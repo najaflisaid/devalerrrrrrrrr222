@@ -519,6 +519,7 @@ const ProductsPage: React.FC = () => {
                   setComingSoonFilter('all');
                   setDiscountFilter('all');
                   setSearchQuery('');
+                  setSortBy('name-asc');
                   // Clear all URL params
                   setSearchParams({}, { replace: true });
                 }}
