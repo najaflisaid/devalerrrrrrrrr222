@@ -11,7 +11,9 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(true);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  const [strokeCount, setStrokeCount] = useState(0);
+  const MIN_STROKES_REQUIRED = 10; // Minimum stroke count to consider as valid signature
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -39,7 +41,6 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
     if (!context) return;
 
     setIsDrawing(true);
-    setIsEmpty(false);
 
     const rect = canvas.getBoundingClientRect();
     const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
@@ -64,6 +65,15 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
 
     context.lineTo(x, y);
     context.stroke();
+    
+    // Count strokes to determine if user has actually drawn something
+    setStrokeCount(prev => {
+      const newCount = prev + 1;
+      if (newCount >= MIN_STROKES_REQUIRED) {
+        setHasDrawn(true);
+      }
+      return newCount;
+    });
   };
 
   const stopDrawing = () => {
@@ -78,12 +88,13 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
     if (!context) return;
 
     context.clearRect(0, 0, canvas.width, canvas.height);
-    setIsEmpty(true);
+    setHasDrawn(false);
+    setStrokeCount(0);
   };
 
   const saveSignature = () => {
     const canvas = canvasRef.current;
-    if (!canvas || isEmpty) return;
+    if (!canvas || !hasDrawn) return;
 
     const signatureData = canvas.toDataURL('image/png');
     onSave(signatureData);
@@ -103,7 +114,9 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
             </button>
           </div>
 
-          <div className="border-2 border-gray-300 rounded-lg bg-white mb-4">
+          <p className="text-sm text-gray-600 mb-4">{t('b2b.signatureInstruction')}</p>
+
+          <div className="border-2 border-gray-300 rounded-lg bg-white mb-4 relative">
             <canvas
               ref={canvasRef}
               className="w-full h-64 touch-none cursor-crosshair"
@@ -115,6 +128,11 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
               onTouchMove={draw}
               onTouchEnd={stopDrawing}
             />
+            {!hasDrawn && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <p className="text-gray-400 text-lg">{t('b2b.drawSignatureHere')}</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -127,7 +145,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
             </button>
             <button
               onClick={saveSignature}
-              disabled={isEmpty}
+              disabled={!hasDrawn}
               className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
             >
               {t('b2b.saveSignature')}
