@@ -465,6 +465,9 @@ const ProductsPage: React.FC = () => {
                   setCurrentMaxPrice(maxPrice);
                   setComingSoonFilter('all');
                   setDiscountFilter('all');
+                  setSearchQuery('');
+                  // Clear all URL params
+                  setSearchParams({}, { replace: true });
                 }}
                 className="w-full py-2 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
               >
