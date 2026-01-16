@@ -27,6 +27,21 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
 
+  // Clear filters from localStorage when leaving the page
+  useEffect(() => {
+    return () => {
+      // Clear all filter values from localStorage when component unmounts
+      localStorage.removeItem('productFilterCategory');
+      localStorage.removeItem('productFilterBrand');
+      localStorage.removeItem('productFilterGender');
+      localStorage.removeItem('productFilterMinPrice');
+      localStorage.removeItem('productFilterMaxPrice');
+      localStorage.removeItem('productFilterComingSoon');
+      localStorage.removeItem('productFilterDiscount');
+      localStorage.removeItem('productFilterSort');
+    };
+  }, []);
+
   useEffect(() => {
     loadProducts();
     const userRole = localStorage.getItem('userRole');
@@ -36,42 +51,31 @@ const ProductsPage: React.FC = () => {
     const search = searchParams.get('search');
     if (search) {
       setSearchQuery(search);
+    } else {
+      setSearchQuery('');
     }
 
-    // Read category parameter
+    // Read category parameter from URL only
     const category = searchParams.get('category');
     if (category) {
       setSelectedCategory(category);
     } else {
-      const savedCategory = localStorage.getItem('productFilterCategory');
-      setSelectedCategory(savedCategory || 'all');
+      setSelectedCategory('all');
     }
 
-    // Read brand parameter
+    // Read brand parameter from URL only
     const brand = searchParams.get('brand');
     if (brand) {
       setSelectedBrand(brand);
     } else {
-      const savedBrand = localStorage.getItem('productFilterBrand');
-      setSelectedBrand(savedBrand || 'all');
+      setSelectedBrand('all');
     }
 
-    const savedGender = localStorage.getItem('productFilterGender');
-    if (savedGender) setSelectedGender(savedGender);
-
-    const savedMinPrice = localStorage.getItem('productFilterMinPrice');
-    const savedMaxPrice = localStorage.getItem('productFilterMaxPrice');
-    if (savedMinPrice) setCurrentMinPrice(Number(savedMinPrice));
-    if (savedMaxPrice) setCurrentMaxPrice(Number(savedMaxPrice));
-
-    const savedComingSoon = localStorage.getItem('productFilterComingSoon');
-    if (savedComingSoon) setComingSoonFilter(savedComingSoon);
-
-    const savedDiscount = localStorage.getItem('productFilterDiscount');
-    if (savedDiscount) setDiscountFilter(savedDiscount);
-
-    const savedSort = localStorage.getItem('productFilterSort');
-    if (savedSort) setSortBy(savedSort);
+    // Reset other filters to defaults
+    setSelectedGender('all');
+    setComingSoonFilter('all');
+    setDiscountFilter('all');
+    setSortBy('name-asc');
   }, [searchParams]);
 
   useEffect(() => {
