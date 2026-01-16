@@ -304,19 +304,7 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="relative h-[400px] bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center">
-        <div className="text-center text-white">
-          <h1 className="font-playfair text-5xl md:text-6xl tracking-wide mb-4">
-            {t('common.productsTitle')}
-          </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto px-4">
-            {t('common.productsSubtitle')}
-          </p>
-        </div>
-      </div>
-
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-12"></div>
         <div className="lg:hidden mb-6">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
