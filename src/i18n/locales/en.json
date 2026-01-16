@@ -427,7 +427,7 @@
     "name": "Name",
     "surname": "Surname",
     "phone": "Phone",
-    "relative": "Relative's number",
+    "relative": "Contact Person",
     "position": "Position",
     "workplace": "Workplace",
     "workAddress": "Work address",
