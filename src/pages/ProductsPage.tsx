@@ -97,14 +97,6 @@ const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     filterProducts();
-    localStorage.setItem('productFilterCategory', selectedCategory);
-    localStorage.setItem('productFilterBrand', selectedBrand);
-    localStorage.setItem('productFilterGender', selectedGender);
-    localStorage.setItem('productFilterMinPrice', currentMinPrice.toString());
-    localStorage.setItem('productFilterMaxPrice', currentMaxPrice.toString());
-    localStorage.setItem('productFilterComingSoon', comingSoonFilter);
-    localStorage.setItem('productFilterDiscount', discountFilter);
-    localStorage.setItem('productFilterSort', sortBy);
   }, [products, selectedCategory, selectedBrand, selectedGender, currentMinPrice, currentMaxPrice, comingSoonFilter, discountFilter, searchQuery, sortBy]);
 
   const loadProducts = async () => {
