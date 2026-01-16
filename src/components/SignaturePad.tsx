@@ -12,7 +12,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [strokeCount, setStrokeCount] = useState(0);
+  const strokeCountRef = useRef(0);
   const MIN_STROKES_REQUIRED = 10; // Minimum stroke count to consider as valid signature
 
   useEffect(() => {
