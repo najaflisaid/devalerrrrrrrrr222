@@ -575,7 +575,13 @@ const ProductsPage: React.FC = () => {
                   onClick={() => {
                     setSelectedCategory('all');
                     setSelectedBrand('all');
+                    setSelectedGender('all');
                     setSearchQuery('');
+                    setDiscountFilter('all');
+                    setComingSoonFilter('all');
+                    setSortBy('name-asc');
+                    setCurrentMinPrice(minPrice);
+                    setCurrentMaxPrice(maxPrice);
                     setSearchParams({}, { replace: true });
                   }}
                   className="mt-4 text-gray-900 underline hover:no-underline"
