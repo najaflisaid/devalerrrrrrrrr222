@@ -9,18 +9,17 @@ import type { Product } from '../types';
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedGender, setSelectedGender] = useState<string>('all');
-  const [priceRange, setPriceRange] = useState<string>('all');
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [currentMinPrice, setCurrentMinPrice] = useState<number>(0);
   const [currentMaxPrice, setCurrentMaxPrice] = useState<number>(1000);
+  const [priceInitialized, setPriceInitialized] = useState(false);
   const [comingSoonFilter, setComingSoonFilter] = useState<string>('all');
   const [discountFilter, setDiscountFilter] = useState<string>('all');
   const [isB2BUser, setIsB2BUser] = useState(false);
@@ -28,61 +27,108 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
 
+  // Function to update URL with all current filters
+  const updateURLParams = (updates: Record<string, string | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === 'all' || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+    
+    setSearchParams(newParams, { replace: true });
+  };
+
   // Function to clear search when filter is selected
   const clearSearchOnFilterChange = () => {
     if (searchQuery) {
       setSearchQuery('');
-      // Remove search param from URL
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('search');
-      setSearchParams(newParams, { replace: true });
     }
   };
 
-  // Handler for category change - clears search
+  // Handler for category change - clears search and updates URL
   const handleCategoryChange = (category: string) => {
     clearSearchOnFilterChange();
     setSelectedCategory(category);
+    updateURLParams({ 
+      category: category === 'all' ? null : category,
+      search: null 
+    });
   };
 
-  // Handler for brand change - clears search
+  // Handler for brand change - clears search and updates URL
   const handleBrandChange = (brand: string) => {
     clearSearchOnFilterChange();
     setSelectedBrand(brand);
+    updateURLParams({ 
+      brand: brand === 'all' ? null : brand,
+      search: null 
+    });
   };
 
-  // Handler for gender change - clears search
+  // Handler for gender change - clears search and updates URL
   const handleGenderChange = (gender: string) => {
     clearSearchOnFilterChange();
     setSelectedGender(gender);
+    updateURLParams({ 
+      gender: gender === 'all' ? null : gender,
+      search: null 
+    });
   };
 
-  // Handler for discount filter change - clears search
+  // Handler for discount filter change - clears search and updates URL
   const handleDiscountFilterChange = (checked: boolean) => {
     clearSearchOnFilterChange();
-    setDiscountFilter(checked ? 'discounted' : 'all');
+    const value = checked ? 'discounted' : 'all';
+    setDiscountFilter(value);
+    updateURLParams({ 
+      discount: checked ? 'true' : null,
+      search: null 
+    });
   };
 
-  // Handler for coming soon filter change - clears search
+  // Handler for coming soon filter change - clears search and updates URL
   const handleComingSoonFilterChange = (checked: boolean) => {
     clearSearchOnFilterChange();
-    setComingSoonFilter(checked ? 'comingSoon' : 'all');
+    const value = checked ? 'comingSoon' : 'all';
+    setComingSoonFilter(value);
+    updateURLParams({ 
+      comingSoon: checked ? 'true' : null,
+      search: null 
+    });
   };
 
-  // Clear filters from localStorage when leaving the page
+  // Handler for sort change - updates URL
+  const handleSortChange = (sort: string) => {
+    setSortBy(sort);
+    updateURLParams({ sort: sort === 'name-asc' ? null : sort });
+  };
+
+  // Handler for price range change - updates URL (debounced would be better for production)
+  const handlePriceChange = (min: number, max: number) => {
+    setCurrentMinPrice(min);
+    setCurrentMaxPrice(max);
+  };
+
+  // Update URL when price changes (with slight delay to avoid too many updates)
   useEffect(() => {
-    return () => {
-      // Clear all filter values from localStorage when component unmounts
-      localStorage.removeItem('productFilterCategory');
-      localStorage.removeItem('productFilterBrand');
-      localStorage.removeItem('productFilterGender');
-      localStorage.removeItem('productFilterMinPrice');
-      localStorage.removeItem('productFilterMaxPrice');
-      localStorage.removeItem('productFilterComingSoon');
-      localStorage.removeItem('productFilterDiscount');
-      localStorage.removeItem('productFilterSort');
-    };
-  }, []);
+    if (!priceInitialized) return;
+    
+    const timer = setTimeout(() => {
+      const minChanged = currentMinPrice !== minPrice;
+      const maxChanged = currentMaxPrice !== maxPrice;
+      
+      updateURLParams({
+        minPrice: minChanged ? currentMinPrice.toString() : null,
+        maxPrice: maxChanged ? currentMaxPrice.toString() : null
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [currentMinPrice, currentMaxPrice, priceInitialized]);
 
   useEffect(() => {
     loadProducts();
