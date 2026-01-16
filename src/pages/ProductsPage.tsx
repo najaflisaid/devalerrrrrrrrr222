@@ -389,7 +389,7 @@ const ProductsPage: React.FC = () => {
                       name="gender"
                       value="all"
                       checked={selectedGender === 'all'}
-                      onChange={(e) => setSelectedGender(e.target.value)}
+                      onChange={(e) => handleGenderChange(e.target.value)}
                       className="mr-2"
                     />
                     <span className="text-sm">{t('common.all')}</span>
@@ -400,7 +400,7 @@ const ProductsPage: React.FC = () => {
                       name="gender"
                       value="men"
                       checked={selectedGender === 'men'}
-                      onChange={(e) => setSelectedGender(e.target.value)}
+                      onChange={(e) => handleGenderChange(e.target.value)}
                       className="mr-2"
                     />
                     <span className="text-sm">{t('category.men')}</span>
@@ -411,7 +411,7 @@ const ProductsPage: React.FC = () => {
                       name="gender"
                       value="women"
                       checked={selectedGender === 'women'}
-                      onChange={(e) => setSelectedGender(e.target.value)}
+                      onChange={(e) => handleGenderChange(e.target.value)}
                       className="mr-2"
                     />
                     <span className="text-sm">{t('category.women')}</span>
@@ -422,7 +422,7 @@ const ProductsPage: React.FC = () => {
                       name="gender"
                       value="unisex"
                       checked={selectedGender === 'unisex'}
-                      onChange={(e) => setSelectedGender(e.target.value)}
+                      onChange={(e) => handleGenderChange(e.target.value)}
                       className="mr-2"
                     />
                     <span className="text-sm">{t('category.unisex')}</span>
