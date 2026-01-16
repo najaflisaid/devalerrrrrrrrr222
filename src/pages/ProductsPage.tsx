@@ -107,12 +107,6 @@ const ProductsPage: React.FC = () => {
     updateURLParams({ sort: sort === 'name-asc' ? null : sort });
   };
 
-  // Handler for price range change - updates URL (debounced would be better for production)
-  const handlePriceChange = (min: number, max: number) => {
-    setCurrentMinPrice(min);
-    setCurrentMaxPrice(max);
-  };
-
   // Update URL when price changes (with slight delay to avoid too many updates)
   useEffect(() => {
     if (!priceInitialized) return;
