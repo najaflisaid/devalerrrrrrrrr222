@@ -67,13 +67,10 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
     context.stroke();
     
     // Count strokes to determine if user has actually drawn something
-    setStrokeCount(prev => {
-      const newCount = prev + 1;
-      if (newCount >= MIN_STROKES_REQUIRED) {
-        setHasDrawn(true);
-      }
-      return newCount;
-    });
+    strokeCountRef.current += 1;
+    if (strokeCountRef.current >= MIN_STROKES_REQUIRED) {
+      setHasDrawn(true);
+    }
   };
 
   const stopDrawing = () => {
