@@ -435,7 +435,7 @@ const ProductsPage: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={discountFilter === 'discounted'}
-                    onChange={(e) => setDiscountFilter(e.target.checked ? 'discounted' : 'all')}
+                    onChange={(e) => handleDiscountFilterChange(e.target.checked)}
                     className="mr-2 w-4 h-4"
                   />
                   <span className="text-sm font-medium text-red-600">{t('common.discountedProducts')}</span>
@@ -448,7 +448,7 @@ const ProductsPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={comingSoonFilter === 'comingSoon'}
-                      onChange={(e) => setComingSoonFilter(e.target.checked ? 'comingSoon' : 'all')}
+                      onChange={(e) => handleComingSoonFilterChange(e.target.checked)}
                       className="mr-2 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-blue-600">{t('common.comingSoonProducts')}</span>
