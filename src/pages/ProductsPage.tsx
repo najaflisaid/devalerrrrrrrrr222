@@ -369,7 +369,7 @@ const ProductsPage: React.FC = () => {
                         name="brand"
                         value={brand}
                         checked={selectedBrand === brand}
-                        onChange={(e) => setSelectedBrand(e.target.value)}
+                        onChange={(e) => handleBrandChange(e.target.value)}
                         className="mr-2"
                       />
                       <span className="text-sm">
