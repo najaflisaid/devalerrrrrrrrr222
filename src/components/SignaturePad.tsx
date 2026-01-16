@@ -86,7 +86,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
 
     context.clearRect(0, 0, canvas.width, canvas.height);
     setHasDrawn(false);
-    setStrokeCount(0);
+    strokeCountRef.current = 0;
   };
 
   const saveSignature = () => {
