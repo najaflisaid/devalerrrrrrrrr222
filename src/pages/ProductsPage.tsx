@@ -130,6 +130,7 @@ const ProductsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [currentMinPrice, currentMaxPrice, priceInitialized]);
 
+  // Read filters from URL on mount and when URL changes
   useEffect(() => {
     loadProducts();
     const userRole = localStorage.getItem('userRole');
@@ -137,37 +138,36 @@ const ProductsPage: React.FC = () => {
 
     // Read search parameter
     const search = searchParams.get('search');
-    if (search) {
-      setSearchQuery(search);
-    } else {
-      setSearchQuery('');
-    }
+    setSearchQuery(search || '');
 
-    // Read category parameter from URL only
+    // Read category parameter
     const category = searchParams.get('category');
-    if (category) {
-      setSelectedCategory(category);
-    } else {
-      setSelectedCategory('all');
-    }
+    setSelectedCategory(category || 'all');
 
-    // Read brand parameter from URL only
+    // Read brand parameter
     const brand = searchParams.get('brand');
-    if (brand) {
-      setSelectedBrand(brand);
-    } else {
-      setSelectedBrand('all');
-    }
+    setSelectedBrand(brand || 'all');
 
-    // Reset other filters to defaults
-    setSelectedGender('all');
-    setComingSoonFilter('all');
-    setDiscountFilter('all');
-    setSortBy('name-asc');
-  }, [searchParams]);
+    // Read gender parameter
+    const gender = searchParams.get('gender');
+    setSelectedGender(gender || 'all');
 
+    // Read discount parameter
+    const discount = searchParams.get('discount');
+    setDiscountFilter(discount === 'true' ? 'discounted' : 'all');
+
+    // Read comingSoon parameter
+    const comingSoon = searchParams.get('comingSoon');
+    setComingSoonFilter(comingSoon === 'true' ? 'comingSoon' : 'all');
+
+    // Read sort parameter
+    const sort = searchParams.get('sort');
+    setSortBy(sort || 'name-asc');
+  }, []);
+
+  // Read price params after products are loaded
   useEffect(() => {
-    if (products.length > 0) {
+    if (products.length > 0 && !priceInitialized) {
       const prices = products.map(p => {
         if (isB2BUser) {
           return p.b2bSalePrice || p.b2bPrice || p.salePrice || p.price;
@@ -178,10 +178,17 @@ const ProductsPage: React.FC = () => {
       const max = Math.ceil(Math.max(...prices));
       setMinPrice(min);
       setMaxPrice(max);
-      setCurrentMinPrice(min);
-      setCurrentMaxPrice(max);
+
+      // Read price params from URL or use defaults
+      const urlMinPrice = searchParams.get('minPrice');
+      const urlMaxPrice = searchParams.get('maxPrice');
+      
+      setCurrentMinPrice(urlMinPrice ? Number(urlMinPrice) : min);
+      setCurrentMaxPrice(urlMaxPrice ? Number(urlMaxPrice) : max);
+      
+      setPriceInitialized(true);
     }
-  }, [products, isB2BUser]);
+  }, [products, isB2BUser, priceInitialized, searchParams]);
 
   useEffect(() => {
     filterProducts();
