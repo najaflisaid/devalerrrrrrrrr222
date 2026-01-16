@@ -8,7 +8,8 @@ import type { Product } from '../types';
 
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,47 @@ const ProductsPage: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
+
+  // Function to clear search when filter is selected
+  const clearSearchOnFilterChange = () => {
+    if (searchQuery) {
+      setSearchQuery('');
+      // Remove search param from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('search');
+      setSearchParams(newParams, { replace: true });
+    }
+  };
+
+  // Handler for category change - clears search
+  const handleCategoryChange = (category: string) => {
+    clearSearchOnFilterChange();
+    setSelectedCategory(category);
+  };
+
+  // Handler for brand change - clears search
+  const handleBrandChange = (brand: string) => {
+    clearSearchOnFilterChange();
+    setSelectedBrand(brand);
+  };
+
+  // Handler for gender change - clears search
+  const handleGenderChange = (gender: string) => {
+    clearSearchOnFilterChange();
+    setSelectedGender(gender);
+  };
+
+  // Handler for discount filter change - clears search
+  const handleDiscountFilterChange = (checked: boolean) => {
+    clearSearchOnFilterChange();
+    setDiscountFilter(checked ? 'discounted' : 'all');
+  };
+
+  // Handler for coming soon filter change - clears search
+  const handleComingSoonFilterChange = (checked: boolean) => {
+    clearSearchOnFilterChange();
+    setComingSoonFilter(checked ? 'comingSoon' : 'all');
+  };
 
   // Clear filters from localStorage when leaving the page
   useEffect(() => {
