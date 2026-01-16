@@ -291,6 +291,7 @@
     "receiveWarning": "Zəhmət olmasa təhvil zamanı məhsulları yoxlayın. \"Təhvil aldım\" təsdiqi sifarişin, tərəfinizdən qəbulunu rəsmiləşdirən elektron təsdiqdir.",
     "signatureTitle": "İmza",
     "signatureInstruction": "Zəhmət olmasa barmağınızla və ya siçanla aşağıdakı sahəyə imzanızı çəkin.",
+    "drawSignatureHere": "Buraya imzanızı çəkin",
     "clearSignature": "Təmizlə",
     "saveSignature": "İmzanı Təsdiq Et",
     "customerSignature": "Müştəri İmzası",
