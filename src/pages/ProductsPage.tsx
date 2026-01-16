@@ -348,7 +348,7 @@ const ProductsPage: React.FC = () => {
                         name="category"
                         value={category}
                         checked={selectedCategory === category}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        onChange={(e) => handleCategoryChange(e.target.value)}
                         className="mr-2"
                       />
                       <span className="text-sm capitalize">
