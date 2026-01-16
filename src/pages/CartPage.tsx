@@ -336,6 +336,13 @@ const CartPage: React.FC = () => {
                 {loading ? t('cart.sending') : t('cart.completeOrder')}
               </button>
 
+              <button
+                onClick={() => navigate('/products')}
+                className="w-full bg-gray-100 text-gray-900 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors font-medium mb-3"
+              >
+                {t('cart.continueShopping')}
+              </button>
+
               {!isB2BUser && (
                 <button
                   onClick={() => setShowCreditForm(true)}
