@@ -291,6 +291,7 @@
     "receiveWarning": "Please check the products upon delivery. \"I Received It\" confirmation is an electronic confirmation that formalizes your acceptance of the order.",
     "signatureTitle": "Signature",
     "signatureInstruction": "Please draw your signature in the box below using your finger or mouse.",
+    "drawSignatureHere": "Draw your signature here",
     "clearSignature": "Clear",
     "saveSignature": "Confirm Signature",
     "customerSignature": "Customer Signature",
