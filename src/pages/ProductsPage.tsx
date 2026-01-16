@@ -521,6 +521,8 @@ const ProductsPage: React.FC = () => {
                   onClick={() => {
                     setSelectedCategory('all');
                     setSelectedBrand('all');
+                    setSearchQuery('');
+                    setSearchParams({}, { replace: true });
                   }}
                   className="mt-4 text-gray-900 underline hover:no-underline"
                 >
