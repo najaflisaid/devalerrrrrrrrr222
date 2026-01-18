@@ -514,10 +514,20 @@ const ProductsPage: React.FC = () => {
 
           <div className="lg:col-span-3">
             {searchQuery && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                 <p className="text-sm text-blue-800">
                   <strong>"{searchQuery}"</strong> {t('common.searchResults')}: {filteredProducts.length} {t('common.productCount')}
                 </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchParams({}, { replace: true });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <span>✕</span>
+                  {t('common.clearSearch')}
+                </button>
               </div>
             )}
 
