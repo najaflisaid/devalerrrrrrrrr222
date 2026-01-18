@@ -261,7 +261,7 @@ const B2BOrdersTab: React.FC = () => {
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Məhsullar</h4>
                 <div className="space-y-2">
-                  {order.items?.slice(0, 3).map((item: any, index: number) => {
+                  {order.items?.map((item: any, index: number) => {
                     const product = products.find(p => p.id === item.productId);
                     const productImage = product?.images?.[0];
                     return (
@@ -289,24 +289,23 @@ const B2BOrdersTab: React.FC = () => {
                       </div>
                     );
                   })}
-                  {order.items.length > 3 && (
-                    <p className="text-xs text-gray-500 text-center">
-                      +{order.items.length - 3} daha çox məhsul
-                    </p>
-                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 bg-gray-50 rounded-lg p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 bg-gray-50 rounded-lg p-3">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Məhsul sayı</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Model sayı</p>
                   <p className="text-base sm:text-lg font-semibold">{order.items.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Ümumi miqdar</p>
+                  <p className="text-base sm:text-lg font-semibold">{order.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)} ədəd</p>
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Ümumi məbləğ</p>
                   <p className="text-base sm:text-lg font-semibold break-words">{order.totalAmount.toFixed(2)}₼</p>
                 </div>
-                <div className="col-span-2 sm:col-span-1">
+                <div>
                   <p className="text-xs sm:text-sm text-gray-600">Endirim</p>
                   <p className="text-base sm:text-lg font-semibold text-green-600 break-words">{order.discountAmount.toFixed(2)}₼</p>
                 </div>
