@@ -54,7 +54,7 @@ const HomeProductBanners: React.FC = () => {
             <Link
               key={banner.id}
               to={banner.link_url}
-              className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300"
+              className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300"
             >
               <div className="aspect-[16/7] relative">
                 {banner.content_type === 'video' && banner.video_url ? (
