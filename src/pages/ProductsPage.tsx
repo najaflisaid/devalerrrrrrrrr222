@@ -22,6 +22,7 @@ const ProductsPage: React.FC = () => {
   const [priceInitialized, setPriceInitialized] = useState(false);
   const [comingSoonFilter, setComingSoonFilter] = useState<string>('all');
   const [discountFilter, setDiscountFilter] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
   const [isB2BUser, setIsB2BUser] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -196,7 +197,7 @@ const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     filterProducts();
-  }, [products, selectedCategory, selectedBrand, selectedGender, currentMinPrice, currentMaxPrice, comingSoonFilter, discountFilter, searchQuery, sortBy]);
+  }, [products, selectedCategory, selectedBrand, selectedGender, currentMinPrice, currentMaxPrice, comingSoonFilter, discountFilter, stockFilter, searchQuery, sortBy]);
 
   const loadProducts = async () => {
     try {
@@ -267,6 +268,11 @@ const ProductsPage: React.FC = () => {
           return p.salePrice && p.salePrice < p.price;
         }
       });
+    }
+
+    // Stock filter - only for B2B users
+    if (stockFilter === 'inStock') {
+      filtered = filtered.filter(p => p.stock > 0);
     }
 
     filtered.sort((a, b) => {
@@ -380,6 +386,37 @@ const ProductsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Stock Filter - Only for B2B users */}
+              {isB2BUser && (
+                <div className="border-t border-gray-200 pt-4">
+                  <h3 className="font-medium mb-3">Stok</h3>
+                  <div className="space-y-2">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="stock"
+                        value="all"
+                        checked={stockFilter === 'all'}
+                        onChange={() => setStockFilter('all')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">{t('common.all')}</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="stock"
+                        value="inStock"
+                        checked={stockFilter === 'inStock'}
+                        onChange={() => setStockFilter('inStock')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-green-600 font-medium">Mövcud məhsullar</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-200 pt-4">
                 <h3 className="font-medium mb-3">{t('product.category')}</h3>
