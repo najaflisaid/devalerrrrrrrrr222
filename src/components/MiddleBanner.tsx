@@ -72,8 +72,7 @@ const MiddleBanner: React.FC = () => {
 
   return (
     <section className="relative w-full py-6">
-      <div className="max-w-[1440px] mx-auto px-4">
-        <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[400px] overflow-hidden">
+      <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[400px] overflow-hidden">
           {slides.map((slide, index) => (
             <div
               key={index}
@@ -150,7 +149,6 @@ const MiddleBanner: React.FC = () => {
             </>
           )}
         </div>
-      </div>
     </section>
   );
 };
