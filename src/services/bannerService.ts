@@ -7,7 +7,7 @@ export interface Banner {
   title: { az: string; ru: string; en: string };
   link?: string;
   buttonText?: { az: string; ru: string; en: string };
-  position: 'home' | 'products';
+  position: 'home' | 'products' | 'middle';
   orderIndex: number;
   active: boolean;
   duration?: number;
