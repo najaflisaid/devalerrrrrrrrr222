@@ -13,7 +13,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false, compact = false }) => {
   const { t, i18n } = useTranslation();
-  const { addToCart } = useCart();
+  const { addToCart, addNotification } = useCart();
   const isB2BUser = localStorage.getItem('userRole') === 'b2b';
   const [isHovered, setIsHovered] = useState(false);
 
@@ -61,12 +61,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isB2BUser || product.stock > 0) {
-      addToCart(product, 1);
+    if (product.stock === 0) {
+      addNotification(t('product.outOfStockMessage') || 'Bu məhsul stokda yoxdur', 'error');
+      return;
     }
+    addToCart(product, 1);
   };
 
-  const isOutOfStock = isB2BUser && product.stock === 0;
+  const isOutOfStock = product.stock === 0;
   const currentImage = isHovered && product.images[1] ? product.images[1] : product.images[0];
 
   return (
@@ -77,14 +79,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {isOutOfStock && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-              <span className={`bg-red-600 text-white ${compact ? 'text-xs px-2 py-1' : 'text-sm px-4 py-2'} font-semibold rounded`}>
-                {t('product.outOfStock')}
-              </span>
-            </div>
-          )}
-
           <img
             src={currentImage}
             alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
@@ -108,6 +102,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
+          {isOutOfStock && (
+            <p className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-red-600`}>
+              {t('product.outOfStock')}
+            </p>
+          )}
           <div className="flex items-center justify-center space-x-2">
             {originalPrice ? (
               <>
@@ -124,13 +123,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               </span>
             )}
           </div>
-          {isB2BUser && !compact && (
+          {isB2BUser && !compact && !isOutOfStock && (
             <p className={`text-xs font-medium mt-1 ${
-              product.stock === 0 ? 'text-red-600' :
-              product.stock <= 5 ? 'text-orange-600' :
-              'text-green-600'
+              product.stock <= 5 ? 'text-orange-600' : 'text-green-600'
             }`}>
-              {product.stock === 0 ? t('product.outOfStock') : `${t('product.stock')}: ${product.stock}`}
+              {`${t('product.stock')}: ${product.stock}`}
             </p>
           )}
 

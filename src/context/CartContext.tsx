@@ -26,6 +26,7 @@ interface CartContextType {
   getUserDiscount: () => number;
   notifications: Notification[];
   removeNotification: (id: string) => void;
+  addNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -182,6 +183,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getUserDiscount,
       notifications,
       removeNotification,
+      addNotification,
     }}>
       {children}
     </CartContext.Provider>
