@@ -198,7 +198,7 @@ const Header: React.FC = () => {
             {/* Logo - Center on Desktop */}
             <div className="absolute left-1/2 transform -translate-x-1/2 md:static md:transform-none">
               <Link to="/">
-                <img src="https://customer-assets.emergentagent.com/job_f1f83b6e-f511-4a6e-994f-1249c8d1bae5/artifacts/dcu3bp0c_tmu65g6__1_-removebg-preview.png" alt="De Valeur" className="h-10" />
+                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
               </Link>
             </div>
 
@@ -351,7 +351,7 @@ const Header: React.FC = () => {
 
             <div className="fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white shadow-2xl animate-slideInLeft">
               <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                <img src="https://customer-assets.emergentagent.com/job_f1f83b6e-f511-4a6e-994f-1249c8d1bae5/artifacts/dcu3bp0c_tmu65g6__1_-removebg-preview.png" alt="De Valeur" className="h-10" />
+                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <X className="h-6 w-6" />
                 </button>
