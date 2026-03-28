@@ -181,8 +181,15 @@
     "subtitle": "Yeniliklər, tədbirlər və məqalələr",
     "readMore": "Daha ətraflı",
     "backToBlog": "Bloqa qayıt",
+    "backToBlogs": "Bloqlara qayıt",
     "latestPosts": "Son Yazılar",
     "noPosts": "Hələ bloq yazısı yoxdur",
+    "checkBackLater": "Tezliklə yeni yazılar əlavə ediləcək",
+    "notFound": "Bloq tapılmadı",
+    "notFoundDesc": "Axtardığınız yazı mövcud deyil",
+    "linkCopied": "Link kopyalandı!",
+    "share": "Paylaş",
+    "minRead": "dəq oxuma",
     "loading": "Yüklənir..."
   },
   "partners": {

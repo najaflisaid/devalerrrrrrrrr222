@@ -528,6 +528,7 @@ const AdminPanel: React.FC = () => {
         category: editProduct.category,
         gender: editProduct.gender,
         isBestseller: editProduct.isBestseller,
+        comingSoon: editProduct.comingSoon,
         stock: parseInt(editProduct.stock) || 0,
         visibleTo: editProduct.visibleTo,
       };
