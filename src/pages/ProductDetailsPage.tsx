@@ -12,7 +12,7 @@ const ProductDetailsPage: React.FC = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { addToCart } = useCart();
+  const { addToCart, addNotification } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -136,13 +136,6 @@ const ProductDetailsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             <div className="bg-gray-50 rounded-lg overflow-hidden mb-6 aspect-square relative">
-              {isOutOfStock && (
-                <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-20">
-                  <span className="bg-red-600 text-white text-lg px-6 py-3 font-bold rounded">
-                    {t('product.outOfStock')}
-                  </span>
-                </div>
-              )}
               {!isOutOfStock && product.salePrice && (
                 <span className="absolute top-4 left-4 bg-red-500 text-white text-xs px-2 py-1 font-medium z-10">
                   {t('product.sale')}
@@ -172,6 +165,11 @@ const ProductDetailsPage: React.FC = () => {
               <h1 className="text-4xl font-light text-gray-900 mb-2">
                 {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
               </h1>
+              {isOutOfStock && (
+                <p className="text-lg font-semibold text-red-600 mb-2">
+                  {t('product.outOfStock')}
+                </p>
+              )}
               <div className="space-y-1">
                 <p className="text-gray-600">
                   {product.brand}
@@ -272,8 +270,11 @@ const ProductDetailsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (product) {
+                      if (product.stock === 0) {
+                        addNotification(t('product.outOfStockMessage') || 'Bu məhsul stokda yoxdur', 'error');
+                        return;
+                      }
                       addToCart(product, quantity);
-                      alert(t('product.addedToCart'));
                     }
                   }}
                   className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg hover:bg-gray-800 transition-colors font-medium tracking-wide uppercase flex items-center justify-center gap-2"

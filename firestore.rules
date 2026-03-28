@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Site Settings - admin yazır, hamı oxuya bilər
+    match /site_settings/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Contact Messages - hamı yaza bilər, admin oxuyur
+    match /contact_messages/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Banners
+    match /banners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Products
+    match /products/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Categories
+    match /categories/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Brands
+    match /brands/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Blog Posts
+    match /blog_posts/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Partners
+    match /partners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Users
+    match /users/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // B2B Requests
+    match /b2b_requests/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // B2B Orders
+    match /b2b_orders/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // About Content
+    match /about_content/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Product Banners
+    match /product_banners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Coming Soon Products
+    match /coming_soon/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Orders
+    match /orders/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Default - hər şeyə icazə (development)
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
