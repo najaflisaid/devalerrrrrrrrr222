@@ -75,6 +75,9 @@ const AdminPanel: React.FC = () => {
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState('all');
+  const [adminBrandFilter, setAdminBrandFilter] = useState('all');
+  const [adminStockFilter, setAdminStockFilter] = useState('all');
 
   const [newProduct, setNewProduct] = useState({
     nameAz: '',
@@ -1027,7 +1030,13 @@ const AdminPanel: React.FC = () => {
                       );
                     })();
                     const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
-                    return matchesSearch && matchesPrice;
+                    const matchesCategory = adminCategoryFilter === 'all' || p.category === adminCategoryFilter;
+                    const matchesBrand = adminBrandFilter === 'all' || p.brand === adminBrandFilter;
+                    const matchesStock = adminStockFilter === 'all' || 
+                      (adminStockFilter === 'inStock' && p.stock > 0) ||
+                      (adminStockFilter === 'outOfStock' && p.stock === 0) ||
+                      (adminStockFilter === 'lowStock' && p.stock > 0 && p.stock <= 5);
+                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock;
                   }).length;
                 })()})
               </h2>
@@ -1093,6 +1102,49 @@ const AdminPanel: React.FC = () => {
                       className="w-full"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Category, Brand, Stock Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Kateqoriya</label>
+                  <select
+                    value={adminCategoryFilter}
+                    onChange={(e) => setAdminCategoryFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  >
+                    <option value="all">Hamısı</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Brend</label>
+                  <select
+                    value={adminBrandFilter}
+                    onChange={(e) => setAdminBrandFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  >
+                    <option value="all">Hamısı</option>
+                    {brands.map((brand) => (
+                      <option key={brand.id} value={brand.name}>{brand.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stok</label>
+                  <select
+                    value={adminStockFilter}
+                    onChange={(e) => setAdminStockFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  >
+                    <option value="all">Hamısı</option>
+                    <option value="inStock">Mövcud</option>
+                    <option value="outOfStock">Bitdi</option>
+                    <option value="lowStock">Az qalıb (≤5)</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1435,8 +1487,14 @@ const AdminPanel: React.FC = () => {
                     })();
 
                     const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+                    const matchesCategory = adminCategoryFilter === 'all' || product.category === adminCategoryFilter;
+                    const matchesBrand = adminBrandFilter === 'all' || product.brand === adminBrandFilter;
+                    const matchesStock = adminStockFilter === 'all' || 
+                      (adminStockFilter === 'inStock' && product.stock > 0) ||
+                      (adminStockFilter === 'outOfStock' && product.stock === 0) ||
+                      (adminStockFilter === 'lowStock' && product.stock > 0 && product.stock <= 5);
 
-                    return matchesSearch && matchesPrice;
+                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock;
                   })
                   .sort((a, b) => {
                     const brandCompare = a.brand.localeCompare(b.brand);
@@ -1465,7 +1523,7 @@ const AdminPanel: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <p className="text-sm font-medium text-gray-900">{product.price}₼</p>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${product.stock === 0 ? 'bg-red-100 text-red-700' : product.stock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                          Stok: {product.stock}
+                          {product.stock === 0 ? 'Bitdi' : `Mövcud: ${product.stock}`}
                         </span>
                       </div>
                       {product.isBestseller && (
