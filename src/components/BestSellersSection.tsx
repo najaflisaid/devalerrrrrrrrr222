@@ -122,11 +122,11 @@ const BestSellersSection: React.FC = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex-shrink-0 w-[200px] cursor-pointer group"
+                className="flex-shrink-0 w-[260px] cursor-pointer group"
                 onClick={() => navigate(`/product/${product.id}`)}
               >
                 {/* Product Card */}
-                <div className="bg-[#f5f5f0] relative overflow-hidden">
+                <div className="bg-white relative overflow-hidden border border-gray-100">
                   {/* Personalize tag */}
                   {product.isPersonalizable && (
                     <span className="absolute top-3 left-3 text-[10px] uppercase tracking-wider text-gray-500 italic">
@@ -135,10 +135,10 @@ const BestSellersSection: React.FC = () => {
                   )}
                   
                   {/* Product Image */}
-                  <div className="aspect-[3/4] flex items-center justify-center p-4">
+                  <div className="aspect-[3/4] flex items-center justify-center p-6">
                     <img
                       src={product.images?.[0] || product.imageUrl}
-                      alt={product.name}
+                      alt={getProductName(product)}
                       className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
@@ -149,7 +149,7 @@ const BestSellersSection: React.FC = () => {
                   <h3 className="text-sm text-gray-900 font-normal truncate">
                     {getProductName(product)}
                   </h3>
-                  <p className="text-sm text-gray-900 mt-1">
+                  <p className="text-sm text-gray-900 mt-1 font-medium">
                     {product.price?.toFixed(2)} ₼
                   </p>
                 </div>
