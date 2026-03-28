@@ -25,8 +25,13 @@ export interface B2BOrder {
 export const createB2BOrder = async (order: B2BOrder) => {
   console.log('Creating B2B order in Firestore:', order);
   const ordersRef = collection(db, 'b2bOrders');
+  
+  // Calculate subtotal (before discount)
+  const subtotal = order.items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
+  
   const docRef = await addDoc(ordersRef, {
     ...order,
+    subtotal: subtotal,
     status: 'pending',
     createdAt: Timestamp.now()
   });
@@ -44,7 +49,7 @@ export const createB2BOrder = async (order: B2BOrder) => {
     console.error('Error reducing stock:', error);
   }
 
-  return { id: docRef.id, ...order };
+  return { id: docRef.id, ...order, subtotal };
 };
 
 export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string) => {
@@ -206,11 +211,22 @@ export const updateOrderItemQuantity = async (orderId: string, itemIndex: number
 
   items[itemIndex] = { ...item, quantity: newQuantity };
 
-  const newTotalAmount = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0) - orderData.discountAmount;
+  // Calculate subtotal (before discount)
+  const subtotal = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
+  
+  // Calculate discount proportionally based on original discount percentage
+  const originalSubtotal = orderData.items.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0);
+  const originalDiscountPercentage = originalSubtotal > 0 ? (orderData.discountAmount / originalSubtotal) * 100 : 0;
+  
+  // Apply same discount percentage to new subtotal
+  const newDiscountAmount = (subtotal * originalDiscountPercentage) / 100;
+  const newTotalAmount = subtotal - newDiscountAmount;
 
   await updateDoc(orderRef, {
     items,
-    totalAmount: newTotalAmount
+    totalAmount: newTotalAmount,
+    discountAmount: newDiscountAmount,
+    subtotal: subtotal
   });
 
   const productRef = doc(db, 'products', productId);
@@ -218,7 +234,7 @@ export const updateOrderItemQuantity = async (orderId: string, itemIndex: number
     stock: increment(quantityDiff)
   });
 
-  return { id: orderId, items, totalAmount: newTotalAmount };
+  return { id: orderId, items, totalAmount: newTotalAmount, discountAmount: newDiscountAmount, subtotal };
 };
 
 export const removeOrderItem = async (orderId: string, itemIndex: number, productId: string, quantity: number) => {
@@ -231,6 +247,10 @@ export const removeOrderItem = async (orderId: string, itemIndex: number, produc
 
   const orderData = orderSnap.data();
   const items = [...orderData.items];
+  
+  // Calculate original discount percentage before removing item
+  const originalSubtotal = orderData.items.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0);
+  const originalDiscountPercentage = originalSubtotal > 0 ? (orderData.discountAmount / originalSubtotal) * 100 : 0;
 
   items.splice(itemIndex, 1);
 
@@ -245,11 +265,16 @@ export const removeOrderItem = async (orderId: string, itemIndex: number, produc
     return { deleted: true };
   }
 
-  const newTotalAmount = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0) - orderData.discountAmount;
+  // Calculate new subtotal and apply same discount percentage
+  const subtotal = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
+  const newDiscountAmount = (subtotal * originalDiscountPercentage) / 100;
+  const newTotalAmount = subtotal - newDiscountAmount;
 
   await updateDoc(orderRef, {
     items,
-    totalAmount: newTotalAmount
+    totalAmount: newTotalAmount,
+    discountAmount: newDiscountAmount,
+    subtotal: subtotal
   });
 
   const productRef = doc(db, 'products', productId);
@@ -257,5 +282,5 @@ export const removeOrderItem = async (orderId: string, itemIndex: number, produc
     stock: increment(quantity)
   });
 
-  return { id: orderId, items, totalAmount: newTotalAmount };
+  return { id: orderId, items, totalAmount: newTotalAmount, discountAmount: newDiscountAmount, subtotal };
 };

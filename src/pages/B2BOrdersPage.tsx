@@ -235,9 +235,23 @@ const B2BOrdersPage: React.FC = () => {
                             <p><span className="font-medium">{t('b2b.phone')}:</span> {order.customerPhone}</p>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">{t('b2b.totalAmount')}</p>
-                          <p className="text-2xl font-bold">{order.totalAmount?.toFixed(2)} ₼</p>
+                        <div className="text-right space-y-1">
+                          <div>
+                            <p className="text-xs text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
+                            <p className="text-sm text-gray-400 line-through">
+                              {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} ₼
+                            </p>
+                          </div>
+                          {(order as any).discountAmount > 0 && (
+                            <div>
+                              <p className="text-xs text-green-600">{t('b2b.discount') || 'Endirim'}</p>
+                              <p className="text-sm font-medium text-green-600">-{(order as any).discountAmount?.toFixed(2)} ₼</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs text-gray-500">{t('b2b.totalAmount')}</p>
+                            <p className="text-2xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} ₼</p>
+                          </div>
                         </div>
                       </div>
                     </div>

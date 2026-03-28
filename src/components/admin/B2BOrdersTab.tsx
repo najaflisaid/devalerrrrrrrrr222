@@ -292,7 +292,7 @@ const B2BOrdersTab: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 bg-gray-50 rounded-lg p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 mb-4 bg-gray-50 rounded-lg p-3">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Model sayı</p>
                   <p className="text-base sm:text-lg font-semibold">{order.items.length}</p>
@@ -302,12 +302,18 @@ const B2BOrdersTab: React.FC = () => {
                   <p className="text-base sm:text-lg font-semibold">{order.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)} ədəd</p>
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Ümumi məbləğ</p>
-                  <p className="text-base sm:text-lg font-semibold break-words">{order.totalAmount.toFixed(2)}₼</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Endirimsiz qiymət</p>
+                  <p className="text-base sm:text-lg font-semibold text-gray-500 line-through break-words">
+                    {((order as any).subtotal || order.items.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0)).toFixed(2)}₼
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Endirim</p>
-                  <p className="text-base sm:text-lg font-semibold text-green-600 break-words">{order.discountAmount.toFixed(2)}₼</p>
+                  <p className="text-base sm:text-lg font-semibold text-green-600 break-words">-{order.discountAmount.toFixed(2)}₼</p>
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Ödəniləcək məbləğ</p>
+                  <p className="text-base sm:text-lg font-bold text-blue-600 break-words">{order.totalAmount.toFixed(2)}₼</p>
                 </div>
               </div>
 
@@ -507,12 +513,18 @@ const B2BOrdersTab: React.FC = () => {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex justify-between mb-2">
-                  <span>Ümumi Endirim:</span>
-                  <span className="font-semibold text-green-600">{selectedOrder.discountAmount.toFixed(2)}₼</span>
+                  <span>Endirimsiz Qiymət:</span>
+                  <span className="font-semibold text-gray-500 line-through">
+                    {((selectedOrder as any).subtotal || selectedOrder.items.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0)).toFixed(2)}₼
+                  </span>
                 </div>
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Yekun Məbləğ:</span>
-                  <span>{selectedOrder.totalAmount.toFixed(2)}₼</span>
+                <div className="flex justify-between mb-2">
+                  <span>Ümumi Endirim:</span>
+                  <span className="font-semibold text-green-600">-{selectedOrder.discountAmount.toFixed(2)}₼</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
+                  <span>Ödəniləcək Məbləğ:</span>
+                  <span className="text-blue-600">{selectedOrder.totalAmount.toFixed(2)}₼</span>
                 </div>
               </div>
 
