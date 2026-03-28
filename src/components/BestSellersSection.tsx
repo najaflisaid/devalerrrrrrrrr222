@@ -113,7 +113,7 @@ const BestSellersSection: React.FC = () => {
         >
           <div
             ref={scrollContainerRef}
-            className="flex gap-1 overflow-x-auto scrollbar-hide scroll-smooth"
+            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-0"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
@@ -122,7 +122,7 @@ const BestSellersSection: React.FC = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex-shrink-0 w-[260px] cursor-pointer group"
+                className="flex-shrink-0 w-[31%] min-w-[110px] sm:w-[200px] md:w-[240px] lg:w-[260px] cursor-pointer group"
                 onClick={() => navigate(`/product/${product.id}`)}
               >
                 {/* Product Card */}
