@@ -51,42 +51,52 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  // Handler for category change - clears search and updates URL
+  // Handler for category change - clears search and discount filter, updates URL
   const handleCategoryChange = (category: string) => {
     clearSearchOnFilterChange();
     setSelectedCategory(category);
+    // Clear discount filter when category is selected
+    setDiscountFilter('all');
     updateURLParams({ 
       category: category === 'all' ? null : category,
-      search: null 
+      search: null,
+      discount: null
     });
   };
 
-  // Handler for brand change - clears search and updates URL, resets category
+  // Handler for brand change - clears search and discount filter, updates URL, resets category
   const handleBrandChange = (brand: string) => {
     clearSearchOnFilterChange();
     setSelectedBrand(brand);
+    // Clear discount filter when brand is selected
+    setDiscountFilter('all');
     if (brand !== 'all') {
       setSelectedCategory('all');
       updateURLParams({ 
         brand: brand === 'all' ? null : brand,
         category: null,
-        search: null 
+        search: null,
+        discount: null
       });
     } else {
       updateURLParams({ 
         brand: null,
-        search: null 
+        search: null,
+        discount: null
       });
     }
   };
 
-  // Handler for gender change - clears search and updates URL
+  // Handler for gender change - clears search and discount filter, updates URL
   const handleGenderChange = (gender: string) => {
     clearSearchOnFilterChange();
     setSelectedGender(gender);
+    // Clear discount filter when gender is selected
+    setDiscountFilter('all');
     updateURLParams({ 
       gender: gender === 'all' ? null : gender,
-      search: null 
+      search: null,
+      discount: null
     });
   };
 
