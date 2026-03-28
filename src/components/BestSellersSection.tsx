@@ -2,18 +2,51 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { productService } from '../services/productService';
-import ProductCard from './ProductCard';
-import type { Product } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { Product } from '../types';
 
 const BestSellersSection: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+
+  const getProductName = (product: Product): string => {
+    if (typeof product.name === 'string') return product.name;
+    const lang = i18n.language as 'az' | 'ru' | 'en';
+    return product.name[lang] || product.name.az || product.name.en || '';
+  };
 
   useEffect(() => {
     loadBestSellers();
   }, []);
+
+  // Auto scroll effect
+  useEffect(() => {
+    if (!isAutoScrolling || products.length === 0) return;
+
+    const interval = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        
+        if (container.scrollLeft >= maxScroll - 10) {
+          // Reset to start
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          // Scroll right
+          container.scrollTo({
+            left: container.scrollLeft + 220,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isAutoScrolling, products]);
 
   const loadBestSellers = async () => {
     try {
@@ -27,8 +60,9 @@ const BestSellersSection: React.FC = () => {
   };
 
   const scroll = (direction: 'left' | 'right') => {
+    setIsAutoScrolling(false);
     if (scrollContainerRef.current) {
-      const scrollAmount = 400;
+      const scrollAmount = 440;
       const newScrollLeft = direction === 'left'
         ? scrollContainerRef.current.scrollLeft - scrollAmount
         : scrollContainerRef.current.scrollLeft + scrollAmount;
@@ -38,6 +72,8 @@ const BestSellersSection: React.FC = () => {
         behavior: 'smooth'
       });
     }
+    // Resume auto scroll after 10 seconds
+    setTimeout(() => setIsAutoScrolling(true), 10000);
   };
 
   if (loading || products.length === 0) {
@@ -48,45 +84,75 @@ const BestSellersSection: React.FC = () => {
     <section className="py-12 bg-white">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              {t('bestSellers.title')}
-            </h2>
-            <p className="text-gray-600">
-              {t('bestSellers.subtitle')}
-            </p>
-          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-wide">
+            {t('bestSellers.title')}
+          </h2>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => scroll('left')}
-              className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors duration-200 shadow-sm"
+              className="p-2 hover:bg-gray-100 transition-colors duration-200"
               aria-label={t('bestSellers.prevProducts')}
             >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
+              <ChevronLeft className="h-6 w-6 text-gray-400" strokeWidth={1} />
             </button>
             <button
               onClick={() => scroll('right')}
-              className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors duration-200 shadow-sm"
+              className="p-2 hover:bg-gray-100 transition-colors duration-200"
               aria-label={t('bestSellers.nextProducts')}
             >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
+              <ChevronRight className="h-6 w-6 text-gray-900" strokeWidth={1} />
             </button>
           </div>
         </div>
 
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseEnter={() => setIsAutoScrolling(false)}
+          onMouseLeave={() => setIsAutoScrolling(true)}
+        >
           <div
             ref={scrollContainerRef}
-            className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+            className="flex gap-1 overflow-x-auto scrollbar-hide scroll-smooth"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
             }}
           >
             {products.map((product) => (
-              <div key={product.id} className="flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px]">
-                <ProductCard product={product} compact={true} />
+              <div 
+                key={product.id} 
+                className="flex-shrink-0 w-[200px] cursor-pointer group"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                {/* Product Card */}
+                <div className="bg-[#f5f5f0] relative overflow-hidden">
+                  {/* Personalize tag */}
+                  {product.isPersonalizable && (
+                    <span className="absolute top-3 left-3 text-[10px] uppercase tracking-wider text-gray-500 italic">
+                      Personalize
+                    </span>
+                  )}
+                  
+                  {/* Product Image */}
+                  <div className="aspect-[3/4] flex items-center justify-center p-4">
+                    <img
+                      src={product.images?.[0] || product.imageUrl}
+                      alt={product.name}
+                      className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                </div>
+                
+                {/* Product Info */}
+                <div className="pt-3 pb-4">
+                  <h3 className="text-sm text-gray-900 font-normal truncate">
+                    {getProductName(product)}
+                  </h3>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {product.price?.toFixed(2)} ₼
+                  </p>
+                </div>
               </div>
             ))}
           </div>

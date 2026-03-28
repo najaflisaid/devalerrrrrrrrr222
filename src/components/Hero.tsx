@@ -141,7 +141,7 @@ const Hero: React.FC = () => {
 
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-3 transition-all duration-200 z-10"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-3 rounded-full transition-all duration-200 z-10"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-6 w-6 text-gray-900" />
@@ -149,7 +149,7 @@ const Hero: React.FC = () => {
 
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-3 transition-all duration-200 z-10"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-3 rounded-full transition-all duration-200 z-10"
             aria-label="Next slide"
           >
             <ChevronRight className="h-6 w-6 text-gray-900" />
