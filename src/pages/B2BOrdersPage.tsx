@@ -227,11 +227,11 @@ const B2BOrdersPage: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <div className="text-sm text-gray-600">
                           <p><span className="font-medium">{t('b2b.name')}:</span> {order.customerName} {order.customerLastname || ''}</p>
-                          {order.companyName && (
+                          {order.companyName && !order.companyName.includes('@') && (
                             <p><span className="font-medium">{t('b2b.companyName')}:</span> {order.companyName}</p>
                           )}
                           <p><span className="font-medium">{t('b2b.email')}:</span> {order.customerEmail}</p>
-                          {order.customerPhone && (
+                          {order.customerPhone && !order.customerPhone.includes(' ') && order.customerPhone.length < 20 && (
                             <p><span className="font-medium">{t('b2b.phone')}:</span> {order.customerPhone}</p>
                           )}
                         </div>

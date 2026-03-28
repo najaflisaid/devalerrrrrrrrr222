@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus } from 'lucide-react';
-import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem } from '../../services/b2bOrderService';
+import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User } from 'lucide-react';
+import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
 
 interface B2BOrder {
@@ -30,7 +30,13 @@ const B2BOrdersTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editingNoteOrderId, setEditingNoteOrderId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState<string>('');
-
+  const [editingCustomerOrderId, setEditingCustomerOrderId] = useState<string | null>(null);
+  const [customerEditData, setCustomerEditData] = useState({
+    customerName: '',
+    customerLastname: '',
+    customerPhone: '',
+    companyName: ''
+  });
   useEffect(() => {
     loadProducts();
     loadOrders();
@@ -115,6 +121,39 @@ const B2BOrdersTab: React.FC = () => {
     setEditingNoteOrderId(null);
     setNoteText('');
   };
+
+  const handleEditCustomer = (order: B2BOrder) => {
+    setEditingCustomerOrderId(order.id);
+    setCustomerEditData({
+      customerName: order.customerName || '',
+      customerLastname: order.customerLastname || '',
+      customerPhone: order.customerPhone || '',
+      companyName: order.companyName || ''
+    });
+  };
+
+  const handleSaveCustomer = async (orderId: string) => {
+    try {
+      await updateB2BOrderCustomerInfo(orderId, customerEditData);
+      loadOrders();
+      setEditingCustomerOrderId(null);
+      alert('Müştəri məlumatları yeniləndi');
+    } catch (error) {
+      console.error('Error saving customer info:', error);
+      alert('Müştəri məlumatları yenilənə bilmədi');
+    }
+  };
+
+  const handleCancelCustomerEdit = () => {
+    setEditingCustomerOrderId(null);
+    setCustomerEditData({
+      customerName: '',
+      customerLastname: '',
+      customerPhone: '',
+      companyName: ''
+    });
+  };
+
 
   const handleUpdateItemQuantity = async (orderId: string, itemIndex: number, newQuantity: number, oldQuantity: number, productId: string) => {
     if (newQuantity < 1) {
@@ -239,15 +278,75 @@ const B2BOrdersTab: React.FC = () => {
             >
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start mb-4 gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 break-words">
-                    {order.customerName} {order.customerLastname || ''}
-                  </h3>
-                  {order.companyName && (
-                    <p className="text-sm text-gray-700 font-medium">{order.companyName}</p>
-                  )}
-                  <p className="text-sm text-blue-600 font-medium break-all">{order.customerEmail || 'Email yoxdur'}</p>
-                  {order.customerPhone && (
-                    <p className="text-sm text-gray-600">{order.customerPhone}</p>
+                  {editingCustomerOrderId === order.id ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customerEditData.customerName}
+                          onChange={(e) => setCustomerEditData({ ...customerEditData, customerName: e.target.value })}
+                          placeholder="Ad"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black"
+                        />
+                        <input
+                          type="text"
+                          value={customerEditData.customerLastname}
+                          onChange={(e) => setCustomerEditData({ ...customerEditData, customerLastname: e.target.value })}
+                          placeholder="Soyad"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={customerEditData.companyName}
+                        onChange={(e) => setCustomerEditData({ ...customerEditData, companyName: e.target.value })}
+                        placeholder="Şirkət adı"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black"
+                      />
+                      <input
+                        type="text"
+                        value={customerEditData.customerPhone}
+                        onChange={(e) => setCustomerEditData({ ...customerEditData, customerPhone: e.target.value })}
+                        placeholder="Telefon"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveCustomer(order.id)}
+                          className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                        >
+                          <Save className="h-3 w-3" /> Yadda saxla
+                        </button>
+                        <button
+                          onClick={handleCancelCustomerEdit}
+                          className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
+                        >
+                          <X className="h-3 w-3" /> Ləğv et
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900 break-words">
+                          {order.customerName} {order.customerLastname || ''}
+                        </h3>
+                        <button
+                          onClick={() => handleEditCustomer(order)}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Müştəri məlumatlarını redaktə et"
+                        >
+                          <User className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {order.companyName && !order.companyName.includes('@') && (
+                        <p className="text-sm text-gray-700 font-medium">{order.companyName}</p>
+                      )}
+                      <p className="text-sm text-blue-600 font-medium break-all">{order.customerEmail || 'Email yoxdur'}</p>
+                      {order.customerPhone && !order.customerPhone.includes(' ') && order.customerPhone.length < 20 && (
+                        <p className="text-sm text-gray-600">{order.customerPhone}</p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="text-left sm:text-right flex-shrink-0">
@@ -439,11 +538,11 @@ const B2BOrdersTab: React.FC = () => {
                 <h4 className="font-semibold mb-2">Müştəri Məlumatları</h4>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <p><span className="font-medium">Ad Soyad:</span> {selectedOrder.customerName} {selectedOrder.customerLastname || ''}</p>
-                  {selectedOrder.companyName && (
+                  {selectedOrder.companyName && !selectedOrder.companyName.includes('@') && (
                     <p><span className="font-medium">Şirkət:</span> {selectedOrder.companyName}</p>
                   )}
                   <p><span className="font-medium">Email:</span> {selectedOrder.customerEmail}</p>
-                  {selectedOrder.customerPhone && (
+                  {selectedOrder.customerPhone && !selectedOrder.customerPhone.includes(' ') && selectedOrder.customerPhone.length < 20 && (
                     <p><span className="font-medium">Telefon:</span> {selectedOrder.customerPhone}</p>
                   )}
                 </div>
