@@ -6,6 +6,7 @@ export interface Banner {
   imageUrl: string;
   title: { az: string; ru: string; en: string };
   link?: string;
+  buttonText?: { az: string; ru: string; en: string };
   position: 'home' | 'products';
   orderIndex: number;
   active: boolean;

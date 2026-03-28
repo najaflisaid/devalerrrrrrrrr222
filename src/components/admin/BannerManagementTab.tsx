@@ -9,10 +9,11 @@ const BannerManagementTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
-  const [formData, setFormData] = useState<Omit<Banner, 'id' | 'createdAt'>>({
+  const [formData, setFormData] = useState<any>({
     imageUrl: '',
     title: { az: '', ru: '', en: '' },
     link: '',
+    buttonText: { az: '', ru: '', en: '' },
     position: 'home',
     orderIndex: 0,
     active: true,
@@ -60,7 +61,6 @@ const BannerManagementTab: React.FC = () => {
     const timestamp = Date.now();
     const filename = `banner_${timestamp}_${file.name}`;
     const storageRef = ref(storage, `banners/${filename}`);
-
     await uploadBytes(storageRef, file);
     const downloadUrl = await getDownloadURL(storageRef);
     return downloadUrl;
@@ -88,13 +88,10 @@ const BannerManagementTab: React.FC = () => {
 
       const bannerData = { ...formData, imageUrl };
 
-      console.log('Saving banner:', bannerData);
       if (editingBanner) {
         await updateBanner(editingBanner.id!, bannerData);
-        console.log('Banner updated');
       } else {
-        const result = await createBanner(bannerData);
-        console.log('Banner created:', result);
+        await createBanner(bannerData);
       }
       await loadBanners();
       resetForm();
@@ -124,6 +121,7 @@ const BannerManagementTab: React.FC = () => {
       imageUrl: banner.imageUrl || '',
       title: banner.title,
       link: banner.link || '',
+      buttonText: (banner as any).buttonText || { az: '', ru: '', en: '' },
       position: banner.position,
       orderIndex: banner.orderIndex,
       active: banner.active,
@@ -141,6 +139,7 @@ const BannerManagementTab: React.FC = () => {
       imageUrl: '',
       title: { az: '', ru: '', en: '' },
       link: '',
+      buttonText: { az: '', ru: '', en: '' },
       position: 'home',
       orderIndex: 0,
       active: true,
@@ -202,7 +201,7 @@ const BannerManagementTab: React.FC = () => {
                 <p className="font-semibold text-gray-900">{banner.title.az}</p>
                 <p className="text-sm text-gray-600">{banner.title.ru}</p>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3 flex-wrap">
                 <span className={`px-2 py-1 rounded ${banner.position === 'home' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
                   {banner.position === 'home' ? 'Ana Səhifə' : 'Məhsullar'}
                 </span>
@@ -210,6 +209,7 @@ const BannerManagementTab: React.FC = () => {
                   {(banner as any).mediaType === 'video' ? 'Video' : 'Şəkil'}
                 </span>
                 <span>Sıra: {banner.orderIndex}</span>
+                <span>{(banner as any).duration || 4}s</span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -252,17 +252,13 @@ const BannerManagementTab: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Media Tipi
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Media Tipi</label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, mediaType: 'image' })}
                     className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                      formData.mediaType === 'image'
-                        ? 'border-black bg-gray-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                      formData.mediaType === 'image' ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
                     <ImageIcon className="h-5 w-5" />
@@ -272,9 +268,7 @@ const BannerManagementTab: React.FC = () => {
                     type="button"
                     onClick={() => setFormData({ ...formData, mediaType: 'video' })}
                     className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                      formData.mediaType === 'video'
-                        ? 'border-black bg-gray-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                      formData.mediaType === 'video' ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
                     <Video className="h-5 w-5" />
@@ -286,53 +280,41 @@ const BannerManagementTab: React.FC = () => {
               {formData.mediaType === 'image' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Şəkil Yüklə
-                    </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="banner-upload"
-                  />
-                  <label htmlFor="banner-upload" className="cursor-pointer">
-                    {previewUrl || formData.imageUrl ? (
-                      <div className="space-y-2">
-                        <img
-                          src={previewUrl || formData.imageUrl}
-                          alt="Preview"
-                          className="max-h-48 mx-auto rounded-lg"
-                        />
-                        <p className="text-sm text-blue-600 hover:text-blue-700">
-                          Başqa şəkil seçin
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto" />
-                        <p className="text-gray-600">Şəkil yükləmək üçün klikləyin</p>
-                        <p className="text-xs text-gray-500">PNG, JPG, GIF (max 5MB)</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">və ya</span>
-                </div>
-              </div>
-
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Şəkil Yüklə</label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="banner-upload"
+                      />
+                      <label htmlFor="banner-upload" className="cursor-pointer">
+                        {previewUrl || formData.imageUrl ? (
+                          <div className="space-y-2">
+                            <img src={previewUrl || formData.imageUrl} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                            <p className="text-sm text-blue-600 hover:text-blue-700">Başqa şəkil seçin</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Upload className="h-12 w-12 text-gray-400 mx-auto" />
+                            <p className="text-gray-600">Şəkil yükləmək üçün klikləyin</p>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF (max 5MB)</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">və ya</span>
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Şəkil URL
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Şəkil URL</label>
                     <input
                       type="url"
                       value={formData.imageUrl}
@@ -346,9 +328,7 @@ const BannerManagementTab: React.FC = () => {
 
               {formData.mediaType === 'video' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Video URL
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
                   <input
                     type="url"
                     value={formData.videoUrl}
@@ -357,74 +337,42 @@ const BannerManagementTab: React.FC = () => {
                     placeholder="https://www.youtube.com/embed/..."
                     required
                   />
-                  <p className="mt-2 text-xs text-gray-500">
-                    YouTube üçün: https://www.youtube.com/embed/VIDEO_ID
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Vimeo üçün: https://player.vimeo.com/video/VIDEO_ID
-                  </p>
-                  {formData.videoUrl && (
-                    <div className="mt-3 aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                      <iframe
-                        src={formData.videoUrl}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
+                  <p className="mt-2 text-xs text-gray-500">YouTube üçün: https://www.youtube.com/embed/VIDEO_ID</p>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlıq (AZ)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlıq (AZ)</label>
                   <input
                     type="text"
                     value={formData.title.az}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      title: { ...formData.title, az: e.target.value }
-                    })}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, az: e.target.value } })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlıq (RU)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlıq (RU)</label>
                   <input
                     type="text"
                     value={formData.title.ru}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      title: { ...formData.title, ru: e.target.value }
-                    })}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, ru: e.target.value } })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlıq (EN)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlıq (EN)</label>
                   <input
                     type="text"
                     value={formData.title.en}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      title: { ...formData.title, en: e.target.value }
-                    })}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, en: e.target.value } })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Link (İstəyə bağlı)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Link (İstəyə bağlı)</label>
                 <input
                   type="url"
                   value={formData.link}
@@ -434,11 +382,44 @@ const BannerManagementTab: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {formData.link && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Buton Mətni (AZ)</label>
+                    <input
+                      type="text"
+                      value={formData.buttonText?.az || ''}
+                      onChange={(e) => setFormData({ ...formData, buttonText: { ...formData.buttonText, az: e.target.value } })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      placeholder="Daha ətraflı"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Buton Mətni (RU)</label>
+                    <input
+                      type="text"
+                      value={formData.buttonText?.ru || ''}
+                      onChange={(e) => setFormData({ ...formData, buttonText: { ...formData.buttonText, ru: e.target.value } })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      placeholder="Подробнее"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Buton Mətni (EN)</label>
+                    <input
+                      type="text"
+                      value={formData.buttonText?.en || ''}
+                      onChange={(e) => setFormData({ ...formData, buttonText: { ...formData.buttonText, en: e.target.value } })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      placeholder="Learn more"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mövqe
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mövqe</label>
                   <select
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value as 'home' | 'products' })}
@@ -449,9 +430,7 @@ const BannerManagementTab: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sıra
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sıra</label>
                   <input
                     type="number"
                     value={formData.orderIndex}
@@ -460,22 +439,17 @@ const BannerManagementTab: React.FC = () => {
                     min="0"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Müddət (saniyə)
-                </label>
-                <input
-                  type="number"
-                  value={formData.duration || 4}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 4 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  min="1"
-                  max="60"
-                  placeholder="4"
-                />
-                <p className="mt-1 text-xs text-gray-500">Banner neçə saniyə göstərilsin (1-60)</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Müddət (saniyə)</label>
+                  <input
+                    type="number"
+                    value={formData.duration || 4}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 4 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    min="1"
+                    max="60"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center">
@@ -486,9 +460,7 @@ const BannerManagementTab: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                   className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
                 />
-                <label htmlFor="active" className="ml-2 text-sm text-gray-700">
-                  Aktiv
-                </label>
+                <label htmlFor="active" className="ml-2 text-sm text-gray-700">Aktiv</label>
               </div>
 
               <div className="flex gap-3 pt-4">
