@@ -85,8 +85,7 @@ const Hero: React.FC = () => {
 
   return (
     <section className="relative w-full mt-4">
-      <div className="max-w-[1400px] mx-auto px-4">
-        <div className="relative h-[280px] sm:h-[380px] md:h-[450px] lg:h-[520px] overflow-hidden">
+      <div className="relative h-[250px] sm:h-[320px] md:h-[380px] lg:h-[450px] overflow-hidden">
           {slides.map((slide, index) => (
             <div
               key={index}
@@ -161,7 +160,6 @@ const Hero: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
     </section>
   );
 };
