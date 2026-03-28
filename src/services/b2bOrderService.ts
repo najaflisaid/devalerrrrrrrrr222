@@ -206,6 +206,16 @@ export const updateB2BOrderCustomerInfo = async (orderId: string, customerInfo: 
   return { id: orderId, ...customerInfo };
 };
 
+export const updateB2BOrderPaymentInfo = async (orderId: string, paymentInfo: {
+  totalDebt?: number;
+  paymentDeadline?: string;
+}) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, paymentInfo);
+  return { id: orderId, ...paymentInfo };
+};
+
+
 export const updateOrderItemQuantity = async (orderId: string, itemIndex: number, newQuantity: number, oldQuantity: number, productId: string) => {
   const orderRef = doc(db, 'b2bOrders', orderId);
   const orderSnap = await getDoc(orderRef);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, DollarSign, Calendar } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -22,6 +22,8 @@ interface B2BOrder {
   adminNote?: string;
   signature?: string;
   signedAt?: any;
+  totalDebt?: number;
+  paymentDeadline?: string;
 }
 
 const getStatusConfig = (t: any) => ({
@@ -255,6 +257,39 @@ const B2BOrdersPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Ödəniş Məlumatları */}
+                    {(order.totalDebt || order.paymentDeadline) && (
+                      <div className="border-t mt-4 pt-4">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                            <DollarSign className="h-5 w-5" />
+                            {t('b2b.paymentInfo') || 'Ödəniş Məlumatları'}
+                          </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            {order.totalDebt !== undefined && order.totalDebt !== null && (
+                              <div>
+                                <p className="text-xs text-yellow-700">{t('b2b.totalDebt') || 'Ümumi Borc'}</p>
+                                <p className="text-2xl font-bold text-red-600">{order.totalDebt.toFixed(2)} ₼</p>
+                              </div>
+                            )}
+                            {order.paymentDeadline && (
+                              <div>
+                                <p className="text-xs text-yellow-700">{t('b2b.paymentDeadline') || 'Son Ödəniş Müddəti'}</p>
+                                <p className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(order.paymentDeadline).toLocaleDateString(i18n.language === 'az' ? 'az-AZ' : 'ru-RU', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {order.adminNote && (
                       <div className="border-t mt-4 pt-4">

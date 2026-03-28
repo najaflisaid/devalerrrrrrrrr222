@@ -314,7 +314,10 @@
     "email": "Email",
     "phone": "Телефон",
     "name": "Имя",
-    "unit": "шт"
+    "unit": "шт",
+    "paymentInfo": "Платежная информация",
+    "totalDebt": "Общий долг",
+    "paymentDeadline": "Срок оплаты"
   },
   "admin": {
     "title": "Панель администратора",

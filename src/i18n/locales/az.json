@@ -314,7 +314,10 @@
     "email": "Email",
     "phone": "Telefon",
     "name": "Ad Soyad",
-    "unit": "ədəd"
+    "unit": "ədəd",
+    "paymentInfo": "Ödəniş Məlumatları",
+    "totalDebt": "Ümumi Borc",
+    "paymentDeadline": "Son Ödəniş Müddəti"
   },
   "admin": {
     "title": "Admin Panel",

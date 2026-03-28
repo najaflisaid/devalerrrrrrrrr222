@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User } from 'lucide-react';
-import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo } from '../../services/b2bOrderService';
+import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, DollarSign, Calendar } from 'lucide-react';
+import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
 
 interface B2BOrder {
@@ -20,6 +20,8 @@ interface B2BOrder {
   adminNote?: string;
   signature?: string;
   signedAt?: any;
+  totalDebt?: number;
+  paymentDeadline?: string;
 }
 
 const B2BOrdersTab: React.FC = () => {
@@ -37,6 +39,12 @@ const B2BOrdersTab: React.FC = () => {
     customerPhone: '',
     companyName: ''
   });
+  const [editingPaymentOrderId, setEditingPaymentOrderId] = useState<string | null>(null);
+  const [paymentEditData, setPaymentEditData] = useState({
+    totalDebt: '',
+    paymentDeadline: ''
+  });
+  
   useEffect(() => {
     loadProducts();
     loadOrders();
@@ -153,6 +161,38 @@ const B2BOrdersTab: React.FC = () => {
       companyName: ''
     });
   };
+
+  const handleEditPayment = (order: B2BOrder) => {
+    setEditingPaymentOrderId(order.id);
+    setPaymentEditData({
+      totalDebt: order.totalDebt?.toString() || '',
+      paymentDeadline: order.paymentDeadline || ''
+    });
+  };
+
+  const handleSavePayment = async (orderId: string) => {
+    try {
+      await updateB2BOrderPaymentInfo(orderId, {
+        totalDebt: paymentEditData.totalDebt ? parseFloat(paymentEditData.totalDebt) : undefined,
+        paymentDeadline: paymentEditData.paymentDeadline || undefined
+      });
+      loadOrders();
+      setEditingPaymentOrderId(null);
+      alert('Ödəniş məlumatları yeniləndi');
+    } catch (error) {
+      console.error('Error saving payment info:', error);
+      alert('Ödəniş məlumatları yenilənə bilmədi');
+    }
+  };
+
+  const handleCancelPaymentEdit = () => {
+    setEditingPaymentOrderId(null);
+    setPaymentEditData({
+      totalDebt: '',
+      paymentDeadline: ''
+    });
+  };
+
 
 
   const handleUpdateItemQuantity = async (orderId: string, itemIndex: number, newQuantity: number, oldQuantity: number, productId: string) => {
@@ -414,6 +454,79 @@ const B2BOrdersTab: React.FC = () => {
                   <p className="text-xs sm:text-sm text-gray-600">Ödəniləcək məbləğ</p>
                   <p className="text-base sm:text-lg font-bold text-blue-600 break-words">{order.totalAmount.toFixed(2)}₼</p>
                 </div>
+              </div>
+
+              {/* Ödəniş Məlumatları Bölməsi */}
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm font-semibold text-yellow-900 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Ödəniş Məlumatları
+                  </p>
+                  {editingPaymentOrderId !== order.id && (
+                    <button
+                      onClick={() => handleEditPayment(order)}
+                      className="text-yellow-600 hover:text-yellow-800"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                
+                {editingPaymentOrderId === order.id ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Ümumi Borc (₼)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={paymentEditData.totalDebt}
+                        onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebt: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Son Ödəniş Müddəti</label>
+                      <input
+                        type="date"
+                        value={paymentEditData.paymentDeadline}
+                        onChange={(e) => setPaymentEditData({ ...paymentEditData, paymentDeadline: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSavePayment(order.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700"
+                      >
+                        <Save className="h-3 w-3" /> Yadda saxla
+                      </button>
+                      <button
+                        onClick={handleCancelPaymentEdit}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-gray-200 rounded-lg text-sm hover:bg-gray-300"
+                      >
+                        <X className="h-3 w-3" /> Ləğv et
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Ümumi Borc</p>
+                      <p className="text-lg font-bold text-red-600">
+                        {order.totalDebt ? `${order.totalDebt.toFixed(2)}₼` : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Son Ödəniş Müddəti</p>
+                      <p className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {order.paymentDeadline ? new Date(order.paymentDeadline).toLocaleDateString('az-AZ') : '-'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {editingNoteOrderId === order.id ? (
