@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -12,8 +12,60 @@ interface BlogPost {
   createdAt: Date;
 }
 
+const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => {
+  const { i18n, t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const content = post.content[i18n.language as 'az' | 'ru'] || '';
+  const shortContent = content.slice(0, 150);
+  const hasMore = content.length > 150;
+
+  return (
+    <article className="bg-white rounded-lg overflow-hidden shadow-sm">
+      <img
+        src={post.image}
+        alt={post.title[i18n.language as 'az' | 'ru']}
+        className="w-full h-64 object-cover"
+      />
+
+      <div className="p-6 space-y-4">
+        <div className="flex items-center text-sm text-gray-500">
+          <Calendar className="h-4 w-4 mr-2" />
+          {post.createdAt.toLocaleDateString('az-AZ')}
+        </div>
+
+        <h2 className="font-playfair text-xl font-semibold">
+          {post.title[i18n.language as 'az' | 'ru']}
+        </h2>
+
+        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+          {expanded ? content : shortContent}{!expanded && hasMore && '...'}
+        </p>
+
+        {hasMore && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                {t('blog.showLess') || 'Daha az'}
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                {t('blog.readMore') || 'Daha çox'}
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+};
+
 const BlogPage: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,32 +123,7 @@ const BlogPage: React.FC = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             {blogPosts.map(post => (
-              <article
-                key={post.id}
-                className="bg-white rounded-lg overflow-hidden shadow-sm"
-              >
-                <img
-                  src={post.image}
-                  alt={post.title[i18n.language as 'az' | 'ru']}
-                  className="w-full h-64 object-cover"
-                />
-
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {post.createdAt.toLocaleDateString('az-AZ')}
-                  </div>
-
-                  <h2 className="font-playfair text-xl font-semibold">
-                    {post.title[i18n.language as 'az' | 'ru']}
-                  </h2>
-
-                  {/* 🔴 TAM MƏTN */}
-                  <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                    {post.content[i18n.language as 'az' | 'ru']}
-                  </p>
-                </div>
-              </article>
+              <BlogCard key={post.id} post={post} />
             ))}
           </div>
         )}

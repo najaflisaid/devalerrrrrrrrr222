@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings } from 'lucide-react';
 import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
@@ -10,6 +10,8 @@ import ComingSoonTab from './ComingSoonTab';
 import AboutManagementTab from './AboutManagementTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
+import ContactMessagesTab from './ContactMessagesTab';
+import SiteSettingsTab from './SiteSettingsTab';
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -961,6 +963,8 @@ const AdminPanel: React.FC = () => {
     { id: 'categories', label: t('admin.categories'), icon: Tag },
     { id: 'blogs', label: t('admin.blog'), icon: FileText },
     { id: 'partners', label: t('admin.partners'), icon: Building2 },
+    { id: 'contactMessages', label: 'Müraciətlər', icon: Mail },
+    { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Info },
     { id: 'b2b', label: t('admin.b2bRequests'), icon: Users },
     { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
     { id: 'users', label: t('admin.users'), icon: Users },
@@ -2414,6 +2418,10 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'productBanners' && <ProductBannersTab />}
 
         {activeTab === 'about' && <AboutManagementTab />}
+
+        {activeTab === 'contactMessages' && <ContactMessagesTab />}
+
+        {activeTab === 'siteSettings' && <SiteSettingsTab />}
 
         {activeTab === 'b2bUsers' && (
           <PasswordProtectedSection sectionName="b2bUsers">

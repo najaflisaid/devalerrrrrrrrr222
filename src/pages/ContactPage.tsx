@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const ContactPage: React.FC = () => {
   const { t } = useTranslation();
@@ -18,32 +20,15 @@ const ContactPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          access_key: 'ba0691ce-e027-4ca2-b56d-a49332af710a',
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          subject: formData.subject,
-          message: formData.message,
-          from_name: 'De Valeur Contact Form',
-          to_email: 'your-email@gmail.com'
-        })
+      // Save to Firebase for admin panel
+      await addDoc(collection(db, 'contact_messages'), {
+        ...formData,
+        status: 'new',
+        createdAt: serverTimestamp()
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        alert(t('contact.messageSent'));
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-      } else {
-        alert('Error sending message. Please try again.');
-      }
+      alert(t('contact.messageSent'));
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
       console.error('Error:', error);
       alert('Error sending message. Please try again.');

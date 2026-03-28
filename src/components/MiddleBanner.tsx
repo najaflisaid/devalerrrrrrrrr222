@@ -95,20 +95,9 @@ const MiddleBanner: React.FC = () => {
 
               {slide.title && (
                 <div className="absolute bottom-6 left-8 z-10">
-                  <h2 className="text-white text-2xl md:text-3xl font-semibold mb-3 drop-shadow-lg">
+                  <h2 className="text-white text-2xl md:text-3xl font-semibold drop-shadow-lg">
                     {slide.title[i18n.language as 'az' | 'ru' | 'en'] || slide.title.en || slide.title.az}
                   </h2>
-                  {slide.link && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(slide.link, '_blank', 'noopener,noreferrer');
-                      }}
-                      className="bg-white text-black px-5 py-2 font-medium hover:bg-gray-100 transition-colors uppercase tracking-wide text-sm"
-                    >
-                      {slide.buttonText?.[i18n.language as 'az' | 'ru' | 'en'] || slide.buttonText?.az || 'SHOP NOW'}
-                    </button>
-                  )}
                 </div>
               )}
             </div>

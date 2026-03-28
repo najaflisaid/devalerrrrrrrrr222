@@ -3,16 +3,46 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+interface SiteSettings {
+  copyrightText: string;
+  paymentCards: { id: string; name: string }[];
+}
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  const [settings, setSettings] = useState<SiteSettings>({
+    copyrightText: '© 2025 De Valeur. Bütün hüquqlar qorunur',
+    paymentCards: [
+      { id: '1', name: 'TamKart' },
+      { id: '2', name: 'BirKart' },
+      { id: '3', name: 'LeoKart' },
+      { id: '4', name: 'Visa' },
+      { id: '5', name: 'Mastercard' },
+    ]
+  });
 
   useEffect(() => {
     loadCategoriesAndBrands();
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const docRef = doc(db, 'site_settings', 'footer');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setSettings(docSnap.data() as SiteSettings);
+      }
+    } catch (error) {
+      console.error('Error loading footer settings:', error);
+    }
+  };
 
   const loadCategoriesAndBrands = async () => {
     try {
@@ -153,40 +183,18 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-gray-200 mt-8 pt-6">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <img
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfXakvFB55U0jCrrGeSSbXuQ1BOmpF2MbkTQZ5fmytaRfHVLdvBQEAL_r-0s3l-jvXY6I&usqp=CAU"
-              alt="TamKart"
-              className="h-5 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              title="TamKart"
-            />
-            <img
-              src="https://qarant.az/storage/news/9gxISSjvnBtPO4TaKfOgR2xxVfKPO859ewJ5C4ua.png"
-              alt="BirKart"
-              className="h-5 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              title="BirKart"
-            />
-            <img
-              src="https://leobank.az/_next/static/media/card.4a2221fa.svg"
-              alt="LeoKart"
-              className="h-5 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              title="LeoKart"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Visa_2021.svg/1200px-Visa_2021.svg.png"
-              alt="Visa"
-              className="h-4 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              title="Visa"
-            />
-            <img
-              src="https://financialit.net/sites/default/files/1609314895logo-mastercard-mobile_1_4.png"
-              alt="Mastercard"
-              className="h-5 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              title="Mastercard"
-            />
+          <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
+            {settings.paymentCards.map((card) => (
+              <span 
+                key={card.id} 
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                {card.name}
+              </span>
+            ))}
           </div>
           <div className="text-center text-gray-600 text-sm">
-            <p>&copy; 2025 De Valeur. {t('footer.allRightsReserved')}</p>
+            <p>{settings.copyrightText}</p>
           </div>
         </div>
       </div>

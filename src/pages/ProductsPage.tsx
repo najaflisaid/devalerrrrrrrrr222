@@ -26,6 +26,7 @@ const ProductsPage: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
+  const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
 
   // Function to update URL with all current filters
   const updateURLParams = (updates: Record<string, string | null>) => {
@@ -532,25 +533,46 @@ const ProductsPage: React.FC = () => {
               <p className="text-gray-600">
                 {filteredProducts.length} {t('common.productsFound')}
               </p>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Sırala:</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => handleSortChange(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
-                >
-                  <option value="name-asc">Ad: A-Z</option>
-                  <option value="name-desc">Ad: Z-A</option>
-                  <option value="brand-asc">Brend: A-Z</option>
-                  <option value="brand-desc">Brend: Z-A</option>
-                  <option value="price-asc">Qiymət: Aşağıdan yuxarı</option>
-                  <option value="price-desc">Qiymət: Yuxarıdan aşağı</option>
-                </select>
+              <div className="flex items-center gap-4">
+                {/* Column selector - only visible on desktop */}
+                <div className="hidden lg:flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Sıra:</label>
+                  <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                    {[3, 4, 5, 6].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setColumnsPerRow(num)}
+                        className={`px-3 py-2 text-sm ${columnsPerRow === num ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Sırala:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSortChange(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+                  >
+                    <option value="name-asc">Ad: A-Z</option>
+                    <option value="name-desc">Ad: Z-A</option>
+                    <option value="brand-asc">Brend: A-Z</option>
+                    <option value="brand-desc">Brend: Z-A</option>
+                    <option value="price-asc">Qiymət: Aşağıdan yuxarı</option>
+                    <option value="price-desc">Qiymət: Yuxarıdan aşağı</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className={`grid grid-cols-2 gap-4 md:gap-6 ${
+                columnsPerRow === 3 ? 'lg:grid-cols-3' : 
+                columnsPerRow === 4 ? 'lg:grid-cols-4' : 
+                columnsPerRow === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-6'
+              }`}>
                 {filteredProducts.map((product) => (
                   <Link key={product.id} to={`/product/${product.id}`}>
                     <ProductCard product={product} showB2BPrice={isB2BUser} />

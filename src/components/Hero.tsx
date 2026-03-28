@@ -120,20 +120,9 @@ const Hero: React.FC = () => {
 
               {slide.title && (slide as any).mediaType !== 'video' && (
                 <div className="absolute bottom-8 left-12 z-10">
-                  <h2 className="text-white text-3xl md:text-4xl font-semibold mb-4 drop-shadow-lg">
+                  <h2 className="text-white text-3xl md:text-4xl font-semibold drop-shadow-lg">
                     {slide.title[i18n.language as 'az' | 'ru' | 'en'] || slide.title.en || slide.title.az}
                   </h2>
-                  {slide.link && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(slide.link, '_blank', 'noopener,noreferrer');
-                      }}
-                      className="bg-white text-black px-6 py-3 font-medium hover:bg-gray-100 transition-colors uppercase tracking-wide text-sm"
-                    >
-                      {slide.buttonText?.[i18n.language as 'az' | 'ru' | 'en'] || slide.buttonText?.az || 'SHOP NOW'}
-                    </button>
-                  )}
                 </div>
               )}
             </div>
