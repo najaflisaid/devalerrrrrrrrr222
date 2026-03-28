@@ -167,7 +167,7 @@ const ProductDetailsPage: React.FC = () => {
               </h1>
               {isOutOfStock && (
                 <p className="text-lg font-semibold text-red-600 mb-2">
-                  {t('product.outOfStock')}
+                  Bitdi
                 </p>
               )}
               <div className="space-y-1">
@@ -206,7 +206,7 @@ const ProductDetailsPage: React.FC = () => {
                     product.stock <= 5 ? 'text-orange-700' :
                     'text-green-700'
                   }`}>
-                    {isOutOfStock ? t('product.outOfStock') : `${t('product.stock')}: ${product.stock} ${t('product.pieces')}`}
+                    {isOutOfStock ? 'Bitdi' : `Mövcud: ${product.stock} ədəd`}
                   </span>
                 </div>
               </div>
@@ -271,7 +271,7 @@ const ProductDetailsPage: React.FC = () => {
                   onClick={() => {
                     if (product) {
                       if (product.stock === 0) {
-                        addNotification(t('product.outOfStockMessage') || 'Bu məhsul stokda yoxdur', 'error');
+                        addNotification('Bu məhsul bitib', 'error');
                         return;
                       }
                       addToCart(product, quantity);

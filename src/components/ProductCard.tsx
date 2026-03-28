@@ -62,7 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
     e.preventDefault();
     e.stopPropagation();
     if (product.stock === 0) {
-      addNotification(t('product.outOfStockMessage') || 'Bu məhsul stokda yoxdur', 'error');
+      addNotification('Bu məhsul bitib', 'error');
       return;
     }
     addToCart(product, 1);
@@ -104,7 +104,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           </h3>
           {isOutOfStock && (
             <p className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-red-600`}>
-              {t('product.outOfStock')}
+              Bitdi
             </p>
           )}
           <div className="flex items-center justify-center space-x-2">
@@ -127,7 +127,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
             <p className={`text-xs font-medium mt-1 ${
               product.stock <= 5 ? 'text-orange-600' : 'text-green-600'
             }`}>
-              {`${t('product.stock')}: ${product.stock}`}
+              {`Mövcud: ${product.stock}`}
             </p>
           )}
 

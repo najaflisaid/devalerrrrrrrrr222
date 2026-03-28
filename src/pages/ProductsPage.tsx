@@ -412,7 +412,7 @@ const ProductsPage: React.FC = () => {
                         onChange={() => setStockFilter('inStock')}
                         className="mr-2"
                       />
-                      <span className="text-sm text-green-600 font-medium">Mövcud məhsullar</span>
+                      <span className="text-sm">Mövcud məhsullar</span>
                     </label>
                   </div>
                 </div>
