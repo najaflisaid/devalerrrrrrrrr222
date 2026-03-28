@@ -60,14 +60,23 @@ const ProductsPage: React.FC = () => {
     });
   };
 
-  // Handler for brand change - clears search and updates URL
+  // Handler for brand change - clears search and updates URL, resets category
   const handleBrandChange = (brand: string) => {
     clearSearchOnFilterChange();
     setSelectedBrand(brand);
-    updateURLParams({ 
-      brand: brand === 'all' ? null : brand,
-      search: null 
-    });
+    if (brand !== 'all') {
+      setSelectedCategory('all');
+      updateURLParams({ 
+        brand: brand === 'all' ? null : brand,
+        category: null,
+        search: null 
+      });
+    } else {
+      updateURLParams({ 
+        brand: null,
+        search: null 
+      });
+    }
   };
 
   // Handler for gender change - clears search and updates URL

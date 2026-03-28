@@ -8,7 +8,7 @@ import { db } from '../lib/firebase';
 
 interface SiteSettings {
   copyrightText: string;
-  paymentCards: { id: string; name: string }[];
+  paymentCards: { id: string; name: string; iconUrl?: string }[];
 }
 
 const Footer: React.FC = () => {
@@ -185,12 +185,22 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-200 mt-8 pt-6">
           <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
             {settings.paymentCards.map((card) => (
-              <span 
-                key={card.id} 
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {card.name}
-              </span>
+              card.iconUrl ? (
+                <img 
+                  key={card.id} 
+                  src={card.iconUrl} 
+                  alt={card.name} 
+                  className="h-4 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                  title={card.name}
+                />
+              ) : (
+                <span 
+                  key={card.id} 
+                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {card.name}
+                </span>
+              )
             ))}
           </div>
           <div className="text-center text-gray-600 text-sm">

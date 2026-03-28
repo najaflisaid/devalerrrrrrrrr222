@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -12,60 +13,8 @@ interface BlogPost {
   createdAt: Date;
 }
 
-const BlogCard: React.FC<{ post: BlogPost }> = ({ post }) => {
-  const { i18n, t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
-  const content = post.content[i18n.language as 'az' | 'ru'] || '';
-  const shortContent = content.slice(0, 150);
-  const hasMore = content.length > 150;
-
-  return (
-    <article className="bg-white rounded-lg overflow-hidden shadow-sm">
-      <img
-        src={post.image}
-        alt={post.title[i18n.language as 'az' | 'ru']}
-        className="w-full h-64 object-cover"
-      />
-
-      <div className="p-6 space-y-4">
-        <div className="flex items-center text-sm text-gray-500">
-          <Calendar className="h-4 w-4 mr-2" />
-          {post.createdAt.toLocaleDateString('az-AZ')}
-        </div>
-
-        <h2 className="font-playfair text-xl font-semibold">
-          {post.title[i18n.language as 'az' | 'ru']}
-        </h2>
-
-        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-          {expanded ? content : shortContent}{!expanded && hasMore && '...'}
-        </p>
-
-        {hasMore && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors"
-          >
-            {expanded ? (
-              <>
-                <ChevronUp className="h-4 w-4" />
-                {t('blog.showLess') || 'Daha az'}
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4" />
-                {t('blog.readMore') || 'Daha çox'}
-              </>
-            )}
-          </button>
-        )}
-      </div>
-    </article>
-  );
-};
-
 const BlogPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +42,8 @@ const BlogPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const lang = i18n.language as 'az' | 'ru';
 
   if (loading) {
     return (
@@ -123,7 +74,39 @@ const BlogPage: React.FC = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             {blogPosts.map(post => (
-              <BlogCard key={post.id} post={post} />
+              <article
+                key={post.id}
+                className="bg-white rounded-lg overflow-hidden shadow-sm group"
+              >
+                <Link to={`/blog/${post.id}`} className="block">
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={post.image}
+                      alt={post.title[lang]}
+                      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                </Link>
+
+                <div className="p-6">
+                  <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {post.createdAt.toLocaleDateString('az-AZ')}
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4">
+                    <h2 className="font-playfair text-xl font-semibold flex-1 line-clamp-2">
+                      {post.title[lang]}
+                    </h2>
+                    <Link
+                      to={`/blog/${post.id}`}
+                      className="flex-shrink-0 text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors whitespace-nowrap underline"
+                    >
+                      {t('blog.readMore') || 'Daha ətraflı'}
+                    </Link>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         )}

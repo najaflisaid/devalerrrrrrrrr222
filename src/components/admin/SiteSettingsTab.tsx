@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Save, Plus, Trash2, CreditCard } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, CreditCard, Image as ImageIcon } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 interface PaymentCard {
   id: string;
   name: string;
-  icon?: string;
+  iconUrl?: string;
 }
 
 interface SiteSettings {
@@ -17,11 +17,11 @@ interface SiteSettings {
 const defaultSettings: SiteSettings = {
   copyrightText: '© 2025 De Valeur. Bütün hüquqlar qorunur',
   paymentCards: [
-    { id: '1', name: 'TamKart' },
-    { id: '2', name: 'BirKart' },
-    { id: '3', name: 'LeoKart' },
-    { id: '4', name: 'Visa' },
-    { id: '5', name: 'Mastercard' },
+    { id: '1', name: 'TamKart', iconUrl: '' },
+    { id: '2', name: 'BirKart', iconUrl: '' },
+    { id: '3', name: 'LeoKart', iconUrl: '' },
+    { id: '4', name: 'Visa', iconUrl: '' },
+    { id: '5', name: 'Mastercard', iconUrl: '' },
   ]
 };
 
@@ -30,6 +30,7 @@ const SiteSettingsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newCardName, setNewCardName] = useState('');
+  const [newCardIcon, setNewCardIcon] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -68,16 +69,26 @@ const SiteSettingsTab: React.FC = () => {
       ...settings,
       paymentCards: [
         ...settings.paymentCards,
-        { id: Date.now().toString(), name: newCardName.trim() }
+        { id: Date.now().toString(), name: newCardName.trim(), iconUrl: newCardIcon.trim() }
       ]
     });
     setNewCardName('');
+    setNewCardIcon('');
   };
 
   const removeCard = (id: string) => {
     setSettings({
       ...settings,
       paymentCards: settings.paymentCards.filter(c => c.id !== id)
+    });
+  };
+
+  const updateCardIcon = (id: string, iconUrl: string) => {
+    setSettings({
+      ...settings,
+      paymentCards: settings.paymentCards.map(c => 
+        c.id === id ? { ...c, iconUrl } : c
+      )
     });
   };
 
@@ -124,17 +135,30 @@ const SiteSettingsTab: React.FC = () => {
             <CreditCard className="h-4 w-4 inline mr-2" />
             Ödəniş Kartları (Footer-da görünən)
           </label>
+          <p className="text-xs text-gray-500 mb-4">İkon URL əlavə etsəniz, yalnız ikon görünəcək. Boş buraxsanız, yalnız ad görünəcək.</p>
           
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="space-y-3 mb-4">
             {settings.paymentCards.map((card) => (
               <div
                 key={card.id}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
               >
-                <span className="text-sm">{card.name}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{card.name}</p>
+                  <input
+                    type="url"
+                    value={card.iconUrl || ''}
+                    onChange={(e) => updateCardIcon(card.id, e.target.value)}
+                    placeholder="İkon URL (məs: https://...png)"
+                    className="w-full mt-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-black focus:border-transparent"
+                  />
+                </div>
+                {card.iconUrl && (
+                  <img src={card.iconUrl} alt={card.name} className="h-6 w-auto object-contain" />
+                )}
                 <button
                   onClick={() => removeCard(card.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 p-1"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -147,9 +171,15 @@ const SiteSettingsTab: React.FC = () => {
               type="text"
               value={newCardName}
               onChange={(e) => setNewCardName(e.target.value)}
-              placeholder="Yeni kart adı"
+              placeholder="Kart adı"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-              onKeyPress={(e) => e.key === 'Enter' && addCard()}
+            />
+            <input
+              type="url"
+              value={newCardIcon}
+              onChange={(e) => setNewCardIcon(e.target.value)}
+              placeholder="İkon URL (istəyə bağlı)"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
             />
             <button
               onClick={addCard}
@@ -165,14 +195,24 @@ const SiteSettingsTab: React.FC = () => {
         <div className="border-t border-gray-200 pt-6">
           <p className="text-sm font-medium text-gray-700 mb-3">Önizləmə:</p>
           <div className="bg-gray-900 text-white p-4 rounded-lg">
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
               {settings.paymentCards.map((card) => (
-                <span key={card.id} className="text-xs text-gray-300">
-                  {card.name}
-                </span>
+                card.iconUrl ? (
+                  <img 
+                    key={card.id} 
+                    src={card.iconUrl} 
+                    alt={card.name} 
+                    className="h-4 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                    title={card.name}
+                  />
+                ) : (
+                  <span key={card.id} className="text-xs text-gray-300">
+                    {card.name}
+                  </span>
+                )
               ))}
             </div>
-            <p className="text-xs text-gray-400">{settings.copyrightText}</p>
+            <p className="text-xs text-gray-400 text-center">{settings.copyrightText}</p>
           </div>
         </div>
       </div>
