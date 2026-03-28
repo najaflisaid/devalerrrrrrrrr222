@@ -90,15 +90,31 @@ const ProductsPage: React.FC = () => {
     });
   };
 
-  // Handler for discount filter change - clears search and updates URL
+  // Handler for discount filter change - clears all filters and updates URL
   const handleDiscountFilterChange = (checked: boolean) => {
     clearSearchOnFilterChange();
     const value = checked ? 'discounted' : 'all';
     setDiscountFilter(value);
-    updateURLParams({ 
-      discount: checked ? 'true' : null,
-      search: null 
-    });
+    
+    // When discount filter is enabled, reset all other filters to "All"
+    if (checked) {
+      setSelectedCategory('all');
+      setSelectedBrand('all');
+      setSelectedGender('all');
+      setCurrentMinPrice(minPrice);
+      setCurrentMaxPrice(maxPrice);
+      setComingSoonFilter('all');
+      setStockFilter('all');
+      // Clear all params and set only discount
+      const newParams = new URLSearchParams();
+      newParams.set('discount', 'true');
+      setSearchParams(newParams, { replace: true });
+    } else {
+      updateURLParams({ 
+        discount: null,
+        search: null 
+      });
+    }
   };
 
   // Handler for coming soon filter change - clears search and updates URL
@@ -135,9 +151,8 @@ const ProductsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [currentMinPrice, currentMaxPrice, priceInitialized]);
 
-  // Read filters from URL on mount
+  // Read filters from URL on mount and when URL changes
   useEffect(() => {
-    loadProducts();
     const userRole = localStorage.getItem('userRole');
     setIsB2BUser(userRole === 'b2b' || userRole === 'admin');
 
@@ -168,6 +183,11 @@ const ProductsPage: React.FC = () => {
     // Read sort parameter
     const sort = searchParams.get('sort');
     setSortBy(sort || 'name-asc');
+  }, [searchParams]);
+
+  // Load products only on mount
+  useEffect(() => {
+    loadProducts();
   }, []);
 
   // Read price params after products are loaded
