@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div>
-            <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-12 mb-4" />
+            <img src="https://customer-assets.emergentagent.com/job_f1f83b6e-f511-4a6e-994f-1249c8d1bae5/artifacts/dcu3bp0c_tmu65g6__1_-removebg-preview.png" alt="De Valeur" className="h-12 mb-4" />
             <p className="text-gray-700 text-sm font-medium mb-3">
               {t('footer.followUs')}
             </p>
