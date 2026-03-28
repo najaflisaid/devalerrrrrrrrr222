@@ -9,6 +9,7 @@ export interface Banner {
   position: 'home' | 'products';
   orderIndex: number;
   active: boolean;
+  duration?: number;
   createdAt?: any;
 }
 

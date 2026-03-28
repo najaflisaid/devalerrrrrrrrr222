@@ -17,7 +17,8 @@ const BannerManagementTab: React.FC = () => {
     orderIndex: 0,
     active: true,
     mediaType: 'image',
-    videoUrl: ''
+    videoUrl: '',
+    duration: 4
   });
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -127,7 +128,8 @@ const BannerManagementTab: React.FC = () => {
       orderIndex: banner.orderIndex,
       active: banner.active,
       mediaType: (banner as any).mediaType || 'image',
-      videoUrl: (banner as any).videoUrl || ''
+      videoUrl: (banner as any).videoUrl || '',
+      duration: (banner as any).duration || 4
     });
     setShowForm(true);
   };
@@ -143,7 +145,8 @@ const BannerManagementTab: React.FC = () => {
       orderIndex: 0,
       active: true,
       mediaType: 'image',
-      videoUrl: ''
+      videoUrl: '',
+      duration: 4
     });
     setSelectedFile(null);
     setPreviewUrl('');
@@ -457,6 +460,22 @@ const BannerManagementTab: React.FC = () => {
                     min="0"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Müddət (saniyə)
+                </label>
+                <input
+                  type="number"
+                  value={formData.duration || 4}
+                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 4 })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  min="1"
+                  max="60"
+                  placeholder="4"
+                />
+                <p className="mt-1 text-xs text-gray-500">Banner neçə saniyə göstərilsin (1-60)</p>
               </div>
 
               <div className="flex items-center">
