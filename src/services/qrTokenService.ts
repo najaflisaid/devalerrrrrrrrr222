@@ -26,56 +26,84 @@ const TOKEN_VALIDITY_HOURS = 1; // 1 saat
 
 // Yeni QR token yarat
 export const generateQRToken = async (employeeId: string): Promise<QRToken> => {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + TOKEN_VALIDITY_HOURS * 60 * 60 * 1000);
-  
-  const token = uuidv4();
-  
-  const qrToken = {
-    token,
-    employeeId,
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    isActive: true
-  };
-  
-  const docRef = await addDoc(collection(db, COLLECTION), qrToken);
-  
-  return {
-    id: docRef.id,
-    ...qrToken
-  };
+  try {
+    console.log('🔵 QR Token yaradılır...', employeeId);
+    
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + TOKEN_VALIDITY_HOURS * 60 * 60 * 1000);
+    
+    const token = uuidv4();
+    console.log('🔵 Token generated:', token);
+    
+    const qrToken = {
+      token,
+      employeeId,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      isActive: true
+    };
+    
+    console.log('🔵 Firestore-a yazılır:', qrToken);
+    const docRef = await addDoc(collection(db, COLLECTION), qrToken);
+    console.log('✅ Token yaradıldı! Doc ID:', docRef.id);
+    
+    return {
+      id: docRef.id,
+      ...qrToken
+    };
+  } catch (error) {
+    console.error('❌ Token yaratma xətası:', error);
+    throw error;
+  }
 };
 
 // Token-i yoxla
 export const validateQRToken = async (token: string): Promise<{ valid: boolean; employeeId?: string; message: string }> => {
   try {
-    const q = query(
-      collection(db, COLLECTION),
-      where('token', '==', token),
-      where('isActive', '==', true),
-      limit(1)
-    );
+    console.log('🔍 Token yoxlanılır:', token);
     
-    const querySnapshot = await getDocs(q);
+    // Sadə query - index problemi olmasın
+    const allTokensQuery = query(collection(db, COLLECTION));
+    const querySnapshot = await getDocs(allTokensQuery);
     
-    if (querySnapshot.empty) {
+    console.log('📊 Toplam token sayı:', querySnapshot.size);
+    
+    // Manual filter
+    let tokenDoc = null;
+    let tokenData = null;
+    
+    for (const doc of querySnapshot.docs) {
+      const data = doc.data();
+      console.log('Yoxlanılır:', data.token === token, data.isActive);
+      
+      if (data.token === token && data.isActive) {
+        tokenDoc = doc;
+        tokenData = data;
+        break;
+      }
+    }
+    
+    if (!tokenDoc || !tokenData) {
+      console.log('❌ Token tapılmadı');
       return { valid: false, message: 'Token tapılmadı və ya deaktiv edilib' };
     }
     
-    const tokenDoc = querySnapshot.docs[0];
-    const tokenData = tokenDoc.data() as Omit<QRToken, 'id'>;
+    console.log('✅ Token tapıldı:', tokenData);
     
     // Vaxt yoxlaması
     const now = new Date();
     const expiresAt = new Date(tokenData.expiresAt);
     
+    console.log('⏰ İndi:', now.toISOString());
+    console.log('⏰ Bitmə:', expiresAt.toISOString());
+    
     if (now > expiresAt) {
-      // Token köhnəlib - deaktiv et
+      console.log('❌ Token vaxtı keçib');
       await updateDoc(tokenDoc.ref, { isActive: false });
       return { valid: false, message: 'Token vaxtı keçib (1 saatdan çox)' };
     }
     
+    console.log('✅ Token keçərlidir!');
     return { 
       valid: true, 
       employeeId: tokenData.employeeId,
@@ -83,8 +111,8 @@ export const validateQRToken = async (token: string): Promise<{ valid: boolean; 
     };
     
   } catch (error) {
-    console.error('Token yoxlama xətası:', error);
-    return { valid: false, message: 'Token yoxlanarkən xəta baş verdi' };
+    console.error('❌ Token yoxlama xətası:', error);
+    return { valid: false, message: 'Token yoxlanarkən xəta baş verdi: ' + (error as Error).message };
   }
 };
 
