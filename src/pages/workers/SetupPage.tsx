@@ -76,10 +76,13 @@ const SetupPage: React.FC = () => {
         
         try {
           // Firebase Auth-da hesab yarat
-          await createUserWithEmailAndPassword(auth, worker.email, worker.password);
+          addLog('info', `  → Auth hesabı yaradılır...`);
+          const userCredential = await createUserWithEmailAndPassword(auth, worker.email, worker.password);
+          addLog('success', `  ✓ Auth UID: ${userCredential.user.uid}`);
           
           // Firestore-da işçi məlumatı yarat
-          await addDoc(collection(db, 'employees'), {
+          addLog('info', `  → Firestore-da məlumat yazılır...`);
+          const employeeData = {
             ad: worker.ad,
             soyad: worker.soyad,
             email: worker.email,
@@ -90,14 +93,38 @@ const SetupPage: React.FC = () => {
             aktiv: true,
             mezuniyyetQaligi: worker.mezuniyyetQaligi,
             createdAt: new Date().toISOString()
-          });
+          };
           
-          addLog('success', `✅ ${worker.ad} ${worker.soyad} yaradıldı`);
+          const docRef = await addDoc(collection(db, 'employees'), employeeData);
+          addLog('success', `  ✓ Firestore Doc ID: ${docRef.id}`);
+          addLog('success', `✅ ${worker.ad} ${worker.soyad} tam yaradıldı`);
         } catch (error: any) {
           if (error.code === 'auth/email-already-in-use') {
-            addLog('info', `ℹ️ ${worker.email} artıq mövcuddur`);
+            addLog('info', `ℹ️ ${worker.email} Auth-da artıq var`);
+            
+            // Yenə də Firestore-a yazmağa cəhd et
+            try {
+              addLog('info', `  → Firestore-a yenidən yazılır...`);
+              const employeeData = {
+                ad: worker.ad,
+                soyad: worker.soyad,
+                email: worker.email,
+                telefon: worker.telefon,
+                vezife: worker.vezife,
+                magaza: worker.magaza,
+                iseGirisTarixi: worker.iseGirisTarixi,
+                aktiv: true,
+                mezuniyyetQaligi: worker.mezuniyyetQaligi,
+                createdAt: new Date().toISOString()
+              };
+              
+              const docRef = await addDoc(collection(db, 'employees'), employeeData);
+              addLog('success', `  ✓ Firestore-a yazıldı: ${docRef.id}`);
+            } catch (fsError: any) {
+              addLog('error', `  ✗ Firestore xətası: ${fsError.message}`);
+            }
           } else {
-            addLog('error', `❌ Xəta: ${error.message}`);
+            addLog('error', `❌ Xəta: ${error.code} - ${error.message}`);
           }
         }
         
