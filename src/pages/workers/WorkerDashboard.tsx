@@ -125,20 +125,8 @@ const WorkerDashboard: React.FC = () => {
     
     try {
       setActionLoading(true);
-      
-      // QR token generate et
-      const token = await generateQRToken(employee.id);
-      const qrUrl = `${window.location.origin}/qr?token=${token.token}&employeeId=${employee.id}`;
-      
-      setQrToken(qrUrl);
-      setQrExpiry(new Date(token.expiresAt));
-      setShowQRCode(true);
-      
-      // QR oxutma modal-ı da aç
-      setTimeout(() => {
-        setShowQRScanner(true);
-      }, 500);
-      
+      await checkIn(employee.id);
+      await loadData();
     } catch (error: any) {
       alert(error.message);
     } finally {
@@ -151,52 +139,12 @@ const WorkerDashboard: React.FC = () => {
     
     try {
       setActionLoading(true);
-      
-      // QR token generate et
-      const token = await generateQRToken(employee.id);
-      const qrUrl = `${window.location.origin}/qr?token=${token.token}&employeeId=${employee.id}`;
-      
-      setQrToken(qrUrl);
-      setQrExpiry(new Date(token.expiresAt));
-      setShowQRCode(true);
-      
-      // QR oxutma modal-ı da aç
-      setTimeout(() => {
-        setShowQRScanner(true);
-      }, 500);
-      
+      await checkOut(employee.id);
+      await loadData();
     } catch (error: any) {
       alert(error.message);
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  const handleQRScan = async (data: string) => {
-    console.log('QR Scan edildi:', data);
-    setShowQRScanner(false);
-    
-    // URL-dən keçirsə QR page işləyəcək
-    if (data.includes('/qr?')) {
-      window.location.href = data;
-    }
-  };
-
-  const handleSignatureSave = async (signature: string) => {
-    if (!employee) return;
-    
-    try {
-      // Signature ilə check-out
-      await checkOut(employee.id);
-      
-      // Signature-ı Firestore-da attendance-ə əlavə et
-      // (attendanceService-də updateAttendance funksiyası lazımdır)
-      
-      setShowSignature(false);
-      await loadData();
-      alert('İmza təsdiqləndi və çıxış edildi!');
-    } catch (error: any) {
-      alert('Xəta: ' + error.message);
     }
   };
 
@@ -289,37 +237,25 @@ const WorkerDashboard: React.FC = () => {
               )}
             </div>
             
-            <div className="flex flex-col gap-4">
+            <div>
               {!todayAttendance ? (
-                <>
-                  <button
-                    onClick={handleCheckIn}
-                    disabled={actionLoading}
-                    className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    data-testid="check-in-button"
-                  >
-                    <QrCode className="w-6 h-6" />
-                    {actionLoading ? 'Gözləyin...' : 'QR ilə Giriş Et'}
-                  </button>
-                  <p className="text-indigo-100 text-sm text-center">
-                    QR kod oxutma açılacaq
-                  </p>
-                </>
+                <button
+                  onClick={handleCheckIn}
+                  disabled={actionLoading}
+                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  data-testid="check-in-button"
+                >
+                  {actionLoading ? 'Gözləyin...' : 'Giriş Et'}
+                </button>
               ) : todayAttendance.status === 'isde' ? (
-                <>
-                  <button
-                    onClick={handleCheckOut}
-                    disabled={actionLoading}
-                    className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    data-testid="check-out-button"
-                  >
-                    <Scan className="w-6 h-6" />
-                    {actionLoading ? 'Gözləyin...' : 'QR ilə Çıxış Et'}
-                  </button>
-                  <p className="text-indigo-100 text-sm text-center">
-                    İmza tələb olunacaq
-                  </p>
-                </>
+                <button
+                  onClick={handleCheckOut}
+                  disabled={actionLoading}
+                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  data-testid="check-out-button"
+                >
+                  {actionLoading ? 'Gözləyin...' : 'Çıxış Et'}
+                </button>
               ) : (
                 <div className="bg-white/20 px-8 py-4 rounded-xl text-center">
                   <p className="text-sm">Bu gün işiniz bitib</p>
@@ -505,61 +441,6 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* QR Code Display Modal */}
-      {showQRCode && qrToken && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8">
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                QR Kodunuz
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Bu QR kodu oxutun və ya başqa cihazda /qr linkini açın
-              </p>
-              
-              <div className="bg-white p-6 rounded-xl border-2 border-gray-200 inline-block">
-                <QRCodeSVG 
-                  value={qrToken} 
-                  size={256}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-              
-              {qrExpiry && (
-                <p className="text-sm text-gray-500 mt-4">
-                  Keçərlilik: {qrExpiry.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })} 
-                  ({Math.floor((qrExpiry.getTime() - new Date().getTime()) / 60000)} dəqiqə qalıb)
-                </p>
-              )}
-              
-              <button
-                onClick={() => setShowQRCode(false)}
-                className="mt-6 w-full px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Bağla
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* QR Scanner Modal */}
-      <QRScannerModal
-        isOpen={showQRScanner}
-        onClose={() => setShowQRScanner(false)}
-        onScan={handleQRScan}
-        title={todayAttendance ? "Çıxış üçün QR oxut" : "Giriş üçün QR oxut"}
-      />
-
-      {/* Signature Modal */}
-      <SignatureModal
-        isOpen={showSignature}
-        onClose={() => setShowSignature(false)}
-        onSave={handleSignatureSave}
-        employeeName={`${employee.ad} ${employee.soyad}`}
-      />
     </div>
   );
 };

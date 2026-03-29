@@ -30,6 +30,7 @@ import AdminWorkerLogin from './pages/workers/AdminLogin';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import AdminDashboard from './pages/workers/AdminDashboard';
 import QRPage from './pages/workers/QRPage';
+import QRScanPage from './pages/workers/QRScanPage';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
@@ -56,6 +57,7 @@ const AppContent: React.FC = () => {
         <Routes>
           {/* Worker Management Routes */}
           <Route path="/qr" element={<QRPage />} />
+          <Route path="/workers/qr-scan" element={<QRScanPage />} />
           <Route path="/workers" element={<WorkerLogin />} />
           <Route path="/workers/admin-login" element={<AdminWorkerLogin />} />
           <Route path="/workers/dashboard" element={<WorkerDashboard />} />

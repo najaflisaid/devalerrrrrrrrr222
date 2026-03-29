@@ -1,233 +1,147 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { validateQRToken } from '../../services/qrTokenService';
-import { getEmployee } from '../../services/employeeService';
-import { checkIn, checkOut, getTodayAttendance } from '../../services/attendanceService';
-import { Loader2, CheckCircle2, XCircle, Clock, ArrowLeft } from 'lucide-react';
-import { Employee, Attendance } from '../../types/worker';
+import { RefreshCw, Clock, Wifi } from 'lucide-react';
 
-const QRPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const token = searchParams.get('token');
-  const employeeId = searchParams.get('employeeId');
-  
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [status, setStatus] = useState<'validating' | 'valid' | 'invalid' | 'success' | 'error'>('validating');
-  const [message, setMessage] = useState('');
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
-  const [action, setAction] = useState<'check-in' | 'check-out' | null>(null);
+const QRDisplayPage: React.FC = () => {
+  const [sessionCode, setSessionCode] = useState('');
+  const [expiryTime, setExpiryTime] = useState<Date | null>(null);
+  const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
-    if (token && employeeId) {
-      validateAndProcess();
-    } else {
-      setStatus('invalid');
-      setMessage('Token və ya işçi ID-si tapılmadı');
-      setLoading(false);
-    }
-  }, [token, employeeId]);
-
-  const validateAndProcess = async () => {
-    try {
-      setLoading(true);
-      setStatus('validating');
-      
-      // Token yoxla
-      const validation = await validateQRToken(token!);
-      
-      if (!validation.valid) {
-        setStatus('invalid');
-        setMessage(validation.message);
-        setLoading(false);
-        return;
-      }
-      
-      // İşçi məlumatını al
-      const emp = await getEmployee(employeeId!);
-      if (!emp) {
-        setStatus('invalid');
-        setMessage('İşçi tapılmadı');
-        setLoading(false);
-        return;
-      }
-      
-      setEmployee(emp);
-      
-      // Bugünkü davamiyyət yoxla
-      const todayAtt = await getTodayAttendance(employeeId!);
-      setAttendance(todayAtt);
-      
-      // Status təyin et
-      if (!todayAtt) {
-        setAction('check-in');
-        setStatus('valid');
-        setMessage(`${emp.ad} ${emp.soyad}, işə girmək üçün hazırsınız`);
-      } else if (todayAtt.status === 'isde') {
-        setAction('check-out');
-        setStatus('valid');
-        setMessage(`${emp.ad} ${emp.soyad}, işdən çıxmaq üçün hazırsınız`);
-      } else {
-        setStatus('invalid');
-        setMessage('Bu gün artıq çıxış etmisiniz');
-      }
-      
-      setLoading(false);
-      
-      // 3 saniyə sonra avtomatik əməliyyat et
-      setTimeout(() => {
-        processAttendance();
-      }, 3000);
-      
-    } catch (error: any) {
-      console.error('QR yoxlama xətası:', error);
-      setStatus('error');
-      setMessage('Xəta baş verdi: ' + error.message);
-      setLoading(false);
-    }
-  };
-
-  const processAttendance = async () => {
-    if (!employee || !action || processing) return;
+    generateNewSession();
     
-    try {
-      setProcessing(true);
-      
-      if (action === 'check-in') {
-        await checkIn(employee.id);
-        setStatus('success');
-        setMessage(`✅ İşə giriş uğurlu! ${new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}`);
-      } else {
-        await checkOut(employee.id);
-        setStatus('success');
-        setMessage(`✅ İşdən çıxış uğurlu! ${new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}`);
+    // Hər 1 saatda bir yenilə
+    const interval = setInterval(() => {
+      generateNewSession();
+    }, 60 * 60 * 1000); // 1 saat
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Timer - hər saniyə yenilə
+    const timer = setInterval(() => {
+      if (expiryTime) {
+        const now = new Date();
+        const diff = expiryTime.getTime() - now.getTime();
+        
+        if (diff <= 0) {
+          generateNewSession();
+        } else {
+          const minutes = Math.floor(diff / 60000);
+          const seconds = Math.floor((diff % 60000) / 1000);
+          setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        }
       }
-      
-      // 2 saniyə sonra dashboard-a yönləndir
-      setTimeout(() => {
-        navigate('/workers/dashboard');
-      }, 2000);
-      
-    } catch (error: any) {
-      console.error('Davamiyyət xətası:', error);
-      setStatus('error');
-      setMessage('Xəta: ' + error.message);
-    } finally {
-      setProcessing(false);
-    }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [expiryTime]);
+
+  const generateNewSession = () => {
+    // Unique session code yarat
+    const code = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 saat sonra
+    
+    setSessionCode(code);
+    setExpiryTime(expiry);
+    
+    console.log('🔄 Yeni QR session yaradıldı:', code);
   };
+
+  const qrUrl = `${window.location.origin}/workers/qr-scan?session=${sessionCode}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Ana səhifə
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-8">
+      <div className="max-w-2xl w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center gap-3 mb-4">
+            <Wifi className="w-8 h-8 text-white animate-pulse" />
+            <h1 className="text-5xl font-bold text-white">İşçi QR Sistemi</h1>
+          </div>
+          <p className="text-xl text-indigo-200">
+            Telefonunuzdan bu QR kodu scan edin
+          </p>
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center">
-              <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Token yoxlanılır...</p>
+        {/* QR Code Card */}
+        <div className="bg-white rounded-3xl shadow-2xl p-12 mb-6">
+          <div className="text-center">
+            {/* QR Code */}
+            <div className="bg-white p-8 rounded-2xl inline-block mb-6 border-8 border-indigo-100">
+              <QRCodeSVG 
+                value={qrUrl}
+                size={400}
+                level="H"
+                includeMargin={false}
+                bgColor="#ffffff"
+                fgColor="#4F46E5"
+              />
             </div>
-          ) : (
-            <>
-              {/* Header */}
-              <div className={`p-6 ${
-                status === 'valid' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
-                status === 'success' ? 'bg-gradient-to-r from-blue-500 to-indigo-600' :
-                'bg-gradient-to-r from-red-500 to-pink-600'
-              } text-white`}>
-                <div className="flex items-center justify-center mb-4">
-                  {status === 'valid' || status === 'success' ? (
-                    <CheckCircle2 className="w-16 h-16" />
-                  ) : (
-                    <XCircle className="w-16 h-16" />
-                  )}
-                </div>
-                <h1 className="text-2xl font-bold text-center">
-                  {status === 'valid' ? 'QR Kod Keçərlidir' :
-                   status === 'success' ? 'Uğurlu!' :
-                   status === 'invalid' ? 'Token Keçərsizdir' :
-                   'Xəta Baş Verdi'}
-                </h1>
-              </div>
 
-              {/* Content */}
-              <div className="p-8">
-                {employee && (
-                  <div className="text-center mb-6">
-                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-2xl mx-auto mb-4">
-                      {employee.ad[0]}{employee.soyad[0]}
-                    </div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      {employee.ad} {employee.soyad}
-                    </h2>
-                    <p className="text-gray-600">{employee.vezife}</p>
-                  </div>
-                )}
+            {/* Instructions */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-900">
+                İşə Giriş / Çıxış
+              </h2>
+              <ol className="text-left max-w-md mx-auto space-y-3 text-gray-700">
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">1</span>
+                  <span className="pt-1">Telefonda kamera və ya QR scanner tətbiqi açın</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">2</span>
+                  <span className="pt-1">Yuxarıdakı QR kodu scan edin</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">3</span>
+                  <span className="pt-1">Email və şifrənizi daxil edin</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">4</span>
+                  <span className="pt-1">Avtomatik giriş və ya çıxış ediləcək</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
 
-                <div className={`p-4 rounded-lg border-2 ${
-                  status === 'valid' ? 'bg-green-50 border-green-200' :
-                  status === 'success' ? 'bg-blue-50 border-blue-200' :
-                  'bg-red-50 border-red-200'
-                }`}>
-                  <p className={`text-center font-medium ${
-                    status === 'valid' ? 'text-green-800' :
-                    status === 'success' ? 'text-blue-800' :
-                    'text-red-800'
-                  }`}>
-                    {message}
-                  </p>
-                </div>
-
-                {status === 'valid' && !processing && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-center gap-2 text-gray-600 mb-4">
-                      <Clock className="w-5 h-5 animate-pulse" />
-                      <span className="text-sm">3 saniyə sonra avtomatik...</span>
-                    </div>
-                    <button
-                      onClick={processAttendance}
-                      className="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      {action === 'check-in' ? 'İndi Giriş Et' : 'İndi Çıxış Et'}
-                    </button>
-                  </div>
-                )}
-
-                {processing && (
-                  <div className="mt-6 text-center">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-                    <p className="text-gray-600 mt-2">Əməliyyat yerinə yetirilir...</p>
-                  </div>
-                )}
-
-                {status === 'success' && (
-                  <div className="mt-6 text-center text-gray-600">
-                    <p>Dashboard-a yönləndirilirsiniz...</p>
-                  </div>
-                )}
-              </div>
-            </>
+        {/* Timer Card */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <Clock className="w-6 h-6" />
+              <span className="text-lg">QR kod keçərliliyi:</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-3xl font-bold font-mono">{timeLeft}</span>
+              <button
+                onClick={generateNewSession}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                title="Yenilə"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {expiryTime && (
+            <p className="text-indigo-200 text-sm mt-2 text-center">
+              Növbəti yenilənmə: {expiryTime.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
+            </p>
           )}
         </div>
 
         {/* Info */}
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>QR kod 1 saat ərzində keçərlidir</p>
+        <div className="mt-8 text-center">
+          <p className="text-indigo-200 text-sm">
+            Bu ekran 24/7 açıq qalmalıdır • QR kod hər saat avtomatik yenilənir
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default QRPage;
+export default QRDisplayPage;
