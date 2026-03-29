@@ -29,6 +29,7 @@ import WorkerLogin from './pages/workers/WorkerLogin';
 import AdminWorkerLogin from './pages/workers/AdminLogin';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import AdminDashboard from './pages/workers/AdminDashboard';
+import QRPage from './pages/workers/QRPage';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
@@ -54,6 +55,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen bg-white">
         <Routes>
           {/* Worker Management Routes */}
+          <Route path="/qr" element={<QRPage />} />
           <Route path="/workers" element={<WorkerLogin />} />
           <Route path="/workers/admin-login" element={<AdminWorkerLogin />} />
           <Route path="/workers/dashboard" element={<WorkerDashboard />} />
