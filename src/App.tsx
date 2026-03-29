@@ -24,6 +24,11 @@ import ContactPage from './pages/ContactPage';
 import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import B2BOrdersPage from './pages/B2BOrdersPage';
+// Worker Management System
+import WorkerLogin from './pages/workers/WorkerLogin';
+import AdminWorkerLogin from './pages/workers/AdminLogin';
+import WorkerDashboard from './pages/workers/WorkerDashboard';
+import AdminDashboard from './pages/workers/AdminDashboard';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
@@ -48,6 +53,13 @@ const AppContent: React.FC = () => {
     <>
       <div className="min-h-screen bg-white">
         <Routes>
+          {/* Worker Management Routes */}
+          <Route path="/workers" element={<WorkerLogin />} />
+          <Route path="/workers/admin-login" element={<AdminWorkerLogin />} />
+          <Route path="/workers/dashboard" element={<WorkerDashboard />} />
+          <Route path="/workers/admin" element={<AdminDashboard />} />
+          
+          {/* Existing Routes */}
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/b2b-request" element={<B2BRequestForm />} />
