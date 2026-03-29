@@ -62,27 +62,43 @@ export const getEmployeeByEmail = async (email: string): Promise<Employee | null
 
 // Bütün işçiləri al
 export const getAllEmployees = async (): Promise<Employee[]> => {
-  const q = query(collection(db, COLLECTION), where('aktiv', '==', true), orderBy('ad'));
-  const querySnapshot = await getDocs(q);
-  
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  } as Employee));
+  try {
+    // Sadə query - index lazım deyil
+    const q = query(collection(db, COLLECTION), where('aktiv', '==', true));
+    const querySnapshot = await getDocs(q);
+    
+    // Memory-də sort et
+    const employees = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Employee));
+    
+    // Əlifba sırası ilə sort
+    return employees.sort((a, b) => a.ad.localeCompare(b.ad, 'az'));
+  } catch (error) {
+    console.error('getAllEmployees xətası:', error);
+    return [];
+  }
 };
 
 // Mağazaya görə işçilər
 export const getEmployeesByMagaza = async (magaza: string): Promise<Employee[]> => {
-  const q = query(
-    collection(db, COLLECTION), 
-    where('aktiv', '==', true),
-    where('magaza', '==', magaza),
-    orderBy('ad')
-  );
-  const querySnapshot = await getDocs(q);
-  
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  } as Employee));
+  try {
+    const q = query(
+      collection(db, COLLECTION), 
+      where('aktiv', '==', true),
+      where('magaza', '==', magaza)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const employees = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Employee));
+    
+    return employees.sort((a, b) => a.ad.localeCompare(b.ad, 'az'));
+  } catch (error) {
+    console.error('getEmployeesByMagaza xətası:', error);
+    return [];
+  }
 };

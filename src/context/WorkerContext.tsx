@@ -41,15 +41,27 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (firebaseUser) {
         // Admin yoxla
         if (firebaseUser.email === 'admin@devaleur.az') {
+          console.log('✅ Admin daxil oldu');
           setIsAdmin(true);
           setEmployee(null);
         } else {
           // İşçi məlumatını al
+          console.log('👤 İşçi məlumatı yüklənir:', firebaseUser.email);
           const emp = await getEmployeeByEmail(firebaseUser.email!);
-          setEmployee(emp);
-          setIsAdmin(false);
+          console.log('İşçi məlumatı:', emp);
+          
+          if (emp) {
+            console.log('✅ İşçi tapıldı:', emp.ad, emp.soyad);
+            setEmployee(emp);
+            setIsAdmin(false);
+          } else {
+            console.warn('⚠️ İşçi məlumatı tapılmadı Firestore-da');
+            setEmployee(null);
+            setIsAdmin(false);
+          }
         }
       } else {
+        console.log('🚪 User çıxış etdi');
         setEmployee(null);
         setIsAdmin(false);
       }

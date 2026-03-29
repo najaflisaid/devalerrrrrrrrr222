@@ -33,10 +33,14 @@ const EmployeeManagement: React.FC<Props> = ({ onRefresh }) => {
 
   const loadEmployees = async () => {
     try {
+      console.log('📋 İşçilər yüklənir...');
       const data = await getAllEmployees();
+      console.log('✅ İşçilər yükləndi:', data.length, 'işçi');
+      console.log('İşçilər:', data);
       setEmployees(data);
     } catch (error) {
-      console.error('İşçilər yüklənə bilmədi:', error);
+      console.error('❌ İşçilər yüklənə bilmədi:', error);
+      alert('İşçilər yüklənə bilmədi: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
