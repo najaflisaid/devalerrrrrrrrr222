@@ -338,3 +338,19 @@ html {
 .animate-slideDown {
   animation: slideDown 0.2s ease-out;
 }
+
+/* B2B Notification fade-in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}

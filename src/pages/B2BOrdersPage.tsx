@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, Bell, X, Info, AlertTriangle } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { productService } from '../services/productService';
 import SignaturePad from '../components/SignaturePad';
+import { 
+  subscribeToActiveNotifications, 
+  markNotificationAsRead,
+  B2BNotification,
+  NotificationType 
+} from '../services/b2bNotificationService';
 
 interface B2BOrder {
   id: string;
@@ -43,6 +49,8 @@ const B2BOrdersPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<B2BNotification[]>([]);
+  const [dismissedNotifications, setDismissedNotifications] = useState<string[]>([]);
 
   useEffect(() => {
     loadProducts();
@@ -57,6 +65,16 @@ const B2BOrdersPage: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!userEmail) return;
+
+    const unsubscribe = subscribeToActiveNotifications(userEmail, (notifs) => {
+      setNotifications(notifs);
+    });
+
+    return () => unsubscribe();
+  }, [userEmail]);
 
   const loadProducts = async () => {
     try {
@@ -140,6 +158,31 @@ const B2BOrdersPage: React.FC = () => {
     }
   };
 
+  const getNotificationTypeConfig = (type: NotificationType) => {
+    switch (type) {
+      case 'success':
+        return { icon: CheckCircle, bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-900', iconColor: 'text-green-600' };
+      case 'warning':
+        return { icon: AlertTriangle, bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', textColor: 'text-yellow-900', iconColor: 'text-yellow-600' };
+      case 'error':
+        return { icon: AlertCircle, bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-900', iconColor: 'text-red-600' };
+      default:
+        return { icon: Info, bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-900', iconColor: 'text-blue-600' };
+    }
+  };
+
+  const handleDismissNotification = async (notificationId: string) => {
+    setDismissedNotifications([...dismissedNotifications, notificationId]);
+    if (userEmail) {
+      await markNotificationAsRead(notificationId, userEmail);
+    }
+  };
+
+  const visibleNotifications = notifications.filter(n => !dismissedNotifications.includes(n.id || ''));
+  const unreadCount = userEmail 
+    ? visibleNotifications.filter(n => !n.readBy?.includes(userEmail)).length 
+    : 0;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -154,7 +197,66 @@ const B2BOrdersPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <h1 className="text-3xl font-bold mb-8">{t('b2b.myOrders')}</h1>
+        {/* Bildiriş Paneli */}
+        {visibleNotifications.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {visibleNotifications.map((notification) => {
+              const config = getNotificationTypeConfig(notification.type);
+              const NotifIcon = config.icon;
+              const isUnread = userEmail ? !notification.readBy?.includes(userEmail) : true;
+              
+              return (
+                <div
+                  key={notification.id}
+                  className={`${config.bgColor} border ${config.borderColor} rounded-xl p-4 shadow-sm animate-fade-in`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 ${config.iconColor}`}>
+                      <NotifIcon className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className={`font-bold ${config.textColor}`}>{notification.title}</h3>
+                            {isUnread && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Yeni
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm ${config.textColor} whitespace-pre-wrap`}>{notification.message}</p>
+                          {notification.expiresAt && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              Bitmə tarixi: {new Date(notification.expiresAt.toDate()).toLocaleDateString('az-AZ')}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDismissNotification(notification.id!)}
+                          className={`flex-shrink-0 ${config.iconColor} hover:opacity-70 transition-opacity p-1`}
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Başlıq və Bildiriş Badge */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">{t('b2b.myOrders')}</h1>
+          {unreadCount > 0 && (
+            <div className="flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-full">
+              <Bell className="h-5 w-5" />
+              <span className="font-semibold">{unreadCount} yeni bildiriş</span>
+            </div>
+          )}
+        </div>
 
         {orders.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
