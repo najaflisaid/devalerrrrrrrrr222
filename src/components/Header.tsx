@@ -398,11 +398,11 @@ const Header: React.FC = () => {
                           b2bNotifications.map((notif, index) => (
                             <div 
                               key={notif.id} 
-                              className={`p-5 hover:bg-gray-50 transition-colors ${index !== b2bNotifications.length - 1 ? 'border-b border-gray-100' : ''}`}
+                              className={`p-5 bg-gray-700 hover:bg-gray-600 transition-colors ${index !== b2bNotifications.length - 1 ? 'border-b border-gray-600' : ''}`}
                             >
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 break-words">{notif.title}</h4>
-                                <p className="text-gray-600 text-sm mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
+                                <h4 className="font-semibold text-white break-words">{notif.title}</h4>
+                                <p className="text-gray-200 text-sm mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
                               </div>
                             </div>
                           ))
@@ -707,11 +707,11 @@ const Header: React.FC = () => {
               {b2bNotifications.map((notif, index) => (
                 <div
                   key={notif.id}
-                  className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-gray-700 border border-gray-600 rounded-2xl p-5 shadow-sm hover:bg-gray-600 transition-all"
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-lg break-words">{notif.title}</h3>
-                    <p className="text-gray-600 mt-2 whitespace-pre-wrap break-words leading-relaxed">{notif.message}</p>
+                    <h3 className="font-bold text-white text-lg break-words">{notif.title}</h3>
+                    <p className="text-gray-200 mt-2 whitespace-pre-wrap break-words leading-relaxed">{notif.message}</p>
                   </div>
                 </div>
               ))}
