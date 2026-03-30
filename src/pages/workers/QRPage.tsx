@@ -72,6 +72,7 @@ const QRDisplayPage: React.FC = () => {
       const newToken = await generateStoreQRToken('Ana mağaza');
       setToken(newToken);
       console.log('🔄 Yeni QR token yaradıldı:', newToken.token);
+      console.log('📝 Token Firestore-a yazıldı, ID:', newToken.id);
     } catch (error) {
       console.error('Token yaratma xətası:', error);
     }

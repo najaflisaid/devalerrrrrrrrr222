@@ -133,22 +133,29 @@ export const validateStoreQRToken = async (
   action: 'checkin' | 'checkout'
 ): Promise<{ valid: boolean; message: string; magaza?: string }> => {
   try {
+    console.log('🔍 QR validation başladı:', { token, employeeId, action });
+    
     // Bütün tokenləri al
     const snapshot = await getDocs(collection(db, COLLECTION));
+    console.log('📦 Firestore-dan alınan token sayı:', snapshot.size);
     
     let tokenDoc = null;
     let tokenData = null;
     
     for (const doc of snapshot.docs) {
       const data = doc.data();
+      console.log('🔎 Token yoxlanılır:', { storedToken: data.token, isActive: data.isActive, scannedToken: token });
+      
       if (data.token === token && data.isActive) {
         tokenDoc = doc;
         tokenData = data;
+        console.log('✅ Token tapıldı!');
         break;
       }
     }
     
     if (!tokenDoc || !tokenData) {
+      console.log('❌ Token tapılmadı');
       return { valid: false, message: 'QR kod tapılmadı və ya keçərsizdir' };
     }
     

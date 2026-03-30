@@ -138,11 +138,25 @@ const WorkerDashboard: React.FC = () => {
   const handleQRScan = async (scannedToken: string) => {
     if (!employee) return;
     
+    console.log('📱 QR Skan edildi:', scannedToken);
+    
     try {
       setActionLoading(true);
       setShowQRScanner(false);
       
-      const validation = await validateStoreQRToken(scannedToken, employee.id, scanAction);
+      // Skan edilən data-nı təmizlə (URL formatında gələ bilər)
+      let cleanToken = scannedToken;
+      
+      // Əgər URL formatındadırsa, sadəcə token hissəsini al
+      if (scannedToken.includes('?session=')) {
+        cleanToken = scannedToken.split('?session=')[1];
+      }
+      
+      console.log('🔑 Yoxlanacaq token:', cleanToken);
+      
+      const validation = await validateStoreQRToken(cleanToken, employee.id, scanAction);
+      
+      console.log('✅ Validation nəticəsi:', validation);
       
       if (!validation.valid) {
         setScanMessage({ type: 'error', text: validation.message });
@@ -162,6 +176,7 @@ const WorkerDashboard: React.FC = () => {
       setTimeout(() => setScanMessage(null), 5000);
       
     } catch (error: any) {
+      console.error('❌ QR xətası:', error);
       setScanMessage({ type: 'error', text: error.message });
       setTimeout(() => setScanMessage(null), 5000);
     } finally {
