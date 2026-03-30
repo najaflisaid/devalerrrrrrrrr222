@@ -268,7 +268,7 @@ const B2BOrdersPage: React.FC = () => {
                           <div className="grid grid-cols-2 gap-4">
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div>
-                                <p className="text-xs text-gray-600">BORC</p>
+                                <p className="text-xs text-gray-600">Əvvəlki borc</p>
                                 <p className="text-2xl font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
                               </div>
                             )}
