@@ -242,11 +242,11 @@ const B2BOrdersPage: React.FC = () => {
               )}
             </button>
 
-            {/* Tünd Fon Overlay */}
+            {/* Boz Fon Overlay */}
             {showNotificationPanel && (
               <>
                 <div 
-                  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fadeIn"
+                  className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 animate-fadeIn"
                   onClick={() => setShowNotificationPanel(false)}
                 />
                 
