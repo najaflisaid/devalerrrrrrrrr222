@@ -102,9 +102,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
-          {isOutOfStock && (
-            <span className="text-xs text-red-600 font-medium">Bitdi</span>
-          )}
           <div className="flex items-center justify-center space-x-2">
             {originalPrice ? (
               <>
@@ -121,6 +118,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               </span>
             )}
           </div>
+          {isOutOfStock && (
+            <span className="text-xs text-red-600 font-medium">Bitdi</span>
+          )}
           {isB2BUser && !compact && !isOutOfStock && (
             <p className={`text-xs font-medium mt-1 ${
               product.stock <= 5 ? 'text-orange-600' : 'text-green-600'
