@@ -19,7 +19,7 @@ const AdminLogin: React.FC = () => {
     try {
       await login(email, password);
       // Admin yoxlanması WorkerContext-də olacaq
-      if (email === 'admin@devaleur.az') {
+      if (email === 'rasim@gmail.com') {
         navigate('/workers/admin');
       } else {
         setError('Admin hesabı deyil');
@@ -63,7 +63,7 @@ const AdminLogin: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                placeholder="admin@devaleur.az"
+                placeholder="rasim@gmail.com"
                 required
                 data-testid="admin-email-input"
               />

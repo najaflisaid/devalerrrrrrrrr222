@@ -40,7 +40,7 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       if (firebaseUser) {
         // Admin yoxla
-        if (firebaseUser.email === 'admin@devaleur.az') {
+        if (firebaseUser.email === 'rasim@gmail.com') {
           console.log('✅ Admin daxil oldu');
           setIsAdmin(true);
           setEmployee(null);

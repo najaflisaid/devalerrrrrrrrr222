@@ -1,0 +1,7 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd /app && npx serve dist -l 3000 -s"
+  }
+}
