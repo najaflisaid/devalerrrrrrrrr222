@@ -388,8 +388,8 @@ const Header: React.FC = () => {
                         ) : (
                           b2bNotifications.map((notif) => (
                             <div key={notif.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
-                              <h4 className="font-semibold text-gray-900 text-sm">{notif.title}</h4>
-                              <p className="text-gray-600 text-xs mt-1 line-clamp-2">{notif.message}</p>
+                              <h4 className="font-semibold text-gray-900 text-sm break-words">{notif.title}</h4>
+                              <p className="text-gray-600 text-xs mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
                             </div>
                           ))
                         )}
@@ -690,8 +690,8 @@ const Header: React.FC = () => {
                   key={notif.id}
                   className="border border-gray-200 rounded-lg p-4 bg-gray-50"
                 >
-                  <h3 className="font-semibold text-gray-900 mb-2">{notif.title}</h3>
-                  <p className="text-gray-600 text-sm whitespace-pre-wrap">{notif.message}</p>
+                  <h3 className="font-semibold text-gray-900 mb-2 break-words">{notif.title}</h3>
+                  <p className="text-gray-600 text-sm whitespace-pre-wrap break-words">{notif.message}</p>
                 </div>
               ))}
             </div>
