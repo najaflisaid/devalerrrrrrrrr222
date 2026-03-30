@@ -298,68 +298,68 @@ const WorkerDashboard: React.FC = () => {
               )}
             </div>
             
-            <div className="flex flex-col gap-3">
-              {/* İşə Başla düyməsi - YALNIZ işə başlamamışsa */}
-              {!todayAttendance && !pendingGirisRequest && (
-                <button
-                  onClick={handleStartWork}
-                  disabled={requestLoading}
-                  className="flex items-center justify-center gap-3 bg-white text-green-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-colors disabled:opacity-50 shadow-lg"
-                  data-testid="start-work-btn"
-                >
-                  {requestLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <Play className="w-6 h-6" />
-                  )}
-                  {requestLoading ? 'Göndərilir...' : 'İşə Başla'}
-                </button>
-              )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* İşə Başla düyməsi - həmişə görünür */}
+              <button
+                onClick={handleStartWork}
+                disabled={requestLoading || pendingGirisRequest || todayAttendance?.status === 'isde'}
+                className={`flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition-colors shadow-lg ${
+                  todayAttendance?.status === 'isde' 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                    : 'bg-white text-green-600 hover:bg-green-50 disabled:opacity-50'
+                }`}
+                data-testid="start-work-btn"
+              >
+                {requestLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : pendingGirisRequest ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Play className="w-6 h-6" />
+                )}
+                {pendingGirisRequest ? 'Gözləyir...' : 'İşə Başla'}
+              </button>
 
-              {/* Giriş sorğusu gözləmədədirsə */}
-              {pendingGirisRequest && (
-                <div className="bg-yellow-500/30 border border-yellow-300 px-6 py-4 rounded-xl text-center">
-                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                  <p className="font-medium">Giriş sorğusu gözləmədədir</p>
-                  <p className="text-sm text-yellow-100 mt-1">Admin təsdiq edəndə iş başlayacaq</p>
-                </div>
-              )}
-
-              {/* İşi Bitir düyməsi - İŞDƏDİRSƏ */}
-              {todayAttendance?.status === 'isde' && !pendingCixisRequest && (
-                <button
-                  onClick={handleEndWork}
-                  disabled={requestLoading}
-                  className="flex items-center justify-center gap-3 bg-white text-red-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-50 transition-colors disabled:opacity-50 shadow-lg"
-                  data-testid="end-work-btn"
-                >
-                  {requestLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <Square className="w-6 h-6" />
-                  )}
-                  {requestLoading ? 'Göndərilir...' : 'İşi Bitir'}
-                </button>
-              )}
-
-              {/* Çıxış sorğusu gözləmədədirsə */}
-              {pendingCixisRequest && (
-                <div className="bg-yellow-500/30 border border-yellow-300 px-6 py-4 rounded-xl text-center">
-                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                  <p className="font-medium">Çıxış sorğusu gözləmədədir</p>
-                  <p className="text-sm text-yellow-100 mt-1">Admin təsdiq edəndə iş bitəcək</p>
-                </div>
-              )}
-
-              {/* İş bitibsə */}
-              {todayAttendance?.status === 'cixib' && (
-                <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
-                  <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-300" />
-                  <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
-                  <p className="text-sm text-indigo-100 mt-1">Xoş istirahət!</p>
-                </div>
-              )}
+              {/* İşi Bitir düyməsi - həmişə görünür */}
+              <button
+                onClick={handleEndWork}
+                disabled={requestLoading || pendingCixisRequest || !todayAttendance || todayAttendance?.status !== 'isde'}
+                className={`flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition-colors shadow-lg ${
+                  !todayAttendance || todayAttendance?.status !== 'isde'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                    : 'bg-white text-red-600 hover:bg-red-50 disabled:opacity-50'
+                }`}
+                data-testid="end-work-btn"
+              >
+                {requestLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : pendingCixisRequest ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Square className="w-6 h-6" />
+                )}
+                {pendingCixisRequest ? 'Gözləyir...' : 'İşi Bitir'}
+              </button>
             </div>
+
+            {/* Status mesajları */}
+            {pendingGirisRequest && (
+              <div className="mt-3 bg-yellow-500/30 border border-yellow-300 px-4 py-3 rounded-xl text-center">
+                <p className="font-medium">⏳ Giriş sorğusu gözləmədədir - Admin təsdiq edəcək</p>
+              </div>
+            )}
+
+            {pendingCixisRequest && (
+              <div className="mt-3 bg-yellow-500/30 border border-yellow-300 px-4 py-3 rounded-xl text-center">
+                <p className="font-medium">⏳ Çıxış sorğusu gözləmədədir - Admin təsdiq edəcək</p>
+              </div>
+            )}
+
+            {todayAttendance?.status === 'cixib' && (
+              <div className="mt-3 bg-green-500/30 border border-green-300 px-4 py-3 rounded-xl text-center">
+                <p className="font-medium">✅ Bu gün işiniz bitib - Xoş istirahət!</p>
+              </div>
+            )}
           </div>
 
           {/* Sorğu mesajı */}
