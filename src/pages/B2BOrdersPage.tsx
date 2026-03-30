@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell, AlertTriangle, Info } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -180,13 +180,13 @@ const B2BOrdersPage: React.FC = () => {
   const getNotificationTypeConfig = (type: NotificationType) => {
     switch (type) {
       case 'success':
-        return { icon: CheckCircle, bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-900', iconColor: 'text-green-600' };
+        return { textColor: 'text-green-900' };
       case 'warning':
-        return { icon: AlertTriangle, bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', textColor: 'text-yellow-900', iconColor: 'text-yellow-600' };
+        return { textColor: 'text-yellow-900' };
       case 'error':
-        return { icon: AlertCircle, bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-900', iconColor: 'text-red-600' };
+        return { textColor: 'text-red-900' };
       default:
-        return { icon: Info, bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-900', iconColor: 'text-blue-600' };
+        return { textColor: 'text-blue-900' };
     }
   };
 
@@ -267,7 +267,6 @@ const B2BOrdersPage: React.FC = () => {
                     <div className="divide-y divide-gray-100">
                       {visibleNotifications.map((notification) => {
                         const config = getNotificationTypeConfig(notification.type);
-                        const NotifIcon = config.icon;
                         const isUnread = userEmail ? !notification.readBy?.includes(userEmail) : true;
                         
                         return (
@@ -282,12 +281,7 @@ const B2BOrdersPage: React.FC = () => {
                               }
                             }}
                           >
-                            <div className="flex gap-3">
-                              {/* İkon */}
-                              <div className={`flex-shrink-0 h-10 w-10 rounded-full ${config.bgColor} flex items-center justify-center`}>
-                                <NotifIcon className={`h-5 w-5 ${config.iconColor}`} />
-                              </div>
-
+                            <div className="flex items-start justify-between gap-3">
                               {/* Məzmun */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2 mb-1">
