@@ -58,15 +58,19 @@ export const createAttendanceRequest = async (
 export const getPendingRequests = async (): Promise<AttendanceRequest[]> => {
   const q = query(
     collection(db, COLLECTION_NAME),
-    where('status', '==', 'gozlemede'),
-    orderBy('sorguVaxti', 'desc')
+    where('status', '==', 'gozlemede')
   );
   
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
+  const requests = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   })) as AttendanceRequest[];
+  
+  // Client-side sort
+  return requests.sort((a, b) => 
+    new Date(b.sorguVaxti).getTime() - new Date(a.sorguVaxti).getTime()
+  );
 };
 
 // Real-time gözləmədə olan sorğuları dinlə
@@ -75,8 +79,7 @@ export const subscribeToPendingRequests = (
 ): Unsubscribe => {
   const q = query(
     collection(db, COLLECTION_NAME),
-    where('status', '==', 'gozlemede'),
-    orderBy('sorguVaxti', 'desc')
+    where('status', '==', 'gozlemede')
   );
   
   return onSnapshot(q, (snapshot) => {
@@ -84,7 +87,15 @@ export const subscribeToPendingRequests = (
       id: doc.id,
       ...doc.data()
     })) as AttendanceRequest[];
-    callback(requests);
+    
+    // Client-side sort
+    const sortedRequests = requests.sort((a, b) => 
+      new Date(b.sorguVaxti).getTime() - new Date(a.sorguVaxti).getTime()
+    );
+    callback(sortedRequests);
+  }, (error) => {
+    console.error('Sorğu dinləmə xətası:', error);
+    callback([]);
   });
 };
 
@@ -98,8 +109,7 @@ export const subscribeToMyRequests = (
   const q = query(
     collection(db, COLLECTION_NAME),
     where('isciID', '==', isciID),
-    where('tarix', '==', today),
-    orderBy('sorguVaxti', 'desc')
+    where('tarix', '==', today)
   );
   
   return onSnapshot(q, (snapshot) => {
@@ -107,7 +117,15 @@ export const subscribeToMyRequests = (
       id: doc.id,
       ...doc.data()
     })) as AttendanceRequest[];
-    callback(requests);
+    
+    // Client-side sort
+    const sortedRequests = requests.sort((a, b) => 
+      new Date(b.sorguVaxti).getTime() - new Date(a.sorguVaxti).getTime()
+    );
+    callback(sortedRequests);
+  }, (error) => {
+    console.error('Sorğu dinləmə xətası:', error);
+    callback([]);
   });
 };
 
