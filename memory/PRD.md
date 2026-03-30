@@ -1,12 +1,9 @@
 # PRD - İşçi İdarəetmə Sistemi (De Valeur)
 
 ## Problem Statement
-İşçilər səhifəsində QR kod oxutma sistemi və işə giriş-çıxış sistemini düzəltmək. İşçi QR kod skan etdikdə:
-- 1-ci skan = İşə giriş yazılsın
-- 2-ci skan = İşdən çıxış yazılsın
-- Admin panelində real-vaxt görünsün
-
-**YENİ**: İşçilər YALNIZ admin-in yaratdığı QR kod linki ilə giriş-çıxış edə bilər.
+1. İşçilər səhifəsində QR kod oxutma sistemi düzəldilsin
+2. Cərimə etdikdə məbləğ + bal ayrı yazılsın
+3. İşçinin səhifəsində cərimələr görsənsin
 
 ## Architecture
 - **Frontend**: Vite + React + TypeScript
@@ -15,66 +12,34 @@
 - **QR System**: html5-qrcode library + qrcode.react
 
 ## User Personas
-1. **Admin**: İşçiləri idarə edir, QR kod yaradır, giriş-çıxışları izləyir
+1. **Admin**: İşçiləri idarə edir, QR kod yaradır, cərimə/mükafat yazır
 2. **İşçi**: Admin QR kodunu telefon ilə skan edərək giriş/çıxış edir
-
-## Core Requirements
-- [x] İşçi giriş sistemi (Firebase Auth)
-- [x] Admin giriş sistemi
-- [x] QR kod yaratma (URL formatında)
-- [x] QR skan ilə giriş (1-ci skan)
-- [x] QR skan ilə çıxış (2-ci skan + imza)
-- [x] Real-vaxt monitorinq (Admin panelində)
-- [x] Session persistence
 
 ## What's Been Implemented (2024-03-30)
 
-### İlkin dəyişikliklər:
-1. WorkerDashboard QR Skan düzəldildi
-2. RealTimeMonitoring yaxşılaşdırıldı
-3. Session Persistence əlavə edildi
+### QR Sistem:
+- [x] QR kod URL formatında yaradılır: `{domain}/workers/qr-scan?session={token}`
+- [x] İşçilər YALNIZ admin QR kodu ilə giriş-çıxış edə bilər
+- [x] 1-ci skan = Giriş, 2-ci skan = Çıxış + imza
 
-### Son dəyişikliklər (v2):
-1. **QR Sistem dəyişdirildi**:
-   - QR kod indi URL formatında yaradılır: `{domain}/workers/qr-scan?session={token}`
-   - İşçilər telefon ilə QR kodu skan edib linki açırlar
-   - Dashboard-dakı QR skan düyməsi silindi
-   
-2. **QRScanPage yaxşılaşdırıldı**:
-   - Session token validation əlavə edildi
-   - Giriş/Çıxış avtomatik təyin olunur
-   - Çıxışda imza tələb olunur
-   
-3. **QRCodePanel yeniləndi**:
-   - URL formatında QR kod yaradılır
-   - Təlimatlar əlavə edildi (1-ci skan = Giriş, 2-ci skan = Çıxış)
+### Cərimə Sistemi (YENİ):
+- [x] **Cərimə növü** əlavə edildi (Təşəkkür, Xəbərdarlıq, Töhmət, Cərimə)
+- [x] **Məbləğ (₼)** ayrı field - admin istədiyi məbləği yazır
+- [x] **Bal təsiri** ayrı field - admin istədiyi balı yazır
+- [x] Admin panelində cərimə siyahısında məbləğ göstərilir
+
+### İşçi Dashboard:
+- [x] **Cərimə/Xəbərdarlıq bölümü** əlavə edildi
+- [x] Hər qeyd üçün növ, səbəb, bal və məbləğ göstərilir
+- [x] Cəmi cərimə məbləği hesablanır və göstərilir
 
 ## Test Results
-- **Frontend**: 100% uğurlu
-- Admin QR yaradır
-- İşçi telefon ilə skan edir
-- Giriş/Çıxış düzgün qeyd olunur
-- Admin panelində real-vaxt görünür
+- **Kod strukturu**: 100% uğurlu
+- **Frontend**: 70% (Firebase Auth session problemi)
 
-## Prioritized Backlog
-### P0 (Kritik - Tamamlandı)
-- [x] QR skan sistemi
-- [x] Yalnız admin QR ilə giriş
-
-### P1 (Yüksək)
-- [ ] QR kod yazdırma funksiyası
-- [ ] İşçi gecikmə hesabatı
-
-### P2 (Orta)
-- [ ] Aylıq hesabat export
-- [ ] İcazə sistemi
+## URLs
+- QR Skan: /workers/qr-scan?session={token}
+- Admin Davranış: /workers/admin → Davranış tabı
 
 ## Test Credentials
 - Admin: rasimgasimzade@gmail.com / Rasim2323
-- İşçilər admin panelindən yaradılır
-
-## URLs
-- İşçi Girişi: /workers
-- Admin Girişi: /workers/admin-login
-- Admin Panel: /workers/admin-dashboard
-- QR Skan Səhifəsi: /workers/qr-scan?session={token}
