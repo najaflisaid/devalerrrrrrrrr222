@@ -1,48 +1,23 @@
 # Test Credentials - İşçi İdarəetmə Sistemi
 
-## Admin Hesabı
-- **Email:** admin@devaleur.az
-- **Password:** Admin123!
-- **Link:** /workers/admin-login
+## Admin Credentials (Firebase Auth-da yaradılmalı)
+- **Email:** rasim@gmail.com
+- **Password:** Rasim2323
+- **URL:** /workers/admin-login
 
-## İşçi Hesabları
+## Admin Hesabı Yaratma Təlimatı
+1. Firebase Console-a daxil olun: https://console.firebase.google.com
+2. "devaleur-11742" layihəsini seçin
+3. Sol menyudan "Authentication" → "Users" bölməsinə keçin
+4. "Add user" düyməsinə basın
+5. Email: rasim@gmail.com, Password: Rasim2323 daxil edin
+6. "Add user" ilə təsdiqləyin
 
-### 1. Ayşəl Məmmədova (Satış Meneceri)
-- **Email:** aysel.mammadova@devaleur.az
-- **Password:** Test123!
-- **Vəzifə:** Satış meneceri
-- **Link:** /workers
+## İşçi Test Credentials
+İşçilər admin panel vasitəsilə yaradılır. Yaradıldıqda Firebase Auth-da da avtomatik hesab yaranır.
 
-### 2. Elvin Həsənov (Kassir)
-- **Email:** elvin.hasanov@devaleur.az
-- **Password:** Test123!
-- **Vəzifə:** Kassir
-- **Link:** /workers
-
-### 3. Leyla Əliyeva (Satış Məsləhətçisi)
-- **Email:** leyla.aliyeva@devaleur.az
-- **Password:** Test123!
-- **Vəzifə:** Satış məsləhətçisi
-- **Link:** /workers
-
-## Firebase Quraşdırma Qeydi
-- Firebase Authentication: Qurulub ✓
-- Firestore Database: Qurulub ✓
-- Project: devaleur-11742
-
-## İlk Dəfə İstifadə
-1. Firebase Console-dan yuxarıdakı email/password ilə hesablar yaradın (Authentication bölməsindən)
-2. Firestore-da işçi məlumatlarını əlavə edin (employees collection)
-3. Admin ilə daxil olun: /workers/admin-login
-4. İşçiləri "İşçilər" tabından əlavə edin və ya redaktə edin
-5. İşçi olaraq daxil olun: /workers
-
-## Sistem Xüsusiyyətləri
-- ✅ İşçi giriş/çıxış (Check-in/Check-out)
-- ✅ Davamiyyət nəzarəti
-- ✅ Performans hesablaması
-- ✅ Bonus sistemi
-- ✅ Badge/Nailiyyətlər
-- ✅ Real-vaxt izləmə
-- ✅ Davranış qeydləri
-- ✅ Reytinq sistemi
+## Linkler
+- İşçi Girişi: /workers
+- Admin Girişi: /workers/admin-login
+- Admin Panel: /workers/admin
+- İşçi Dashboard: /workers/dashboard

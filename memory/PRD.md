@@ -1,78 +1,96 @@
-# De Valeur E-Commerce PRD
+# İşçi İdarəetmə Sistemi PRD
 
 ## Original Problem Statement
-- "Tezliklə" bölməsi adminde işləmir - məhsul edit edəndə save olunmur
-- Endirimli məhsullar işləmir
-- Bloq səhifəsi pis dizayndır
-- Bloq detay səhifəsində yazılar ortada olmalıdır
-- B2B sifarişlərdə endirimsiz qiymət, endirim və ödəniləcək məbləğ düzgün göstərilməli
+İşçi İdarəetmə Sistemi – Nəzarət + Motivasiya layihəsi:
+- /workers linkində işçilərin girişi
+- Davamiyyət nəzarəti (giriş/çıxış saatı, gecikmə, erkən çıxış)
+- Real vaxt izləmə
+- Davranış qeydləri (xəbərdarlıq, töhmət, təşəkkür)
+- Performans balı sistemi (davamiyyət 30%, satış 40%, intizam 20%, aktivlik 10%)
+- Bonus paneli
+- Reytinq sistemi (1-7)
+- Badge sistemi
 
 ## Architecture
 - **Frontend**: React + TypeScript + Vite
 - **Backend**: Firebase (Firestore + Authentication)
 - **Styling**: Tailwind CSS
-- **i18n**: i18next (az, ru dillər)
+- **State Management**: React Context
 
 ## User Personas
-1. **Admin** - Məhsul, bloq, banner, B2B sifariş idarəetməsi
-2. **B2B User** - Topdan alış, xüsusi qiymətlər, endirim
-3. **Customer** - Normal müştəri
+1. **Admin** - İşçi yaratma, davamiyyət izləmə, performans idarəetmə
+2. **İşçi** - Giriş/çıxış, öz performansını görür, badge qazanır
 
-## Core Requirements (Static)
-- Məhsul kataloqu
-- Səbət funksionallığı
-- Admin panel
-- B2B giriş sistemi
-- Çoxdilli dəstək (az/ru)
+## Core Requirements
+### Nəzarət funksiyaları ✅
+- Davamiyyət nəzarəti (giriş/çıxış saatı)
+- Gecikmə avtomatik hesablanması
+- Erkən çıxış qeydiyyatı
+- Real vaxt izləmə
+- Davranış qeydləri
+
+### Motivasiya funksiyaları ✅
+- Performans balı sistemi
+- Bonus paneli
+- Reytinq sistemi
+- Badge sistemi
 
 ## What's Been Implemented
 
-### 2026-01-28
-1. **"Tezliklə" Bug Fix** ✅
-   - `AdminPanel.tsx` - `handleUpdateProduct` funksiyasına `comingSoon` sahəsi əlavə edildi
+### 2026-03-30
+1. **Admin Login sistemi yeniləndi** ✅
+   - Admin email: rasim@gmail.com
+   - WorkerContext.tsx yeniləndi
+   - AdminLogin.tsx yeniləndi
 
-2. **Endirimli Məhsullar Filter** ✅
-   - "Endirimli məhsullar" seçiləndə bütün filtrlər "Hamısı" olur
-   - Kateqoriya/Brend/Cins seçiləndə endirimli filtr avtomatik ləğv edilir
+2. **UI Komponentləri** ✅
+   - /workers - İşçi giriş səhifəsi
+   - /workers/admin-login - Admin giriş səhifəsi
+   - /workers/dashboard - İşçi dashboard
+   - /workers/admin - Admin panel
 
-3. **Bloq Səhifəsi Dizayn** ✅
-   - Modern hero section, Featured post, Hover effektlər
+3. **Services** ✅
+   - employeeService.ts - İşçi CRUD
+   - attendanceService.ts - Davamiyyət
+   - performanceService.ts - Performans
+   - bonusService.ts - Bonus
+   - badgeService.ts - Badge
+   - behaviorService.ts - Davranış
+   - salesService.ts - Satış
 
-4. **Bloq Detay Səhifəsi** ✅
-   - Mətnlər ortada (centered), Hero şəkil + overlay
-
-5. **B2B Sifariş Sistemi** ✅
-   - `subtotal` (endirimsiz qiymət) sahəsi əlavə edildi
-   - Admin paneldə: Endirimsiz qiymət, Endirim, Ödəniləcək məbləğ göstərilir
-   - Müştəri səhifəsində: Eyni məlumatlar göstərilir
-   - Miqdar azaldıqda/artırıldıqda endirim proporsional olaraq yenidən hesablanır
-   - `updateOrderItemQuantity` və `removeOrderItem` funksiyaları yeniləndi
+4. **Admin Panel Tabs** ✅
+   - Dashboard statistika
+   - Real vaxt izləmə
+   - İşçilər idarəetmə
+   - Davamiyyət
+   - Davranış
+   - Performans
+   - Bonuslar
 
 ## Files Modified
-- `/app/src/components/admin/AdminPanel.tsx`
-- `/app/src/components/admin/B2BOrdersTab.tsx`
-- `/app/src/pages/ProductsPage.tsx`
-- `/app/src/pages/BlogPage.tsx`
-- `/app/src/pages/BlogDetailPage.tsx`
-- `/app/src/pages/B2BOrdersPage.tsx`
-- `/app/src/services/b2bOrderService.ts`
-- `/app/src/i18n/locales/az.json`
-- `/app/src/i18n/locales/ru.json`
-- `/app/vite.config.ts`
+- /app/src/context/WorkerContext.tsx
+- /app/src/pages/workers/AdminLogin.tsx
 
 ## Prioritized Backlog
 
-### P0 (Critical) - DONE
-- [x] Tezliklə checkbox save problemi
-- [x] Endirimli məhsullar filter məntiqi
-- [x] B2B sifariş qiymət hesablanması
+### P0 (Critical) - Tamamlandı
+- [x] İşçi giriş səhifəsi
+- [x] Admin giriş səhifəsi
+- [x] Admin panel
+- [x] Davamiyyət sistemi
 
-### P1 (High) - DONE
-- [x] Bloq səhifəsi yenidən dizayn
-- [x] Bloq detay səhifəsi
+### P1 (High) - Firebase Auth Setup Gözlənir
+- [ ] Admin hesabı Firebase-də yaradılmalı (rasim@gmail.com / Rasim2323)
 
 ### P2 (Medium)
-- [ ] Ana səhifədə "Endirimli Məhsullar" bölməsi
+- [ ] Aylıq HR report
+- [ ] Mağaza üzrə müqayisə
 
 ### P3 (Low)
-- [ ] TypeScript type xətalarını düzəltmək
+- [ ] Email bildirişləri
+- [ ] PDF export
+
+## Next Steps
+1. Firebase Console-da admin hesabı yaratmaq
+2. Test işçilər əlavə etmək
+3. Satış data əlavə etmək
