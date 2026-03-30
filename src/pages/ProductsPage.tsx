@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Filter, Bell, X } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
-import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
 import type { Product } from '../types';
 
 const ProductsPage: React.FC = () => {
@@ -29,8 +28,6 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
-  const [b2bNotifications, setB2bNotifications] = useState<B2BNotification[]>([]);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   // Function to update URL with all current filters
   const updateURLParams = (updates: Record<string, string | null>) => {
@@ -51,24 +48,6 @@ const ProductsPage: React.FC = () => {
   const clearSearchOnFilterChange = () => {
     if (searchQuery) {
       setSearchQuery('');
-    }
-  };
-
-  // B2B bildirişlərini yüklə
-  const loadB2BNotifications = async () => {
-    try {
-      const notifs = await getActiveB2BNotifications();
-      setB2bNotifications(notifs);
-      if (notifs.length > 0) {
-        // Session-da göstərilib-göstərilmədiyini yoxla
-        const shownKey = `b2b_notif_shown_${new Date().toDateString()}`;
-        if (!sessionStorage.getItem(shownKey)) {
-          setShowNotificationModal(true);
-          sessionStorage.setItem(shownKey, 'true');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading B2B notifications:', error);
     }
   };
 
@@ -185,13 +164,7 @@ const ProductsPage: React.FC = () => {
   // Read filters from URL on mount and when URL changes
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
-    const isB2B = userRole === 'b2b' || userRole === 'admin';
-    setIsB2BUser(isB2B);
-
-    // B2B istifadəçisi üçün bildirişləri yüklə
-    if (isB2B) {
-      loadB2BNotifications();
-    }
+    setIsB2BUser(userRole === 'b2b' || userRole === 'admin');
 
     // Read search parameter
     const search = searchParams.get('search');
@@ -377,45 +350,6 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* B2B Bildiriş Modalı */}
-      {showNotificationModal && b2bNotifications.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl">
-            <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                <h2 className="font-semibold text-lg">Bildirişlər</h2>
-              </div>
-              <button
-                onClick={() => setShowNotificationModal(false)}
-                className="text-white/80 hover:text-white"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
-              {b2bNotifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                >
-                  <h3 className="font-semibold text-gray-900 mb-2">{notif.title}</h3>
-                  <p className="text-gray-600 text-sm whitespace-pre-wrap">{notif.message}</p>
-                </div>
-              ))}
-            </div>
-            <div className="px-6 py-4 border-t bg-gray-50">
-              <button
-                onClick={() => setShowNotificationModal(false)}
-                className="w-full bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-              >
-                Bağla
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:hidden mb-6">
           <button

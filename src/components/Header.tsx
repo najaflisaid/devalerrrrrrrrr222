@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -8,6 +8,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
 import CustomerLogin from './auth/CustomerLogin';
 import { productService } from '../services/productService';
+import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
 
 const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -25,6 +26,11 @@ const Header: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
   const userDiscount = getUserDiscount();
+  
+  // B2B Bildiriş state-ləri
+  const [b2bNotifications, setB2bNotifications] = useState<B2BNotification[]>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -50,6 +56,11 @@ const Header: React.FC = () => {
             localStorage.setItem('userRole', newRole);
             localStorage.setItem('userEmail', user.email || '');
             localStorage.setItem('userId', user.uid);
+
+            // B2B istifadəçisi üçün bildirişləri yüklə
+            if (newRole === 'b2b' || newRole === 'admin') {
+              loadB2BNotifications();
+            }
           } else {
             if (previousRole && previousRole !== 'customer') {
               clearCart();
@@ -107,6 +118,25 @@ const Header: React.FC = () => {
       setBrands(uniqueBrands);
     } catch (error) {
       console.error('Error loading categories and brands:', error);
+    }
+  };
+
+  // B2B bildirişləri yüklə
+  const loadB2BNotifications = async () => {
+    try {
+      const notifs = await getActiveB2BNotifications();
+      setB2bNotifications(notifs);
+      
+      // Giriş edən kimi modal göstər
+      if (notifs.length > 0) {
+        const shownKey = `b2b_notif_shown_${new Date().toDateString()}`;
+        if (!sessionStorage.getItem(shownKey)) {
+          setShowNotificationModal(true);
+          sessionStorage.setItem(shownKey, 'true');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading B2B notifications:', error);
     }
   };
 
@@ -306,6 +336,49 @@ const Header: React.FC = () => {
                 onClick={() => setShowSearch(true)}
                 className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900"
               />
+
+              {/* B2B Bildiriş İkonu */}
+              {isLoggedIn && (userRole === 'b2b' || userRole === 'admin') && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                    className="relative p-1"
+                  >
+                    <Bell className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                    {b2bNotifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                        {b2bNotifications.length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Bildiriş Dropdown */}
+                  {showNotificationDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                      <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
+                        <span className="font-semibold">Bildirişlər</span>
+                        <button onClick={() => setShowNotificationDropdown(false)}>
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="overflow-y-auto max-h-72">
+                        {b2bNotifications.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            Bildiriş yoxdur
+                          </div>
+                        ) : (
+                          b2bNotifications.map((notif) => (
+                            <div key={notif.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
+                              <h4 className="font-semibold text-gray-900 text-sm">{notif.title}</h4>
+                              <p className="text-gray-600 text-xs mt-1 line-clamp-2">{notif.message}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!isLoggedIn ? (
                 <>
@@ -569,6 +642,45 @@ const Header: React.FC = () => {
                 </div>
               )}
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* B2B Bildiriş Modalı */}
+      {showNotificationModal && b2bNotifications.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl animate-fadeIn">
+            <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                <h2 className="font-semibold text-lg">Bildirişlər</h2>
+              </div>
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="text-white/80 hover:text-white"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+              {b2bNotifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                >
+                  <h3 className="font-semibold text-gray-900 mb-2">{notif.title}</h3>
+                  <p className="text-gray-600 text-sm whitespace-pre-wrap">{notif.message}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-6 py-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="w-full bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              >
+                Bağla
+              </button>
+            </div>
           </div>
         </div>
       )}
