@@ -36,40 +36,55 @@ export const addB2BNotification = async (title: string, message: string, expires
 
 // Bütün bildirişləri al (admin üçün)
 export const getAllB2BNotifications = async (): Promise<B2BNotification[]> => {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    orderBy('createdAt', 'desc')
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  })) as B2BNotification[];
+  try {
+    const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as B2BNotification[];
+    
+    // Client-side sort
+    return notifications.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    return [];
+  }
 };
 
 // Aktiv bildirişləri al (B2B müştəri üçün)
 export const getActiveB2BNotifications = async (): Promise<B2BNotification[]> => {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    where('isActive', '==', true),
-    orderBy('createdAt', 'desc')
-  );
-  
-  const snapshot = await getDocs(q);
-  const now = new Date();
-  
-  return snapshot.docs
-    .map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
-    .filter((notif: any) => {
-      // Bitmə tarixi yoxdursa və ya hələ bitmyibsə göstər
-      if (!notif.expiresAt) return true;
-      const expiresDate = notif.expiresAt.toDate ? notif.expiresAt.toDate() : new Date(notif.expiresAt);
-      return expiresDate > now;
-    }) as B2BNotification[];
+  try {
+    const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+    const now = new Date();
+    
+    const notifications = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      .filter((notif: any) => {
+        // Aktiv olmalıdır
+        if (notif.isActive === false) return false;
+        // Bitmə tarixi yoxdursa və ya hələ bitmyibsə göstər
+        if (!notif.expiresAt) return true;
+        const expiresDate = notif.expiresAt.toDate ? notif.expiresAt.toDate() : new Date(notif.expiresAt);
+        return expiresDate > now;
+      }) as B2BNotification[];
+    
+    // Client-side sort
+    return notifications.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  } catch (error) {
+    console.error('Error getting active notifications:', error);
+    return [];
+  }
 };
 
 // Bildirişi sil
