@@ -287,8 +287,8 @@ const B2BOrdersPage: React.FC = () => {
                         return (
                           <div
                             key={notification.id}
-                            className={`px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                              isUnread ? 'bg-blue-50/30' : ''
+                            className={`px-4 sm:px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer ${
+                              isUnread ? 'border-l-4 border-blue-500' : ''
                             }`}
                             onClick={() => {
                               if (isUnread && notification.id) {
