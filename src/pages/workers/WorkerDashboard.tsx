@@ -49,7 +49,6 @@ const WorkerDashboard: React.FC = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [qrExpiry, setQrExpiry] = useState<Date | null>(null);
-  const [scanAction, setScanAction] = useState<'checkin' | 'checkout'>('checkin');
   const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Stats
@@ -123,14 +122,7 @@ const WorkerDashboard: React.FC = () => {
     }
   };
 
-  const handleCheckIn = () => {
-    setScanAction('checkin');
-    setScanMessage(null);
-    setShowQRScanner(true);
-  };
-
-  const handleCheckOut = () => {
-    setScanAction('checkout');
+  const handleScanQR = () => {
     setScanMessage(null);
     setShowQRScanner(true);
   };
@@ -144,17 +136,30 @@ const WorkerDashboard: React.FC = () => {
       setActionLoading(true);
       setShowQRScanner(false);
       
-      // Skan edilən data-nı təmizlə (URL formatında gələ bilər)
+      // Skan edilən data-nı təmizlə
       let cleanToken = scannedToken;
-      
-      // Əgər URL formatındadırsa, sadəcə token hissəsini al
       if (scannedToken.includes('?session=')) {
         cleanToken = scannedToken.split('?session=')[1];
       }
       
       console.log('🔑 Yoxlanacaq token:', cleanToken);
       
-      const validation = await validateStoreQRToken(cleanToken, employee.id, scanAction);
+      // Avtomatik giriş/çıxış təyin et
+      let action: 'checkin' | 'checkout' = 'checkin';
+      
+      if (todayAttendance) {
+        if (todayAttendance.status === 'isde') {
+          // İşdədirsə, çıxış et
+          action = 'checkout';
+        } else {
+          // Artıq çıxış edibsə
+          setScanMessage({ type: 'error', text: 'Bu gün artıq işiniz bitib!' });
+          setTimeout(() => setScanMessage(null), 5000);
+          return;
+        }
+      }
+      
+      const validation = await validateStoreQRToken(cleanToken, employee.id, action);
       
       console.log('✅ Validation nəticəsi:', validation);
       
@@ -164,12 +169,12 @@ const WorkerDashboard: React.FC = () => {
         return;
       }
       
-      if (scanAction === 'checkin') {
+      if (action === 'checkin') {
         await checkIn(employee.id);
-        setScanMessage({ type: 'success', text: 'Giriş uğurla qeyd edildi!' });
+        setScanMessage({ type: 'success', text: '✅ Giriş uğurla qeyd edildi! İşə başladınız.' });
       } else {
         await checkOut(employee.id);
-        setScanMessage({ type: 'success', text: 'Çıxış uğurla qeyd edildi!' });
+        setScanMessage({ type: 'success', text: '✅ Çıxış uğurla qeyd edildi! İşiniz bitdi.' });
       }
       
       await loadData();
@@ -274,29 +279,21 @@ const WorkerDashboard: React.FC = () => {
             </div>
             
             <div>
-              {!todayAttendance ? (
+              {(!todayAttendance || todayAttendance.status === 'isde') ? (
                 <button
-                  onClick={handleCheckIn}
+                  onClick={handleScanQR}
                   disabled={actionLoading}
                   className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3"
-                  data-testid="check-in-button"
+                  data-testid="qr-scan-button"
                 >
                   <Scan className="w-6 h-6" />
-                  {actionLoading ? 'Gözləyin...' : 'QR Skan - Giriş'}
-                </button>
-              ) : todayAttendance.status === 'isde' ? (
-                <button
-                  onClick={handleCheckOut}
-                  disabled={actionLoading}
-                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3"
-                  data-testid="check-out-button"
-                >
-                  <Scan className="w-6 h-6" />
-                  {actionLoading ? 'Gözləyin...' : 'QR Skan - Çıxış'}
+                  {actionLoading ? 'Gözləyin...' : (
+                    !todayAttendance ? 'QR Skan - Giriş' : 'QR Skan - Çıxış'
+                  )}
                 </button>
               ) : (
                 <div className="bg-white/20 px-8 py-4 rounded-xl text-center">
-                  <p className="text-sm">Bu gün işiniz bitib</p>
+                  <p className="text-sm">✅ Bu gün işiniz bitib</p>
                 </div>
               )}
             </div>
@@ -490,7 +487,7 @@ const WorkerDashboard: React.FC = () => {
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
         onScan={handleQRScan}
-        title={scanAction === 'checkin' ? 'QR ilə Giriş' : 'QR ilə Çıxış'}
+        title={!todayAttendance ? 'QR ilə Giriş' : 'QR ilə Çıxış'}
       />
     </div>
   );
