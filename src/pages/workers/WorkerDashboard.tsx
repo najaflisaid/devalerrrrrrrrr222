@@ -144,21 +144,29 @@ const WorkerDashboard: React.FC = () => {
       
       console.log('🔑 Yoxlanacaq token:', cleanToken);
       
+      // Bugünkü davamiyyəti yenidən yoxla (real-time)
+      const currentAttendance = await getTodayAttendance(employee.id);
+      
       // Avtomatik giriş/çıxış təyin et
       let action: 'checkin' | 'checkout' = 'checkin';
       
-      if (todayAttendance) {
-        if (todayAttendance.status === 'isde') {
-          // İşdədirsə, çıxış et
+      if (currentAttendance) {
+        if (currentAttendance.status === 'isde') {
+          // İşdədirsə, çıxış et (2-ci skan)
           action = 'checkout';
-        } else {
+          console.log('🚪 Çıxış əməliyyatı başladı');
+        } else if (currentAttendance.status === 'cixib') {
           // Artıq çıxış edibsə
           setScanMessage({ type: 'error', text: 'Bu gün artıq işiniz bitib!' });
           setTimeout(() => setScanMessage(null), 5000);
           return;
         }
+      } else {
+        // Giriş yoxdursa, giriş et (1-ci skan)
+        console.log('🚀 Giriş əməliyyatı başladı');
       }
       
+      // QR token-i yoxla
       const validation = await validateStoreQRToken(cleanToken, employee.id, action);
       
       console.log('✅ Validation nəticəsi:', validation);
@@ -169,20 +177,24 @@ const WorkerDashboard: React.FC = () => {
         return;
       }
       
+      // Giriş/Çıxış əməliyyatını icra et
       if (action === 'checkin') {
         await checkIn(employee.id);
-        setScanMessage({ type: 'success', text: '✅ Giriş uğurla qeyd edildi! İşə başladınız.' });
+        const girisVaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+        setScanMessage({ type: 'success', text: `✅ İşə GİRİŞ uğurla qeyd edildi! Saat: ${girisVaxt}` });
       } else {
         await checkOut(employee.id);
-        setScanMessage({ type: 'success', text: '✅ Çıxış uğurla qeyd edildi! İşiniz bitdi.' });
+        const cixisVaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+        setScanMessage({ type: 'success', text: `✅ İşdən ÇIXIŞ uğurla qeyd edildi! Saat: ${cixisVaxt}` });
       }
       
+      // Data-nı yenilə ki, admin panelində görsənsin
       await loadData();
       setTimeout(() => setScanMessage(null), 5000);
       
     } catch (error: any) {
       console.error('❌ QR xətası:', error);
-      setScanMessage({ type: 'error', text: error.message });
+      setScanMessage({ type: 'error', text: error.message || 'Xəta baş verdi' });
       setTimeout(() => setScanMessage(null), 5000);
     } finally {
       setActionLoading(false);
@@ -248,29 +260,37 @@ const WorkerDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Check In/Out Kartı */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
               <p className="text-indigo-100 mb-2">Bugünkü Status</p>
-              <h2 className="text-3xl font-bold mb-4">
+              <h2 className="text-3xl font-bold mb-4" data-testid="today-status">
                 {todayAttendance 
                   ? todayAttendance.status === 'isde' 
-                    ? 'İşdəsiniz' 
-                    : 'Çıxış etmisiniz'
-                  : 'Giriş etməmisiniz'}
+                    ? '🟢 İşdəsiniz' 
+                    : '⏹️ Çıxış etmisiniz'
+                  : '⚪ Giriş etməmisiniz'}
               </h2>
               
               {todayAttendance && (
                 <div className="space-y-2">
-                  <p className="text-indigo-100">
+                  <p className="text-indigo-100 flex items-center gap-2">
+                    <span className="text-green-300">▶</span>
                     Giriş: {todayAttendance.girisSaati ? new Date(todayAttendance.girisSaati).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' }) : '-'}
                   </p>
                   {todayAttendance.cixisSaati && (
-                    <p className="text-indigo-100">
+                    <p className="text-indigo-100 flex items-center gap-2">
+                      <span className="text-red-300">■</span>
                       Çıxış: {new Date(todayAttendance.cixisSaati).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
+                  {todayAttendance.isSaati > 0 && (
+                    <p className="text-indigo-100 flex items-center gap-2">
+                      <span className="text-yellow-300">⏱</span>
+                      İş müddəti: {Math.floor(todayAttendance.isSaati / 60)}s {todayAttendance.isSaati % 60}d
+                    </p>
+                  )}
                   {todayAttendance.gecikme > 0 && (
-                    <p className="text-yellow-300">
+                    <p className="text-yellow-300 flex items-center gap-2">
                       ⚠️ Gecikmə: {todayAttendance.gecikme} dəqiqə
                     </p>
                   )}
@@ -283,25 +303,26 @@ const WorkerDashboard: React.FC = () => {
                 <button
                   onClick={handleScanQR}
                   disabled={actionLoading}
-                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3"
+                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3 shadow-lg"
                   data-testid="qr-scan-button"
                 >
                   <Scan className="w-6 h-6" />
                   {actionLoading ? 'Gözləyin...' : (
-                    !todayAttendance ? 'QR Skan - Giriş' : 'QR Skan - Çıxış'
+                    !todayAttendance ? '📥 QR Skan - GİRİŞ' : '📤 QR Skan - ÇIXIŞ'
                   )}
                 </button>
               ) : (
-                <div className="bg-white/20 px-8 py-4 rounded-xl text-center">
-                  <p className="text-sm">✅ Bu gün işiniz bitib</p>
+                <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
+                  <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
+                  <p className="text-sm text-indigo-100 mt-1">Xoş istirahət!</p>
                 </div>
               )}
             </div>
           </div>
           
           {scanMessage && (
-            <div className={`mt-4 p-4 rounded-lg ${scanMessage.type === 'success' ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'}`}>
-              {scanMessage.text}
+            <div className={`mt-6 p-4 rounded-lg ${scanMessage.type === 'success' ? 'bg-green-500/30 border border-green-300 text-green-100' : 'bg-red-500/30 border border-red-300 text-red-100'}`} data-testid="scan-message">
+              <p className="text-lg font-medium">{scanMessage.text}</p>
             </div>
           )}
         </div>
