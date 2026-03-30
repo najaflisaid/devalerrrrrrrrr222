@@ -26,6 +26,7 @@ import { getEmployeeBadges } from '../../services/badgeService';
 import { getMonthlyBonus } from '../../services/bonusService';
 import { getMonthlySales } from '../../services/salesService';
 import { generateQRToken, getActiveToken } from '../../services/qrTokenService';
+import { validateStoreQRToken } from '../../services/storeQRService';
 import { Attendance, Performance, Badge, Bonus } from '../../types/worker';
 import QRScannerModal from '../../components/workers/QRScannerModal';
 import SignatureModal from '../../components/workers/SignatureModal';
@@ -48,6 +49,8 @@ const WorkerDashboard: React.FC = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [qrExpiry, setQrExpiry] = useState<Date | null>(null);
+  const [scanAction, setScanAction] = useState<'checkin' | 'checkout'>('checkin');
+  const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Stats
   const [monthlyStats, setMonthlyStats] = useState({
@@ -120,29 +123,47 @@ const WorkerDashboard: React.FC = () => {
     }
   };
 
-  const handleCheckIn = async () => {
-    if (!employee) return;
-    
-    try {
-      setActionLoading(true);
-      await checkIn(employee.id);
-      await loadData();
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setActionLoading(false);
-    }
+  const handleCheckIn = () => {
+    setScanAction('checkin');
+    setScanMessage(null);
+    setShowQRScanner(true);
   };
 
-  const handleCheckOut = async () => {
+  const handleCheckOut = () => {
+    setScanAction('checkout');
+    setScanMessage(null);
+    setShowQRScanner(true);
+  };
+
+  const handleQRScan = async (scannedToken: string) => {
     if (!employee) return;
     
     try {
       setActionLoading(true);
-      await checkOut(employee.id);
+      setShowQRScanner(false);
+      
+      const validation = await validateStoreQRToken(scannedToken, employee.id, scanAction);
+      
+      if (!validation.valid) {
+        setScanMessage({ type: 'error', text: validation.message });
+        setTimeout(() => setScanMessage(null), 5000);
+        return;
+      }
+      
+      if (scanAction === 'checkin') {
+        await checkIn(employee.id);
+        setScanMessage({ type: 'success', text: 'Giriş uğurla qeyd edildi!' });
+      } else {
+        await checkOut(employee.id);
+        setScanMessage({ type: 'success', text: 'Çıxış uğurla qeyd edildi!' });
+      }
+      
       await loadData();
+      setTimeout(() => setScanMessage(null), 5000);
+      
     } catch (error: any) {
-      alert(error.message);
+      setScanMessage({ type: 'error', text: error.message });
+      setTimeout(() => setScanMessage(null), 5000);
     } finally {
       setActionLoading(false);
     }
@@ -242,19 +263,21 @@ const WorkerDashboard: React.FC = () => {
                 <button
                   onClick={handleCheckIn}
                   disabled={actionLoading}
-                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3"
                   data-testid="check-in-button"
                 >
-                  {actionLoading ? 'Gözləyin...' : 'Giriş Et'}
+                  <Scan className="w-6 h-6" />
+                  {actionLoading ? 'Gözləyin...' : 'QR Skan - Giriş'}
                 </button>
               ) : todayAttendance.status === 'isde' ? (
                 <button
                   onClick={handleCheckOut}
                   disabled={actionLoading}
-                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3"
                   data-testid="check-out-button"
                 >
-                  {actionLoading ? 'Gözləyin...' : 'Çıxış Et'}
+                  <Scan className="w-6 h-6" />
+                  {actionLoading ? 'Gözləyin...' : 'QR Skan - Çıxış'}
                 </button>
               ) : (
                 <div className="bg-white/20 px-8 py-4 rounded-xl text-center">
@@ -263,6 +286,12 @@ const WorkerDashboard: React.FC = () => {
               )}
             </div>
           </div>
+          
+          {scanMessage && (
+            <div className={`mt-4 p-4 rounded-lg ${scanMessage.type === 'success' ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'}`}>
+              {scanMessage.text}
+            </div>
+          )}
         </div>
 
         {/* Statistika Kartları */}
@@ -441,6 +470,13 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      <QRScannerModal
+        isOpen={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScan={handleQRScan}
+        title={scanAction === 'checkin' ? 'QR ilə Giriş' : 'QR ilə Çıxış'}
+      />
     </div>
   );
 };

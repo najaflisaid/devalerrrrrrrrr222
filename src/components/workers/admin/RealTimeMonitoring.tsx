@@ -3,6 +3,7 @@ import { getAllEmployees } from '../../../services/employeeService';
 import { getTodayAllAttendance } from '../../../services/attendanceService';
 import { Employee, Attendance, RealtimeWorker } from '../../../types/worker';
 import { Clock, User, AlertCircle, CheckCircle2, Coffee } from 'lucide-react';
+import QRCodePanel from './QRCodePanel';
 
 const RealTimeMonitoring: React.FC = () => {
   const [workers, setWorkers] = useState<RealtimeWorker[]>([]);
@@ -82,6 +83,9 @@ const RealTimeMonitoring: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* QR Code Panel */}
+      <QRCodePanel magaza="Ana mağaza" />
+      
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <button
