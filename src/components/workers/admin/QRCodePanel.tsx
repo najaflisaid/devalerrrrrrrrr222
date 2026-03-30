@@ -105,10 +105,10 @@ const QRCodePanel: React.FC<Props> = ({ magaza = 'Ana mağaza' }) => {
 
       {token ? (
         <div className="text-center">
-          {/* QR Code */}
+          {/* QR Code - URL olaraq yaradılır */}
           <div className="bg-white p-4 rounded-lg border-2 border-gray-200 inline-block mb-4">
             <QRCodeSVG 
-              value={token.token} 
+              value={`${window.location.origin}/workers/qr-scan?session=${token.token}`} 
               size={200}
               level="H"
               includeMargin
@@ -126,18 +126,24 @@ const QRCodePanel: React.FC<Props> = ({ magaza = 'Ana mağaza' }) => {
           {/* Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
             <p className="text-sm text-blue-800">
-              <strong>Məlumat:</strong> Bu QR kod 1 saat ərzində keçərlidir. İşçilər bu kodu skan edərək giriş/çıxış edə bilərlər.
+              <strong>Təlimat:</strong> İşçilər telefon ilə bu QR kodu skan etsinlər. 
+            </p>
+            <p className="text-sm text-blue-800 mt-2">
+              • <strong>1-ci skan:</strong> İşə GİRİŞ qeyd olunur
+            </p>
+            <p className="text-sm text-blue-800">
+              • <strong>2-ci skan:</strong> İşdən ÇIXIŞ qeyd olunur
             </p>
             <p className="text-xs text-blue-600 mt-2">
-              Hər işçi eyni QR ilə yalnız 1 dəfə giriş edə bilər.
+              QR kod 1 saat keçərlidir. Vaxtı bitdikdə yeni QR yaradın.
             </p>
           </div>
 
           {/* Used By */}
           {token.usedBy && token.usedBy.length > 0 && (
-            <div className="mt-4 text-left">
-              <p className="text-sm text-gray-600">
-                Bu QR ilə {token.usedBy.length} işçi giriş edib
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-left">
+              <p className="text-sm text-green-800 font-medium">
+                ✅ Bu QR ilə {token.usedBy.length} işçi giriş edib
               </p>
             </div>
           )}

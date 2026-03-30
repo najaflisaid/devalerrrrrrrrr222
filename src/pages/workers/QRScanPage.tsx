@@ -4,7 +4,8 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { getEmployeeByEmail } from '../../services/employeeService';
 import { checkIn, checkOut, getTodayAttendance } from '../../services/attendanceService';
-import { Loader2, CheckCircle2, LogIn, Scan } from 'lucide-react';
+import { validateStoreQRToken } from '../../services/storeQRService';
+import { Loader2, CheckCircle2, LogIn, Scan, XCircle } from 'lucide-react';
 import SignatureModal from '../../components/workers/SignatureModal';
 
 const QRScanPage: React.FC = () => {
@@ -12,7 +13,7 @@ const QRScanPage: React.FC = () => {
   const navigate = useNavigate();
   const session = searchParams.get('session');
   
-  const [step, setStep] = useState<'login' | 'processing' | 'success' | 'signature'>('login');
+  const [step, setStep] = useState<'validating' | 'login' | 'processing' | 'success' | 'signature' | 'error'>('validating');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,10 +22,16 @@ const QRScanPage: React.FC = () => {
   const [action, setAction] = useState<'check-in' | 'check-out' | null>(null);
   const [employeeName, setEmployeeName] = useState('');
   const [employeeId, setEmployeeId] = useState('');
+  const [sessionValid, setSessionValid] = useState(false);
 
   useEffect(() => {
     if (!session) {
       setError('QR kod keçərsizdir');
+      setStep('error');
+    } else {
+      // Session var, login formu göstər
+      setSessionValid(true);
+      setStep('login');
     }
   }, [session]);
 
@@ -53,31 +60,55 @@ const QRScanPage: React.FC = () => {
       setStep('processing');
       const todayAttendance = await getTodayAttendance(employee.id);
       
+      // Əməliyyat növünü təyin et
+      let currentAction: 'checkin' | 'checkout' = 'checkin';
+      
       if (!todayAttendance) {
-        // Check-in
-        setAction('check-in');
-        await checkIn(employee.id);
-        setMessage(`Xoş gəldiniz! İşə giriş: ${new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}`);
-        setStep('success');
-        
-        // 3 saniyə sonra dashboard-a keç
-        setTimeout(() => {
-          navigate('/workers/dashboard');
-        }, 3000);
-        
+        // Giriş yoxdur - 1-ci skan = GİRİŞ
+        currentAction = 'checkin';
       } else if (todayAttendance.status === 'isde') {
-        // Check-out - imza lazımdır
-        setAction('check-out');
-        setStep('signature');
-        
+        // İşdədir - 2-ci skan = ÇIXIŞ
+        currentAction = 'checkout';
       } else {
+        // Artıq çıxış edib
         setError('Bu gün artıq çıxış etmisiniz');
         setStep('login');
+        setLoading(false);
+        return;
+      }
+      
+      // QR session token-i yoxla
+      const validation = await validateStoreQRToken(session!, employee.id, currentAction);
+      
+      if (!validation.valid) {
+        setError(validation.message);
+        setStep('login');
+        setLoading(false);
+        return;
+      }
+      
+      // Əməliyyatı icra et
+      if (currentAction === 'checkin') {
+        setAction('check-in');
+        await checkIn(employee.id);
+        const vaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+        setMessage(`Xoş gəldiniz! İşə GİRİŞ: ${vaxt}`);
+        setStep('success');
+        
+        // 3 saniyə sonra işçi login-ə keç
+        setTimeout(() => {
+          navigate('/workers');
+        }, 3000);
+        
+      } else {
+        // Çıxış - imza lazımdır
+        setAction('check-out');
+        setStep('signature');
       }
       
     } catch (err: any) {
       console.error('Login xətası:', err);
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         setError('Email və ya şifrə yanlışdır');
       } else {
         setError('Xəta baş verdi: ' + err.message);
@@ -95,14 +126,13 @@ const QRScanPage: React.FC = () => {
       // Check-out et
       await checkOut(employeeId);
       
-      // TODO: İmzanı saxla (attendance-ə signature field əlavə et)
-      
-      setMessage(`Xudahafiz! İşdən çıxış: ${new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}`);
+      const vaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+      setMessage(`Xudahafiz! İşdən ÇIXIŞ: ${vaxt}`);
       setStep('success');
       
-      // 3 saniyə sonra dashboard-a keç
+      // 3 saniyə sonra işçi login-ə keç
       setTimeout(() => {
-        navigate('/workers/dashboard');
+        navigate('/workers');
       }, 3000);
       
     } catch (error: any) {
@@ -111,15 +141,29 @@ const QRScanPage: React.FC = () => {
     }
   };
 
-  if (!session) {
+  // Xəta ekranı
+  if (step === 'error' || !session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Scan className="w-8 h-8 text-red-600" />
+            <XCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">QR Kod Keçərsizdir</h2>
-          <p className="text-gray-600">Zəhmət olmasa düzgün QR kodu scan edin</p>
+          <p className="text-gray-600 mb-4">Bu QR kod yanlışdır və ya vaxtı keçib.</p>
+          <p className="text-sm text-gray-500">Zəhmət olmasa admin-dən yeni QR kod istəyin.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Validasiya ekranı
+  if (step === 'validating') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">QR kod yoxlanılır...</p>
         </div>
       </div>
     );

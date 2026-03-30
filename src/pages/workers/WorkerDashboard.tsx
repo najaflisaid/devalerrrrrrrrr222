@@ -10,14 +10,10 @@ import {
   Calendar,
   Target,
   Activity,
-  QrCode,
   Scan
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { 
   getTodayAttendance, 
-  checkIn, 
-  checkOut,
   getRecentAttendance,
   getMonthlyAttendance
 } from '../../services/attendanceService';
@@ -25,11 +21,7 @@ import { getLatestPerformance } from '../../services/performanceService';
 import { getEmployeeBadges } from '../../services/badgeService';
 import { getMonthlyBonus } from '../../services/bonusService';
 import { getMonthlySales } from '../../services/salesService';
-import { generateQRToken, getActiveToken } from '../../services/qrTokenService';
-import { validateStoreQRToken } from '../../services/storeQRService';
 import { Attendance, Performance, Badge, Bonus } from '../../types/worker';
-import QRScannerModal from '../../components/workers/QRScannerModal';
-import SignatureModal from '../../components/workers/SignatureModal';
 
 const WorkerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -41,15 +33,6 @@ const WorkerDashboard: React.FC = () => {
   const [badges, setBadges] = useState<Badge[]>([]);
   const [bonus, setBonus] = useState<Bonus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  
-  // QR States
-  const [qrToken, setQrToken] = useState<string>('');
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [showQRScanner, setShowQRScanner] = useState(false);
-  const [showSignature, setShowSignature] = useState(false);
-  const [qrExpiry, setQrExpiry] = useState<Date | null>(null);
-  const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Stats
   const [monthlyStats, setMonthlyStats] = useState({
@@ -122,85 +105,6 @@ const WorkerDashboard: React.FC = () => {
     }
   };
 
-  const handleScanQR = () => {
-    setScanMessage(null);
-    setShowQRScanner(true);
-  };
-
-  const handleQRScan = async (scannedToken: string) => {
-    if (!employee) return;
-    
-    console.log('📱 QR Skan edildi:', scannedToken);
-    
-    try {
-      setActionLoading(true);
-      setShowQRScanner(false);
-      
-      // Skan edilən data-nı təmizlə
-      let cleanToken = scannedToken;
-      if (scannedToken.includes('?session=')) {
-        cleanToken = scannedToken.split('?session=')[1];
-      }
-      
-      console.log('🔑 Yoxlanacaq token:', cleanToken);
-      
-      // Bugünkü davamiyyəti yenidən yoxla (real-time)
-      const currentAttendance = await getTodayAttendance(employee.id);
-      
-      // Avtomatik giriş/çıxış təyin et
-      let action: 'checkin' | 'checkout' = 'checkin';
-      
-      if (currentAttendance) {
-        if (currentAttendance.status === 'isde') {
-          // İşdədirsə, çıxış et (2-ci skan)
-          action = 'checkout';
-          console.log('🚪 Çıxış əməliyyatı başladı');
-        } else if (currentAttendance.status === 'cixib') {
-          // Artıq çıxış edibsə
-          setScanMessage({ type: 'error', text: 'Bu gün artıq işiniz bitib!' });
-          setTimeout(() => setScanMessage(null), 5000);
-          return;
-        }
-      } else {
-        // Giriş yoxdursa, giriş et (1-ci skan)
-        console.log('🚀 Giriş əməliyyatı başladı');
-      }
-      
-      // QR token-i yoxla
-      const validation = await validateStoreQRToken(cleanToken, employee.id, action);
-      
-      console.log('✅ Validation nəticəsi:', validation);
-      
-      if (!validation.valid) {
-        setScanMessage({ type: 'error', text: validation.message });
-        setTimeout(() => setScanMessage(null), 5000);
-        return;
-      }
-      
-      // Giriş/Çıxış əməliyyatını icra et
-      if (action === 'checkin') {
-        await checkIn(employee.id);
-        const girisVaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
-        setScanMessage({ type: 'success', text: `✅ İşə GİRİŞ uğurla qeyd edildi! Saat: ${girisVaxt}` });
-      } else {
-        await checkOut(employee.id);
-        const cixisVaxt = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
-        setScanMessage({ type: 'success', text: `✅ İşdən ÇIXIŞ uğurla qeyd edildi! Saat: ${cixisVaxt}` });
-      }
-      
-      // Data-nı yenilə ki, admin panelində görsənsin
-      await loadData();
-      setTimeout(() => setScanMessage(null), 5000);
-      
-    } catch (error: any) {
-      console.error('❌ QR xətası:', error);
-      setScanMessage({ type: 'error', text: error.message || 'Xəta baş verdi' });
-      setTimeout(() => setScanMessage(null), 5000);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleLogout = async () => {
     await logout();
     navigate('/workers');
@@ -258,7 +162,7 @@ const WorkerDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Check In/Out Kartı */}
+        {/* Bugünkü Status Kartı */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
@@ -300,17 +204,12 @@ const WorkerDashboard: React.FC = () => {
             
             <div>
               {(!todayAttendance || todayAttendance.status === 'isde') ? (
-                <button
-                  onClick={handleScanQR}
-                  disabled={actionLoading}
-                  className="bg-white text-indigo-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 flex items-center gap-3 shadow-lg"
-                  data-testid="qr-scan-button"
-                >
-                  <Scan className="w-6 h-6" />
-                  {actionLoading ? 'Gözləyin...' : (
-                    !todayAttendance ? '📥 QR Skan - GİRİŞ' : '📤 QR Skan - ÇIXIŞ'
-                  )}
-                </button>
+                <div className="bg-white/20 px-6 py-4 rounded-xl text-center" data-testid="qr-instruction">
+                  <Scan className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">
+                    {!todayAttendance ? 'Giriş üçün mağazadakı QR kodu skan edin' : 'Çıxış üçün mağazadakı QR kodu skan edin'}
+                  </p>
+                </div>
               ) : (
                 <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
                   <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
@@ -319,12 +218,6 @@ const WorkerDashboard: React.FC = () => {
               )}
             </div>
           </div>
-          
-          {scanMessage && (
-            <div className={`mt-6 p-4 rounded-lg ${scanMessage.type === 'success' ? 'bg-green-500/30 border border-green-300 text-green-100' : 'bg-red-500/30 border border-red-300 text-red-100'}`} data-testid="scan-message">
-              <p className="text-lg font-medium">{scanMessage.text}</p>
-            </div>
-          )}
         </div>
 
         {/* Statistika Kartları */}
@@ -503,13 +396,6 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      <QRScannerModal
-        isOpen={showQRScanner}
-        onClose={() => setShowQRScanner(false)}
-        onScan={handleQRScan}
-        title={!todayAttendance ? 'QR ilə Giriş' : 'QR ilə Çıxış'}
-      />
     </div>
   );
 };
