@@ -10,9 +10,13 @@ import {
   Calendar,
   Target,
   Activity,
-  Scan,
   AlertTriangle,
-  XCircle
+  XCircle,
+  Play,
+  Square,
+  Loader2,
+  CheckCircle,
+  XOctagon
 } from 'lucide-react';
 import { 
   getTodayAttendance, 
@@ -24,7 +28,12 @@ import { getEmployeeBadges } from '../../services/badgeService';
 import { getMonthlyBonus } from '../../services/bonusService';
 import { getMonthlySales } from '../../services/salesService';
 import { getEmployeeBehaviors } from '../../services/behaviorService';
-import { Attendance, Performance, Badge, Bonus, Behavior } from '../../types/worker';
+import { 
+  createAttendanceRequest, 
+  subscribeToMyRequests,
+  getMyTodayRequestStatus 
+} from '../../services/requestService';
+import { Attendance, Performance, Badge, Bonus, Behavior, AttendanceRequest } from '../../types/worker';
 
 const WorkerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -36,7 +45,10 @@ const WorkerDashboard: React.FC = () => {
   const [badges, setBadges] = useState<Badge[]>([]);
   const [bonus, setBonus] = useState<Bonus | null>(null);
   const [behaviors, setBehaviors] = useState<Behavior[]>([]);
+  const [myRequests, setMyRequests] = useState<AttendanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestMessage, setRequestMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   
   // Stats
   const [monthlyStats, setMonthlyStats] = useState({
@@ -55,6 +67,19 @@ const WorkerDashboard: React.FC = () => {
     
     if (employee) {
       loadData();
+      
+      // Real-time sorğu dinləmə
+      const unsubscribe = subscribeToMyRequests(employee.id, (requests) => {
+        setMyRequests(requests);
+        
+        // Sorğu təsdiq olunduqda data-nı yenilə
+        const approvedRequest = requests.find(r => r.status === 'tesdiq');
+        if (approvedRequest) {
+          loadData();
+        }
+      });
+      
+      return () => unsubscribe();
     }
   }, [employee, authLoading, navigate]);
 
@@ -123,6 +148,63 @@ const WorkerDashboard: React.FC = () => {
     await logout();
     navigate('/workers');
   };
+
+  // İşə başla sorğusu göndər
+  const handleStartWork = async () => {
+    if (!employee) return;
+    
+    setRequestLoading(true);
+    setRequestMessage(null);
+    
+    try {
+      await createAttendanceRequest(
+        employee.id,
+        employee.ad,
+        employee.soyad,
+        'giris'
+      );
+      setRequestMessage({ 
+        type: 'success', 
+        text: '✅ İşə başlama sorğusu göndərildi! Admin təsdiq edəndə iş başlayacaq.' 
+      });
+    } catch (error: any) {
+      setRequestMessage({ type: 'error', text: error.message });
+    } finally {
+      setRequestLoading(false);
+      setTimeout(() => setRequestMessage(null), 5000);
+    }
+  };
+
+  // Çıxış sorğusu göndər
+  const handleEndWork = async () => {
+    if (!employee) return;
+    
+    setRequestLoading(true);
+    setRequestMessage(null);
+    
+    try {
+      await createAttendanceRequest(
+        employee.id,
+        employee.ad,
+        employee.soyad,
+        'cixis'
+      );
+      setRequestMessage({ 
+        type: 'success', 
+        text: '✅ Çıxış sorğusu göndərildi! Admin təsdiq edəndə iş bitəcək.' 
+      });
+    } catch (error: any) {
+      setRequestMessage({ type: 'error', text: error.message });
+    } finally {
+      setRequestLoading(false);
+      setTimeout(() => setRequestMessage(null), 5000);
+    }
+  };
+
+  // Gözləmədə olan sorğu varmı?
+  const pendingGirisRequest = myRequests.find(r => r.nov === 'giris' && r.status === 'gozlemede');
+  const pendingCixisRequest = myRequests.find(r => r.nov === 'cixis' && r.status === 'gozlemede');
+  const rejectedRequest = myRequests.find(r => r.status === 'legv');
 
   if (authLoading || loading) {
     return (
@@ -216,22 +298,97 @@ const WorkerDashboard: React.FC = () => {
               )}
             </div>
             
-            <div>
-              {(!todayAttendance || todayAttendance.status === 'isde') ? (
-                <div className="bg-white/20 px-6 py-4 rounded-xl text-center" data-testid="qr-instruction">
-                  <Scan className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm font-medium">
-                    {!todayAttendance ? 'Giriş üçün mağazadakı QR kodu skan edin' : 'Çıxış üçün mağazadakı QR kodu skan edin'}
-                  </p>
+            <div className="flex flex-col gap-3">
+              {/* İşə başlamamışsa - İşə başla düyməsi */}
+              {!todayAttendance && !pendingGirisRequest && (
+                <button
+                  onClick={handleStartWork}
+                  disabled={requestLoading}
+                  className="flex items-center justify-center gap-3 bg-white text-green-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-colors disabled:opacity-50 shadow-lg"
+                  data-testid="start-work-btn"
+                >
+                  {requestLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Play className="w-6 h-6" />
+                  )}
+                  {requestLoading ? 'Göndərilir...' : 'İşə Başla'}
+                </button>
+              )}
+
+              {/* Giriş sorğusu gözləmədədirsə */}
+              {pendingGirisRequest && (
+                <div className="bg-yellow-500/30 border border-yellow-300 px-6 py-4 rounded-xl text-center">
+                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                  <p className="font-medium">Giriş sorğusu gözləmədədir</p>
+                  <p className="text-sm text-yellow-100 mt-1">Admin təsdiq edəndə iş başlayacaq</p>
                 </div>
-              ) : (
+              )}
+
+              {/* İşdədirsə - Çıxış düyməsi */}
+              {todayAttendance?.status === 'isde' && !pendingCixisRequest && (
+                <button
+                  onClick={handleEndWork}
+                  disabled={requestLoading}
+                  className="flex items-center justify-center gap-3 bg-white text-red-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-50 transition-colors disabled:opacity-50 shadow-lg"
+                  data-testid="end-work-btn"
+                >
+                  {requestLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Square className="w-6 h-6" />
+                  )}
+                  {requestLoading ? 'Göndərilir...' : 'Çıxış Et'}
+                </button>
+              )}
+
+              {/* Çıxış sorğusu gözləmədədirsə */}
+              {pendingCixisRequest && (
+                <div className="bg-yellow-500/30 border border-yellow-300 px-6 py-4 rounded-xl text-center">
+                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                  <p className="font-medium">Çıxış sorğusu gözləmədədir</p>
+                  <p className="text-sm text-yellow-100 mt-1">Admin təsdiq edəndə iş bitəcək</p>
+                </div>
+              )}
+
+              {/* İş bitibsə */}
+              {todayAttendance?.status === 'cixib' && (
                 <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
+                  <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-300" />
                   <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
                   <p className="text-sm text-indigo-100 mt-1">Xoş istirahət!</p>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Sorğu mesajı */}
+          {requestMessage && (
+            <div className={`mt-4 p-4 rounded-lg ${
+              requestMessage.type === 'success' ? 'bg-green-500/30 border border-green-300 text-green-100' : 
+              requestMessage.type === 'error' ? 'bg-red-500/30 border border-red-300 text-red-100' :
+              'bg-blue-500/30 border border-blue-300 text-blue-100'
+            }`}>
+              <p className="font-medium">{requestMessage.text}</p>
+            </div>
+          )}
+
+          {/* Ləğv edilmiş sorğu varsa */}
+          {rejectedRequest && (
+            <div className="mt-4 p-4 rounded-lg bg-red-500/30 border border-red-300">
+              <div className="flex items-start gap-3">
+                <XOctagon className="w-5 h-5 text-red-200 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-red-100">
+                    {rejectedRequest.nov === 'giris' ? 'Giriş' : 'Çıxış'} sorğunuz ləğv edildi
+                  </p>
+                  {rejectedRequest.adminQeyd && (
+                    <p className="text-sm text-red-200 mt-1">Səbəb: {rejectedRequest.adminQeyd}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Statistika Kartları */}

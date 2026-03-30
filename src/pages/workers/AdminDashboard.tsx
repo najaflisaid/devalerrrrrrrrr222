@@ -10,11 +10,13 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  Award
+  Award,
+  Bell
 } from 'lucide-react';
 import { getAllEmployees } from '../../services/employeeService';
 import { getTodayAllAttendance } from '../../services/attendanceService';
 import { getAllPerformances } from '../../services/performanceService';
+import { subscribeToPendingRequests } from '../../services/requestService';
 import { Employee, Attendance, Performance, AdminDashboardStats, RealtimeWorker } from '../../types/worker';
 
 // Komponentlər
@@ -24,12 +26,14 @@ import AttendanceManagement from '../../components/workers/admin/AttendanceManag
 import BehaviorManagement from '../../components/workers/admin/BehaviorManagement';
 import PerformanceManagement from '../../components/workers/admin/PerformanceManagement';
 import BonusManagement from '../../components/workers/admin/BonusManagement';
+import RequestManagement from '../../components/workers/admin/RequestManagement';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin, logout, loading: authLoading } = useWorker();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'realtime' | 'employees' | 'attendance' | 'behavior' | 'performance' | 'bonus'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'requests' | 'realtime' | 'employees' | 'attendance' | 'behavior' | 'performance' | 'bonus'>('dashboard');
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [stats, setStats] = useState<AdminDashboardStats>({
     bugunIsde: 0,
     bugunGecikenler: 0,
@@ -49,6 +53,13 @@ const AdminDashboard: React.FC = () => {
     
     if (isAdmin) {
       loadDashboardData();
+      
+      // Real-time sorğu sayını dinlə
+      const unsubscribe = subscribeToPendingRequests((requests) => {
+        setPendingRequestCount(requests.length);
+      });
+      
+      return () => unsubscribe();
     }
   }, [isAdmin, authLoading, navigate]);
 
@@ -145,6 +156,25 @@ const AdminDashboard: React.FC = () => {
               }`}
             >
               Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap relative ${
+                activeTab === 'requests'
+                  ? 'border-red-600 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+              data-testid="requests-tab"
+            >
+              <span className="flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Sorğular
+                {pendingRequestCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                    {pendingRequestCount}
+                  </span>
+                )}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('realtime')}
@@ -278,6 +308,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'requests' && <RequestManagement />}
         {activeTab === 'realtime' && <RealTimeMonitoring />}
         {activeTab === 'employees' && <EmployeeManagement onRefresh={loadDashboardData} />}
         {activeTab === 'attendance' && <AttendanceManagement />}

@@ -115,3 +115,18 @@ export interface RealtimeWorker {
   status: 'isde' | 'yoxdur' | 'gecikmeli' | 'icazeli';
   statusText: string;
 }
+
+// İşə giriş/çıxış sorğusu
+export interface AttendanceRequest {
+  id: string;
+  isciID: string;
+  isciAd: string;
+  isciSoyad: string;
+  nov: 'giris' | 'cixis'; // giriş və ya çıxış sorğusu
+  tarix: string; // YYYY-MM-DD
+  sorguVaxti: string; // timestamp - sorğu göndərilən vaxt
+  status: 'gozlemede' | 'tesdiq' | 'legv'; // gözləmədə, təsdiq, ləğv
+  adminQeyd?: string; // admin qeydi
+  cavabVaxti?: string; // admin cavab verdiyi vaxt
+  createdAt: string;
+}
