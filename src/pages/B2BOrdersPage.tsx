@@ -261,27 +261,27 @@ const B2BOrdersPage: React.FC = () => {
                     {/* Ödəniş Məlumatları */}
                     {(order.totalDebt || order.paymentDeadline) && (
                       <div className="border-t mt-4 pt-4">
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <p className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             {t('b2b.paymentInfo') || 'Ödəniş Məlumatları'}
                           </p>
                           <div className="grid grid-cols-2 gap-4">
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div>
-                                <p className="text-xs text-yellow-700">BORC</p>
-                                <p className="text-2xl font-bold text-red-600">{order.totalDebt.toFixed(2)} ₼</p>
+                                <p className="text-xs text-gray-600">BORC</p>
+                                <p className="text-2xl font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
                               </div>
                             )}
                             {order.paymentDeadline && (
                               <div>
-                                <p className="text-xs text-yellow-700">Ödənişin tamamlanma tarixi</p>
-                                <p className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                                <p className="text-xs text-gray-600">Ödənişin tamamlanma tarixi</p>
+                                <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
                                   <Calendar className="h-4 w-4" />
-                                  {new Date(order.paymentDeadline).toLocaleDateString(i18n.language === 'az' ? 'az-AZ' : 'ru-RU', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })}
+                                  {new Date(order.paymentDeadline).toLocaleDateString('az-AZ', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                  }).replace(/\//g, '.')}
                                 </p>
                               </div>
                             )}
