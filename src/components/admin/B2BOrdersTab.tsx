@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, DollarSign, Calendar } from 'lucide-react';
+import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar } from 'lucide-react';
 import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
 
@@ -457,16 +457,15 @@ const B2BOrdersTab: React.FC = () => {
               </div>
 
               {/* Ödəniş Məlumatları Bölməsi */}
-              <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="mb-4 bg-white border border-gray-200 rounded-lg p-3">
                 <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm font-semibold text-yellow-900 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
+                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     Ödəniş Məlumatları
                   </p>
                   {editingPaymentOrderId !== order.id && (
                     <button
                       onClick={() => handleEditPayment(order)}
-                      className="text-yellow-600 hover:text-yellow-800"
+                      className="text-gray-600 hover:text-gray-800"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
@@ -476,29 +475,29 @@ const B2BOrdersTab: React.FC = () => {
                 {editingPaymentOrderId === order.id ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Ümumi Borc (₼)</label>
+                      <label className="block text-xs text-gray-600 mb-1">Əvvəlki borc (₼)</label>
                       <input
                         type="number"
                         step="0.01"
                         value={paymentEditData.totalDebt}
                         onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebt: e.target.value })}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Son Ödəniş Müddəti</label>
+                      <label className="block text-xs text-gray-600 mb-1">Ödənişin tamamlanma tarixi</label>
                       <input
                         type="date"
                         value={paymentEditData.paymentDeadline}
                         onChange={(e) => setPaymentEditData({ ...paymentEditData, paymentDeadline: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
                       />
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSavePayment(order.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800"
                       >
                         <Save className="h-3 w-3" /> Yadda saxla
                       </button>
@@ -513,16 +512,16 @@ const B2BOrdersTab: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">Ümumi Borc</p>
-                      <p className="text-lg font-bold text-red-600">
+                      <p className="text-xs text-gray-500">Əvvəlki borc</p>
+                      <p className="text-lg font-bold text-gray-900">
                         {order.totalDebt ? `${order.totalDebt.toFixed(2)}₼` : '-'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Son Ödəniş Müddəti</p>
-                      <p className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                      <p className="text-xs text-gray-500">Ödənişin tamamlanma tarixi</p>
+                      <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {order.paymentDeadline ? new Date(order.paymentDeadline).toLocaleDateString('az-AZ') : '-'}
+                        {order.paymentDeadline ? new Date(order.paymentDeadline).toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : '-'}
                       </p>
                     </div>
                   </div>
