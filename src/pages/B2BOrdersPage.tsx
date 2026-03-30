@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell, AlertTriangle, Info } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -51,6 +51,8 @@ const B2BOrdersPage: React.FC = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<B2BNotification[]>([]);
   const [dismissedNotifications, setDismissedNotifications] = useState<string[]>([]);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadProducts();
@@ -75,6 +77,23 @@ const B2BOrdersPage: React.FC = () => {
 
     return () => unsubscribe();
   }, [userEmail]);
+
+  // Click outside to close notification panel
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationPanelRef.current && !notificationPanelRef.current.contains(event.target as Node)) {
+        setShowNotificationPanel(false);
+      }
+    };
+
+    if (showNotificationPanel) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotificationPanel]);
 
   const loadProducts = async () => {
     try {
@@ -161,13 +180,13 @@ const B2BOrdersPage: React.FC = () => {
   const getNotificationTypeConfig = (type: NotificationType) => {
     switch (type) {
       case 'success':
-        return { bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-900' };
+        return { icon: CheckCircle, bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-900', iconColor: 'text-green-600' };
       case 'warning':
-        return { bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', textColor: 'text-yellow-900' };
+        return { icon: AlertTriangle, bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', textColor: 'text-yellow-900', iconColor: 'text-yellow-600' };
       case 'error':
-        return { bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-900' };
+        return { icon: AlertCircle, bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-900', iconColor: 'text-red-600' };
       default:
-        return { bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-900' };
+        return { icon: Info, bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-900', iconColor: 'text-blue-600' };
     }
   };
 
@@ -179,6 +198,9 @@ const B2BOrdersPage: React.FC = () => {
   };
 
   const visibleNotifications = notifications.filter(n => !dismissedNotifications.includes(n.id || ''));
+  const unreadCount = userEmail 
+    ? visibleNotifications.filter(n => !n.readBy?.includes(userEmail)).length 
+    : 0;
 
   if (loading) {
     return (
@@ -194,50 +216,140 @@ const B2BOrdersPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Bildiriş Paneli */}
-        {visibleNotifications.length > 0 && (
-          <div className="mb-6 space-y-3">
-            {visibleNotifications.map((notification) => {
-              const config = getNotificationTypeConfig(notification.type);
-              const isUnread = userEmail ? !notification.readBy?.includes(userEmail) : true;
-              
-              return (
-                <div
-                  key={notification.id}
-                  className={`${config.bgColor} border ${config.borderColor} rounded-xl p-4 shadow-sm animate-fade-in`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className={`font-bold ${config.textColor}`}>{notification.title}</h3>
-                        {isUnread && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Yeni
-                          </span>
-                        )}
+        {/* Başlıq və Bildiriş İkonu */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">{t('b2b.myOrders')}</h1>
+          
+          {/* Bildiriş İkonu */}
+          <div className="relative" ref={notificationPanelRef}>
+            <button
+              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+              className="relative p-3 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <Bell className="h-6 w-6 text-gray-700" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Bildiriş Paneli */}
+            {showNotificationPanel && (
+              <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col animate-slideDown">
+                {/* Başlıq */}
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-base sm:text-lg text-gray-900">Bildirişlər</h3>
+                    {unreadCount > 0 && (
+                      <p className="text-xs text-gray-500 mt-0.5">{unreadCount} yeni bildiriş</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowNotificationPanel(false)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+
+                {/* Bildirişlər Siyahısı */}
+                <div className="overflow-y-auto flex-1 custom-scrollbar">
+                  {visibleNotifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-6">
+                      <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Bell className="h-10 w-10 text-gray-400" />
                       </div>
-                      <p className={`text-sm ${config.textColor} whitespace-pre-wrap`}>{notification.message}</p>
-                      {notification.expiresAt && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Bitmə tarixi: {new Date(notification.expiresAt.toDate()).toLocaleDateString('az-AZ')}
-                        </p>
-                      )}
+                      <p className="text-gray-500 text-center font-medium">Bildiriş yoxdur</p>
+                      <p className="text-gray-400 text-sm text-center mt-1">Yeni bildirişlər burada görünəcək</p>
                     </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {visibleNotifications.map((notification) => {
+                        const config = getNotificationTypeConfig(notification.type);
+                        const NotifIcon = config.icon;
+                        const isUnread = userEmail ? !notification.readBy?.includes(userEmail) : true;
+                        
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                              isUnread ? 'bg-blue-50/30' : ''
+                            }`}
+                            onClick={() => {
+                              if (isUnread && notification.id) {
+                                handleDismissNotification(notification.id);
+                              }
+                            }}
+                          >
+                            <div className="flex gap-3">
+                              {/* İkon */}
+                              <div className={`flex-shrink-0 h-10 w-10 rounded-full ${config.bgColor} flex items-center justify-center`}>
+                                <NotifIcon className={`h-5 w-5 ${config.iconColor}`} />
+                              </div>
+
+                              {/* Məzmun */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <h4 className={`font-semibold text-sm ${config.textColor}`}>
+                                    {notification.title}
+                                  </h4>
+                                  {isUnread && (
+                                    <span className="flex-shrink-0 h-2 w-2 bg-blue-500 rounded-full mt-1"></span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                  {notification.message}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-gray-400">
+                                    {notification.createdAt?.toDate ? 
+                                      notification.createdAt.toDate().toLocaleDateString('az-AZ', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      }) : '-'
+                                    }
+                                  </p>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDismissNotification(notification.id!);
+                                    }}
+                                    className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+                                  >
+                                    Bağla
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Alt hissə */}
+                {visibleNotifications.length > 0 && (
+                  <div className="px-4 sm:px-6 py-3 border-t border-gray-100 bg-gray-50">
                     <button
-                      onClick={() => handleDismissNotification(notification.id!)}
-                      className="flex-shrink-0 text-gray-500 hover:text-gray-700 transition-colors p-1"
+                      onClick={() => {
+                        visibleNotifications.forEach(n => {
+                          if (n.id) handleDismissNotification(n.id);
+                        });
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium w-full text-center"
                     >
-                      <X className="h-5 w-5" />
+                      Hamısını oxunmuş kimi işarələ
                     </button>
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Başlıq */}
-        <h1 className="text-3xl font-bold mb-8">{t('b2b.myOrders')}</h1>
+        </div>
 
         {orders.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
