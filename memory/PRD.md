@@ -1,45 +1,57 @@
 # PRD - İşçi İdarəetmə Sistemi (De Valeur)
 
 ## Problem Statement
-1. İşçilər səhifəsində QR kod oxutma sistemi düzəldilsin
-2. Cərimə etdikdə məbləğ + bal ayrı yazılsın
-3. İşçinin səhifəsində cərimələr görsənsin
+1. QR kod sistemi silinsin
+2. İşçi "İşə Başla" bassın → Admin-ə sorğu gəlsin
+3. Admin təsdiq/ləğv edə bilsin
+4. Çıxış üçün də eyni sistem
+5. Cərimə sistemi - məbləğ + bal ayrı
 
 ## Architecture
 - **Frontend**: Vite + React + TypeScript
 - **Backend**: Firebase (Firestore, Auth)
 - **Database**: Firebase Firestore
-- **QR System**: html5-qrcode library + qrcode.react
-
-## User Personas
-1. **Admin**: İşçiləri idarə edir, QR kod yaradır, cərimə/mükafat yazır
-2. **İşçi**: Admin QR kodunu telefon ilə skan edərək giriş/çıxış edir
+- **Real-time**: Firebase onSnapshot listeners
 
 ## What's Been Implemented (2024-03-30)
 
-### QR Sistem:
-- [x] QR kod URL formatında yaradılır: `{domain}/workers/qr-scan?session={token}`
-- [x] İşçilər YALNIZ admin QR kodu ilə giriş-çıxış edə bilər
-- [x] 1-ci skan = Giriş, 2-ci skan = Çıxış + imza
+### YENİ: Sorğu Sistemi
+- [x] **İşçi Dashboard-da**:
+  - "İşə Başla" düyməsi (giriş sorğusu göndərir)
+  - "Çıxış Et" düyməsi (çıxış sorğusu göndərir)
+  - Gözləmədə olan sorğu statusu göstərilir
+  - Ləğv edilmiş sorğu mesajı göstərilir
 
-### Cərimə Sistemi (YENİ):
-- [x] **Cərimə növü** əlavə edildi (Təşəkkür, Xəbərdarlıq, Töhmət, Cərimə)
-- [x] **Məbləğ (₼)** ayrı field - admin istədiyi məbləği yazır
-- [x] **Bal təsiri** ayrı field - admin istədiyi balı yazır
-- [x] Admin panelində cərimə siyahısında məbləğ göstərilir
+- [x] **Admin Panelində "Sorğular" tabı**:
+  - Real-time sorğu siyahısı
+  - Təsdiq/Ləğv düymələri
+  - Gözləyən sorğu sayı badge ilə göstərilir
+  - Ləğv səbəbi yazıla bilər
 
-### İşçi Dashboard:
-- [x] **Cərimə/Xəbərdarlıq bölümü** əlavə edildi
-- [x] Hər qeyd üçün növ, səbəb, bal və məbləğ göstərilir
-- [x] Cəmi cərimə məbləği hesablanır və göstərilir
+- [x] **Request Service** (`/app/src/services/requestService.ts`):
+  - createAttendanceRequest - sorğu yaratma
+  - approveRequest - təsdiq (avtomatik checkIn/checkOut)
+  - rejectRequest - ləğv
+  - subscribeToPendingRequests - real-time admin dinləmə
+  - subscribeToMyRequests - işçinin öz sorğularını dinləmə
 
-## Test Results
-- **Kod strukturu**: 100% uğurlu
-- **Frontend**: 70% (Firebase Auth session problemi)
+### SİLİNDİ:
+- [x] QR kod sistemi (QRCodePanel RealTimeMonitoring-dən silindi)
+- [x] QRScanPage artıq istifadə olunmur
+
+### Cərimə Sistemi:
+- [x] Məbləğ (₼) + Bal ayrı yazılır
+- [x] İşçi Dashboard-da cərimələr göstərilir
+
+## Firebase Index Tələbi ⚠️
+Admin paneli üçün bu indexlər Firebase Console-da yaradılmalıdır:
+- `attendance_requests` collection: `status` + `sorguVaxti`
+- `performances` collection: mövcud index tələbi
 
 ## URLs
-- QR Skan: /workers/qr-scan?session={token}
-- Admin Davranış: /workers/admin → Davranış tabı
+- İşçi Dashboard: /workers/dashboard
+- Admin Panel: /workers/admin
+- Sorğular: Admin Panel → "Sorğular" tabı
 
 ## Test Credentials
 - Admin: rasimgasimzade@gmail.com / Rasim2323
