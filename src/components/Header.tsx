@@ -373,23 +373,42 @@ const Header: React.FC = () => {
 
                   {/* Bildiriş Dropdown */}
                   {showNotificationDropdown && (
-                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
-                      <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
-                        <span className="font-semibold">Bildirişlər</span>
-                        <button onClick={() => setShowNotificationDropdown(false)}>
-                          <X className="h-4 w-4" />
+                    <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-5 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-5 w-5" />
+                          <span className="font-semibold text-lg">Bildirişlər</span>
+                        </div>
+                        <button 
+                          onClick={() => setShowNotificationDropdown(false)}
+                          className="hover:bg-white/20 p-1 rounded-full transition-colors"
+                        >
+                          <X className="h-5 w-5" />
                         </button>
                       </div>
-                      <div className="overflow-y-auto max-h-72">
+                      <div className="overflow-y-auto max-h-80">
                         {b2bNotifications.length === 0 ? (
-                          <div className="p-4 text-center text-gray-500 text-sm">
-                            Bildiriş yoxdur
+                          <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                              <Bell className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <p className="text-gray-500">Bildiriş yoxdur</p>
                           </div>
                         ) : (
-                          b2bNotifications.map((notif) => (
-                            <div key={notif.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
-                              <h4 className="font-semibold text-gray-900 text-sm break-words">{notif.title}</h4>
-                              <p className="text-gray-600 text-xs mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
+                          b2bNotifications.map((notif, index) => (
+                            <div 
+                              key={notif.id} 
+                              className={`p-5 hover:bg-gray-50 transition-colors ${index !== b2bNotifications.length - 1 ? 'border-b border-gray-100' : ''}`}
+                            >
+                              <div className="flex gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Bell className="h-5 w-5 text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-gray-900 break-words">{notif.title}</h4>
+                                  <p className="text-gray-600 text-sm mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
+                                </div>
+                              </div>
                             </div>
                           ))
                         )}
@@ -667,43 +686,55 @@ const Header: React.FC = () => {
 
       {/* B2B Bildiriş Modalı */}
       {showNotificationModal && b2bNotifications.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl animate-fadeIn">
-            <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                <h2 className="font-semibold text-lg">Bildirişlər</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-hidden shadow-2xl transform transition-all">
+            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-xl">Bildirişlər</h2>
+                  <p className="text-white/70 text-sm">{b2bNotifications.length} yeni bildiriş</p>
+                </div>
               </div>
               <button
                 onClick={() => {
                   setShowNotificationModal(false);
                   markNotificationsAsRead();
                 }}
-                className="text-white/80 hover:text-white"
+                className="hover:bg-white/20 p-2 rounded-full transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
-              {b2bNotifications.map((notif) => (
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[55vh]">
+              {b2bNotifications.map((notif, index) => (
                 <div
                   key={notif.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <h3 className="font-semibold text-gray-900 mb-2 break-words">{notif.title}</h3>
-                  <p className="text-gray-600 text-sm whitespace-pre-wrap break-words">{notif.message}</p>
+                  <div className="flex gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Bell className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-lg break-words">{notif.title}</h3>
+                      <p className="text-gray-600 mt-2 whitespace-pre-wrap break-words leading-relaxed">{notif.message}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="px-6 py-4 border-t bg-gray-50">
+            <div className="px-6 py-5 border-t bg-gray-50">
               <button
                 onClick={() => {
                   setShowNotificationModal(false);
                   markNotificationsAsRead();
                 }}
-                className="w-full bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-3.5 rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all font-semibold text-lg shadow-lg hover:shadow-xl"
               >
-                Bağla
+                Oxudum, Bağla
               </button>
             </div>
           </div>
