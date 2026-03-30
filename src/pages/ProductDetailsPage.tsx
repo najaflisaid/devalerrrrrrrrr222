@@ -165,11 +165,6 @@ const ProductDetailsPage: React.FC = () => {
               <h1 className="text-4xl font-light text-gray-900 mb-2">
                 {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
               </h1>
-              {isOutOfStock && (
-                <p className="text-lg font-semibold text-red-600 mb-2">
-                  Bitdi
-                </p>
-              )}
               <div className="space-y-1">
                 <p className="text-gray-600">
                   {product.brand}
@@ -184,11 +179,14 @@ const ProductDetailsPage: React.FC = () => {
               <div className="space-y-2">
                 {product.salePrice ? (
                   <>
-                    <p className="text-sm text-gray-600 line-through">{product.price.toFixed(2)}₼</p>
+                    <p className="text-sm text-gray-400">{product.price.toFixed(2)}₼</p>
                     <p className="text-4xl font-bold text-gray-900">{product.salePrice.toFixed(2)}₼</p>
                   </>
                 ) : (
                   <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)}₼</p>
+                )}
+                {isOutOfStock && (
+                  <p className="text-sm text-red-600 font-medium">Bitdi</p>
                 )}
               </div>
 

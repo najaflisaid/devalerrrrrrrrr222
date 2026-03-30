@@ -103,14 +103,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
           {isOutOfStock && (
-            <p className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-red-600`}>
-              Bitdi
-            </p>
+            <span className="text-xs text-red-600 font-medium">Bitdi</span>
           )}
           <div className="flex items-center justify-center space-x-2">
             {originalPrice ? (
               <>
-                <span className={`${compact ? 'text-xs' : 'text-sm'} text-gray-500 line-through`}>
+                <span className={`${compact ? 'text-xs' : 'text-sm'} text-gray-400`}>
                   {originalPrice.toFixed(2)}₼
                 </span>
                 <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-red-500`}>

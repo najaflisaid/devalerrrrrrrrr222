@@ -72,6 +72,8 @@ const AdminPanel: React.FC = () => {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showAddB2BUser, setShowAddB2BUser] = useState(false);
   const [showAddBlog, setShowAddBlog] = useState(false);
+  const [showEditBlog, setShowEditBlog] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
@@ -783,6 +785,46 @@ const AdminPanel: React.FC = () => {
         console.error('Error deleting blog:', error);
         alert('Xəta baş verdi: ' + (error as Error).message);
       }
+    }
+  };
+
+  const handleEditBlog = (blog: BlogPost) => {
+    setEditingBlog(blog);
+    setNewBlog({
+      titleAz: blog.title.az,
+      titleRu: blog.title.ru || '',
+      contentAz: blog.content.az,
+      contentRu: blog.content.ru || '',
+      image: blog.image
+    });
+    setShowEditBlog(true);
+    setShowAddBlog(false);
+  };
+
+  const handleUpdateBlog = async () => {
+    if (!editingBlog || !newBlog.titleAz || !newBlog.contentAz || !newBlog.image) {
+      alert('Zəhmət olmasa bütün sahələri doldurun');
+      return;
+    }
+
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      
+      await updateDoc(doc(db, 'blog_posts', editingBlog.id!), {
+        title: { az: newBlog.titleAz, ru: newBlog.titleRu || newBlog.titleAz },
+        content: { az: newBlog.contentAz, ru: newBlog.contentRu || newBlog.contentAz },
+        image: newBlog.image
+      });
+
+      setNewBlog({ titleAz: '', titleRu: '', contentAz: '', contentRu: '', image: '' });
+      setShowEditBlog(false);
+      setEditingBlog(null);
+      await loadData();
+      alert('Bloq yazısı yeniləndi!');
+    } catch (error) {
+      console.error('Error updating blog:', error);
+      alert('Xəta baş verdi: ' + (error as Error).message);
     }
   };
 
@@ -1958,6 +2000,73 @@ const AdminPanel: React.FC = () => {
               </div>
             )}
 
+            {/* Blog Düzəliş Formu */}
+            {showEditBlog && editingBlog && (
+              <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Bloq Yazısını Düzəlt</h3>
+                  <button onClick={() => { setShowEditBlog(false); setEditingBlog(null); setNewBlog({ titleAz: '', titleRu: '', contentAz: '', contentRu: '', image: '' }); }} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Başlıq (AZ) *</label>
+                    <input
+                      type="text"
+                      value={newBlog.titleAz}
+                      onChange={(e) => setNewBlog({ ...newBlog, titleAz: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Başlıq (RU)</label>
+                    <input
+                      type="text"
+                      value={newBlog.titleRu}
+                      onChange={(e) => setNewBlog({ ...newBlog, titleRu: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Mətn (AZ) *</label>
+                    <textarea
+                      value={newBlog.contentAz}
+                      onChange={(e) => setNewBlog({ ...newBlog, contentAz: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Mətn (RU)</label>
+                    <textarea
+                      value={newBlog.contentRu}
+                      onChange={(e) => setNewBlog({ ...newBlog, contentRu: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Şəkil URL *</label>
+                    <input
+                      type="text"
+                      value={newBlog.image}
+                      onChange={(e) => setNewBlog({ ...newBlog, image: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleUpdateBlog}
+                  className="mt-6 w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg"
+                >
+                  Yadda saxla
+                </button>
+              </div>
+            )}
+
             <div className="grid gap-4">
               {blogs.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
@@ -1972,12 +2081,20 @@ const AdminPanel: React.FC = () => {
                       <h3 className="font-semibold text-gray-900 mb-1">{blog.title.az}</h3>
                       <p className="text-sm text-gray-600 line-clamp-2">{blog.content.az}</p>
                     </div>
-                    <button
-                      onClick={() => handleDeleteBlog(blog.id!)}
-                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditBlog(blog)}
+                        className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-all"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBlog(blog.id!)}
+                        className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
