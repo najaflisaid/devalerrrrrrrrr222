@@ -3,7 +3,9 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  User,
+  browserLocalPersistence,
+  setPersistence
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { getEmployeeByEmail } from '../services/employeeService';
@@ -74,6 +76,8 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const login = async (email: string, password: string) => {
     try {
+      // Session-u local storage-da saxla ki, browser bağlandıqda belə qalsın
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       throw new Error(error.message);
