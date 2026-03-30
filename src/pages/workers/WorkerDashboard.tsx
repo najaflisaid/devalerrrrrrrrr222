@@ -299,8 +299,8 @@ const WorkerDashboard: React.FC = () => {
             </div>
             
             <div className="flex flex-col gap-3">
-              {/* İşə başlamamışsa - İşə başla düyməsi */}
-              {!todayAttendance && !pendingGirisRequest && (
+              {/* İşə Başla düyməsi - işə başlamamışsa və ya sorğu ləğv edilibsə */}
+              {(!todayAttendance || todayAttendance.status === 'cixib') && !pendingGirisRequest && (
                 <button
                   onClick={handleStartWork}
                   disabled={requestLoading}
@@ -325,7 +325,7 @@ const WorkerDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* İşdədirsə - Çıxış düyməsi */}
+              {/* Çıxış Et düyməsi - işdədirsə */}
               {todayAttendance?.status === 'isde' && !pendingCixisRequest && (
                 <button
                   onClick={handleEndWork}
@@ -351,12 +351,12 @@ const WorkerDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* İş bitibsə */}
-              {todayAttendance?.status === 'cixib' && (
-                <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
+              {/* İş bitibsə - yenidən işə başla */}
+              {todayAttendance?.status === 'cixib' && !pendingGirisRequest && (
+                <div className="bg-white/20 px-8 py-4 rounded-xl text-center mb-3" data-testid="work-completed">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-300" />
                   <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
-                  <p className="text-sm text-indigo-100 mt-1">Xoş istirahət!</p>
+                  <p className="text-sm text-indigo-100 mt-1">Yenidən işə başlamaq üçün yuxarıdakı düyməyə basın</p>
                 </div>
               )}
             </div>
