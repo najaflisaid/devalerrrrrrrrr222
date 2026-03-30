@@ -31,6 +31,7 @@ const Header: React.FC = () => {
   const [b2bNotifications, setB2bNotifications] = useState<B2BNotification[]>([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationsRead, setNotificationsRead] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -127,6 +128,12 @@ const Header: React.FC = () => {
       const notifs = await getActiveB2BNotifications();
       setB2bNotifications(notifs);
       
+      // Oxunub-oxunmadığını yoxla
+      const readKey = `b2b_notif_read_${new Date().toDateString()}`;
+      if (sessionStorage.getItem(readKey)) {
+        setNotificationsRead(true);
+      }
+      
       // Giriş edən kimi modal göstər
       if (notifs.length > 0) {
         const shownKey = `b2b_notif_shown_${new Date().toDateString()}`;
@@ -138,6 +145,13 @@ const Header: React.FC = () => {
     } catch (error) {
       console.error('Error loading B2B notifications:', error);
     }
+  };
+
+  // Bildirişləri oxunmuş kimi işarələ
+  const markNotificationsAsRead = () => {
+    setNotificationsRead(true);
+    const readKey = `b2b_notif_read_${new Date().toDateString()}`;
+    sessionStorage.setItem(readKey, 'true');
   };
 
   const handleDropdownEnter = () => {
@@ -341,11 +355,16 @@ const Header: React.FC = () => {
               {isLoggedIn && (userRole === 'b2b' || userRole === 'admin') && (
                 <div className="relative">
                   <button
-                    onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                    onClick={() => {
+                      setShowNotificationDropdown(!showNotificationDropdown);
+                      if (!showNotificationDropdown) {
+                        markNotificationsAsRead();
+                      }
+                    }}
                     className="relative p-1"
                   >
                     <Bell className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
-                    {b2bNotifications.length > 0 && (
+                    {b2bNotifications.length > 0 && !notificationsRead && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
                         {b2bNotifications.length}
                       </span>
@@ -656,7 +675,10 @@ const Header: React.FC = () => {
                 <h2 className="font-semibold text-lg">Bildirişlər</h2>
               </div>
               <button
-                onClick={() => setShowNotificationModal(false)}
+                onClick={() => {
+                  setShowNotificationModal(false);
+                  markNotificationsAsRead();
+                }}
                 className="text-white/80 hover:text-white"
               >
                 <X className="h-6 w-6" />
@@ -675,7 +697,10 @@ const Header: React.FC = () => {
             </div>
             <div className="px-6 py-4 border-t bg-gray-50">
               <button
-                onClick={() => setShowNotificationModal(false)}
+                onClick={() => {
+                  setShowNotificationModal(false);
+                  markNotificationsAsRead();
+                }}
                 className="w-full bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium"
               >
                 Bağla
