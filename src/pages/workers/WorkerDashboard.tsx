@@ -299,8 +299,8 @@ const WorkerDashboard: React.FC = () => {
             </div>
             
             <div className="flex flex-col gap-3">
-              {/* İşə Başla düyməsi - işə başlamamışsa və ya sorğu ləğv edilibsə */}
-              {(!todayAttendance || todayAttendance.status === 'cixib') && !pendingGirisRequest && (
+              {/* İşə Başla düyməsi - YALNIZ işə başlamamışsa */}
+              {!todayAttendance && !pendingGirisRequest && (
                 <button
                   onClick={handleStartWork}
                   disabled={requestLoading}
@@ -325,7 +325,7 @@ const WorkerDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* Çıxış Et düyməsi - işdədirsə */}
+              {/* İşi Bitir düyməsi - İŞDƏDİRSƏ */}
               {todayAttendance?.status === 'isde' && !pendingCixisRequest && (
                 <button
                   onClick={handleEndWork}
@@ -338,7 +338,7 @@ const WorkerDashboard: React.FC = () => {
                   ) : (
                     <Square className="w-6 h-6" />
                   )}
-                  {requestLoading ? 'Göndərilir...' : 'Çıxış Et'}
+                  {requestLoading ? 'Göndərilir...' : 'İşi Bitir'}
                 </button>
               )}
 
@@ -351,12 +351,12 @@ const WorkerDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* İş bitibsə - yenidən işə başla */}
-              {todayAttendance?.status === 'cixib' && !pendingGirisRequest && (
-                <div className="bg-white/20 px-8 py-4 rounded-xl text-center mb-3" data-testid="work-completed">
+              {/* İş bitibsə */}
+              {todayAttendance?.status === 'cixib' && (
+                <div className="bg-white/20 px-8 py-4 rounded-xl text-center" data-testid="work-completed">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-300" />
                   <p className="text-lg font-medium">✅ Bu gün işiniz bitib</p>
-                  <p className="text-sm text-indigo-100 mt-1">Yenidən işə başlamaq üçün yuxarıdakı düyməyə basın</p>
+                  <p className="text-sm text-indigo-100 mt-1">Xoş istirahət!</p>
                 </div>
               )}
             </div>
