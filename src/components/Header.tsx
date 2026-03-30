@@ -400,14 +400,9 @@ const Header: React.FC = () => {
                               key={notif.id} 
                               className={`p-5 hover:bg-gray-50 transition-colors ${index !== b2bNotifications.length - 1 ? 'border-b border-gray-100' : ''}`}
                             >
-                              <div className="flex gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Bell className="h-5 w-5 text-white" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-gray-900 break-words">{notif.title}</h4>
-                                  <p className="text-gray-600 text-sm mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
-                                </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 break-words">{notif.title}</h4>
+                                <p className="text-gray-600 text-sm mt-1 break-words whitespace-pre-wrap">{notif.message}</p>
                               </div>
                             </div>
                           ))
@@ -714,14 +709,9 @@ const Header: React.FC = () => {
                   key={notif.id}
                   className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <Bell className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 text-lg break-words">{notif.title}</h3>
-                      <p className="text-gray-600 mt-2 whitespace-pre-wrap break-words leading-relaxed">{notif.message}</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-lg break-words">{notif.title}</h3>
+                    <p className="text-gray-600 mt-2 whitespace-pre-wrap break-words leading-relaxed">{notif.message}</p>
                   </div>
                 </div>
               ))}
