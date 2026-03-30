@@ -86,12 +86,20 @@ const B2BOrdersPage: React.FC = () => {
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNotificationPanel(false);
+      }
+    };
+
     if (showNotificationPanel) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [showNotificationPanel]);
 
@@ -224,7 +232,7 @@ const B2BOrdersPage: React.FC = () => {
           <div className="relative" ref={notificationPanelRef}>
             <button
               onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              className="relative p-3 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+              className="relative p-3 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm z-50"
             >
               <Bell className="h-6 w-6 text-gray-700" />
               {unreadCount > 0 && (
@@ -234,9 +242,16 @@ const B2BOrdersPage: React.FC = () => {
               )}
             </button>
 
-            {/* Bildiriş Paneli */}
+            {/* Tünd Fon Overlay */}
             {showNotificationPanel && (
-              <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col animate-slideDown">
+              <>
+                <div 
+                  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fadeIn"
+                  onClick={() => setShowNotificationPanel(false)}
+                />
+                
+                {/* Bildiriş Paneli */}
+                <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col animate-slideDown">
                 {/* Başlıq */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                   <div>
@@ -341,6 +356,7 @@ const B2BOrdersPage: React.FC = () => {
                   </div>
                 )}
               </div>
+              </>
             )}
           </div>
         </div>
