@@ -79,12 +79,10 @@ const deactivateOldStoreTokens = async (magaza: string): Promise<void> => {
 // Mağazanın aktiv QR token-ini al
 export const getActiveStoreToken = async (magaza: string): Promise<StoreQRToken | null> => {
   try {
+    // Sadə query - bütün aktiv tokenləri al
     const q = query(
       collection(db, COLLECTION),
-      where('magaza', '==', magaza),
-      where('isActive', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(1)
+      where('isActive', '==', true)
     );
     
     const snapshot = await getDocs(q);
@@ -93,22 +91,35 @@ export const getActiveStoreToken = async (magaza: string): Promise<StoreQRToken 
       return null;
     }
     
-    const doc = snapshot.docs[0];
-    const data = doc.data();
+    // Mağazaya görə filter et və ən sonuncunu tap
+    let latestToken: StoreQRToken | null = null;
+    let latestDate = new Date(0);
     
-    // Vaxt yoxla
-    const now = new Date();
-    const expiresAt = new Date(data.expiresAt);
-    
-    if (now > expiresAt) {
-      await updateDoc(doc.ref, { isActive: false });
-      return null;
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      
+      if (data.magaza === magaza) {
+        const now = new Date();
+        const expiresAt = new Date(data.expiresAt);
+        
+        // Vaxtı keçibsə, deaktiv et
+        if (now > expiresAt) {
+          await updateDoc(docSnap.ref, { isActive: false });
+          continue;
+        }
+        
+        const createdAt = new Date(data.createdAt);
+        if (createdAt > latestDate) {
+          latestDate = createdAt;
+          latestToken = {
+            id: docSnap.id,
+            ...data
+          } as StoreQRToken;
+        }
+      }
     }
     
-    return {
-      id: doc.id,
-      ...data
-    } as StoreQRToken;
+    return latestToken;
   } catch (error) {
     console.error('Aktiv store token alma xətası:', error);
     return null;
