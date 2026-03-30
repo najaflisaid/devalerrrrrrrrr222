@@ -120,3 +120,24 @@ export const addTesekkur = async (
     balTesiri: 10
   });
 };
+
+// Cərimə əlavə et (məbləğ + bal ayrı)
+export const addCerime = async (
+  isciID: string, 
+  sebeb: string, 
+  manager: string, 
+  mebleg: number,
+  balTesiri: number,
+  qeyd: string = ''
+): Promise<string> => {
+  return addBehavior({
+    isciID,
+    tarix: new Date().toISOString().split('T')[0],
+    nov: 'cerime',
+    sebeb,
+    qeyd,
+    manager,
+    balTesiri,
+    mebleg
+  });
+};

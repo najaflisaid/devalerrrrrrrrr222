@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getAllEmployees } from '../../../services/employeeService';
-import { addXeberdarliq, addTohmet, addTesekkur, getAllBehaviors } from '../../../services/behaviorService';
+import { addXeberdarliq, addTohmet, addTesekkur, addCerime, getAllBehaviors } from '../../../services/behaviorService';
 import { Employee, Behavior } from '../../../types/worker';
-import { AlertTriangle, XCircle, Award, Plus, X } from 'lucide-react';
+import { AlertTriangle, XCircle, Award, Plus, X, DollarSign } from 'lucide-react';
 
 const BehaviorManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -10,10 +10,12 @@ const BehaviorManagement: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     isciID: '',
-    nov: 'xeberdarliq' as 'xeberdarliq' | 'tohmet' | 'tesekkur',
+    nov: 'xeberdarliq' as 'xeberdarliq' | 'tohmet' | 'tesekkur' | 'cerime',
     sebeb: '',
     qeyd: '',
-    manager: 'Admin'
+    manager: 'Admin',
+    mebleg: 0,
+    balTesiri: -5
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +52,8 @@ const BehaviorManagement: React.FC = () => {
         await addXeberdarliq(formData.isciID, formData.sebeb, formData.manager, formData.qeyd);
       } else if (formData.nov === 'tohmet') {
         await addTohmet(formData.isciID, formData.sebeb, formData.manager, formData.qeyd);
+      } else if (formData.nov === 'cerime') {
+        await addCerime(formData.isciID, formData.sebeb, formData.manager, formData.mebleg, formData.balTesiri, formData.qeyd);
       } else {
         await addTesekkur(formData.isciID, formData.sebeb, formData.manager, formData.qeyd);
       }
@@ -61,7 +65,9 @@ const BehaviorManagement: React.FC = () => {
         nov: 'xeberdarliq',
         sebeb: '',
         qeyd: '',
-        manager: 'Admin'
+        manager: 'Admin',
+        mebleg: 0,
+        balTesiri: -5
       });
     } catch (error: any) {
       alert('Xəta: ' + error.message);
@@ -102,10 +108,12 @@ const BehaviorManagement: React.FC = () => {
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                     behavior.nov === 'tesekkur' ? 'bg-green-100' :
-                    behavior.nov === 'xeberdarliq' ? 'bg-yellow-100' : 'bg-red-100'
+                    behavior.nov === 'xeberdarliq' ? 'bg-yellow-100' : 
+                    behavior.nov === 'cerime' ? 'bg-purple-100' : 'bg-red-100'
                   }`}>
                     {behavior.nov === 'tesekkur' ? <Award className="w-6 h-6 text-green-600" /> :
                      behavior.nov === 'xeberdarliq' ? <AlertTriangle className="w-6 h-6 text-yellow-600" /> :
+                     behavior.nov === 'cerime' ? <DollarSign className="w-6 h-6 text-purple-600" /> :
                      <XCircle className="w-6 h-6 text-red-600" />}
                   </div>
 
@@ -115,7 +123,8 @@ const BehaviorManagement: React.FC = () => {
                         <h4 className="font-semibold text-gray-900">{getEmployeeName(behavior.isciID)}</h4>
                         <p className="text-sm text-gray-600">
                           {behavior.nov === 'tesekkur' ? 'Təşəkkür' :
-                           behavior.nov === 'xeberdarliq' ? 'Xəbərdarlıq' : 'Töhmət'}
+                           behavior.nov === 'xeberdarliq' ? 'Xəbərdarlıq' : 
+                           behavior.nov === 'cerime' ? 'Cərimə' : 'Töhmət'}
                         </p>
                       </div>
                       <div className="text-right">
@@ -127,6 +136,11 @@ const BehaviorManagement: React.FC = () => {
                         }`}>
                           {behavior.balTesiri > 0 ? '+' : ''}{behavior.balTesiri} bal
                         </p>
+                        {behavior.mebleg && behavior.mebleg > 0 && (
+                          <p className="text-sm font-bold text-purple-600">
+                            {behavior.mebleg} ₼ cərimə
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -179,10 +193,10 @@ const BehaviorManagement: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Növ *</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, nov: 'tesekkur' })}
+                    onClick={() => setFormData({ ...formData, nov: 'tesekkur', balTesiri: 10, mebleg: 0 })}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       formData.nov === 'tesekkur'
                         ? 'border-green-500 bg-green-50'
@@ -195,7 +209,7 @@ const BehaviorManagement: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, nov: 'xeberdarliq' })}
+                    onClick={() => setFormData({ ...formData, nov: 'xeberdarliq', balTesiri: -5, mebleg: 0 })}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       formData.nov === 'xeberdarliq'
                         ? 'border-yellow-500 bg-yellow-50'
@@ -208,7 +222,7 @@ const BehaviorManagement: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, nov: 'tohmet' })}
+                    onClick={() => setFormData({ ...formData, nov: 'tohmet', balTesiri: -10, mebleg: 0 })}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       formData.nov === 'tohmet'
                         ? 'border-red-500 bg-red-50'
@@ -218,8 +232,51 @@ const BehaviorManagement: React.FC = () => {
                     <XCircle className="w-5 h-5 mx-auto mb-1 text-red-600" />
                     <p className="text-xs font-medium">Töhmət</p>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, nov: 'cerime', balTesiri: -5, mebleg: 0 })}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      formData.nov === 'cerime'
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <DollarSign className="w-5 h-5 mx-auto mb-1 text-purple-600" />
+                    <p className="text-xs font-medium">Cərimə</p>
+                  </button>
                 </div>
               </div>
+
+              {/* Cərimə üçün məbləğ və bal */}
+              {formData.nov === 'cerime' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cərimə Məbləği (₼) *</label>
+                    <input
+                      type="number"
+                      value={formData.mebleg}
+                      onChange={(e) => setFormData({ ...formData, mebleg: Number(e.target.value) })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      min="0"
+                      step="0.01"
+                      required
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bal Təsiri *</label>
+                    <input
+                      type="number"
+                      value={formData.balTesiri}
+                      onChange={(e) => setFormData({ ...formData, balTesiri: Number(e.target.value) })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                      placeholder="-5"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Mənfi rəqəm yazın (məs: -5, -10)</p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Səbəb *</label>

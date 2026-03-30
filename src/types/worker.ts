@@ -33,11 +33,12 @@ export interface Behavior {
   id: string;
   isciID: string;
   tarix: string;
-  nov: 'xeberdarliq' | 'tohmet' | 'tesekkur'; // xəbərdarlıq, töhmət, təşəkkür
+  nov: 'xeberdarliq' | 'tohmet' | 'tesekkur' | 'cerime'; // xəbərdarlıq, töhmət, təşəkkür, cərimə
   sebeb: string; // səbəb
   qeyd: string;
   manager: string;
   balTesiri: number; // bal təsiri (-10, -20, +5, +10)
+  mebleg?: number; // cərimə məbləği (AZN)
   createdAt: string;
 }
 

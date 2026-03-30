@@ -10,7 +10,9 @@ import {
   Calendar,
   Target,
   Activity,
-  Scan
+  Scan,
+  AlertTriangle,
+  XCircle
 } from 'lucide-react';
 import { 
   getTodayAttendance, 
@@ -21,7 +23,8 @@ import { getLatestPerformance } from '../../services/performanceService';
 import { getEmployeeBadges } from '../../services/badgeService';
 import { getMonthlyBonus } from '../../services/bonusService';
 import { getMonthlySales } from '../../services/salesService';
-import { Attendance, Performance, Badge, Bonus } from '../../types/worker';
+import { getEmployeeBehaviors } from '../../services/behaviorService';
+import { Attendance, Performance, Badge, Bonus, Behavior } from '../../types/worker';
 
 const WorkerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -32,6 +35,7 @@ const WorkerDashboard: React.FC = () => {
   const [performance, setPerformance] = useState<Performance | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [bonus, setBonus] = useState<Bonus | null>(null);
+  const [behaviors, setBehaviors] = useState<Behavior[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Stats
@@ -39,7 +43,8 @@ const WorkerDashboard: React.FC = () => {
     totalWorkHours: 0,
     lateCount: 0,
     salesAmount: 0,
-    salesTarget: 50000
+    salesTarget: 50000,
+    totalCerime: 0
   });
 
   useEffect(() => {
@@ -68,7 +73,8 @@ const WorkerDashboard: React.FC = () => {
         badgeList,
         bonusData,
         monthlyAtt,
-        sales
+        sales,
+        behaviorList
       ] = await Promise.all([
         getTodayAttendance(employee.id),
         getRecentAttendance(employee.id, 7),
@@ -76,7 +82,8 @@ const WorkerDashboard: React.FC = () => {
         getEmployeeBadges(employee.id),
         getMonthlyBonus(employee.id, currentMonth),
         getMonthlyAttendance(employee.id, currentMonth),
-        getMonthlySales(employee.id, currentMonth)
+        getMonthlySales(employee.id, currentMonth),
+        getEmployeeBehaviors(employee.id)
       ]);
       
       setTodayAttendance(todayAtt);
@@ -84,6 +91,7 @@ const WorkerDashboard: React.FC = () => {
       setPerformance(perf);
       setBadges(badgeList);
       setBonus(bonusData);
+      setBehaviors(behaviorList);
       
       // Aylıq statistika hesabla
       const totalMinutes = monthlyAtt.reduce((sum, att) => sum + att.isSaati, 0);
@@ -91,11 +99,17 @@ const WorkerDashboard: React.FC = () => {
       const lateCount = monthlyAtt.filter(att => att.gecikme > 0).length;
       const salesAmount = sales.reduce((sum, sale) => sum + sale.mebleg, 0);
       
+      // Cərimə hesabla
+      const totalCerime = behaviorList
+        .filter(b => b.nov === 'cerime' && b.mebleg)
+        .reduce((sum, b) => sum + (b.mebleg || 0), 0);
+      
       setMonthlyStats({
         totalWorkHours: totalHours,
         lateCount,
         salesAmount,
-        salesTarget: 50000
+        salesTarget: 50000,
+        totalCerime
       });
       
     } catch (error) {
@@ -339,6 +353,63 @@ const WorkerDashboard: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {/* Cərimə və Xəbərdarlıqlar */}
+            {behaviors.length > 0 && (
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                    <h3 className="text-lg font-bold text-gray-900">Qeydlər</h3>
+                  </div>
+                  {monthlyStats.totalCerime > 0 && (
+                    <span className="text-sm font-bold text-red-600">
+                      Cəmi: {monthlyStats.totalCerime} ₼
+                    </span>
+                  )}
+                </div>
+                
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {behaviors.slice(0, 5).map(behavior => (
+                    <div 
+                      key={behavior.id}
+                      className={`p-3 rounded-lg border-l-4 ${
+                        behavior.nov === 'tesekkur' ? 'bg-green-50 border-green-500' :
+                        behavior.nov === 'xeberdarliq' ? 'bg-yellow-50 border-yellow-500' :
+                        behavior.nov === 'cerime' ? 'bg-purple-50 border-purple-500' :
+                        'bg-red-50 border-red-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          {behavior.nov === 'tesekkur' ? <Award className="w-4 h-4 text-green-600" /> :
+                           behavior.nov === 'xeberdarliq' ? <AlertTriangle className="w-4 h-4 text-yellow-600" /> :
+                           behavior.nov === 'cerime' ? <DollarSign className="w-4 h-4 text-purple-600" /> :
+                           <XCircle className="w-4 h-4 text-red-600" />}
+                          <span className="text-sm font-medium text-gray-900">
+                            {behavior.nov === 'tesekkur' ? 'Təşəkkür' :
+                             behavior.nov === 'xeberdarliq' ? 'Xəbərdarlıq' : 
+                             behavior.nov === 'cerime' ? 'Cərimə' : 'Töhmət'}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-medium ${behavior.balTesiri > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {behavior.balTesiri > 0 ? '+' : ''}{behavior.balTesiri} bal
+                          </span>
+                          {behavior.mebleg && behavior.mebleg > 0 && (
+                            <p className="text-xs font-bold text-purple-600">{behavior.mebleg} ₼</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 mt-1">{behavior.sebeb}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(behavior.tarix).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sağ sütun - Son davamiyyət */}
