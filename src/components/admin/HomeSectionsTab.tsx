@@ -50,6 +50,7 @@ const HomeSectionsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string>('');
+  const [productSearch, setProductSearch] = useState<string>('');
 
   useEffect(() => {
     (async () => {
@@ -209,28 +210,89 @@ const HomeSectionsTab: React.FC = () => {
 
         <div>
           <Label>Seçilmiş məhsul</Label>
-          <select
-            value={data.signature.featuredProductId}
-            onChange={(e) =>
-              setData({
-                ...data,
-                signature: { ...data.signature, featuredProductId: e.target.value },
-              })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-            data-testid="home-sections-featured-product"
-          >
-            <option value="">— Avtomatik (ilk best-seller) —</option>
-            {products.map((p) => {
-              const name = typeof p.name === 'string' ? p.name : (p.name?.az || p.name?.en || p.id);
-              return (
-                <option key={p.id} value={p.id}>
-                  {name} · {p.price?.toFixed(2)} ₼
-                </option>
-              );
-            })}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">Boş buraxsanız, avtomatik ilk best-seller göstərilir.</p>
+
+          {/* Search box */}
+          <div className="relative mb-2">
+            <input
+              type="text"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Məhsul adı, brend və ya qiymət ilə axtarın..."
+              className="w-full px-3 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+              data-testid="home-sections-product-search"
+            />
+            <svg
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+            </svg>
+            {productSearch && (
+              <button
+                type="button"
+                onClick={() => setProductSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-sm"
+                aria-label="Təmizlə"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {(() => {
+            const q = productSearch.trim().toLowerCase();
+            const filtered = !q
+              ? products
+              : products.filter((p) => {
+                  const name = typeof p.name === 'string'
+                    ? p.name
+                    : (p.name?.az || p.name?.en || p.name?.ru || '');
+                  const haystack = [
+                    name,
+                    (p as any).brand,
+                    (p as any).category,
+                    p.id,
+                    p.price?.toString(),
+                  ].filter(Boolean).join(' ').toLowerCase();
+                  return haystack.includes(q);
+                });
+
+            return (
+              <>
+                <select
+                  value={data.signature.featuredProductId}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      signature: { ...data.signature, featuredProductId: e.target.value },
+                    })
+                  }
+                  size={Math.min(8, Math.max(4, filtered.length + 1))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+                  data-testid="home-sections-featured-product"
+                >
+                  <option value="">— Avtomatik (ilk best-seller) —</option>
+                  {filtered.map((p) => {
+                    const name = typeof p.name === 'string' ? p.name : (p.name?.az || p.name?.en || p.id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {name} · {p.price?.toFixed(2)} ₼
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {q
+                    ? `${filtered.length} nəticə tapıldı (${products.length} məhsuldan)`
+                    : 'Boş buraxsanız, avtomatik ilk best-seller göstərilir.'}
+                </p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
