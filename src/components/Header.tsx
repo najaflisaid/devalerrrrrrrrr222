@@ -451,11 +451,14 @@ const Header: React.FC = () => {
         {isMobileMenuOpen && (
           <>
             <div
-              className="fixed inset-0 z-50 bg-black bg-opacity-60 animate-fadeIn"
+              className="fixed inset-0 z-50 bg-black/55 dv-menu-backdrop"
               onClick={() => setIsMobileMenuOpen(false)}
             ></div>
 
-            <div className="fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white shadow-2xl animate-slideInLeft">
+            <div
+              className="fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white dv-menu-panel"
+              style={{ boxShadow: '40px 0 80px -20px rgba(0,0,0,0.35)' }}
+            >
               <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -465,6 +468,7 @@ const Header: React.FC = () => {
 
               <div className="flex flex-col h-[calc(100%-80px)] overflow-y-auto">
                 <nav className="flex-1 p-6 space-y-1">
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
                   <Link
                     to="/"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -472,6 +476,8 @@ const Header: React.FC = () => {
                   >
                     {t('header.home')}
                   </Link>
+                  </div>
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
                   <Link
                     to="/products"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -479,9 +485,10 @@ const Header: React.FC = () => {
                   >
                     {t('header.products')}
                   </Link>
+                  </div>
 
                   {/* Mobile Categories Dropdown */}
-                  <div className="px-4 py-2">
+                  <div className="dv-menu-item px-4 py-2" style={{ ['--dv-i' as any]: 2 }}>
                     <details className="group">
                       <summary className="py-2 font-medium cursor-pointer list-none flex items-center justify-between">
                         <span>{t('header.categories')}</span>
@@ -505,7 +512,7 @@ const Header: React.FC = () => {
                   </div>
 
                   {/* Mobile Brands Dropdown */}
-                  <div className="px-4 py-2">
+                  <div className="dv-menu-item px-4 py-2" style={{ ['--dv-i' as any]: 3 }}>
                     <details className="group">
                       <summary className="py-2 font-medium cursor-pointer list-none flex items-center justify-between">
                         <span>{t('header.brands')}</span>
@@ -528,6 +535,7 @@ const Header: React.FC = () => {
                     </details>
                   </div>
 
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 4 }}>
                   <Link
                     to="/about"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -535,6 +543,8 @@ const Header: React.FC = () => {
                   >
                     {t('header.about')}
                   </Link>
+                  </div>
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 5 }}>
                   <Link
                     to="/blog"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -542,6 +552,8 @@ const Header: React.FC = () => {
                   >
                     {t('header.blog')}
                   </Link>
+                  </div>
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 6 }}>
                   <Link
                     to="/partners"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -549,6 +561,8 @@ const Header: React.FC = () => {
                   >
                     {t('header.partners')}
                   </Link>
+                  </div>
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 7 }}>
                   <Link
                     to="/contact"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -556,8 +570,10 @@ const Header: React.FC = () => {
                   >
                     {t('header.contact')}
                   </Link>
+                  </div>
 
                   {isLoggedIn && userRole === 'b2b' && (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
                     <Link
                       to="/b2b/orders"
                       className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -565,9 +581,11 @@ const Header: React.FC = () => {
                     >
                       {t('header.myOrders')}
                     </Link>
+                    </div>
                   )}
 
                   {isLoggedIn && userRole === 'admin' && (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 9 }}>
                     <Link
                       to="/admin"
                       className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
@@ -575,6 +593,7 @@ const Header: React.FC = () => {
                     >
                       {t('header.admin')}
                     </Link>
+                    </div>
                   )}
                 </nav>
 
