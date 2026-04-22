@@ -49,6 +49,7 @@ const B2BOrdersTab: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('grouped');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const [customerFilter, setCustomerFilter] = useState<string>('all');
 
   const toggleCustomer = (key: string) => {
     setExpandedCustomers((prev) => {
@@ -362,20 +363,52 @@ const B2BOrdersTab: React.FC = () => {
             <option value="delivered">Təhvil verildi</option>
             <option value="cancelled">Ləğv edildi</option>
           </select>
+
+          {(() => {
+            const map: Record<string, { name: string; count: number }> = {};
+            orders.forEach((o) => {
+              const k = (o.customerEmail || `${o.customerName || ''}|${o.customerPhone || ''}`).toLowerCase();
+              const nm = [o.customerName, o.customerLastname].filter(Boolean).join(' ').trim() || (o.customerEmail || '—');
+              if (!map[k]) map[k] = { name: nm, count: 0 };
+              map[k].count += 1;
+            });
+            const list = Object.entries(map).sort((a, b) => a[1].name.localeCompare(b[1].name));
+            return (
+              <select
+                value={customerFilter}
+                onChange={(e) => setCustomerFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent max-w-[260px] truncate"
+                data-testid="b2b-orders-customer-filter"
+              >
+                <option value="all">Müştəri: Hamısı ({list.length})</option>
+                {list.map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.name} ({v.count})
+                  </option>
+                ))}
+              </select>
+            );
+          })()}
         </div>
       </div>
 
       {(() => {
         const q = searchQuery.trim().toLowerCase();
-        const filteredOrders = !q
-          ? orders
-          : orders.filter((o) => {
-              const hay = [
-                o.customerName, o.customerLastname, o.customerEmail,
-                o.customerPhone, o.companyName, o.id, o.notes, o.adminNote,
-              ].filter(Boolean).join(' ').toLowerCase();
-              return hay.includes(q);
-            });
+
+        const filteredOrders = orders.filter((o) => {
+          // customer filter
+          if (customerFilter !== 'all') {
+            const k = (o.customerEmail || `${o.customerName || ''}|${o.customerPhone || ''}`).toLowerCase();
+            if (k !== customerFilter) return false;
+          }
+          // search
+          if (!q) return true;
+          const hay = [
+            o.customerName, o.customerLastname, o.customerEmail,
+            o.customerPhone, o.companyName, o.id, o.notes, o.adminNote,
+          ].filter(Boolean).join(' ').toLowerCase();
+          return hay.includes(q);
+        });
 
         // Build customer groups for grouped mode (key = email || name+phone)
         const getKey = (o: B2BOrder) =>
@@ -402,6 +435,22 @@ const B2BOrdersTab: React.FC = () => {
           });
         }
 
+        // Build a unified render list — inline customer headers BEFORE each group in grouped mode
+        type RenderItem =
+          | { type: 'header'; key: string; group: { customer: B2BOrder; orders: B2BOrder[]; total: number } }
+          | { type: 'order'; order: B2BOrder };
+        const renderList: RenderItem[] = [];
+        if (viewMode === 'grouped') {
+          groupList.forEach(([key, g]) => {
+            renderList.push({ type: 'header', key, group: g });
+            if (expandedCustomers.has(key)) {
+              g.orders.forEach((o) => renderList.push({ type: 'order', order: o }));
+            }
+          });
+        } else {
+          filteredOrders.forEach((o) => renderList.push({ type: 'order', order: o }));
+        }
+
         return (
           <>
             {/* Summary */}
@@ -412,22 +461,34 @@ const B2BOrdersTab: React.FC = () => {
               {viewMode === 'grouped' && ` · ${groupList.length} müştəri`}
             </div>
 
-            {/* Grouped customer headers */}
-            {viewMode === 'grouped' && (
-              <div className="space-y-2" data-testid="b2b-orders-grouped">
-                {groupList.length === 0 && (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">Müştəri tapılmadı</p>
-                  </div>
-                )}
-                {groupList.map(([key, g]) => {
+            {/* Grouped + flat rendering using a single interleaved list */}
+            <div className="grid gap-4" data-testid="b2b-orders-list">
+              {renderList.length === 0 && (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  {viewMode === 'grouped' ? (
+                    <>
+                      <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Müştəri tapılmadı</p>
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Sifariş tapılmadı</p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {renderList.map((item) => {
+                if (item.type === 'header') {
+                  const key = item.key;
+                  const g = item.group;
                   const isOpen = expandedCustomers.has(key);
                   const name = [g.customer.customerName, g.customer.customerLastname].filter(Boolean).join(' ').trim() || '—';
                   return (
                     <div
-                      key={key}
-                      className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                      key={`h-${key}`}
+                      className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${isOpen ? 'ring-1 ring-black/5 shadow-sm' : ''}`}
                       data-testid={`b2b-customer-${key}`}
                     >
                       <button
@@ -442,7 +503,7 @@ const B2BOrdersTab: React.FC = () => {
                           <div className="min-w-0">
                             <div className="font-semibold text-gray-900 truncate">{name}</div>
                             <div className="text-xs text-gray-500 truncate">
-                              {g.customer.companyName && <span>{g.customer.companyName} · </span>}
+                              {g.customer.companyName && !g.customer.companyName.includes('@') && <span>{g.customer.companyName} · </span>}
                               {g.customer.customerEmail || g.customer.customerPhone || '—'}
                             </div>
                           </div>
@@ -461,31 +522,11 @@ const B2BOrdersTab: React.FC = () => {
                           />
                         </div>
                       </button>
-
-                      {isOpen && (
-                        <div className="border-t border-gray-100 bg-gray-50 p-4 space-y-4"
-                             data-testid={`b2b-customer-orders-${key}`}>
-                          {/* The full order cards for this customer render below via the existing loop (filtered via visibleOrders) */}
-                          <p className="text-xs text-gray-500">↓ Aşağıda bu müştərinin bütün sifarişləri</p>
-                        </div>
-                      )}
                     </div>
                   );
-                })}
-              </div>
-            )}
-
-            {/* Order cards list (shared with existing map logic) */}
-            <div className="grid gap-4" data-testid="b2b-orders-list">
-              {visibleOrders.length === 0 ? (
-                viewMode === 'flat' ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">Sifariş tapılmadı</p>
-                  </div>
-                ) : null
-              ) : (
-                visibleOrders.map((order) => (
+                }
+                const order = item.order;
+                return (
             <div
               key={order.id}
               className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -802,8 +843,8 @@ const B2BOrdersTab: React.FC = () => {
                 </div>
               )}
             </div>
-          ))
-        )}
+          );
+              })}
       </div>
           </>
         );
