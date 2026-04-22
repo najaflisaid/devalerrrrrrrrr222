@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar, Search, ChevronDown, Users, List } from 'lucide-react';
-import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo } from '../../services/b2bOrderService';
+import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo, updateB2BOrderCheckedItems } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
 
 interface B2BOrder {
@@ -50,6 +50,39 @@ const B2BOrdersTab: React.FC = () => {
   const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('grouped');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [customerFilter, setCustomerFilter] = useState<string>('all');
+  // Per-order "show all items" toggle (default shows first 5)
+  const [expandedOrderItems, setExpandedOrderItems] = useState<Set<string>>(new Set());
+
+  const toggleExpandedOrderItems = (orderId: string) => {
+    setExpandedOrderItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  // Toggle checkmark (confirmation) for a specific item in an order
+  const toggleItemChecked = async (order: B2BOrder, itemIndex: number) => {
+    if (!order.id) return;
+    const existing: number[] = Array.isArray((order as any).checkedItems)
+      ? [...(order as any).checkedItems]
+      : [];
+    const idx = existing.indexOf(itemIndex);
+    if (idx >= 0) existing.splice(idx, 1);
+    else existing.push(itemIndex);
+
+    // Optimistic local update
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? ({ ...o, checkedItems: existing } as any) : o))
+    );
+    try {
+      await updateB2BOrderCheckedItems(order.id, existing);
+    } catch (err) {
+      console.error(err);
+      alert('Təsdiq yadda saxlana bilmədi');
+    }
+  };
 
   const toggleCustomer = (key: string) => {
     setExpandedCustomers((prev) => {
@@ -615,34 +648,108 @@ const B2BOrdersTab: React.FC = () => {
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Məhsullar</h4>
                 <div className="space-y-2">
-                  {order.items?.map((item: any, index: number) => {
-                    const product = products.find(p => p.id === item.productId);
-                    const productImage = product?.images?.[0];
+                  {(() => {
+                    const items = order.items || [];
+                    const isAllShown = expandedOrderItems.has(order.id || '');
+                    const displayed = isAllShown ? items : items.slice(0, 5);
+                    const checkedSet = new Set<number>(
+                      Array.isArray((order as any).checkedItems) ? (order as any).checkedItems : []
+                    );
+                    const confirmedCount = checkedSet.size;
+
                     return (
-                      <div key={index} className="flex items-center gap-2 sm:gap-3 bg-gray-50 rounded-lg p-2 sm:p-3">
-                        {productImage ? (
-                          <img
-                            src={productImage}
-                            alt={item.productName?.az || item.productName}
-                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md flex-shrink-0 border border-gray-200"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-md flex-shrink-0 flex items-center justify-center border border-gray-200">
-                            <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+                      <>
+                        {displayed.map((item: any, index: number) => {
+                          const product = products.find(p => p.id === item.productId);
+                          const productImage = product?.images?.[0];
+                          const isChecked = checkedSet.has(index);
+                          return (
+                            <div
+                              key={index}
+                              className={`flex items-center gap-2 sm:gap-3 rounded-lg p-2 sm:p-3 transition-colors ${
+                                isChecked ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
+                              }`}
+                              data-testid={`b2b-order-item-${order.id}-${index}`}
+                            >
+                              {/* Confirmation checkbox */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleItemChecked(order, index);
+                                }}
+                                className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                                  isChecked
+                                    ? 'bg-green-600 border-green-600 text-white'
+                                    : 'bg-white border-gray-300 hover:border-green-500'
+                                }`}
+                                aria-label={isChecked ? 'Təsdiqi geri al' : 'Təsdiqlə'}
+                                data-testid={`b2b-order-item-check-${order.id}-${index}`}
+                              >
+                                {isChecked && <Check className="h-4 w-4" strokeWidth={3} />}
+                              </button>
+
+                              {productImage ? (
+                                <img
+                                  src={productImage}
+                                  alt={item.productName?.az || item.productName}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md flex-shrink-0 border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-md flex-shrink-0 flex items-center justify-center border border-gray-200">
+                                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-xs sm:text-sm font-medium line-clamp-2 break-words ${
+                                  isChecked ? 'text-gray-600 line-through' : 'text-gray-900'
+                                }`}>
+                                  {item.productName?.az || item.productName}
+                                </p>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1 text-xs text-gray-600">
+                                  <span className="font-semibold text-gray-900">Miqdar: {item.quantity}</span>
+                                  <span className="font-medium">{item.regularPrice?.toFixed(2)}₼</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {items.length > 5 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandedOrderItems(order.id || '')}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+                            data-testid={`b2b-order-toggle-items-${order.id}`}
+                          >
+                            {isAllShown ? (
+                              <>Daha az göstər (ilk 5) <ChevronDown className="h-4 w-4 rotate-180" /></>
+                            ) : (
+                              <>Daha çox göstər ({items.length - 5} əlavə) <ChevronDown className="h-4 w-4" /></>
+                            )}
+                          </button>
+                        )}
+
+                        {/* Progress summary */}
+                        {items.length > 0 && (
+                          <div className="flex items-center justify-between text-xs text-gray-600 pt-2 border-t border-gray-100">
+                            <span>
+                              Təsdiqlənmiş:{' '}
+                              <span className="font-semibold text-green-700">{confirmedCount}</span>
+                              {' / '}
+                              {items.length}
+                            </span>
+                            {confirmedCount > 0 && confirmedCount < items.length && (
+                              <span className="text-amber-700">{items.length - confirmedCount} qalır</span>
+                            )}
+                            {confirmedCount === items.length && (
+                              <span className="text-green-700 font-semibold">Hamısı təsdiqləndi ✓</span>
+                            )}
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 break-words">
-                            {item.productName?.az || item.productName}
-                          </p>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1 text-xs text-gray-600">
-                            <span className="font-semibold text-gray-900">Miqdar: {item.quantity}</span>
-                            <span className="font-medium">{item.regularPrice?.toFixed(2)}₼</span>
-                          </div>
-                        </div>
-                      </div>
+                      </>
                     );
-                  })}
+                  })()}
                 </div>
               </div>
 

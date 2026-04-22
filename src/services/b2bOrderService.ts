@@ -215,6 +215,14 @@ export const updateB2BOrderPaymentInfo = async (orderId: string, paymentInfo: {
   return { id: orderId, ...paymentInfo };
 };
 
+// Toggle confirmation (checkmark) for a specific order item
+export const updateB2BOrderCheckedItems = async (orderId: string, checkedItems: number[]) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, { checkedItems });
+  return { id: orderId, checkedItems };
+};
+
+
 
 export const updateOrderItemQuantity = async (orderId: string, itemIndex: number, newQuantity: number, oldQuantity: number, productId: string) => {
   const orderRef = doc(db, 'b2bOrders', orderId);
