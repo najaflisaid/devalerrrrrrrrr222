@@ -248,7 +248,7 @@ const Header: React.FC = () => {
 
             {/* Desktop Navigation - Left */}
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+              <Link to="/" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.home')}
               </Link>
 
@@ -258,30 +258,31 @@ const Header: React.FC = () => {
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="flex items-center text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+                <button className="dv-navlink flex items-center text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                   {t('header.products')}
                 </button>
 
                 {showDropdown && (
                   <div
-                    className="fixed left-0 right-0 top-[64px] bg-white shadow-2xl border-t border-gray-200 animate-slideDown z-50"
+                    className="fixed left-0 right-0 top-[64px] bg-white shadow-2xl border-t border-gray-200 dv-megamenu z-50"
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
                   >
                     <div className="max-w-[1440px] mx-auto px-8">
                       <div className="grid grid-cols-2 divide-x divide-gray-200">
                         {/* Categories Section */}
-                        <div className="py-8 pr-8">
+                        <div className="py-8 pr-8 dv-megamenu-col">
                           <h3 className="font-bold text-gray-900 mb-6 text-lg uppercase tracking-wide">{t('header.categories')}</h3>
                           <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-                            {categories.map((category) => (
+                            {categories.map((category, idx) => (
                               <button
                                 key={category}
                                 onClick={() => {
                                   navigate(`/products?category=${encodeURIComponent(category)}`);
                                   setShowDropdown(false);
                                 }}
-                                className="text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg transition-all capitalize font-medium hover:bg-gray-50"
+                                style={{ ['--dv-i' as any]: idx }}
+                                className="dv-megamenu-item text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg capitalize font-medium hover:bg-gray-50"
                               >
                                 {getCategoryTranslation(category)}
                               </button>
@@ -290,17 +291,18 @@ const Header: React.FC = () => {
                         </div>
 
                         {/* Brands Section */}
-                        <div className="py-8 pl-8">
+                        <div className="py-8 pl-8 dv-megamenu-col">
                           <h3 className="font-bold text-gray-900 mb-6 text-lg uppercase tracking-wide">{t('header.brands')}</h3>
                           <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-                            {brands.map((brand) => (
+                            {brands.map((brand, idx) => (
                               <button
                                 key={brand}
                                 onClick={() => {
                                   navigate(`/products?brand=${encodeURIComponent(brand)}`);
                                   setShowDropdown(false);
                                 }}
-                                className="text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg transition-all font-medium hover:bg-gray-50"
+                                style={{ ['--dv-i' as any]: idx }}
+                                className="dv-megamenu-item text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50"
                               >
                                 {brand}
                               </button>
@@ -313,25 +315,25 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              <Link to="/about" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+              <Link to="/about" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.about')}
               </Link>
-              <Link to="/blog" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+              <Link to="/blog" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.blog')}
               </Link>
-              <Link to="/partners" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+              <Link to="/partners" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.partners')}
               </Link>
-              <Link to="/contact" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+              <Link to="/contact" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.contact')}
               </Link>
               {isLoggedIn && userRole === 'b2b' && (
-                <Link to="/b2b/orders" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+                <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                   {t('header.myOrders')}
                 </Link>
               )}
               {isLoggedIn && userRole === 'admin' && (
-                <Link to="/admin" className="text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+                <Link to="/admin" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                   {t('header.admin')}
                 </Link>
               )}
