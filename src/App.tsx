@@ -37,6 +37,7 @@ import QRScanPage from './pages/workers/QRScanPage';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
+import { ThemeProvider } from './context/ThemeContext';
 import './i18n';
 
 const HomePage: React.FC = () => {
@@ -117,10 +118,12 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <AppContent />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <ScrollToTop />
+        <AppContent />
+      </Router>
+    </ThemeProvider>
   );
 }
 

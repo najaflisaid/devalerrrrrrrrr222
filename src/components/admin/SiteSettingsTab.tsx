@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Save, Plus, Trash2, CreditCard, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, CreditCard, Image as ImageIcon, Sun, Moon } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { useTheme } from '../../context/ThemeContext';
 
 interface PaymentCard {
   id: string;
@@ -114,6 +115,9 @@ const SiteSettingsTab: React.FC = () => {
         </button>
       </div>
 
+      {/* ========== Site Theme Toggle ========== */}
+      <SiteThemePanel />
+
       <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
         {/* Copyright Text */}
         <div>
@@ -221,3 +225,72 @@ const SiteSettingsTab: React.FC = () => {
 };
 
 export default SiteSettingsTab;
+
+/* ================= Site Theme (Dark / Light) Panel ================= */
+const SiteThemePanel: React.FC = () => {
+  const { theme, setTheme, loading } = useTheme();
+  const [busy, setBusy] = useState(false);
+
+  const apply = async (t: 'light' | 'dark') => {
+    if (t === theme || busy) return;
+    setBusy(true);
+    try {
+      await setTheme(t);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="bg-white border border-gray-200 rounded-lg p-6"
+      data-testid="site-theme-panel"
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            {theme === 'dark' ? <Moon className="h-5 w-5 text-[#D4AF37]" /> : <Sun className="h-5 w-5 text-amber-500" />}
+            Sayt teması
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Saytı qara (dark) və ya ağ (light) temaya keçirin. Dəyişiklik bütün ziyarətçilər üçün tətbiq olunur.
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Hazırkı: <span className="font-semibold">{theme === 'dark' ? 'Qara' : 'Ağ'}</span>
+            {loading && <span className="ml-2 text-gray-400">yüklənir...</span>}
+          </p>
+        </div>
+
+        <div className="inline-flex p-1 bg-gray-100 rounded-full" role="group">
+          <button
+            type="button"
+            onClick={() => apply('light')}
+            disabled={busy}
+            className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
+              theme === 'light'
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            } disabled:opacity-50`}
+            data-testid="site-theme-light"
+          >
+            <Sun className="h-4 w-4" /> Ağ
+          </button>
+          <button
+            type="button"
+            onClick={() => apply('dark')}
+            disabled={busy}
+            className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
+              theme === 'dark'
+                ? 'bg-gray-900 text-white shadow'
+                : 'text-gray-500 hover:text-gray-700'
+            } disabled:opacity-50`}
+            data-testid="site-theme-dark"
+          >
+            <Moon className="h-4 w-4" /> Qara
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+

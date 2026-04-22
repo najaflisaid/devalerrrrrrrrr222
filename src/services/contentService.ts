@@ -278,4 +278,29 @@ export const updateHomepageSections = async (sections: HomepageSections) => {
   );
 };
 
+
+// ============================================================
+// Site theme (light / dark) — controlled from admin panel
+// ============================================================
+export type SiteTheme = 'light' | 'dark';
+
+export const getSiteTheme = async (): Promise<SiteTheme> => {
+  try {
+    const ref = doc(db, 'site_content', 'site_theme');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const t = (snap.data() as any).theme;
+      if (t === 'dark' || t === 'light') return t;
+    }
+  } catch (err) {
+    console.error('getSiteTheme:', err);
+  }
+  return 'light';
+};
+
+export const setSiteTheme = async (theme: SiteTheme) => {
+  const ref = doc(db, 'site_content', 'site_theme');
+  await setDoc(ref, { theme, updated_at: new Date().toISOString() }, { merge: true });
+};
+
 export { DEFAULT_HOMEPAGE_SECTIONS };

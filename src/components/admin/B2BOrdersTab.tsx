@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar } from 'lucide-react';
+import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar, Search, ChevronDown, Users, List } from 'lucide-react';
 import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
 
@@ -44,6 +44,20 @@ const B2BOrdersTab: React.FC = () => {
     totalDebt: '',
     paymentDeadline: ''
   });
+
+  // NEW: search + group-by-customer accordion
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('grouped');
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+
+  const toggleCustomer = (key: string) => {
+    setExpandedCustomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
   
   useEffect(() => {
     loadProducts();
@@ -284,15 +298,62 @@ const B2BOrdersTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-2xl font-bold text-gray-900">B2B Sifarişlər</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Müştəri, şirkət, telefon, email..."
+              className="pl-9 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent w-72"
+              data-testid="b2b-orders-search"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                aria-label="Təmizlə"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* View mode toggle */}
+          <div className="inline-flex p-1 bg-gray-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setViewMode('grouped')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                viewMode === 'grouped' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
+              data-testid="b2b-orders-view-grouped"
+            >
+              <Users className="h-4 w-4" /> Müştərilər üzrə
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('flat')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                viewMode === 'flat' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
+              data-testid="b2b-orders-view-flat"
+            >
+              <List className="h-4 w-4" /> Hamısı
+            </button>
+          </div>
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
           >
-            <option value="all">Hamısı</option>
+            <option value="all">Status: Hamısı</option>
             <option value="pending">Gözləyir</option>
             <option value="accepted">Qəbul olundu</option>
             <option value="preparing">Hazırlanır</option>
@@ -304,14 +365,127 @@ const B2BOrdersTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {orders.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Sifariş tapılmadı</p>
-          </div>
-        ) : (
-          orders.map((order) => (
+      {(() => {
+        const q = searchQuery.trim().toLowerCase();
+        const filteredOrders = !q
+          ? orders
+          : orders.filter((o) => {
+              const hay = [
+                o.customerName, o.customerLastname, o.customerEmail,
+                o.customerPhone, o.companyName, o.id, o.notes, o.adminNote,
+              ].filter(Boolean).join(' ').toLowerCase();
+              return hay.includes(q);
+            });
+
+        // Build customer groups for grouped mode (key = email || name+phone)
+        const getKey = (o: B2BOrder) =>
+          (o.customerEmail || `${o.customerName || ''}|${o.customerPhone || ''}`).toLowerCase();
+        const grouped: Record<string, { customer: B2BOrder; orders: B2BOrder[]; total: number }> = {};
+        filteredOrders.forEach((o) => {
+          const k = getKey(o);
+          if (!grouped[k]) grouped[k] = { customer: o, orders: [], total: 0 };
+          grouped[k].orders.push(o);
+          grouped[k].total += (o.totalAmount || 0);
+        });
+        const groupList = Object.entries(grouped).sort((a, b) =>
+          (b[1].orders.length - a[1].orders.length)
+        );
+
+        // Orders list to render inside the flat-like card map below
+        // Flat → filteredOrders
+        // Grouped → only orders for expanded customers
+        let visibleOrders: B2BOrder[] = filteredOrders;
+        if (viewMode === 'grouped') {
+          visibleOrders = [];
+          groupList.forEach(([key, g]) => {
+            if (expandedCustomers.has(key)) visibleOrders.push(...g.orders);
+          });
+        }
+
+        return (
+          <>
+            {/* Summary */}
+            <div className="text-sm text-gray-500">
+              {q
+                ? `${filteredOrders.length} nəticə (${orders.length} ümumi sifarişdən)`
+                : `${orders.length} sifariş`}
+              {viewMode === 'grouped' && ` · ${groupList.length} müştəri`}
+            </div>
+
+            {/* Grouped customer headers */}
+            {viewMode === 'grouped' && (
+              <div className="space-y-2" data-testid="b2b-orders-grouped">
+                {groupList.length === 0 && (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Müştəri tapılmadı</p>
+                  </div>
+                )}
+                {groupList.map(([key, g]) => {
+                  const isOpen = expandedCustomers.has(key);
+                  const name = [g.customer.customerName, g.customer.customerLastname].filter(Boolean).join(' ').trim() || '—';
+                  return (
+                    <div
+                      key={key}
+                      className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                      data-testid={`b2b-customer-${key}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleCustomer(key)}
+                        className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-10 w-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-semibold flex-shrink-0">
+                            {name.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 truncate">{name}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {g.customer.companyName && <span>{g.customer.companyName} · </span>}
+                              {g.customer.customerEmail || g.customer.customerPhone || '—'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {g.orders.length} sifariş
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Cəmi: {g.total.toFixed(2)} ₼
+                            </span>
+                          </div>
+                          <ChevronDown
+                            className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t border-gray-100 bg-gray-50 p-4 space-y-4"
+                             data-testid={`b2b-customer-orders-${key}`}>
+                          {/* The full order cards for this customer render below via the existing loop (filtered via visibleOrders) */}
+                          <p className="text-xs text-gray-500">↓ Aşağıda bu müştərinin bütün sifarişləri</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Order cards list (shared with existing map logic) */}
+            <div className="grid gap-4" data-testid="b2b-orders-list">
+              {visibleOrders.length === 0 ? (
+                viewMode === 'flat' ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Sifariş tapılmadı</p>
+                  </div>
+                ) : null
+              ) : (
+                visibleOrders.map((order) => (
             <div
               key={order.id}
               className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -631,6 +805,9 @@ const B2BOrdersTab: React.FC = () => {
           ))
         )}
       </div>
+          </>
+        );
+      })()}
 
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
