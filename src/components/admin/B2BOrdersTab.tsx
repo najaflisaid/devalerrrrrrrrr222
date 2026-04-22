@@ -951,6 +951,13 @@ const B2BOrdersTab: React.FC = () => {
                 </div>
               ) : null}
 
+              {order.notes && order.notes.trim() !== '' && (
+                <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3" data-testid={`b2b-customer-note-${order.id}`}>
+                  <p className="text-sm font-semibold text-amber-900 mb-1">Müştəri Qeydi:</p>
+                  <p className="text-sm text-amber-800 whitespace-pre-wrap">{order.notes}</p>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setSelectedOrder(order)}
