@@ -118,6 +118,9 @@ const SiteSettingsTab: React.FC = () => {
       {/* ========== Site Theme Toggle ========== */}
       <SiteThemePanel />
 
+      {/* ========== Promise / Features Heading Editor ========== */}
+      <FeaturesHeadingPanel />
+
       <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
         {/* Copyright Text */}
         <div>
@@ -225,6 +228,125 @@ const SiteSettingsTab: React.FC = () => {
 };
 
 export default SiteSettingsTab;
+
+/* ================= Features / Promise Heading Panel ================= */
+const FeaturesHeadingPanel: React.FC = () => {
+  const [subtitle, setSubtitle] = useState('Notre Engagement');
+  const [heading, setHeading] = useState('The De Valeur Promise');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'site_settings', 'features'));
+        if (snap.exists()) {
+          const d = snap.data() as any;
+          if (typeof d.subtitle === 'string') setSubtitle(d.subtitle);
+          if (typeof d.heading === 'string') setHeading(d.heading);
+        }
+      } catch (e) {
+        console.error('Error loading features heading:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'site_settings', 'features'), {
+        subtitle: subtitle.trim(),
+        heading: heading.trim()
+      });
+      alert('Yadda saxlanıldı!');
+    } catch (e) {
+      console.error(e);
+      alert('Xəta baş verdi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center gap-2 text-gray-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> Yüklənir...
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-6" data-testid="features-heading-panel">
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Ana səhifə "Promise" başlığı</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Ana səhifədə "Notre Engagement / The De Valeur Promise" bölməsinin mətnlərini dəyişdirin.
+          </p>
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+          data-testid="features-heading-save"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Saxla
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Üst mətn (kiçik, qızılı şriftli)
+          </label>
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            maxLength={80}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+            placeholder="Notre Engagement"
+            data-testid="features-subtitle-input"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Əsas başlıq (böyük)
+          </label>
+          <input
+            type="text"
+            value={heading}
+            onChange={(e) => setHeading(e.target.value)}
+            maxLength={120}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+            placeholder="The De Valeur Promise"
+            data-testid="features-heading-input"
+          />
+        </div>
+
+        {/* Preview */}
+        <div className="border-t border-gray-200 pt-4">
+          <p className="text-xs font-medium text-gray-500 mb-3">Önizləmə:</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <div className="inline-flex items-center mb-3">
+              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
+              <span className="mx-3 text-[10px] uppercase tracking-[0.4em] text-[#D4AF37] font-semibold">
+                {subtitle || 'Notre Engagement'}
+              </span>
+              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-light text-black tracking-tight">
+              {heading || 'The De Valeur Promise'}
+            </h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* ================= Site Theme (Dark / Light) Panel ================= */
 const SiteThemePanel: React.FC = () => {

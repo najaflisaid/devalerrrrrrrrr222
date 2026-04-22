@@ -1,11 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Shield, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from '../hooks/useInView';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const Features: React.FC = () => {
   const { t } = useTranslation();
   const { ref, inView } = useInView<HTMLDivElement>();
+  const [subtitle, setSubtitle] = useState<string>('Notre Engagement');
+  const [heading, setHeading] = useState<string>('');
+
+  useEffect(() => {
+    const ref = doc(db, 'site_settings', 'features');
+    // Initial fetch + realtime
+    getDoc(ref).then((snap) => {
+      if (snap.exists()) {
+        const d = snap.data() as any;
+        if (typeof d.subtitle === 'string') setSubtitle(d.subtitle);
+        if (typeof d.heading === 'string') setHeading(d.heading);
+      }
+    }).catch(() => {});
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        const d = snap.data() as any;
+        if (typeof d.subtitle === 'string') setSubtitle(d.subtitle);
+        if (typeof d.heading === 'string') setHeading(d.heading);
+      }
+    }, () => {});
+    return () => unsub();
+  }, []);
 
   const features = [
     { icon: Award,       title: t('features.quality'),    description: t('features.qualityDesc') },
@@ -36,13 +60,13 @@ const Features: React.FC = () => {
         <div className={`text-center mb-14 md:mb-20 dv-reveal ${inView ? 'is-in' : ''}`}>
           <div className="inline-flex items-center mb-4">
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
-            <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
-              Notre Engagement
+            <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold" data-testid="dv-features-subtitle">
+              {subtitle}
             </span>
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
           </div>
-          <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight">
-            {t('features.heading', { defaultValue: 'The De Valeur Promise' })}
+          <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight" data-testid="dv-features-heading">
+            {heading || t('features.heading', { defaultValue: 'The De Valeur Promise' })}
           </h2>
         </div>
 
