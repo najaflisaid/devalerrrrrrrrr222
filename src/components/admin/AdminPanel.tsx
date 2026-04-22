@@ -13,6 +13,7 @@ import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
+import HomeSectionsTab from './HomeSectionsTab';
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -1005,6 +1006,7 @@ const AdminPanel: React.FC = () => {
     { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
+    { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
     { id: 'about', label: 'Haqqımızda', icon: Info },
     { id: 'brands', label: t('admin.brands'), icon: Tag },
     { id: 'categories', label: t('admin.categories'), icon: Tag },
@@ -2594,6 +2596,8 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'banners' && <BannerManagementTab />}
 
         {activeTab === 'productBanners' && <ProductBannersTab />}
+
+        {activeTab === 'homeSections' && <HomeSectionsTab />}
 
         {activeTab === 'about' && <AboutManagementTab />}
 

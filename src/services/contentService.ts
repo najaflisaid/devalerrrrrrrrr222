@@ -171,3 +171,111 @@ export const deleteProductBanner = async (id: string) => {
   const bannerRef = doc(db, 'product_banners', id);
   await deleteDoc(bannerRef);
 };
+
+
+// ============================================================
+// Home page sections (MaisonQuote + SignaturePiece3D texts)
+// ============================================================
+export interface HomepageSections {
+  quote: {
+    eyebrow: { az: string; ru: string; en: string };
+    line1: { az: string; ru: string; en: string };
+    line2: { az: string; ru: string; en: string };
+    signature: { az: string; ru: string; en: string };
+    backgroundText: string;
+    enabled: boolean;
+  };
+  signature: {
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    subtitle: { az: string; ru: string; en: string };
+    pickLabel: { az: string; ru: string; en: string };
+    ctaLabel: { az: string; ru: string; en: string };
+    featuredProductId: string;
+    enabled: boolean;
+  };
+}
+
+const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
+  quote: {
+    eyebrow: {
+      az: 'Philosophie · Depuis 2010',
+      ru: 'Philosophie · Depuis 2010',
+      en: 'Philosophie · Depuis 2010',
+    },
+    line1: {
+      az: 'Zaman ölçülmür.',
+      ru: 'Время не меряют.',
+      en: 'Time is not measured.',
+    },
+    line2: {
+      az: 'Zaman daşınır.',
+      ru: 'Его носят.',
+      en: 'It is worn.',
+    },
+    signature: {
+      az: 'Maison De Valeur',
+      ru: 'Maison De Valeur',
+      en: 'Maison De Valeur',
+    },
+    backgroundText: 'De Valeur',
+    enabled: true,
+  },
+  signature: {
+    eyebrow: {
+      az: 'Le Choix de la Maison',
+      ru: 'Le Choix de la Maison',
+      en: 'Le Choix de la Maison',
+    },
+    title: {
+      az: 'Seçilmiş Əsər',
+      ru: 'Главное произведение',
+      en: 'Signature Piece',
+    },
+    subtitle: {
+      az: 'Zamansız dizayn. Kompromissiz sənətkarlıq.',
+      ru: 'Вневременной дизайн. Бескомпромиссное мастерство.',
+      en: 'Timeless design. Uncompromising craftsmanship.',
+    },
+    pickLabel: {
+      az: 'Həftənin seçimi',
+      ru: 'Выбор недели',
+      en: 'Pick of the week',
+    },
+    ctaLabel: {
+      az: 'Məhsula bax',
+      ru: 'Смотреть',
+      en: 'View product',
+    },
+    featuredProductId: '',
+    enabled: true,
+  },
+};
+
+export const getHomepageSections = async (): Promise<HomepageSections> => {
+  try {
+    const ref = doc(db, 'site_content', 'homepage_sections');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as Partial<HomepageSections>;
+      return {
+        quote: { ...DEFAULT_HOMEPAGE_SECTIONS.quote, ...(data.quote || {}) },
+        signature: { ...DEFAULT_HOMEPAGE_SECTIONS.signature, ...(data.signature || {}) },
+      };
+    }
+  } catch (err) {
+    console.error('getHomepageSections:', err);
+  }
+  return DEFAULT_HOMEPAGE_SECTIONS;
+};
+
+export const updateHomepageSections = async (sections: HomepageSections) => {
+  const ref = doc(db, 'site_content', 'homepage_sections');
+  await setDoc(
+    ref,
+    { ...sections, updated_at: new Date().toISOString() },
+    { merge: true }
+  );
+};
+
+export { DEFAULT_HOMEPAGE_SECTIONS };

@@ -4,26 +4,36 @@ import { useNavigate } from 'react-router-dom';
 import { productService } from '../services/productService';
 import { Product } from '../types';
 import { useInView } from '../hooks/useInView';
+import { getHomepageSections, HomepageSections, DEFAULT_HOMEPAGE_SECTIONS } from '../services/contentService';
 
-/**
- * 3D Signature Piece showcase.
- * - Featured product (1st best seller) floats in a 3D perspective scene
- * - Mouse-parallax 3D tilt on product + floating gold orbital rings
- * - Auto gentle float + rotate
- */
 const SignaturePiece3D: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { ref: sectionRef, inView } = useInView<HTMLElement>();
   const [product, setProduct] = useState<Product | null>(null);
+  const [cfg, setCfg] = useState<HomepageSections['signature']>(DEFAULT_HOMEPAGE_SECTIONS.signature);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [rot, setRot] = useState({ rx: 0, ry: 0 });
 
   useEffect(() => {
     (async () => {
       try {
-        const list = await productService.getBestSellers(6);
-        if (list && list.length > 0) setProduct(list[0]);
+        const sections = await getHomepageSections();
+        setCfg(sections.signature);
+
+        let p: Product | null = null;
+        if (sections.signature.featuredProductId) {
+          try {
+            p = await productService.getById(sections.signature.featuredProductId);
+          } catch (e) {
+            console.warn('Signature featured product missing, using fallback');
+          }
+        }
+        if (!p) {
+          const list = await productService.getBestSellers(6);
+          if (list && list.length > 0) p = list[0];
+        }
+        setProduct(p);
       } catch (err) {
         console.error('SignaturePiece3D: load error', err);
       }
@@ -41,43 +51,27 @@ const SignaturePiece3D: React.FC = () => {
   };
   const handleLeave = () => setRot({ rx: 0, ry: 0 });
 
-  if (!product) return null;
+  if (!cfg.enabled || !product) return null;
+
+  const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+  const get = (f: { az: string; ru: string; en: string }) => f[lang] || f.az || f.en;
 
   const getName = (p: Product): string => {
     if (typeof p.name === 'string') return p.name;
-    const lang = i18n.language as 'az' | 'ru' | 'en';
     return p.name[lang] || p.name.az || p.name.en || '';
   };
-
-  const title =
-    i18n.language === 'ru'
-      ? 'Главное произведение'
-      : i18n.language === 'en'
-      ? 'Signature Piece'
-      : 'Seçilmiş Əsər';
-
-  const subtitle =
-    i18n.language === 'ru'
-      ? 'Вневременной дизайн. Бескомпромиссное мастерство.'
-      : i18n.language === 'en'
-      ? 'Timeless design. Uncompromising craftsmanship.'
-      : 'Zamansız dizayn. Kompromissiz sənətkarlıq.';
 
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 md:py-32 overflow-hidden"
+      className="relative py-20 md:py-32 overflow-hidden bg-white"
       data-testid="dv-signature-3d"
-      style={{
-        background:
-          'radial-gradient(ellipse at 30% 50%, #FFFBEF 0%, #FFFFFF 55%, #FAFAF7 100%)',
-      }}
     >
-      {/* Ambient gold glow */}
+      {/* Subtle gold glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(212,175,55,0.16) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)',
           filter: 'blur(20px)',
         }}
         aria-hidden="true"
@@ -90,19 +84,19 @@ const SignaturePiece3D: React.FC = () => {
             <div className="flex items-center mb-5">
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
               <span className="ml-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
-                Le Choix de la Maison
+                {get(cfg.eyebrow)}
               </span>
             </div>
             <h2 className="font-playfair text-4xl md:text-6xl lg:text-7xl font-light text-black leading-[1.05] tracking-tight mb-5">
-              {title}
+              {get(cfg.title)}
             </h2>
             <p className="text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-8">
-              {subtitle}
+              {get(cfg.subtitle)}
             </p>
 
             <div className="border-t border-black/10 pt-6">
               <p className="text-[10px] uppercase tracking-[0.35em] text-black/50 mb-2">
-                {i18n.language === 'ru' ? 'Выбор недели' : i18n.language === 'en' ? 'Pick of the week' : 'Həftənin seçimi'}
+                {get(cfg.pickLabel)}
               </p>
               <h3 className="font-playfair text-2xl md:text-3xl font-medium text-black mb-1">
                 {getName(product)}
@@ -117,7 +111,7 @@ const SignaturePiece3D: React.FC = () => {
                 className="group inline-flex items-center gap-3 px-8 py-4 bg-black hover:bg-[#C99B1F] text-white transition-all duration-500 rounded-full text-xs uppercase tracking-[0.3em] font-medium"
                 data-testid="dv-signature-cta"
               >
-                <span>{t('bestSellers.viewProduct', { defaultValue: 'Məhsula bax' })}</span>
+                <span>{get(cfg.ctaLabel)}</span>
                 <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
               </button>
             </div>
@@ -131,7 +125,6 @@ const SignaturePiece3D: React.FC = () => {
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
           >
-            {/* Rotating orbital rings */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
@@ -153,17 +146,13 @@ const SignaturePiece3D: React.FC = () => {
                 className="absolute inset-[24%] rounded-full border-2 border-dashed border-[#D4AF37]/25"
                 style={{ animation: 'dv-spin 40s linear infinite' }}
               />
-              {/* Gold dots on outer ring */}
               <span
                 className="absolute top-[3%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#D4AF37]"
                 style={{ boxShadow: '0 0 12px rgba(212,175,55,0.6)' }}
               />
-              <span
-                className="absolute bottom-[3%] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#D4AF37]/70"
-              />
+              <span className="absolute bottom-[3%] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#D4AF37]/70" />
             </div>
 
-            {/* Soft shadow beneath */}
             <div
               className="absolute bottom-[8%] left-1/2 -translate-x-1/2 w-[60%] h-8 rounded-full pointer-events-none"
               style={{
@@ -173,7 +162,6 @@ const SignaturePiece3D: React.FC = () => {
               aria-hidden="true"
             />
 
-            {/* 3D floating product */}
             <div
               className="absolute inset-[18%] flex items-center justify-center"
               style={{
@@ -182,12 +170,7 @@ const SignaturePiece3D: React.FC = () => {
                 transition: 'transform 400ms cubic-bezier(.2,.8,.2,1)',
               }}
             >
-              <div
-                className="w-full h-full"
-                style={{
-                  animation: 'dv-float-y 6s ease-in-out infinite alternate',
-                }}
-              >
+              <div className="w-full h-full" style={{ animation: 'dv-float-y 6s ease-in-out infinite alternate' }}>
                 <img
                   src={product.images?.[0] || product.imageUrl}
                   alt={getName(product)}

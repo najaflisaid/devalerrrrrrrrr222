@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
 import type { Product } from '../types';
@@ -137,5 +137,21 @@ export const productService = {
     const imageRef = ref(storage, `products/${productId}/${file.name}`);
     await uploadBytes(imageRef, file);
     return await getDownloadURL(imageRef);
+  },
+
+  async getById(id: string): Promise<Product | null> {
+    try {
+      const snap = await getDoc(doc(db, 'products', id));
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      return {
+        id: snap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date()),
+      } as Product;
+    } catch (err) {
+      console.error('productService.getById:', err);
+      return null;
+    }
   }
 };
