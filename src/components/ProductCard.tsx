@@ -61,14 +61,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (product.stock === 0) {
+    // Out-of-stock only blocks B2B users; customers can always add
+    if (isB2BUser && product.stock === 0) {
       addNotification('Bu məhsul bitib', 'error');
       return;
     }
     addToCart(product, 1);
   };
 
-  const isOutOfStock = product.stock === 0;
+  // "Bitdi" göstəricisi yalnız B2B istifadəçilərə görünür
+  const isOutOfStock = isB2BUser && product.stock === 0;
   const currentImage = isHovered && product.images[1] ? product.images[1] : product.images[0];
 
   return (

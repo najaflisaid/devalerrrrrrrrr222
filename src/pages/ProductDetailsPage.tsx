@@ -120,7 +120,8 @@ const ProductDetailsPage: React.FC = () => {
 
   const displayPrice = getDisplayPrice();
   const originalPrice = getOriginalPrice();
-  const isOutOfStock = product.stock === 0;
+  // "Bitdi" / stok göstəricisi yalnız B2B istifadəçilərə
+  const isOutOfStock = isB2BUser && product.stock === 0;
 
   return (
     <div className="min-h-screen bg-white">
@@ -268,7 +269,8 @@ const ProductDetailsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (product) {
-                      if (product.stock === 0) {
+                      // Stok blokajı yalnız B2B üçün
+                      if (isB2BUser && product.stock === 0) {
                         addNotification('Bu məhsul bitib', 'error');
                         return;
                       }
