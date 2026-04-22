@@ -125,34 +125,7 @@ const SignaturePiece3D: React.FC = () => {
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
           >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                transformStyle: 'preserve-3d',
-                transform: `rotateX(${rot.rx * 0.6}deg) rotateY(${rot.ry * 0.6}deg)`,
-                transition: 'transform 400ms cubic-bezier(.2,.8,.2,1)',
-              }}
-              aria-hidden="true"
-            >
-              <span
-                className="absolute inset-[4%] rounded-full border border-[#D4AF37]/30"
-                style={{ animation: 'dv-spin 30s linear infinite' }}
-              />
-              <span
-                className="absolute inset-[14%] rounded-full border border-[#D4AF37]/20"
-                style={{ animation: 'dv-spin 24s linear infinite reverse' }}
-              />
-              <span
-                className="absolute inset-[24%] rounded-full border-2 border-dashed border-[#D4AF37]/25"
-                style={{ animation: 'dv-spin 40s linear infinite' }}
-              />
-              <span
-                className="absolute top-[3%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#D4AF37]"
-                style={{ boxShadow: '0 0 12px rgba(212,175,55,0.6)' }}
-              />
-              <span className="absolute bottom-[3%] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#D4AF37]/70" />
-            </div>
-
+            {/* Soft shadow beneath */}
             <div
               className="absolute bottom-[8%] left-1/2 -translate-x-1/2 w-[60%] h-8 rounded-full pointer-events-none"
               style={{
@@ -177,7 +150,7 @@ const SignaturePiece3D: React.FC = () => {
                   className="w-full h-full object-contain cursor-pointer"
                   onClick={() => navigate(`/product/${product.id}`)}
                   style={{
-                    filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.28)) drop-shadow(0 0 28px rgba(212,175,55,0.25))',
+                    filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.28))',
                   }}
                 />
               </div>
