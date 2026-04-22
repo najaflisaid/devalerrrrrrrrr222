@@ -112,6 +112,24 @@ const BestSellersSection: React.FC = () => {
           onMouseEnter={() => setIsAutoScrolling(false)}
           onMouseLeave={() => setIsAutoScrolling(true)}
         >
+          {/* Floating side nav (over the scroller) */}
+          <button
+            onClick={() => scroll('left')}
+            className="group absolute left-1 sm:-left-2 md:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 bg-white/95 backdrop-blur-sm border border-gray-200 hover:border-[#D4AF37] hover:bg-[#D4AF37] shadow-lg hover:shadow-xl flex items-center justify-center rounded-full transition-all duration-300"
+            aria-label={t('bestSellers.prevProducts')}
+            data-testid="dv-bestsellers-prev-side"
+          >
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-black group-hover:text-white group-hover:-translate-x-0.5 transition-all" strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="group absolute right-1 sm:-right-2 md:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 bg-white/95 backdrop-blur-sm border border-gray-200 hover:border-[#D4AF37] hover:bg-[#D4AF37] shadow-lg hover:shadow-xl flex items-center justify-center rounded-full transition-all duration-300"
+            aria-label={t('bestSellers.nextProducts')}
+            data-testid="dv-bestsellers-next-side"
+          >
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-black group-hover:text-white group-hover:translate-x-0.5 transition-all" strokeWidth={1.5} />
+          </button>
+
           <div
             ref={scrollContainerRef}
             className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-0"
