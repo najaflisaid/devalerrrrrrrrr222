@@ -34,11 +34,13 @@ import QRScanPage from './pages/workers/QRScanPage';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
+import CursorFollower from './components/CursorFollower';
 import './i18n';
 
 const HomePage: React.FC = () => {
   return (
     <>
+      <CursorFollower />
       <Hero />
       <BestSellersSection />
       <HomeProductBanners />

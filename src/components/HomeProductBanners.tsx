@@ -4,15 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { getActiveProductBanners, type ProductBanner } from '../services/contentService';
 import ProductBannerSlider from './ProductBannerSlider';
 import MiddleBanner from './MiddleBanner';
+import Tilt3D from './Tilt3D';
+import { useInView } from '../hooks/useInView';
 
 const HomeProductBanners: React.FC = () => {
   const { i18n } = useTranslation();
   const [banners, setBanners] = useState<ProductBanner[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
+  const { ref: sectionRef, inView } = useInView<HTMLDivElement>();
 
-  useEffect(() => {
-    loadBanners();
-  }, []);
+  useEffect(() => { loadBanners(); }, []);
 
   const loadBanners = async () => {
     try {
@@ -32,74 +33,140 @@ const HomeProductBanners: React.FC = () => {
     return banner.title_az;
   };
 
+  const heading = i18n.language === 'ru'
+    ? 'Детали, добавляющие ценность вашему престижу'
+    : i18n.language === 'en'
+    ? 'Details that add value to your prestige'
+    : 'Prestijinizə dəyər qatan detallar';
+
+  const subheading = i18n.language === 'ru'
+    ? 'Оригинальные варианты, сохраняющие свою ценность в каждой детали'
+    : i18n.language === 'en'
+    ? 'Original choices that preserve their value in every detail'
+    : 'Hər detalında dəyərini qoruyan orijinal seçimlər';
+
   return (
     <>
-      {/* Middle Banner Section */}
       <MiddleBanner />
 
-      <section className="pt-6 pb-8 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-6">
-    
-            <h2 className="text-2xl font-bold text-gray-900">
-              {i18n.language === 'ru'
-                ? 'Детали, добавляющие ценность вашему престижу'
-                : i18n.language === 'en'
-                ? 'Details that add value to your prestige'
-                : 'Prestijinizə dəyər qatan detallar'}
+      <section
+        ref={sectionRef}
+        className="relative pt-20 md:pt-28 pb-16 md:pb-24 bg-[#0A0A0A] overflow-hidden"
+        data-testid="dv-home-banners"
+      >
+        {/* Ambient gold orb */}
+        <div
+          className="dv-orb"
+          style={{ width: 540, height: 540, top: '-20%', left: '50%', marginLeft: -270, opacity: 0.18 }}
+          aria-hidden="true"
+        />
+
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
+          {/* Heading */}
+          <div className={`text-center mb-12 md:mb-16 dv-reveal ${inView ? 'is-in' : ''}`}>
+            <div className="inline-flex items-center mb-5">
+              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
+              <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
+                Signature Selection
+              </span>
+              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
+            </div>
+            <h2 className="font-playfair text-3xl md:text-5xl lg:text-6xl font-light text-white leading-[1.05] max-w-4xl mx-auto">
+              {heading}
             </h2>
           </div>
 
+          {/* Banner grid */}
           {banners.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {banners.map((banner) => (
-                <Link
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-14 md:mb-20">
+              {banners.map((banner, idx) => (
+                <div
                   key={banner.id}
-                  to={banner.link_url}
-                  className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300"
+                  className={`dv-reveal ${inView ? 'is-in' : ''} ${idx === 0 ? 'dv-reveal-delay-1' : 'dv-reveal-delay-2'}`}
                 >
-                  <div className="aspect-[16/7] relative">
-                    {banner.content_type === 'video' && banner.video_url ? (
-                      <video
-                        src={banner.video_url}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <img
-                        src={banner.image_url || ''}
-                        alt={getTitle(banner)}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="eager"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <h3 className="text-white text-2xl font-bold drop-shadow-lg">
-                        {getTitle(banner)}
-                      </h3>
-                    </div>
-                  </div>
-                </Link>
+                  <Tilt3D
+                    maxTilt={5}
+                    className="w-full"
+                    testId={`dv-home-banner-${banner.id}`}
+                  >
+                    <Link
+                      to={banner.link_url}
+                      className="group relative block overflow-hidden bg-black"
+                    >
+                      <div className="dv-tilt-inner">
+                        <div className="aspect-[16/9] md:aspect-[16/8] relative">
+                          {banner.content_type === 'video' && banner.video_url ? (
+                            <video
+                              src={banner.video_url}
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              preload="auto"
+                              className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105"
+                            />
+                          ) : (
+                            <img
+                              src={banner.image_url || ''}
+                              alt={getTitle(banner)}
+                              className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
+                              loading="eager"
+                            />
+                          )}
+
+                          {/* Cinematic overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                          <div
+                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                            style={{
+                              background:
+                                'radial-gradient(ellipse at 30% 30%, rgba(212,175,55,0.25) 0%, transparent 55%)',
+                            }}
+                          />
+
+                          {/* Gold border sweep */}
+                          <div
+                            className="absolute inset-0 border border-[#D4AF37]/0 group-hover:border-[#D4AF37]/60 transition-colors duration-500 pointer-events-none"
+                          />
+
+                          {/* Content */}
+                          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+                            <div className="flex items-center mb-3">
+                              <span className="inline-block w-6 h-[1px] bg-[#D4AF37]" />
+                              <span className="ml-3 text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-medium">
+                                Collection
+                              </span>
+                            </div>
+                            <h3 className="text-white font-playfair text-2xl md:text-4xl font-light tracking-tight mb-4 max-w-lg">
+                              {getTitle(banner)}
+                            </h3>
+                            <span className="inline-flex items-center text-xs uppercase tracking-[0.3em] text-white/90 group-hover:text-[#D4AF37] transition-colors duration-300">
+                              <span className="dv-gold-line">Kəşf et</span>
+                              <span className="ml-3 transition-transform duration-500 group-hover:translate-x-2">
+                                →
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </Tilt3D>
+                </div>
               ))}
             </div>
           )}
 
-          <div className="text-center mt-5">
-            <p className="text-gray-700 text-2xl font-bold">
-              {i18n.language === 'ru'
-                ? 'Оригинальные варианты, сохраняющие свою ценность в каждой детали'
-                : i18n.language === 'en'
-                ? 'Original choices that preserve their value in every detail'
-                : 'Hər detalında dəyərini qoruyan orijinal seçimlər'}
+          {/* Sub heading */}
+          <div className={`text-center mb-10 dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-3`}>
+            <p className="font-playfair text-xl md:text-3xl text-white/85 font-light italic max-w-3xl mx-auto leading-snug">
+              {subheading}
             </p>
           </div>
 
-          <ProductBannerSlider />
+          {/* Brand slider */}
+          <div className={`dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-4`}>
+            <ProductBannerSlider />
+          </div>
         </div>
       </section>
     </>
