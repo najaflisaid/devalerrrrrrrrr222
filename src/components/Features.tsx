@@ -89,22 +89,6 @@ const Features: React.FC = () => {
             );
           })}
         </div>
-
-        {/* Bottom marquee */}
-        <div className="mt-20 md:mt-24 pt-10 border-t border-black/10 overflow-hidden dv-marquee-pause">
-          <div className="dv-marquee-track text-black/15 text-3xl md:text-5xl font-playfair italic">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <span key={i} className="flex items-center">
-                {['Excellence', 'Savoir-Faire', 'Authenticity', 'Prestige', 'Maison De Valeur'].map((w, j) => (
-                  <span key={`${i}-${j}`} className="mx-8 inline-flex items-center">
-                    <span>{w}</span>
-                    <span className="mx-8 text-[#D4AF37]">◆</span>
-                  </span>
-                ))}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
