@@ -64,16 +64,6 @@ const ContactPage: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-start">
                 <div className="bg-gray-900 text-white p-3 rounded-lg mr-4">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-1">{t('contact.address')}</h3>
-                  <p className="text-gray-600" dangerouslySetInnerHTML={{ __html: t('contact.addressText').replace('\n', '<br />') }} />
-                </div>
-              </div>
-
-              <div className="flex items-start">
-                <div className="bg-gray-900 text-white p-3 rounded-lg mr-4">
                   <Phone className="h-6 w-6" />
                 </div>
                 <div>
@@ -107,15 +97,75 @@ const ContactPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-8 rounded-lg overflow-hidden h-64 bg-gray-100">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3039.1725867988836!2d49.85698857629755!3d40.38003257144073!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40307d92c2e6bc3d%3A0x5c5c5c5c5c5c5c5c!2sJPzZU7hrHU5BcW587!5e0!3m2!1sen!2saz!4v1234567890"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-              ></iframe>
+            {/* Branches */}
+            <div className="mt-10">
+              <h3 className="font-playfair text-2xl mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-[#D4AF37]" />
+                Filiallarımız
+              </h3>
+              <div className="space-y-5" data-testid="contact-branches">
+                {[
+                  {
+                    id: 'sulh',
+                    name: 'DE VALEUR — Sumqayıt, Sülh küçəsi',
+                    address: 'Sumqayıt şəh., Sülh küçəsi',
+                    lat: 40.5889111,
+                    lng: 49.6751973,
+                    link: 'https://www.google.com/maps/place/DE+VALEUR+Sumqay%C4%B1t+%C5%9F%C9%99h.,+S%C3%BClh+k%C3%BC%C3%A7%C9%99si/@40.5889111,49.672617,17z/data=!3m1!4b1!4m6!3m5!1s0x403097968093f8b1:0x2dddf79b0380cbf9!8m2!3d40.5889111!4d49.6751973'
+                  },
+                  {
+                    id: 'azadliq',
+                    name: 'DE VALEUR — Bakı, Azadlıq Prospekti',
+                    address: 'Bakı şəh., Azadlıq Prospekti',
+                    lat: 40.3945648,
+                    lng: 49.8402833,
+                    link: 'https://www.google.com/maps/place/DE+VALEUR+Azadl%C4%B1q+Prospekti/@40.3945648,49.837703,17z/data=!3m1!4b1!4m6!3m5!1s0x40307d7836198c1b:0x97426f996ccdb934!8m2!3d40.3945648!4d49.8402833'
+                  },
+                  {
+                    id: 'karvan',
+                    name: 'DE VALEUR — Sumqayıt, Karvan Mall',
+                    address: 'Sumqayıt şəh., Karvan Mall',
+                    lat: 40.5899542,
+                    lng: 49.6747978,
+                    link: 'https://www.google.com/maps/place/DE+VALEUR+Sumqay%C4%B1t+%C5%9F%C9%99h.,+Karvan+Mall/@40.5899542,49.6722175,17z/data=!3m1!4b1!4m6!3m5!1s0x4030970db096e551:0x160a0e8cde924a04!8m2!3d40.5899542!4d49.6747978'
+                  }
+                ].map((branch) => (
+                  <div
+                    key={branch.id}
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    data-testid={`contact-branch-${branch.id}`}
+                  >
+                    <div className="p-4 border-b border-gray-100">
+                      <h4 className="font-semibold text-gray-900">{branch.name}</h4>
+                      <p className="text-sm text-gray-600 mt-0.5">{branch.address}</p>
+                    </div>
+                    <div className="h-48 bg-gray-100">
+                      <iframe
+                        title={branch.name}
+                        src={`https://maps.google.com/maps?q=${branch.lat},${branch.lng}&hl=az&z=17&output=embed`}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      ></iframe>
+                    </div>
+                    <div className="p-3 flex justify-end">
+                      <a
+                        href={branch.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-gray-900 font-medium hover:text-[#D4AF37] transition-colors"
+                        data-testid={`contact-branch-${branch.id}-directions`}
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Xəritədə aç
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
