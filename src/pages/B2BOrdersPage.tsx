@@ -29,6 +29,7 @@ interface B2BOrder {
   signature?: string;
   signedAt?: any;
   totalDebt?: number;
+  totalDebtOverride?: number;
   paymentDeadline?: string;
 }
 
@@ -480,7 +481,10 @@ const B2BOrdersPage: React.FC = () => {
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div data-testid={`b2b-total-debt-${order.id}`}>
                                 <p className="text-xs text-gray-600">Ümumi borc</p>
-                                <p className="text-2xl font-bold text-red-600">{((order.totalDebt || 0) + (order.totalAmount || 0)).toFixed(2)} ₼</p>
+                                <p className="text-2xl font-bold text-red-600">{(order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
+                                  ? order.totalDebtOverride
+                                  : ((order.totalDebt || 0) + (order.totalAmount || 0))
+                                ).toFixed(2)} ₼</p>
                               </div>
                             )}
                             {order.paymentDeadline && (

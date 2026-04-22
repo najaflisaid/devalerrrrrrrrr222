@@ -21,6 +21,7 @@ interface B2BOrder {
   signature?: string;
   signedAt?: any;
   totalDebt?: number;
+  totalDebtOverride?: number;
   paymentDeadline?: string;
 }
 
@@ -42,6 +43,7 @@ const B2BOrdersTab: React.FC = () => {
   const [editingPaymentOrderId, setEditingPaymentOrderId] = useState<string | null>(null);
   const [paymentEditData, setPaymentEditData] = useState({
     totalDebt: '',
+    totalDebtOverride: '',
     paymentDeadline: ''
   });
 
@@ -212,16 +214,31 @@ const B2BOrdersTab: React.FC = () => {
 
   const handleEditPayment = (order: B2BOrder) => {
     setEditingPaymentOrderId(order.id);
+    const autoTotal = (order.totalDebt || 0) + (order.totalAmount || 0);
     setPaymentEditData({
       totalDebt: order.totalDebt?.toString() || '',
+      totalDebtOverride: order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
+        ? order.totalDebtOverride.toString()
+        : autoTotal.toFixed(2),
       paymentDeadline: order.paymentDeadline || ''
     });
   };
 
   const handleSavePayment = async (orderId: string) => {
     try {
+      const prevDebt = paymentEditData.totalDebt ? parseFloat(paymentEditData.totalDebt) : 0;
+      const order = orders.find(o => o.id === orderId);
+      const autoTotal = prevDebt + (order?.totalAmount || 0);
+      const overrideRaw = paymentEditData.totalDebtOverride;
+      const overrideNum = overrideRaw === '' ? null : parseFloat(overrideRaw);
+      // If the override equals the auto-calculated value, treat as not-overridden (null)
+      const overrideToSave = overrideNum === null || isNaN(overrideNum)
+        ? null
+        : (Math.abs(overrideNum - autoTotal) < 0.005 ? null : overrideNum);
+
       await updateB2BOrderPaymentInfo(orderId, {
-        totalDebt: paymentEditData.totalDebt ? parseFloat(paymentEditData.totalDebt) : undefined,
+        totalDebt: paymentEditData.totalDebt ? prevDebt : undefined,
+        totalDebtOverride: overrideToSave,
         paymentDeadline: paymentEditData.paymentDeadline || undefined
       });
       loadOrders();
@@ -237,6 +254,7 @@ const B2BOrdersTab: React.FC = () => {
     setEditingPaymentOrderId(null);
     setPaymentEditData({
       totalDebt: '',
+      totalDebtOverride: '',
       paymentDeadline: ''
     });
   };
@@ -803,25 +821,40 @@ const B2BOrdersTab: React.FC = () => {
                           type="number"
                           step="0.01"
                           value={paymentEditData.totalDebt}
-                          onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebt: e.target.value })}
+                          onChange={(e) => {
+                            const newPrev = e.target.value;
+                            const prevNum = parseFloat(newPrev) || 0;
+                            const autoTotal = (prevNum + (order.totalAmount || 0)).toFixed(2);
+                            // If user hasn't manually overridden (override matched old auto), sync the override
+                            const oldPrev = parseFloat(paymentEditData.totalDebt) || 0;
+                            const oldAuto = (oldPrev + (order.totalAmount || 0)).toFixed(2);
+                            const currentOverride = paymentEditData.totalDebtOverride;
+                            const synced = currentOverride === '' || currentOverride === oldAuto
+                              ? autoTotal
+                              : currentOverride;
+                            setPaymentEditData({
+                              ...paymentEditData,
+                              totalDebt: newPrev,
+                              totalDebtOverride: synced
+                            });
+                          }}
                           placeholder="0.00"
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
                           data-testid={`b2b-prev-debt-input-${order.id}`}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Ümumi borc (avtomatik) (₼)</label>
+                        <label className="block text-xs text-gray-600 mb-1">Ümumi borc (₼)</label>
                         <input
-                          type="text"
-                          value={(
-                            (parseFloat(paymentEditData.totalDebt) || 0) +
-                            (order.totalAmount || 0)
-                          ).toFixed(2)}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg text-gray-700 font-semibold"
-                          data-testid={`b2b-total-debt-display-${order.id}`}
+                          type="number"
+                          step="0.01"
+                          value={paymentEditData.totalDebtOverride}
+                          onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebtOverride: e.target.value })}
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 font-semibold"
+                          data-testid={`b2b-total-debt-input-${order.id}`}
                         />
-                        <p className="text-[10px] text-gray-400 mt-0.5">Əvvəlki borc + qaimə məbləği ({(order.totalAmount || 0).toFixed(2)}₼)</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Əvvəlki borc + qaimə məbləği ({(order.totalAmount || 0).toFixed(2)}₼). Avtomatik hesablanır, əl ilə də dəyişə bilərsiniz.</p>
                       </div>
                     </div>
                     <div>
@@ -859,7 +892,10 @@ const B2BOrdersTab: React.FC = () => {
                     <div>
                       <p className="text-xs text-gray-500">Ümumi borc</p>
                       <p className="text-lg font-bold text-red-600">
-                        {(((order.totalDebt || 0) + (order.totalAmount || 0))).toFixed(2)}₼
+                        {(order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
+                          ? order.totalDebtOverride
+                          : ((order.totalDebt || 0) + (order.totalAmount || 0))
+                        ).toFixed(2)}₼
                       </p>
                     </div>
                     <div>

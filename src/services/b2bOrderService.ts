@@ -208,10 +208,11 @@ export const updateB2BOrderCustomerInfo = async (orderId: string, customerInfo: 
 
 export const updateB2BOrderPaymentInfo = async (orderId: string, paymentInfo: {
   totalDebt?: number;
+  totalDebtOverride?: number | null;
   paymentDeadline?: string;
 }) => {
   const orderRef = doc(db, 'b2bOrders', orderId);
-  await updateDoc(orderRef, paymentInfo);
+  await updateDoc(orderRef, paymentInfo as any);
   return { id: orderId, ...paymentInfo };
 };
 
