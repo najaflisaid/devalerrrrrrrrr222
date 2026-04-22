@@ -1,29 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from '../hooks/useInView';
 
 const MaisonQuote: React.FC = () => {
   const { i18n } = useTranslation();
-  const { ref: revealRef, inView } = useInView<HTMLDivElement>();
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const [progress, setProgress] = useState(0); // 0..1 as user scrolls through it
-
-  useEffect(() => {
-    const onScroll = () => {
-      const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
-      // 0 when section bottom reaches viewport bottom, 1 when section top leaves viewport top
-      const total = rect.height + vh;
-      const scrolled = vh - rect.top;
-      const p = Math.min(1, Math.max(0, scrolled / total));
-      setProgress(p);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const { ref, inView } = useInView<HTMLElement>();
 
   const quote =
     i18n.language === 'ru'
@@ -32,33 +13,62 @@ const MaisonQuote: React.FC = () => {
       ? { line1: 'Time is not measured.', line2: 'It is worn.' }
       : { line1: 'Zaman ölçülmür.', line2: 'Zaman daşınır.' };
 
-  // kinetic background word translates based on scroll progress
-  const translate = -40 + progress * 80; // -40% to +40%
-
   return (
     <section
-      ref={(node) => {
-        sectionRef.current = node;
-        revealRef(node);
-      }}
-      className="relative py-24 md:py-36 bg-white overflow-hidden"
+      ref={ref}
+      className="relative py-24 md:py-40 overflow-hidden"
       data-testid="dv-maison-quote"
+      style={{
+        background:
+          'radial-gradient(ellipse at 50% 50%, #FBF7EE 0%, #F6EFDC 40%, #FAFAF7 100%)',
+      }}
     >
-      {/* Large kinetic background word */}
+      {/* Subtle gold grain overlay */}
       <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
-        style={{ transform: `translate3d(${translate}%, 0, 0)` }}
+        className="absolute inset-0 pointer-events-none opacity-40 dv-grain"
+        aria-hidden="true"
+      />
+      {/* Ambient soft gold glow blobs */}
+      <div
+        className="absolute -top-40 -left-32 w-[520px] h-[520px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(212,175,55,0.22) 0%, transparent 70%)',
+          filter: 'blur(10px)',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -bottom-48 -right-32 w-[560px] h-[560px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(212,175,55,0.18) 0%, transparent 70%)',
+          filter: 'blur(10px)',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Auto-animated background marquee: only "De Valeur" repeating */}
+      <div
+        className="absolute inset-0 flex items-center pointer-events-none select-none overflow-hidden"
         aria-hidden="true"
       >
-        <span
-          className="font-playfair italic text-[22vw] md:text-[16vw] leading-none font-light whitespace-nowrap"
-          style={{
-            color: 'transparent',
-            WebkitTextStroke: '1px rgba(212,175,55,0.35)',
-          }}
-        >
-          De Valeur · Maison · De Valeur ·
-        </span>
+        <div className="dv-marquee-track font-playfair italic text-[22vw] md:text-[14vw] leading-none font-light whitespace-nowrap">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <span key={i} className="flex items-center">
+              {Array.from({ length: 6 }).map((_, j) => (
+                <span
+                  key={`${i}-${j}`}
+                  className="mx-10 inline-block"
+                  style={{
+                    color: 'transparent',
+                    WebkitTextStroke: '1px rgba(212,175,55,0.32)',
+                  }}
+                >
+                  De Valeur
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="relative max-w-[1440px] mx-auto px-6 sm:px-10 text-center">
@@ -79,7 +89,7 @@ const MaisonQuote: React.FC = () => {
             </span>
             <span
               className={`block italic text-3xl sm:text-5xl md:text-6xl lg:text-7xl mt-2 md:mt-4 dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-2`}
-              style={{ color: '#D4AF37' }}
+              style={{ color: '#C99B1F' }}
             >
               “{quote.line2}”
             </span>
@@ -87,7 +97,7 @@ const MaisonQuote: React.FC = () => {
 
           <div className={`mt-10 inline-flex items-center dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-3`}>
             <span className="inline-block w-12 h-[1px] bg-black/40" />
-            <span className="mx-3 text-[11px] uppercase tracking-[0.35em] text-black/60">
+            <span className="mx-3 text-[11px] uppercase tracking-[0.35em] text-black/65">
               Maison De Valeur
             </span>
             <span className="inline-block w-12 h-[1px] bg-black/40" />

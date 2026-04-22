@@ -566,6 +566,14 @@ body.dv-home-active select {
   0% { transform: translate(0, 0) scale(1); }
   100% { transform: translate(8%, -6%) scale(1.15); }
 }
+@keyframes dv-float-y {
+  0% { transform: translateY(0) rotate(-0.5deg); }
+  100% { transform: translateY(-14px) rotate(0.5deg); }
+}
+@keyframes dv-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
 
 /* Grain overlay */
 .dv-grain::before {

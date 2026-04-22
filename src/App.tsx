@@ -10,6 +10,7 @@ import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
 import StatsBand from './components/StatsBand';
 import MaisonQuote from './components/MaisonQuote';
+import SignaturePiece3D from './components/SignaturePiece3D';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
 import B2BRequestForm from './components/auth/B2BRequestForm';
@@ -44,6 +45,7 @@ const HomePage: React.FC = () => {
       <Hero />
       <BestSellersSection />
       <MaisonQuote />
+      <SignaturePiece3D />
       <HomeProductBanners />
       <StatsBand />
       <CategoryBanner />
