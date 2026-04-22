@@ -333,7 +333,7 @@ const CartPage: React.FC = () => {
               {isB2BUser && (
                 <div className="mb-4">
                   <label htmlFor="customer-note" className="block text-sm font-medium text-gray-700 mb-1">
-                    Sifarişə qeyd <span className="text-gray-400 font-normal">(istəyə görə)</span>
+                    Qeyd əlavə et
                   </label>
                   <textarea
                     id="customer-note"
