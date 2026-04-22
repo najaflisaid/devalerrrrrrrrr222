@@ -71,15 +71,6 @@ const BestSellersSection: React.FC = () => {
       className="relative py-20 md:py-28 bg-white overflow-hidden"
       data-testid="dv-bestsellers"
     >
-      {/* Subtle ambient gold glow */}
-      <div
-        className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)',
-        }}
-        aria-hidden="true"
-      />
-
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
         <div className={`dv-reveal ${inView ? 'is-in' : ''} flex items-end justify-between mb-10 md:mb-14`}>
@@ -139,7 +130,7 @@ const BestSellersSection: React.FC = () => {
                 >
                   <div className="dv-tilt-inner">
                     {/* Product image card */}
-                    <div className="relative bg-[#FAFAF7] overflow-hidden border border-gray-100 group-hover:border-[#D4AF37]/60 transition-colors duration-500">
+                    <div className="relative bg-white overflow-hidden border border-gray-100 group-hover:border-[#D4AF37]/60 transition-colors duration-500">
                       {/* Gold corner frames */}
                       <span className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                       <span className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
