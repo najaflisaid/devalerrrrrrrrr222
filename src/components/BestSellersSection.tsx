@@ -148,7 +148,7 @@ const BestSellersSection: React.FC = () => {
                 >
                   <div className="dv-tilt-inner">
                     {/* Product image card */}
-                    <div className="relative bg-white overflow-hidden border border-gray-100 group-hover:border-[#D4AF37]/60 transition-colors duration-500">
+                    <div className="relative bg-white overflow-hidden">
                       {/* Gold corner frames (card interior stays white) */}
                       <span className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                       <span className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -166,7 +166,6 @@ const BestSellersSection: React.FC = () => {
                           src={product.images?.[0] || product.imageUrl}
                           alt={getProductName(product)}
                           className="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-1"
-                          style={{ filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.18))' }}
                         />
                       </div>
                     </div>
