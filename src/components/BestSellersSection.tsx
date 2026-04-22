@@ -149,11 +149,11 @@ const BestSellersSection: React.FC = () => {
                   <div className="dv-tilt-inner">
                     {/* Product image card */}
                     <div className="relative bg-white overflow-hidden border border-gray-100 group-hover:border-[#D4AF37]/60 transition-colors duration-500">
-                      {/* Gold corner frames */}
-                      <span className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* White corner frames */}
+                      <span className="absolute top-0 left-0 w-4 h-4 border-t border-l border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <span className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <span className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <span className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                       {product.isPersonalizable && (
                         <span className="absolute top-3 left-3 text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-medium z-[2]">
