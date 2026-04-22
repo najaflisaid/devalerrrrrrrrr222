@@ -481,6 +481,42 @@ html.dark .dv-orb { opacity: 0.28; }
   .dv-menu-panel,
   .dv-menu-item { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
 }
+
+/* ---- Close (reverse) animations ---- */
+@keyframes dv-menu-backdrop-out {
+  from { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  to   { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+}
+@keyframes dv-menu-panel-out {
+  0% {
+    opacity: 1;
+    transform: perspective(1400px) rotateY(0deg) translateX(0) scale(1);
+    filter: blur(0);
+    transform-origin: left center;
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1400px) rotateY(-28deg) translateX(-18%) scale(0.985);
+    filter: blur(6px);
+    transform-origin: left center;
+  }
+}
+@keyframes dv-menu-item-out {
+  0%   { opacity: 1; transform: translateX(0) translateZ(0); }
+  100% { opacity: 0; transform: translateX(-14px) translateZ(-30px); }
+}
+
+.dv-menu-backdrop.is-closing {
+  animation: dv-menu-backdrop-out 360ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+.dv-menu-panel.is-closing {
+  animation: dv-menu-panel-out 460ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+.dv-menu-panel.is-closing .dv-menu-item {
+  /* Reverse stagger: top items leave first, bottom last */
+  animation: dv-menu-item-out 320ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation-delay: calc(var(--dv-i, 0) * 18ms);
+}
 /* ================= /3D Minimal Menu Animations ================= */
 
 /* ================= 3D Desktop Mega Menu ================= */
@@ -576,6 +612,26 @@ html.dark .dv-orb { opacity: 0.28; }
   .dv-megamenu-item,
   .dv-navlink { animation: none !important; transform: none !important; filter: none !important; opacity: 1 !important; }
   .dv-navlink::after { display: none; }
+}
+
+/* ---- Desktop mega menu close animations ---- */
+@keyframes dv-megamenu-out {
+  0% {
+    opacity: 1;
+    transform: perspective(1600px) rotateX(0) translateY(0) scale(1);
+    filter: blur(0);
+    transform-origin: top center;
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1600px) rotateX(-10deg) translateY(-10px) scale(0.995);
+    filter: blur(4px);
+    transform-origin: top center;
+  }
+}
+.dv-megamenu.is-closing {
+  animation: dv-megamenu-out 320ms cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
 }
 /* ================= /3D Desktop Mega Menu ================= */
 

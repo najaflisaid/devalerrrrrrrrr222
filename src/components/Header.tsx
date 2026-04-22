@@ -15,6 +15,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { getTotalItems, getUserDiscount, clearCart } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMenuClosing, setIsMobileMenuClosing] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
@@ -22,9 +23,11 @@ const Header: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isDropdownClosing, setIsDropdownClosing] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [mobileMenuCloseTimeout, setMobileMenuCloseTimeout] = useState<NodeJS.Timeout | null>(null);
   const userDiscount = getUserDiscount();
   
   // B2B Bildiriş state-ləri
@@ -159,14 +162,29 @@ const Header: React.FC = () => {
       clearTimeout(dropdownTimeout);
       setDropdownTimeout(null);
     }
+    setIsDropdownClosing(false);
     setShowDropdown(true);
   };
 
   const handleDropdownLeave = () => {
+    setIsDropdownClosing(true);
     const timeout = setTimeout(() => {
       setShowDropdown(false);
-    }, 200);
+      setIsDropdownClosing(false);
+    }, 320);
     setDropdownTimeout(timeout);
+  };
+
+  const closeMobileMenu = () => {
+    if (mobileMenuCloseTimeout) {
+      clearTimeout(mobileMenuCloseTimeout);
+    }
+    setIsMobileMenuClosing(true);
+    const timeout = setTimeout(() => {
+      setIsMobileMenuOpen(false);
+      setIsMobileMenuClosing(false);
+    }, 460);
+    setMobileMenuCloseTimeout(timeout);
   };
 
   const getCategoryTranslation = (category: string) => {
@@ -235,7 +253,7 @@ const Header: React.FC = () => {
           <div className="flex items-center justify-between h-16">
 
             {/* Mobile Menu Button */}
-            <button className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
+            <button className="md:hidden" onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); }}>
               <Menu className="h-6 w-6" />
             </button>
 
@@ -264,7 +282,7 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <div
-                    className="fixed left-0 right-0 top-[64px] bg-white shadow-2xl border-t border-gray-200 dv-megamenu z-50"
+                    className={`fixed left-0 right-0 top-[64px] bg-white shadow-2xl border-t border-gray-200 dv-megamenu z-50 ${isDropdownClosing ? 'is-closing' : ''}`}
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
                   >
@@ -453,17 +471,17 @@ const Header: React.FC = () => {
         {isMobileMenuOpen && (
           <>
             <div
-              className="fixed inset-0 z-50 bg-black/55 dv-menu-backdrop"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className={`fixed inset-0 z-50 bg-black/55 dv-menu-backdrop ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              onClick={closeMobileMenu}
             ></div>
 
             <div
-              className="fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white dv-menu-panel"
+              className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
               style={{ boxShadow: '40px 0 80px -20px rgba(0,0,0,0.35)' }}
             >
               <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <button onClick={closeMobileMenu} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <X className="h-6 w-6" />
                 </button>
               </div>
@@ -474,7 +492,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.home')}
                   </Link>
@@ -483,7 +501,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/products"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.products')}
                   </Link>
@@ -502,7 +520,7 @@ const Header: React.FC = () => {
                             key={category}
                             onClick={() => {
                               navigate(`/products?category=${encodeURIComponent(category)}`);
-                              setIsMobileMenuOpen(false);
+                              closeMobileMenu();
                             }}
                             className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded capitalize"
                           >
@@ -526,7 +544,7 @@ const Header: React.FC = () => {
                             key={brand}
                             onClick={() => {
                               navigate(`/products?brand=${encodeURIComponent(brand)}`);
-                              setIsMobileMenuOpen(false);
+                              closeMobileMenu();
                             }}
                             className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                           >
@@ -541,7 +559,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/about"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.about')}
                   </Link>
@@ -550,7 +568,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/blog"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.blog')}
                   </Link>
@@ -559,7 +577,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/partners"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.partners')}
                   </Link>
@@ -568,7 +586,7 @@ const Header: React.FC = () => {
                   <Link
                     to="/contact"
                     className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
                     {t('header.contact')}
                   </Link>
@@ -579,7 +597,7 @@ const Header: React.FC = () => {
                     <Link
                       to="/b2b/orders"
                       className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={closeMobileMenu}
                     >
                       {t('header.myOrders')}
                     </Link>
@@ -591,7 +609,7 @@ const Header: React.FC = () => {
                     <Link
                       to="/admin"
                       className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={closeMobileMenu}
                     >
                       {t('header.admin')}
                     </Link>
@@ -618,7 +636,7 @@ const Header: React.FC = () => {
                       <button
                         onClick={() => {
                           setShowLoginModal(true);
-                          setIsMobileMenuOpen(false);
+                          closeMobileMenu();
                         }}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors"
                       >
@@ -627,7 +645,7 @@ const Header: React.FC = () => {
                       </button>
                       <Link
                         to="/b2b-login"
-                        onClick={() => setIsMobileMenuOpen(false)}
+                        onClick={closeMobileMenu}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                       >
                         <User className="h-5 w-5" />
@@ -643,7 +661,7 @@ const Header: React.FC = () => {
                       <button
                         onClick={() => {
                           handleLogout();
-                          setIsMobileMenuOpen(false);
+                          closeMobileMenu();
                         }}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
