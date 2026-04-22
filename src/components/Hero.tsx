@@ -103,18 +103,18 @@ const Hero: React.FC = () => {
   return (
     <section
       ref={heroRef}
-      className="relative w-full bg-black overflow-hidden"
+      className="relative w-full bg-white overflow-hidden"
       data-testid="dv-hero"
     >
       {/* Ambient gold orbs */}
       <div
         className="dv-orb"
-        style={{ width: 480, height: 480, top: '-15%', left: '-10%' }}
+        style={{ width: 480, height: 480, top: '-15%', left: '-10%', opacity: 0.18 }}
         aria-hidden="true"
       />
       <div
         className="dv-orb"
-        style={{ width: 420, height: 420, bottom: '-20%', right: '-8%', animationDelay: '3s' }}
+        style={{ width: 420, height: 420, bottom: '-20%', right: '-8%', animationDelay: '3s', opacity: 0.18 }}
         aria-hidden="true"
       />
 

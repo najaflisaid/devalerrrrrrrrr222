@@ -16,7 +16,7 @@ const Features: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative py-20 md:py-28 bg-[#0A0A0A] overflow-hidden"
+      className="relative py-20 md:py-28 bg-white overflow-hidden"
       data-testid="dv-features"
     >
       <div
@@ -28,7 +28,7 @@ const Features: React.FC = () => {
       />
       <div
         className="dv-orb"
-        style={{ width: 380, height: 380, top: '20%', right: '-5%', opacity: 0.14 }}
+        style={{ width: 380, height: 380, top: '20%', right: '-5%', opacity: 0.08 }}
         aria-hidden="true"
       />
 
@@ -41,7 +41,7 @@ const Features: React.FC = () => {
             </span>
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
           </div>
-          <h2 className="font-playfair text-3xl md:text-5xl font-light text-white tracking-tight">
+          <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight">
             {t('features.heading', { defaultValue: 'The De Valeur Promise' })}
           </h2>
         </div>
@@ -68,21 +68,21 @@ const Features: React.FC = () => {
                 <div className="relative inline-flex items-center justify-center w-20 h-20 mb-7">
                   {/* Rotating gold ring */}
                   <span
-                    className="absolute inset-0 rounded-full border border-[#D4AF37]/30 transition-all duration-700 group-hover:scale-110 group-hover:border-[#D4AF37]"
+                    className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-all duration-700 group-hover:scale-110 group-hover:border-[#D4AF37]"
                     style={{ animation: 'dv-float 8s ease-in-out infinite alternate' }}
                     aria-hidden="true"
                   />
                   <span
-                    className="absolute inset-2 rounded-full border border-[#D4AF37]/20 transition-transform duration-700 group-hover:rotate-45"
+                    className="absolute inset-2 rounded-full border border-[#D4AF37]/25 transition-transform duration-700 group-hover:rotate-45"
                     aria-hidden="true"
                   />
                   <Icon className="h-7 w-7 text-[#D4AF37] relative z-10 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.2} />
                 </div>
 
-                <h3 className="font-playfair text-xl md:text-2xl font-light text-white mb-3 tracking-tight">
+                <h3 className="font-playfair text-xl md:text-2xl font-light text-black mb-3 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-white/60 text-sm leading-relaxed max-w-xs mx-auto font-light">
+                <p className="text-black/55 text-sm leading-relaxed max-w-xs mx-auto font-light">
                   {feature.description}
                 </p>
               </div>
@@ -91,8 +91,8 @@ const Features: React.FC = () => {
         </div>
 
         {/* Bottom marquee */}
-        <div className="mt-20 md:mt-24 pt-10 border-t border-white/10 overflow-hidden dv-marquee-pause">
-          <div className="dv-marquee-track text-white/20 text-3xl md:text-5xl font-playfair italic">
+        <div className="mt-20 md:mt-24 pt-10 border-t border-black/10 overflow-hidden dv-marquee-pause">
+          <div className="dv-marquee-track text-black/15 text-3xl md:text-5xl font-playfair italic">
             {Array.from({ length: 2 }).map((_, i) => (
               <span key={i} className="flex items-center">
                 {['Excellence', 'Savoir-Faire', 'Authenticity', 'Prestige', 'Maison De Valeur'].map((w, j) => (

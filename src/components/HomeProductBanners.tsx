@@ -51,13 +51,13 @@ const HomeProductBanners: React.FC = () => {
 
       <section
         ref={sectionRef}
-        className="relative pt-20 md:pt-28 pb-16 md:pb-24 bg-[#0A0A0A] overflow-hidden"
+        className="relative pt-20 md:pt-28 pb-16 md:pb-24 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
         {/* Ambient gold orb */}
         <div
           className="dv-orb"
-          style={{ width: 540, height: 540, top: '-20%', left: '50%', marginLeft: -270, opacity: 0.18 }}
+          style={{ width: 540, height: 540, top: '-20%', left: '50%', marginLeft: -270, opacity: 0.08 }}
           aria-hidden="true"
         />
 
@@ -71,7 +71,7 @@ const HomeProductBanners: React.FC = () => {
               </span>
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             </div>
-            <h2 className="font-playfair text-3xl md:text-5xl lg:text-6xl font-light text-white leading-[1.05] max-w-4xl mx-auto">
+            <h2 className="font-playfair text-3xl md:text-5xl lg:text-6xl font-light text-black leading-[1.05] max-w-4xl mx-auto">
               {heading}
             </h2>
           </div>
@@ -158,7 +158,7 @@ const HomeProductBanners: React.FC = () => {
 
           {/* Sub heading */}
           <div className={`text-center mb-10 dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-3`}>
-            <p className="font-playfair text-xl md:text-3xl text-white/85 font-light italic max-w-3xl mx-auto leading-snug">
+            <p className="font-playfair text-xl md:text-3xl text-black/75 font-light italic max-w-3xl mx-auto leading-snug">
               {subheading}
             </p>
           </div>
