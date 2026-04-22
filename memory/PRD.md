@@ -55,3 +55,10 @@ Admin paneli üçün bu indexlər Firebase Console-da yaradılmalıdır:
 
 ## Test Credentials
 - Admin: rasimgasimzade@gmail.com / Rasim2323
+
+## Update (2026-01)
+### B2B Sifariş Səhifəsi - Ödəniş Məlumatları
+- Müştəri B2B sifariş səhifəsində (`src/pages/B2BOrdersPage.tsx`) ödəniş bölməsinə **Ümumi borc** sütunu əlavə olundu (Əvvəlki borc + qaimə məbləği)
+- "Ödənişin tamamlanma tarixi" yazısı "Yeni qaimə üzrə ödənişin tamamlanma tarixi" ilə əvəz olundu
+- Müştəri adının yanında soyad artıq həm müştəri səhifəsində (line 436), həm də admin panelində (B2BOrdersTab line 620, 1000) göstərilir
+

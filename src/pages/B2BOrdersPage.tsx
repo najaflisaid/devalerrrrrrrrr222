@@ -470,16 +470,22 @@ const B2BOrdersPage: React.FC = () => {
                           <p className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             {t('b2b.paymentInfo') || 'Ödəniş Məlumatları'}
                           </p>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
-                              <div>
+                              <div data-testid={`b2b-prev-debt-${order.id}`}>
                                 <p className="text-xs text-gray-600">Əvvəlki borc</p>
                                 <p className="text-2xl font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
                               </div>
                             )}
+                            {order.totalDebt !== undefined && order.totalDebt !== null && (
+                              <div data-testid={`b2b-total-debt-${order.id}`}>
+                                <p className="text-xs text-gray-600">Ümumi borc</p>
+                                <p className="text-2xl font-bold text-red-600">{((order.totalDebt || 0) + (order.totalAmount || 0)).toFixed(2)} ₼</p>
+                              </div>
+                            )}
                             {order.paymentDeadline && (
-                              <div>
-                                <p className="text-xs text-gray-600">Ödənişin tamamlanma tarixi</p>
+                              <div data-testid={`b2b-payment-deadline-${order.id}`}>
+                                <p className="text-xs text-gray-600">Yeni qaimə üzrə ödənişin tamamlanma tarixi</p>
                                 <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
                                   <Calendar className="h-4 w-4" />
                                   {new Date(order.paymentDeadline).toLocaleDateString('az-AZ', {
