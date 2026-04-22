@@ -796,19 +796,36 @@ const B2BOrdersTab: React.FC = () => {
                 
                 {editingPaymentOrderId === order.id ? (
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Əvvəlki borc (₼)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={paymentEditData.totalDebt}
-                        onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebt: e.target.value })}
-                        placeholder="0.00"
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Əvvəlki borc (₼)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={paymentEditData.totalDebt}
+                          onChange={(e) => setPaymentEditData({ ...paymentEditData, totalDebt: e.target.value })}
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500"
+                          data-testid={`b2b-prev-debt-input-${order.id}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Ümumi borc (avtomatik) (₼)</label>
+                        <input
+                          type="text"
+                          value={(
+                            (parseFloat(paymentEditData.totalDebt) || 0) +
+                            (order.totalAmount || 0)
+                          ).toFixed(2)}
+                          readOnly
+                          className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg text-gray-700 font-semibold"
+                          data-testid={`b2b-total-debt-display-${order.id}`}
+                        />
+                        <p className="text-[10px] text-gray-400 mt-0.5">Əvvəlki borc + qaimə məbləği ({(order.totalAmount || 0).toFixed(2)}₼)</p>
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Ödənişin tamamlanma tarixi</label>
+                      <label className="block text-xs text-gray-600 mb-1">Yeni qaimə üzrə ödənişin tamamlanma tarixi</label>
                       <input
                         type="date"
                         value={paymentEditData.paymentDeadline}
@@ -832,7 +849,7 @@ const B2BOrdersTab: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-gray-500">Əvvəlki borc</p>
                       <p className="text-lg font-bold text-gray-900">
@@ -840,7 +857,13 @@ const B2BOrdersTab: React.FC = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Ödənişin tamamlanma tarixi</p>
+                      <p className="text-xs text-gray-500">Ümumi borc</p>
+                      <p className="text-lg font-bold text-red-600">
+                        {(((order.totalDebt || 0) + (order.totalAmount || 0))).toFixed(2)}₼
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Yeni qaimə üzrə ödənişin tamamlanma tarixi</p>
                       <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {order.paymentDeadline ? new Date(order.paymentDeadline).toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : '-'}
