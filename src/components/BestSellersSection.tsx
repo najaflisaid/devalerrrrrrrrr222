@@ -122,7 +122,7 @@ const BestSellersSection: React.FC = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex-shrink-0 w-[31%] min-w-[110px] sm:w-[200px] md:w-[240px] lg:w-[260px] cursor-pointer group"
+                className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[200px] md:w-[240px] lg:w-[260px] cursor-pointer group"
                 onClick={() => navigate(`/product/${product.id}`)}
               >
                 {/* Product Card */}
