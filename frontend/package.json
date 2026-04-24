@@ -2,6 +2,6 @@
   "name": "frontend",
   "version": "1.0.0",
   "scripts": {
-    "start": "cd /app && npx serve dist -l 3000 -s"
+    "start": "cd /app && yarn dev --host 0.0.0.0 --port 3000"
   }
 }
