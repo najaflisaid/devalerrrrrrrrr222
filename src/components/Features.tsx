@@ -8,7 +8,7 @@ const Features: React.FC = () => {
   const { ref, inView } = useInView<HTMLDivElement>();
 
   const subtitle = t('features.subtitle', { defaultValue: 'Bizim Öhdəliyimiz' });
-  const heading = t('features.heading', { defaultValue: 'De Valeur Vədimiz' });
+  const heading = t('features.heading', { defaultValue: 'Dəyər Fəlsəfəmiz' });
 
   const features = [
     { icon: Award,       title: t('features.quality'),    description: t('features.qualityDesc') },
