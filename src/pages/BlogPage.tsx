@@ -64,36 +64,16 @@ const BlogPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Editorial Header — compact */}
-      <div className="border-b border-gray-100 overflow-hidden">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 relative">
-          {/* Oversized faded backdrop word */}
-          <span
-            aria-hidden="true"
-            className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 select-none pointer-events-none font-playfair text-[110px] lg:text-[140px] leading-none font-light tracking-tighter"
-            style={{ color: '#F5F0E6', whiteSpace: 'nowrap' }}
-          >
-            Journal
-          </span>
-
-          <div className="relative">
-            <div className="flex items-baseline gap-3 md:gap-4">
-              <span className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-none">
-                {t('blog.title') || 'Bloq'}
-              </span>
-              <span className="font-playfair italic text-xl text-[#D4AF37] font-light">
-                /
-              </span>
-              <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] text-gray-400 font-medium">
-                {new Date().getFullYear()}
-              </span>
-            </div>
-
-            <div className="mt-2 flex items-center gap-3">
-              <span className="hidden md:inline-block w-8 h-[1px] flex-shrink-0" style={{ background: '#D4AF37' }} />
-              <p className="text-gray-500 text-sm font-light leading-snug">
-                {t('blog.subtitle') || 'Ən son xəbərlər və məqalələr'}
-              </p>
-            </div>
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+          <h1 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-none">
+            {t('blog.title') || 'Bloq'}
+          </h1>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="hidden md:inline-block w-8 h-[1px] flex-shrink-0" style={{ background: '#D4AF37' }} />
+            <p className="text-gray-500 text-sm font-light leading-snug">
+              {t('blog.subtitle') || 'Ən son xəbərlər və məqalələr'}
+            </p>
           </div>
         </div>
       </div>
