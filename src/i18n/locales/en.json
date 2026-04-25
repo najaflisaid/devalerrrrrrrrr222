@@ -39,7 +39,12 @@
   "homeBanners": {
     "eyebrow": "Signature Selection"
   },
+  "stats": {
+    "eyebrow": "In Numbers"
+  },
   "features": {
+    "subtitle": "Our Commitment",
+    "heading": "The De Valeur Promise",
     "quality": "Premium Quality",
     "qualityDesc": "Every product is selected according to the highest quality standards",
     "authentic": "Authentic Products",

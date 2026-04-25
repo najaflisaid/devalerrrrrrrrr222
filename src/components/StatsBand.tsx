@@ -11,10 +11,10 @@ interface Stat {
 }
 
 const STATS: Stat[] = [
-  { value: 2010, format: 'plain', label: { az: 'Təsis olundu', ru: 'Год основания', en: 'Founded' } },
-  { value: 12, suffix: '+', format: 'comma', label: { az: 'Premium brend', ru: 'Премиум брендов', en: 'Premium brands' } },
-  { value: 10000, suffix: '+', format: 'comma', label: { az: 'Məmnun müştəri', ru: 'Довольных клиентов', en: 'Happy clients' } },
-  { value: 99, suffix: '%', format: 'comma', label: { az: 'Orijinallıq zəmanəti', ru: 'Гарантия подлинности', en: 'Authenticity' } },
+  { value: 2019, format: 'plain', label: { az: 'Təsis olundu', ru: 'Год основания', en: 'Founded' } },
+  { value: 20, suffix: '+', format: 'comma', label: { az: 'Premium brend', ru: 'Премиум брендов', en: 'Premium brands' } },
+  { value: 25000, suffix: '+', format: 'comma', label: { az: 'Məmnun müştəri', ru: 'Довольных клиентов', en: 'Happy clients' } },
+  { value: 100, suffix: '%', format: 'comma', label: { az: 'Orijinallıq zəmanəti', ru: 'Гарантия подлинности', en: 'Authenticity' } },
 ];
 
 // Count-up hook
@@ -59,7 +59,7 @@ const StatItem: React.FC<{ stat: Stat; active: boolean; lang: 'az' | 'ru' | 'en'
 };
 
 const StatsBand: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { ref, inView } = useInView<HTMLDivElement>();
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
 
@@ -86,7 +86,7 @@ const StatsBand: React.FC = () => {
           <div className="inline-flex items-center mb-3">
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
-              En Chiffres
+              {t('stats.eyebrow', { defaultValue: 'Rəqəmlərdə' })}
             </span>
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
           </div>
