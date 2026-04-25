@@ -125,52 +125,6 @@ const HomeSectionsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* --- Maison Quote --- */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Maison Quote (Philosophie)</h3>
-          <Toggle
-            on={data.quote.enabled}
-            onChange={(v) => setData({ ...data, quote: { ...data.quote, enabled: v } })}
-          />
-        </div>
-
-        <MultiLangField
-          label="Eyebrow (üst yazı)"
-          value={data.quote.eyebrow}
-          onChange={(v) => setData({ ...data, quote: { ...data.quote, eyebrow: v } })}
-        />
-        <MultiLangField
-          label="1-ci sətir"
-          value={data.quote.line1}
-          onChange={(v) => setData({ ...data, quote: { ...data.quote, line1: v } })}
-        />
-        <MultiLangField
-          label="2-ci sətir (italic qızıl)"
-          value={data.quote.line2}
-          onChange={(v) => setData({ ...data, quote: { ...data.quote, line2: v } })}
-        />
-        <MultiLangField
-          label="İmza (alt yazı)"
-          value={data.quote.signature}
-          onChange={(v) => setData({ ...data, quote: { ...data.quote, signature: v } })}
-        />
-
-        <div>
-          <Label>Arxa fon mətni (bütün dillər üçün eyni)</Label>
-          <input
-            type="text"
-            value={data.quote.backgroundText}
-            onChange={(e) =>
-              setData({ ...data, quote: { ...data.quote, backgroundText: e.target.value } })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-            data-testid="home-sections-bg-text"
-          />
-          <p className="text-xs text-gray-500 mt-1">Arxada fırlanan outline mətn (məsələn: De Valeur)</p>
-        </div>
-      </div>
-
       {/* --- Signature Piece 3D --- */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
