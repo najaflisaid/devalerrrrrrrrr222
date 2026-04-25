@@ -64,7 +64,7 @@ const SignaturePiece3D: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 md:py-32 overflow-hidden bg-white"
+      className="relative pt-6 pb-12 md:pt-12 md:pb-24 overflow-hidden bg-white"
       data-testid="dv-signature-3d"
     >
       {/* Subtle gold glow */}
@@ -78,37 +78,37 @@ const SignaturePiece3D: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div className="grid grid-cols-2 gap-4 sm:gap-10 md:gap-16 items-center">
           {/* LEFT: text */}
-          <div className={`order-2 md:order-1 dv-reveal ${inView ? 'is-in' : ''}`}>
-            <div className="flex items-center mb-5">
-              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
-              <span className="ml-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
+          <div className={`order-1 dv-reveal ${inView ? 'is-in' : ''}`}>
+            <div className="flex items-center mb-2 sm:mb-5">
+              <span className="hidden sm:inline-block w-10 h-[1px] bg-[#D4AF37]" />
+              <span className="sm:ml-3 text-[8px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] dv-shimmer font-semibold">
                 {get(cfg.eyebrow)}
               </span>
             </div>
-            <h2 className="font-playfair text-4xl md:text-6xl lg:text-7xl font-light text-black leading-[1.05] tracking-tight mb-5">
+            <h2 className="font-playfair text-xl sm:text-4xl md:text-6xl lg:text-7xl font-light text-black leading-[1.1] tracking-tight mb-2 sm:mb-5">
               {get(cfg.title)}
             </h2>
-            <p className="text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-8">
+            <p className="hidden sm:block text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-8">
               {get(cfg.subtitle)}
             </p>
 
-            <div className="border-t border-black/10 pt-6">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-black/50 mb-2">
+            <div className="border-t border-black/10 pt-3 sm:pt-6">
+              <p className="text-[8px] sm:text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.35em] text-black/50 mb-1 sm:mb-2">
                 {get(cfg.pickLabel)}
               </p>
-              <h3 className="font-playfair text-2xl md:text-3xl font-medium text-black mb-1">
+              <h3 className="font-playfair text-sm sm:text-2xl md:text-3xl font-medium text-black mb-1 leading-tight line-clamp-2">
                 {getName(product)}
               </h3>
-              <p className="text-black text-lg font-light mb-6">
+              <p className="text-black text-sm sm:text-lg font-light mb-3 sm:mb-6">
                 <span className="font-medium">{product.price?.toFixed(2)}</span>
                 <span className="ml-1 text-black/60">₼</span>
               </p>
 
               <button
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="group inline-flex items-center gap-3 px-8 py-4 bg-black hover:bg-[#C99B1F] text-white transition-all duration-500 rounded-full text-xs uppercase tracking-[0.3em] font-medium"
+                className="group inline-flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-8 sm:py-4 bg-black hover:bg-[#C99B1F] text-white transition-all duration-500 rounded-full text-[9px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] font-medium"
                 data-testid="dv-signature-cta"
               >
                 <span>{get(cfg.ctaLabel)}</span>
@@ -120,7 +120,7 @@ const SignaturePiece3D: React.FC = () => {
           {/* RIGHT: 3D stage */}
           <div
             ref={stageRef}
-            className={`order-1 md:order-2 relative aspect-square max-w-[520px] mx-auto w-full dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-2`}
+            className={`order-2 relative aspect-square max-w-[420px] mx-auto w-full dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-2`}
             onMouseMove={handleMove}
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
@@ -128,13 +128,13 @@ const SignaturePiece3D: React.FC = () => {
             {/* Brand name (auto from product) — large display above the piece */}
             {product.brand && (
               <div
-                className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
+                className="absolute -top-3 sm:-top-5 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
                 aria-hidden="true"
               >
                 <span
                   className="font-playfair font-light text-black/90 leading-none tracking-tight whitespace-nowrap text-center"
                   style={{
-                    fontSize: 'clamp(2.25rem, 9vw, 6rem)',
+                    fontSize: 'clamp(1.5rem, 8vw, 5rem)',
                     letterSpacing: '-0.02em',
                   }}
                   data-testid="dv-signature-brand"
@@ -146,7 +146,7 @@ const SignaturePiece3D: React.FC = () => {
 
             {/* Soft shadow beneath */}
             <div
-              className="absolute bottom-[8%] left-1/2 -translate-x-1/2 w-[60%] h-8 rounded-full pointer-events-none"
+              className="absolute bottom-[10%] left-1/2 -translate-x-1/2 w-[55%] h-6 rounded-full pointer-events-none"
               style={{
                 background: 'radial-gradient(ellipse, rgba(0,0,0,0.18), transparent 70%)',
                 filter: 'blur(8px)',
@@ -155,21 +155,21 @@ const SignaturePiece3D: React.FC = () => {
             />
 
             <div
-              className="absolute inset-[18%] flex items-center justify-center"
+              className="absolute inset-[14%] sm:inset-[20%] flex items-center justify-center"
               style={{
                 transformStyle: 'preserve-3d',
                 transform: `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg) translateZ(60px)`,
                 transition: 'transform 400ms cubic-bezier(.2,.8,.2,1)',
               }}
             >
-              <div className="w-full h-full" style={{ animation: 'dv-float-y 6s ease-in-out infinite alternate' }}>
+              <div className="dv-piece-float w-full h-full">
                 <img
                   src={product.images?.[0] || product.imageUrl}
                   alt={getName(product)}
                   className="w-full h-full object-contain cursor-pointer"
                   onClick={() => navigate(`/product/${product.id}`)}
                   style={{
-                    filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.28))',
+                    filter: 'drop-shadow(0 20px 35px rgba(0,0,0,0.28))',
                   }}
                 />
               </div>
