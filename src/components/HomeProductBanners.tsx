@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getActiveProductBanners, type ProductBanner } from '../services/contentService';
-import ProductBannerSlider from './ProductBannerSlider';
 import MiddleBanner from './MiddleBanner';
 import Tilt3D from './Tilt3D';
 
@@ -48,7 +47,7 @@ const HomeProductBanners: React.FC = () => {
       <MiddleBanner />
 
       <section
-        className="relative pt-20 md:pt-28 pb-16 md:pb-24 bg-white overflow-hidden"
+        className="relative pt-20 md:pt-28 pb-10 md:pb-14 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
         {/* Ambient gold orb */}
@@ -162,15 +161,10 @@ const HomeProductBanners: React.FC = () => {
           )}
 
           {/* Sub heading */}
-          <div className="text-center mb-10 dv-reveal is-in dv-reveal-delay-3">
+          <div className="text-center dv-reveal is-in dv-reveal-delay-3">
             <p className="font-playfair text-xl md:text-3xl text-black/75 font-light italic max-w-3xl mx-auto leading-snug">
               {subheading}
             </p>
-          </div>
-
-          {/* Brand slider */}
-          <div className="dv-reveal is-in dv-reveal-delay-4">
-            <ProductBannerSlider />
           </div>
         </div>
       </section>
