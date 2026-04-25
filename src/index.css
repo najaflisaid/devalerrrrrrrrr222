@@ -903,6 +903,28 @@ body.dv-home-active select {
   z-index: 1;
 }
 
+/* Best-sellers dual-direction marquee */
+@keyframes dv-marquee-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes dv-marquee-right {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+.dv-bs-track {
+  display: flex;
+  width: max-content;
+  gap: 0.5rem;
+  will-change: transform;
+}
+@media (min-width: 640px) {
+  .dv-bs-track { gap: 1.25rem; }
+}
+.dv-bs-track-left  { animation: dv-marquee-left  60s linear infinite; }
+.dv-bs-track-right { animation: dv-marquee-right 75s linear infinite; }
+.dv-bs-row:hover .dv-bs-track { animation-play-state: paused; }
+
 /* Cinematic banner: slow Ken Burns + soft pan */
 @keyframes dv-cine-pan {
   0%   { transform: scale(1.08) translate(0, 0); }

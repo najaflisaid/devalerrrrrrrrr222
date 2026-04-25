@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types';
-import { useInView } from '../hooks/useInView';
 import Tilt3D from './Tilt3D';
 
 const BestSellersSection: React.FC = () => {
@@ -12,9 +10,6 @@ const BestSellersSection: React.FC = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-  const { ref: sectionRef, inView } = useInView<HTMLDivElement>();
 
   const getProductName = (product: Product): string => {
     if (typeof product.name === 'string') return product.name;
@@ -23,22 +18,6 @@ const BestSellersSection: React.FC = () => {
   };
 
   useEffect(() => { loadBestSellers(); }, []);
-
-  useEffect(() => {
-    if (!isAutoScrolling || products.length === 0) return;
-    const interval = setInterval(() => {
-      if (scrollContainerRef.current) {
-        const container = scrollContainerRef.current;
-        const maxScroll = container.scrollWidth - container.clientWidth;
-        if (container.scrollLeft >= maxScroll - 10) {
-          container.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          container.scrollTo({ left: container.scrollLeft + 300, behavior: 'smooth' });
-        }
-      }
-    }, 1800);
-    return () => clearInterval(interval);
-  }, [isAutoScrolling, products]);
 
   const loadBestSellers = async () => {
     try {
@@ -51,152 +30,122 @@ const BestSellersSection: React.FC = () => {
     }
   };
 
-  const scroll = (direction: 'left' | 'right') => {
-    setIsAutoScrolling(false);
-    if (scrollContainerRef.current) {
-      const scrollAmount = 520;
-      const newScrollLeft = direction === 'left'
-        ? scrollContainerRef.current.scrollLeft - scrollAmount
-        : scrollContainerRef.current.scrollLeft + scrollAmount;
-      scrollContainerRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
-    }
-    setTimeout(() => setIsAutoScrolling(true), 10000);
-  };
-
   if (loading || products.length === 0) return null;
+
+  // Split into two rows that scroll in opposite directions
+  const half = Math.ceil(products.length / 2);
+  const rowA = products.slice(0, half);
+  const rowB = products.slice(half);
+  // Ensure both rows have at least 6 cards for visual richness
+  const safeRowA = rowA.length >= 6 ? rowA : [...rowA, ...products].slice(0, Math.max(6, rowA.length));
+  const safeRowB = rowB.length >= 6 ? rowB : [...rowB, ...products].slice(0, Math.max(6, rowB.length));
+
+  const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
+    <div
+      className="shrink-0 w-[calc(33.333vw-12px)] sm:w-[230px] md:w-[260px] lg:w-[290px]"
+    >
+      <Tilt3D
+        maxTilt={6}
+        className="cursor-pointer group transition-transform duration-500 ease-out hover:-translate-y-2 hover:scale-[1.04] hover:z-10 relative block"
+        onClick={() => navigate(`/product/${product.id}`)}
+        testId={`dv-bestseller-card-${product.id}`}
+      >
+        <div className="dv-tilt-inner">
+          <div className="relative bg-white overflow-hidden rounded-md transition-shadow duration-500 group-hover:shadow-[0_18px_40px_-12px_rgba(0,0,0,0.25)] ring-0 group-hover:ring-1 group-hover:ring-[#D4AF37]/30">
+            {product.isPersonalizable && (
+              <span className="absolute top-3 left-3 text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-medium z-[2]">
+                Personalize
+              </span>
+            )}
+
+            <div className="aspect-[3/4] flex items-center justify-center p-2 sm:p-6 relative">
+              <img
+                src={product.images?.[0] || product.imageUrl}
+                alt={getProductName(product)}
+                loading="lazy"
+                decoding="async"
+                className={`max-w-full max-h-full object-contain transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110 group-hover:-rotate-1 ${
+                  product.images?.[1] ? 'group-hover:opacity-0' : ''
+                }`}
+              />
+              {product.images?.[1] && (
+                <img
+                  src={product.images[1]}
+                  alt={getProductName(product)}
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-contain p-2 sm:p-6 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="pt-2 pb-1 sm:pt-4 sm:pb-2 px-1 sm:px-0">
+            <h3 className="text-[11px] sm:text-sm md:text-[15px] text-black font-medium truncate leading-tight">
+              <span className="dv-gold-line">{getProductName(product)}</span>
+            </h3>
+            <p className="text-[11px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1 font-light tracking-wide">
+              <span className="text-black font-medium">{product.price?.toFixed(2)}</span>{' '}
+              ₼
+            </p>
+          </div>
+        </div>
+      </Tilt3D>
+    </div>
+  );
+
+  const Row: React.FC<{ items: Product[]; direction: 'left' | 'right' }> = ({ items, direction }) => (
+    <div className="dv-bs-row relative overflow-hidden">
+      <div className={`dv-bs-track ${direction === 'left' ? 'dv-bs-track-left' : 'dv-bs-track-right'}`}>
+        {/* Render twice for seamless loop */}
+        {[...items, ...items].map((p, i) => (
+          <ProductCard key={`${p.id}-${i}`} product={p} />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <section
-      ref={sectionRef}
       className="relative py-20 md:py-28 bg-white overflow-hidden"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
-        <div className={`dv-reveal ${inView ? 'is-in' : ''} flex items-end justify-between mb-10 md:mb-14`}>
-          <div>
-            <div className="flex items-center mb-4">
-              <span className="inline-block w-8 h-[1px]" style={{ background: '#D4AF37' }} />
-              <span className="ml-3 text-[10px] uppercase tracking-[0.35em] dv-shimmer font-semibold">
-                {t('bestSellers.eyebrow', { defaultValue: "De Valeur'da kəşfə çıxın" })}
-              </span>
-            </div>
-            <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight leading-[1.05]">
-              {t('bestSellers.title')}
-            </h2>
+        <div className="text-center mb-10 md:mb-14">
+          <div className="inline-flex items-center mb-4">
+            <span className="inline-block w-8 h-[1px]" style={{ background: '#D4AF37' }} />
+            <span className="mx-3 text-[10px] uppercase tracking-[0.35em] dv-shimmer font-semibold">
+              {t('bestSellers.eyebrow', { defaultValue: "De Valeur'da kəşfə çıxın" })}
+            </span>
+            <span className="inline-block w-8 h-[1px]" style={{ background: '#D4AF37' }} />
           </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => scroll('left')}
-              className="group w-11 h-11 border border-gray-200 hover:border-black transition-all duration-300 flex items-center justify-center rounded-full"
-              aria-label={t('bestSellers.prevProducts')}
-              data-testid="dv-bestsellers-prev"
-            >
-              <ChevronLeft className="h-4 w-4 text-black group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.2} />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              className="group w-11 h-11 border border-black bg-black hover:bg-[#D4AF37] hover:border-[#D4AF37] transition-all duration-300 flex items-center justify-center rounded-full"
-              aria-label={t('bestSellers.nextProducts')}
-              data-testid="dv-bestsellers-next"
-            >
-              <ChevronRight className="h-4 w-4 text-white group-hover:translate-x-0.5 transition-transform" strokeWidth={1.2} />
-            </button>
-          </div>
+          <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight leading-[1.05]">
+            {t('bestSellers.title')}
+          </h2>
         </div>
 
-        {/* Scroller */}
-        <div
-          className="relative"
-          onMouseEnter={() => setIsAutoScrolling(false)}
-          onMouseLeave={() => setIsAutoScrolling(true)}
-        >
-          {/* Floating side nav (over the scroller) */}
-          <button
-            onClick={() => scroll('left')}
-            className="group absolute left-1 sm:-left-2 md:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 bg-white/95 backdrop-blur-sm border border-gray-200 hover:border-[#D4AF37] hover:bg-[#D4AF37] shadow-lg hover:shadow-xl flex items-center justify-center rounded-full transition-all duration-300"
-            aria-label={t('bestSellers.prevProducts')}
-            data-testid="dv-bestsellers-prev-side"
-          >
-            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-black group-hover:text-white group-hover:-translate-x-0.5 transition-all" strokeWidth={1.5} />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="group absolute right-1 sm:-right-2 md:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 bg-white/95 backdrop-blur-sm border border-gray-200 hover:border-[#D4AF37] hover:bg-[#D4AF37] shadow-lg hover:shadow-xl flex items-center justify-center rounded-full transition-all duration-300"
-            aria-label={t('bestSellers.nextProducts')}
-            data-testid="dv-bestsellers-next-side"
-          >
-            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-black group-hover:text-white group-hover:translate-x-0.5 transition-all" strokeWidth={1.5} />
-          </button>
-
-          <div
-            ref={scrollContainerRef}
-            className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-2 sm:px-0 auto-cols-[calc(33.333%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {products.map((product, idx) => (
-              <div
-                key={product.id}
-                className={`dv-reveal ${inView ? 'is-in' : ''} ${idx < 5 ? `dv-reveal-delay-${idx + 1}` : ''}`}
-              >
-                <Tilt3D
-                  maxTilt={6}
-                  className="cursor-pointer group transition-transform duration-500 ease-out hover:-translate-y-2 hover:scale-[1.04] hover:z-10 relative"
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  testId={`dv-bestseller-card-${product.id}`}
-                >
-                  <div className="dv-tilt-inner">
-                    {/* Product image card */}
-                    <div className="relative bg-white overflow-hidden rounded-md transition-shadow duration-500 group-hover:shadow-[0_18px_40px_-12px_rgba(0,0,0,0.25)] ring-0 group-hover:ring-1 group-hover:ring-[#D4AF37]/30">
-                      {product.isPersonalizable && (
-                        <span className="absolute top-3 left-3 text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-medium z-[2]">
-                          Personalize
-                        </span>
-                      )}
-
-                      <div className="aspect-[3/4] flex items-center justify-center p-2 sm:p-6 relative">
-                        <img
-                          src={product.images?.[0] || product.imageUrl}
-                          alt={getProductName(product)}
-                          loading="lazy"
-                          decoding="async"
-                          className={`max-w-full max-h-full object-contain transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110 group-hover:-rotate-1 ${
-                            product.images?.[1] ? 'group-hover:opacity-0' : ''
-                          }`}
-                        />
-                        {product.images?.[1] && (
-                          <img
-                            src={product.images[1]}
-                            alt={getProductName(product)}
-                            aria-hidden="true"
-                            loading="lazy"
-                            decoding="async"
-                            className="absolute inset-0 w-full h-full object-contain p-2 sm:p-6 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="pt-2 pb-1 sm:pt-4 sm:pb-2 px-1 sm:px-0">
-                      <h3 className="text-[11px] sm:text-sm md:text-[15px] text-black font-medium truncate leading-tight">
-                        <span className="dv-gold-line">{getProductName(product)}</span>
-                      </h3>
-                      <p className="text-[11px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1 font-light tracking-wide">
-                        <span className="text-black font-medium">
-                          {product.price?.toFixed(2)}
-                        </span>{' '}
-                        ₼
-                      </p>
-                    </div>
-                  </div>
-                </Tilt3D>
-              </div>
-            ))}
-          </div>
+        {/* Two opposite-direction marquee rows */}
+        <div className="space-y-3 sm:space-y-5">
+          <Row items={safeRowA} direction="left" />
+          <Row items={safeRowB} direction="right" />
         </div>
+
+        {/* Edge fade masks (subtle gradient on left/right edges) */}
       </div>
+
+      {/* Soft side fades for elegance */}
+      <div
+        className="pointer-events-none absolute top-0 bottom-0 left-0 w-12 sm:w-24 z-10"
+        style={{ background: 'linear-gradient(90deg, white, transparent)' }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute top-0 bottom-0 right-0 w-12 sm:w-24 z-10"
+        style={{ background: 'linear-gradient(270deg, white, transparent)' }}
+        aria-hidden="true"
+      />
     </section>
   );
 };
