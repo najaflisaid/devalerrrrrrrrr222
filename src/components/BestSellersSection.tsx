@@ -78,7 +78,7 @@ const BestSellersSection: React.FC = () => {
             <div className="flex items-center mb-4">
               <span className="inline-block w-8 h-[1px]" style={{ background: '#D4AF37' }} />
               <span className="ml-3 text-[10px] uppercase tracking-[0.35em] dv-shimmer font-semibold">
-                {t('bestSellers.eyebrow', { defaultValue: 'Curated · Iconic' })}
+                {t('bestSellers.eyebrow', { defaultValue: "De Valeur'da kəşfə çıxın" })}
               </span>
             </div>
             <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight leading-[1.05]">
@@ -142,19 +142,13 @@ const BestSellersSection: React.FC = () => {
               >
                 <Tilt3D
                   maxTilt={6}
-                  className="cursor-pointer group"
+                  className="cursor-pointer group transition-transform duration-500 ease-out hover:-translate-y-2 hover:scale-[1.04] hover:z-10 relative"
                   onClick={() => navigate(`/product/${product.id}`)}
                   testId={`dv-bestseller-card-${product.id}`}
                 >
                   <div className="dv-tilt-inner">
                     {/* Product image card */}
-                    <div className="relative bg-white overflow-hidden">
-                      {/* Gold corner frames (card interior stays white) */}
-                      <span className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <span className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
+                    <div className="relative bg-white overflow-hidden rounded-md transition-shadow duration-500 group-hover:shadow-[0_18px_40px_-12px_rgba(0,0,0,0.25)] ring-0 group-hover:ring-1 group-hover:ring-[#D4AF37]/30">
                       {product.isPersonalizable && (
                         <span className="absolute top-3 left-3 text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-medium z-[2]">
                           Personalize

@@ -32,6 +32,7 @@
   "bestSellers": {
     "title": "Бестселлеры",
     "subtitle": "Самые выбираемые товары нашими клиентами",
+    "eyebrow": "Откройте для себя De Valeur",
     "prevProducts": "Предыдущие товары",
     "nextProducts": "Следующие товары"
   },

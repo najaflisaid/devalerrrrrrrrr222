@@ -32,6 +32,7 @@
   "bestSellers": {
     "title": "Best Sellers",
     "subtitle": "Most chosen products by our customers",
+    "eyebrow": "Discover at De Valeur",
     "prevProducts": "Previous products",
     "nextProducts": "Next products"
   },
