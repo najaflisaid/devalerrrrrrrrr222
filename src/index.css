@@ -521,22 +521,51 @@ html.dark .dv-orb { opacity: 0.28; }
 
 /* ================= Minimalist Desktop Mega Menu ================= */
 @keyframes dv-megamenu-in {
-  0%   { opacity: 0; transform: translateY(-6px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0%   { opacity: 0; transform: translateY(-14px) scale(0.985); filter: blur(2px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 @keyframes dv-megamenu-out {
-  0%   { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-6px); }
+  0%   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translateY(-14px) scale(0.985); filter: blur(2px); }
 }
 
 .dv-megamenu {
-  animation: dv-megamenu-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: transform, opacity;
+  animation: dv-megamenu-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
+  will-change: transform, opacity, filter;
 }
 
 .dv-megamenu.is-closing {
-  animation: dv-megamenu-out 160ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: dv-megamenu-out 320ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Stagger reveal for inner content */
+@keyframes dv-megamenu-content-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.dv-megamenu .dv-mega-section {
+  animation: dv-megamenu-content-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.dv-megamenu .dv-mega-section.dv-mega-section-1 { animation-delay: 80ms; }
+.dv-megamenu .dv-mega-section.dv-mega-section-2 { animation-delay: 160ms; }
+
+/* Items stagger */
+@keyframes dv-mega-item-in {
+  0%   { opacity: 0; transform: translateX(-6px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.dv-megamenu .dv-mega-link {
+  animation: dv-mega-item-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(160ms + var(--dv-i, 0) * 22ms);
+}
+
+/* Closing — items fade out together quickly to keep panel anim clean */
+.dv-megamenu.is-closing .dv-mega-section,
+.dv-megamenu.is-closing .dv-mega-link {
+  animation: none;
 }
 
 /* Elegant link reveal — gold accent on hover */
@@ -591,8 +620,10 @@ html.dark .dv-orb { opacity: 0.28; }
 
 @media (prefers-reduced-motion: reduce) {
   .dv-megamenu,
+  .dv-megamenu .dv-mega-section,
+  .dv-megamenu .dv-mega-link,
   .dv-mega-link .dv-mega-text,
-  .dv-navlink { animation: none !important; transition: none !important; }
+  .dv-navlink { animation: none !important; transition: none !important; transform: none !important; opacity: 1 !important; filter: none !important; }
   .dv-navlink::after { display: none; }
 }
 /* ================= /Minimalist Desktop Mega Menu ================= */

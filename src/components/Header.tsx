@@ -176,7 +176,7 @@ const Header: React.FC = () => {
       setTimeout(() => {
         setShowDropdown(false);
         setIsDropdownClosing(false);
-      }, 180);
+      }, 320);
     }, 120);
     setDropdownTimeout(timeout);
   };
@@ -353,21 +353,19 @@ const Header: React.FC = () => {
                       <div className="max-w-[1200px] mx-auto px-10 py-12">
                         <div className="grid grid-cols-2 gap-16">
                           {/* Categories Section */}
-                          <div>
-                            <h3
-                              className="text-[11px] tracking-[0.2em] text-gray-400 uppercase mb-6 font-normal"
-                              style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '0.18em' }}
-                            >
+                          <div className="dv-mega-section dv-mega-section-1">
+                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold">
                               {t('header.categories')}
                             </h3>
                             <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                              {categories.map((category) => (
+                              {categories.map((category, idx) => (
                                 <li key={category}>
                                   <button
                                     onClick={() => {
                                       navigate(`/products?category=${encodeURIComponent(category)}`);
                                       setShowDropdown(false);
                                     }}
+                                    style={{ ['--dv-i' as any]: idx }}
                                     className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 capitalize transition-colors"
                                     data-testid={`menu-category-${category}`}
                                   >
@@ -379,21 +377,19 @@ const Header: React.FC = () => {
                           </div>
 
                           {/* Brands Section */}
-                          <div>
-                            <h3
-                              className="text-[11px] tracking-[0.2em] text-gray-400 uppercase mb-6 font-normal"
-                              style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '0.18em' }}
-                            >
+                          <div className="dv-mega-section dv-mega-section-2">
+                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold">
                               {t('header.brands')}
                             </h3>
                             <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                              {brands.map((brand) => (
+                              {brands.map((brand, idx) => (
                                 <li key={brand}>
                                   <button
                                     onClick={() => {
                                       navigate(`/products?brand=${encodeURIComponent(brand)}`);
                                       setShowDropdown(false);
                                     }}
+                                    style={{ ['--dv-i' as any]: idx }}
                                     className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 transition-colors"
                                     data-testid={`menu-brand-${brand}`}
                                   >
