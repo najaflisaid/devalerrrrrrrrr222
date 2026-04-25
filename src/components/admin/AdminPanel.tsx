@@ -83,6 +83,20 @@ const AdminPanel: React.FC = () => {
   const [adminBrandFilter, setAdminBrandFilter] = useState('all');
   const [adminStockFilter, setAdminStockFilter] = useState('all');
 
+  // Strip leading minus and any "-" so value cannot go below zero.
+  // Empty string is allowed so the input can be cleared.
+  const sanitizeNonNegative = (v: string) => v.replace(/-/g, '');
+  // Block scroll-wheel from inadvertently changing number inputs (worker hands).
+  const blockWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    (e.currentTarget as HTMLInputElement).blur();
+  };
+  // Block keyboard "-" and arrow-up/down from changing the value.
+  const blockMinusKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === '-' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+    }
+  };
+
   const [newProduct, setNewProduct] = useState({
     nameAz: '',
     nameRu: '',
@@ -1271,8 +1285,11 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={newProduct.price}
-                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: sanitizeNonNegative(e.target.value) })}
+                      onWheel={blockWheel}
+                      onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="0.00"
                     />
@@ -1282,8 +1299,11 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={newProduct.salePrice}
-                      onChange={(e) => setNewProduct({ ...newProduct, salePrice: e.target.value })}
+                      onChange={(e) => setNewProduct({ ...newProduct, salePrice: sanitizeNonNegative(e.target.value) })}
+                      onWheel={blockWheel}
+                      onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="0.00"
                     />
@@ -1293,8 +1313,11 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={newProduct.b2bPrice}
-                      onChange={(e) => setNewProduct({ ...newProduct, b2bPrice: e.target.value })}
+                      onChange={(e) => setNewProduct({ ...newProduct, b2bPrice: sanitizeNonNegative(e.target.value) })}
+                      onWheel={blockWheel}
+                      onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="0.00"
                     />
@@ -1304,8 +1327,11 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={newProduct.b2bSalePrice}
-                      onChange={(e) => setNewProduct({ ...newProduct, b2bSalePrice: e.target.value })}
+                      onChange={(e) => setNewProduct({ ...newProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })}
+                      onWheel={blockWheel}
+                      onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="0.00"
                     />
@@ -1316,7 +1342,9 @@ const AdminPanel: React.FC = () => {
                       type="number"
                       min="0"
                       value={newProduct.stock}
-                      onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      onChange={(e) => setNewProduct({ ...newProduct, stock: sanitizeNonNegative(e.target.value) })}
+                      onWheel={blockWheel}
+                      onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="0"
                     />
@@ -1471,11 +1499,11 @@ const AdminPanel: React.FC = () => {
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun təsviri" /></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Ru)</label><textarea value={editProduct.descRu} onChange={(e) => setEditProduct({ ...editProduct, descRu: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Описание продукта" /></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (En)</label><textarea value={editProduct.descEn} onChange={(e) => setEditProduct({ ...editProduct, descEn: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Description" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət (₼) *</label><input type="number" step="0.01" value={editProduct.price} onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət (₼)</label><input type="number" step="0.01" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət (₼)</label><input type="number" step="0.01" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət (₼)</label><input type="number" step="0.01" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət (₼) *</label><input type="number" step="0.01" min="0" value={editProduct.price} onChange={(e) => setEditProduct({ ...editProduct, price: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Brend * <button type="button" onClick={() => setShowAddBrand(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.brand} onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Brend seçin</option>{brands.map(brand => (<option key={brand.id} value={brand.name}>{brand.name}</option>))}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Kateqoriya * <button type="button" onClick={() => setShowAddCategory(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.category} onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Kateqoriya seçin</option>{categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>

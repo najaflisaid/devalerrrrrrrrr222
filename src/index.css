@@ -18,6 +18,19 @@ body {
   font-family: 'Montserrat', sans-serif;
 }
 
+/* Hide native number-input spinner arrows globally
+   so accidental wheel/arrow taps cannot change values
+   (admin panel staff requested manual entry only). */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
