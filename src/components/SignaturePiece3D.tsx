@@ -125,6 +125,25 @@ const SignaturePiece3D: React.FC = () => {
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
           >
+            {/* Brand name (auto from product) — large display above the piece */}
+            {product.brand && (
+              <div
+                className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
+                aria-hidden="true"
+              >
+                <span
+                  className="font-playfair font-light text-black/90 leading-none tracking-tight whitespace-nowrap text-center"
+                  style={{
+                    fontSize: 'clamp(2.25rem, 9vw, 6rem)',
+                    letterSpacing: '-0.02em',
+                  }}
+                  data-testid="dv-signature-brand"
+                >
+                  {product.brand}
+                </span>
+              </div>
+            )}
+
             {/* Soft shadow beneath */}
             <div
               className="absolute bottom-[8%] left-1/2 -translate-x-1/2 w-[60%] h-8 rounded-full pointer-events-none"
