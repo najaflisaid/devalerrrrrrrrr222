@@ -10,7 +10,6 @@ const Hero: React.FC = () => {
   const [, setLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
   const defaultSlides: any[] = [];
 
@@ -58,20 +57,6 @@ const Hero: React.FC = () => {
   useEffect(() => {
     const el = heroRef.current;
     if (!el) return;
-    if (!window.matchMedia('(pointer: fine)').matches) return;
-    const handler = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      setParallax({ x: x * 14, y: y * 14 });
-    };
-    const leave = () => setParallax({ x: 0, y: 0 });
-    el.addEventListener('mousemove', handler);
-    el.addEventListener('mouseleave', leave);
-    return () => {
-      el.removeEventListener('mousemove', handler);
-      el.removeEventListener('mouseleave', leave);
-    };
   }, []);
 
   const nextSlide = () => setCurrentSlide((p) => (p + 1) % slides.length);
@@ -79,26 +64,6 @@ const Hero: React.FC = () => {
   const handleBannerClick = (link?: string) => {
     if (link) window.open(link, '_blank', 'noopener,noreferrer');
   };
-
-  // Kinetic title: split into words/letters for staggered reveal
-  const renderKinetic = (text: string) => {
-    const words = text.split(' ');
-    return words.map((word, i) => (
-      <span
-        key={`${currentSlide}-${i}`}
-        className="dv-kinetic-word mr-[0.35em]"
-      >
-        <span style={{ animationDelay: `${120 + i * 80}ms` }}>{word}</span>
-      </span>
-    ));
-  };
-
-  const currentTitle = slides[currentSlide]?.title
-    ? (slides[currentSlide].title[i18n.language as 'az' | 'ru' | 'en'] ||
-        slides[currentSlide].title.en ||
-        slides[currentSlide].title.az ||
-        '')
-    : '';
 
   return (
     <section
@@ -138,61 +103,22 @@ const Hero: React.FC = () => {
               <div
                 onClick={() => handleBannerClick(slide.link)}
                 className={`absolute inset-0 ${slide.link ? 'cursor-pointer' : ''}`}
-                style={{
-                  transform: index === currentSlide
-                    ? `translate3d(${parallax.x}px, ${parallax.y}px, 0) scale(1.06)`
-                    : 'scale(1.06)',
-                  transition: 'transform 700ms cubic-bezier(.2,.8,.2,1)',
-                }}
               >
                 <img
                   src={slide.image}
                   alt={slide.alt}
-                  className={`w-full h-full object-cover ${index === currentSlide ? 'dv-kenburns' : ''}`}
+                  className="w-full h-full object-cover"
                   loading="eager"
                 />
               </div>
             )}
 
-            {/* Cinematic gold-tinted vignette */}
+            {/* Subtle bottom shade for arrows/indicators legibility */}
             {(slide as any).mediaType !== 'video' && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/40 pointer-events-none" />
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      'radial-gradient(ellipse at 70% 30%, rgba(212,175,55,0.18) 0%, transparent 55%)',
-                  }}
-                />
-              </>
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent pointer-events-none" />
             )}
           </div>
         ))}
-
-        {/* Title overlay */}
-        {currentTitle && slides[currentSlide] && (slides[currentSlide] as any).mediaType !== 'video' && (
-          <div className="absolute inset-0 flex items-end pointer-events-none z-10">
-            <div className="max-w-[1440px] w-full mx-auto px-6 sm:px-10 lg:px-14 pb-14 sm:pb-16 md:pb-20">
-              <div className="flex items-center mb-5">
-                <span className="inline-block w-10 h-[1px]" style={{ background: '#D4AF37' }} />
-                <span
-                  className="ml-3 text-[10px] md:text-xs uppercase tracking-[0.35em] dv-shimmer font-semibold"
-                  data-testid="dv-hero-eyebrow"
-                >
-                  De Valeur · Maison Horlogère
-                </span>
-              </div>
-              <h1
-                key={currentSlide}
-                className="text-white font-playfair text-3xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] font-light max-w-4xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
-                data-testid="dv-hero-title"
-              >
-                {renderKinetic(currentTitle)}
-              </h1>
-            </div>
-          </div>
-        )}
 
         {/* Fine gold frame */}
         <div
@@ -224,7 +150,7 @@ const Hero: React.FC = () => {
           </>
         )}
 
-        {/* Slide counter + indicator bars */}
+        {/* Slide indicator bars */}
         {slides.length > 1 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
             {slides.map((_, index) => (
@@ -241,17 +167,6 @@ const Hero: React.FC = () => {
                 data-testid={`dv-hero-indicator-${index}`}
               />
             ))}
-          </div>
-        )}
-
-        {/* Slide counter */}
-        {slides.length > 1 && (
-          <div className="absolute top-6 right-6 z-20 text-white/80 text-xs tracking-[0.3em] font-light">
-            <span className="text-[#D4AF37] font-semibold">
-              {String(currentSlide + 1).padStart(2, '0')}
-            </span>
-            <span className="mx-2">—</span>
-            <span>{String(slides.length).padStart(2, '0')}</span>
           </div>
         )}
       </div>
