@@ -12,9 +12,10 @@ interface Stat {
 
 const STATS: Stat[] = [
   { value: 2019, format: 'plain', label: { az: 'Təsis olundu', ru: 'Год основания', en: 'Founded' } },
-  { value: 20, suffix: '+', format: 'comma', label: { az: 'Premium brend', ru: 'Премиум брендов', en: 'Premium brands' } },
+  { value: 20, suffix: '+', format: 'comma', label: { az: 'Brend', ru: 'Бренды', en: 'Brands' } },
   { value: 25000, suffix: '+', format: 'comma', label: { az: 'Məmnun müştəri', ru: 'Довольных клиентов', en: 'Happy clients' } },
   { value: 100, suffix: '%', format: 'comma', label: { az: 'Orijinallıq zəmanəti', ru: 'Гарантия подлинности', en: 'Authenticity' } },
+  { value: 2, format: 'plain', label: { az: 'İl beynəlxalq zəmanət', ru: 'Года международной гарантии', en: 'Years int. warranty' } },
 ];
 
 // Count-up hook
@@ -86,13 +87,13 @@ const StatsBand: React.FC = () => {
           <div className="inline-flex items-center mb-3">
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
-              {t('stats.eyebrow', { defaultValue: 'Rəqəmlərdə' })}
+              {t('stats.eyebrow', { defaultValue: 'Bir Baxışda' })}
             </span>
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-6">
           {STATS.map((stat, i) => (
             <div
               key={i}
