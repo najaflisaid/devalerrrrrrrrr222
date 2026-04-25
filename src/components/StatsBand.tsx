@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useInView } from '../hooks/useInView';
 
 interface Stat {
   value: number;
@@ -61,12 +60,10 @@ const StatItem: React.FC<{ stat: Stat; active: boolean; lang: 'az' | 'ru' | 'en'
 
 const StatsBand: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { ref, inView } = useInView<HTMLDivElement>();
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
 
   return (
     <section
-      ref={ref}
       className="relative py-10 md:py-14 bg-white overflow-hidden border-y border-black/5"
       data-testid="dv-stats"
     >
@@ -83,7 +80,7 @@ const StatsBand: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`text-center mb-6 md:mb-8 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <div className="text-center mb-6 md:mb-8 dv-reveal is-in">
           <div className="inline-flex items-center mb-3">
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
@@ -97,9 +94,9 @@ const StatsBand: React.FC = () => {
           {STATS.map((stat, i) => (
             <div
               key={i}
-              className={`dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-${i + 1}`}
+              className={`dv-reveal is-in dv-reveal-delay-${i + 1}`}
             >
-              <StatItem stat={stat} active={inView} lang={lang} />
+              <StatItem stat={stat} active={true} lang={lang} />
             </div>
           ))}
         </div>
