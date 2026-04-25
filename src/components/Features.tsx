@@ -40,7 +40,7 @@ const Features: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative py-20 md:py-28 bg-white overflow-hidden"
+      className="relative py-12 md:py-16 bg-white overflow-hidden"
       data-testid="dv-features"
     >
       <div

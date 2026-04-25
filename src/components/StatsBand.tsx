@@ -66,7 +66,7 @@ const StatsBand: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative py-16 md:py-24 bg-white overflow-hidden border-y border-black/5"
+      className="relative py-10 md:py-14 bg-white overflow-hidden border-y border-black/5"
       data-testid="dv-stats"
     >
       {/* Thin top + bottom gold accent */}
@@ -82,7 +82,7 @@ const StatsBand: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`text-center mb-10 md:mb-14 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <div className={`text-center mb-6 md:mb-8 dv-reveal ${inView ? 'is-in' : ''}`}>
           <div className="inline-flex items-center mb-3">
             <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">

@@ -36,6 +36,9 @@
     "prevProducts": "Previous products",
     "nextProducts": "Next products"
   },
+  "homeBanners": {
+    "eyebrow": "Signature Selection"
+  },
   "features": {
     "quality": "Premium Quality",
     "qualityDesc": "Every product is selected according to the highest quality standards",

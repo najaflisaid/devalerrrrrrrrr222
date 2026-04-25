@@ -36,6 +36,9 @@
     "prevProducts": "Əvvəlki məhsullar",
     "nextProducts": "Növbəti məhsullar"
   },
+  "homeBanners": {
+    "eyebrow": "Seçilmiş Kolleksiya"
+  },
   "features": {
     "quality": "Seçilmiş Kolleksiya",
     "qualityDesc": "Kolleksiyamızda hər bir məhsul xüsusi seçim prosesindən keçir və yalnız mükəmməlliyi ilə seçilən modellər təqdim olunur.",

@@ -6,7 +6,7 @@ import MiddleBanner from './MiddleBanner';
 import Tilt3D from './Tilt3D';
 
 const HomeProductBanners: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [banners, setBanners] = useState<ProductBanner[]>([]);
   const [, setLoading] = useState(true);
 
@@ -63,7 +63,7 @@ const HomeProductBanners: React.FC = () => {
             <div className="inline-flex items-center mb-5">
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
               <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
-                Signature Selection
+                {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
               </span>
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             </div>
@@ -135,12 +135,6 @@ const HomeProductBanners: React.FC = () => {
 
                           {/* Content */}
                           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-                            <div className="flex items-center mb-3">
-                              <span className="inline-block w-6 h-[1px] bg-[#D4AF37]" />
-                              <span className="ml-3 text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-medium">
-                                Collection
-                              </span>
-                            </div>
                             <h3 className="text-white font-playfair text-2xl md:text-4xl font-light tracking-tight mb-4 max-w-lg">
                               {getTitle(banner)}
                             </h3>
