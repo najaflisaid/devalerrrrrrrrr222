@@ -1,5 +1,5 @@
  import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, where, orderBy, updateDoc, deleteDoc, doc, Timestamp, getDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, deleteDoc, doc, Timestamp, getDoc, increment, runTransaction } from 'firebase/firestore';
 
 export interface B2BOrderItem {
   productId: string;
@@ -52,8 +52,9 @@ export const createB2BOrder = async (order: B2BOrder) => {
   return { id: docRef.id, ...order, subtotal };
 };
 
-export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string) => {
+export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string, orderNumber?: number) => {
   try {
+    const displayNumber = orderNumber ? `#${orderNumber}` : `#${orderId.slice(0, 8)}`;
     const itemsHTML = order.items.map((item, index) => `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">${index + 1}</td>
@@ -72,7 +73,7 @@ export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string) => {
           </h1>
 
           <div style="background-color: #eff6ff; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
-            <p style="margin: 8px 0;"><strong>Sifariş ID:</strong> ${orderId}</p>
+            <p style="margin: 8px 0;"><strong>Sifariş №:</strong> ${displayNumber}</p>
             <p style="margin: 8px 0;"><strong>Müştəri:</strong> ${order.customerName}${order.customerLastname ? ' ' + order.customerLastname : ''}</p>
             ${order.companyName ? `<p style="margin: 8px 0;"><strong>Şirkət:</strong> ${order.companyName}</p>` : ''}
             <p style="margin: 8px 0;"><strong>Email:</strong> ${order.customerEmail}</p>
@@ -131,7 +132,7 @@ export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string) => {
       },
       body: JSON.stringify({
         access_key: 'ba0691ce-e027-4ca2-b56d-a49332af710a',
-        subject: `🛍️ Yeni B2B Sifariş #${orderId}`,
+        subject: `🛍️ Yeni B2B Sifariş ${displayNumber}`,
         from_name: 'De Valeur B2B Portal',
         name: order.customerName,
         email: order.customerEmail,
@@ -298,6 +299,23 @@ export const removeOrderItem = async (orderId: string, itemIndex: number, produc
   // Calculate new subtotal and apply same discount percentage
   const subtotal = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
   const newDiscountAmount = (subtotal * originalDiscountPercentage) / 100;
+  const newTotalAmount = subtotal - newDiscountAmount;
+
+  await updateDoc(orderRef, {
+    items,
+    totalAmount: newTotalAmount,
+    discountAmount: newDiscountAmount,
+    subtotal: subtotal
+  });
+
+  const productRef = doc(db, 'products', productId);
+  await updateDoc(productRef, {
+    stock: increment(quantity)
+  });
+
+  return { id: orderId, items, totalAmount: newTotalAmount, discountAmount: newDiscountAmount, subtotal };
+};
+;
   const newTotalAmount = subtotal - newDiscountAmount;
 
   await updateDoc(orderRef, {

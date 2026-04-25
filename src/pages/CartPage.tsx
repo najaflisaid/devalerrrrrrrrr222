@@ -102,7 +102,7 @@ const CartPage: React.FC = () => {
       console.log('Order created:', createdOrder);
 
       console.log('Sending email...');
-      await sendB2BOrderEmail(order, createdOrder.id);
+      await sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber);
       console.log('Email sent successfully');
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);

@@ -337,7 +337,8 @@ const B2BOrdersTab: React.FC = () => {
   const formatDate = (date: any) => {
     if (!date) return '';
     const d = date.toDate ? date.toDate() : new Date(date);
-    return d.toLocaleDateString('az-AZ') + ' ' + d.toLocaleTimeString('az-AZ');
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
   if (loading) {
@@ -659,7 +660,10 @@ const B2BOrdersTab: React.FC = () => {
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                     {getStatusText(order.status)}
                   </span>
-                  <p className="text-xs text-gray-500 mt-2">{formatDate(order.createdAt)}</p>
+                  <p className="text-xs font-semibold text-gray-700 mt-2">
+                    Sifariş #{(order as any).orderNumber ?? order.id?.slice(0, 8)}
+                  </p>
+                  <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                 </div>
               </div>
 

@@ -380,15 +380,15 @@ const B2BOrdersPage: React.FC = () => {
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <p className="text-sm text-gray-500">{t('b2b.orderNumber')} #{order.id.slice(0, 8)}</p>
                         <p className="text-sm text-gray-500">
-                          {orderDate.toLocaleDateString(i18n.language === 'az' ? 'az-AZ' : i18n.language === 'ru' ? 'ru-RU' : 'en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {t('b2b.orderNumber')} #{(order as any).orderNumber ?? order.id.slice(0, 8)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {(() => {
+                            const d = orderDate;
+                            const pad = (n: number) => n.toString().padStart(2, '0');
+                            return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                          })()}
                         </p>
                       </div>
                       <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${statusInfo.color}`}>
