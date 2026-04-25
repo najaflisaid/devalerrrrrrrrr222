@@ -132,7 +132,7 @@ const BestSellersSection: React.FC = () => {
 
           <div
             ref={scrollContainerRef}
-            className="grid grid-rows-3 sm:grid-rows-2 grid-flow-col gap-2 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-2 sm:px-0 auto-cols-[calc(33.333%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
+            className="grid grid-rows-2 grid-flow-col gap-2 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-2 sm:px-0 auto-cols-[calc(33.333%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, idx) => (
