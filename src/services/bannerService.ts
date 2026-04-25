@@ -14,7 +14,7 @@ export interface Banner {
   createdAt?: any;
 }
 
-export const getBanners = async (position?: 'home' | 'products') => {
+export const getBanners = async (position?: 'home' | 'products' | 'middle') => {
   try {
     const bannersRef = collection(db, 'banners');
     const snapshot = await getDocs(bannersRef);
