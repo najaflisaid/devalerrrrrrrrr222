@@ -813,18 +813,6 @@ const Header: React.FC = () => {
                   {t('common.noResults', 'Nəticə tapılmadı')}
                 </div>
               )}
-
-              {searchQuery && (
-                <div className="mt-4 text-center">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-                    data-testid="header-search-submit-btn"
-                  >
-                    {t('header.searchButton')}
-                  </button>
-                </div>
-              )}
             </form>
           </div>
         </div>
