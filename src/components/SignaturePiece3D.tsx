@@ -64,7 +64,7 @@ const SignaturePiece3D: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 md:py-32 overflow-hidden bg-white"
+      className="relative pt-8 pb-20 md:pt-12 md:pb-32 overflow-hidden bg-white"
       data-testid="dv-signature-3d"
     >
       {/* Subtle gold glow */}
@@ -124,11 +124,15 @@ const SignaturePiece3D: React.FC = () => {
 
               <button
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="group inline-flex items-center gap-3 px-8 py-4 bg-black hover:bg-[#C99B1F] text-white transition-all duration-500 rounded-full text-xs uppercase tracking-[0.3em] font-medium"
+                className="group inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.4em] font-medium text-black/80 hover:text-[#C99B1F] transition-colors duration-500 relative pb-1"
                 data-testid="dv-signature-cta"
               >
-                <span>{get(cfg.ctaLabel)}</span>
-                <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
+                <span className="relative">
+                  {get(cfg.ctaLabel)}
+                  <span className="absolute left-0 -bottom-1 h-[1px] w-full bg-black/20 group-hover:bg-[#D4AF37] transition-colors duration-500" />
+                  <span className="absolute left-0 -bottom-1 h-[1px] w-0 bg-[#D4AF37] group-hover:w-full transition-all duration-700 ease-out" />
+                </span>
+                <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base">→</span>
               </button>
             </div>
           </div>
