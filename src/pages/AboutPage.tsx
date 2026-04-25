@@ -42,14 +42,17 @@ const AboutPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="relative h-[400px] bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center">
-        <div className="text-center text-white">
-          <h1 className="font-playfair text-5xl md:text-6xl tracking-wide mb-4">
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+          <h1 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-none">
             {aboutData ? getLocalizedContent('title') : t('about.pageTitle')}
           </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto px-4">
-            {t('about.slogan')}
-          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="hidden md:inline-block w-8 h-[1px] flex-shrink-0" style={{ background: '#D4AF37' }} />
+            <p className="text-gray-500 text-sm font-light leading-snug">
+              {t('about.slogan')}
+            </p>
+          </div>
         </div>
       </div>
 
