@@ -5,20 +5,18 @@ import { getActiveProductBanners, type ProductBanner } from '../services/content
 import ProductBannerSlider from './ProductBannerSlider';
 import MiddleBanner from './MiddleBanner';
 import Tilt3D from './Tilt3D';
-import { useInView } from '../hooks/useInView';
 
 const HomeProductBanners: React.FC = () => {
   const { i18n } = useTranslation();
   const [banners, setBanners] = useState<ProductBanner[]>([]);
   const [, setLoading] = useState(true);
-  const { ref: sectionRef, inView } = useInView<HTMLDivElement>();
 
   useEffect(() => { loadBanners(); }, []);
 
   const loadBanners = async () => {
     try {
       const data = await getActiveProductBanners();
-      setBanners(data.slice(0, 2));
+      setBanners(data);
     } catch (error) {
       console.error('Error loading product banners:', error);
     } finally {
@@ -50,7 +48,6 @@ const HomeProductBanners: React.FC = () => {
       <MiddleBanner />
 
       <section
-        ref={sectionRef}
         className="relative pt-20 md:pt-28 pb-16 md:pb-24 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
@@ -63,7 +60,7 @@ const HomeProductBanners: React.FC = () => {
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Heading */}
-          <div className={`text-center mb-12 md:mb-16 dv-reveal ${inView ? 'is-in' : ''}`}>
+          <div className="text-center mb-12 md:mb-16 dv-reveal is-in">
             <div className="inline-flex items-center mb-5">
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
               <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
@@ -78,11 +75,19 @@ const HomeProductBanners: React.FC = () => {
 
           {/* Banner grid */}
           {banners.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-14 md:mb-20">
+            <div
+              className={`grid gap-5 md:gap-7 mb-14 md:mb-20 ${
+                banners.length === 1
+                  ? 'grid-cols-1 max-w-[760px] mx-auto'
+                  : banners.length === 2
+                  ? 'grid-cols-1 md:grid-cols-2'
+                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              }`}
+            >
               {banners.map((banner, idx) => (
                 <div
                   key={banner.id}
-                  className={`dv-reveal ${inView ? 'is-in' : ''} ${idx === 0 ? 'dv-reveal-delay-1' : 'dv-reveal-delay-2'}`}
+                  className={`dv-reveal is-in ${idx === 0 ? 'dv-reveal-delay-1' : 'dv-reveal-delay-2'}`}
                 >
                   <Tilt3D
                     maxTilt={5}
@@ -157,14 +162,14 @@ const HomeProductBanners: React.FC = () => {
           )}
 
           {/* Sub heading */}
-          <div className={`text-center mb-10 dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-3`}>
+          <div className="text-center mb-10 dv-reveal is-in dv-reveal-delay-3">
             <p className="font-playfair text-xl md:text-3xl text-black/75 font-light italic max-w-3xl mx-auto leading-snug">
               {subheading}
             </p>
           </div>
 
           {/* Brand slider */}
-          <div className={`dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-4`}>
+          <div className="dv-reveal is-in dv-reveal-delay-4">
             <ProductBannerSlider />
           </div>
         </div>
