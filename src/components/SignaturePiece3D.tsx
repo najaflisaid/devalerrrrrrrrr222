@@ -85,7 +85,7 @@ const SignaturePiece3D: React.FC = () => {
             {product.brand && (
               <div className="hidden md:block mb-3 lg:mb-4">
                 <span
-                  className="dv-shimmer font-playfair font-bold leading-none tracking-tight whitespace-nowrap select-none"
+                  className="dv-shimmer font-playfair font-semibold leading-none tracking-tight whitespace-nowrap select-none"
                   style={{
                     fontSize: 'clamp(2.5rem, 5.5vw, 5rem)',
                     letterSpacing: '-0.01em',
@@ -152,7 +152,7 @@ const SignaturePiece3D: React.FC = () => {
                 aria-hidden="true"
               >
                 <span
-                  className="dv-shimmer font-playfair font-bold leading-none tracking-tight whitespace-nowrap text-center"
+                  className="dv-shimmer font-playfair font-semibold leading-none tracking-tight whitespace-nowrap text-center"
                   style={{
                     fontSize: 'clamp(2.25rem, 9vw, 6rem)',
                     letterSpacing: '-0.01em',
