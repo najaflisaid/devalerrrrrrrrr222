@@ -1,11 +1,9 @@
 import React from 'react';
 import { Award, Shield, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useInView } from '../hooks/useInView';
 
 const Features: React.FC = () => {
   const { t } = useTranslation();
-  const { ref, inView } = useInView<HTMLDivElement>();
 
   const subtitle = t('features.subtitle', { defaultValue: 'BİZİM ÖHDƏLİYİMİZ' });
   const heading = t('features.heading', { defaultValue: 'Dəyər Fəlsəfəmiz' });
@@ -18,7 +16,6 @@ const Features: React.FC = () => {
 
   return (
     <section
-      ref={ref}
       className="relative py-12 md:py-16 bg-white overflow-hidden"
       data-testid="dv-features"
     >
@@ -36,7 +33,7 @@ const Features: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className={`text-center mb-14 md:mb-20 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <div className="text-center mb-14 md:mb-20 dv-reveal is-in">
           <div className="inline-flex items-center mb-4">
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold" data-testid="dv-features-subtitle">
@@ -55,7 +52,7 @@ const Features: React.FC = () => {
             return (
               <div
                 key={index}
-                className={`relative text-center px-6 md:px-10 py-8 dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-${index + 1} group`}
+                className={`relative text-center px-6 md:px-10 py-8 dv-reveal is-in dv-reveal-delay-${index + 1} group`}
                 data-testid={`dv-feature-${index}`}
               >
                 {/* Vertical gold separator (desktop, not on last) */}
