@@ -71,8 +71,15 @@ const MiddleBanner: React.FC = () => {
   }
 
   return (
-    <section className="relative w-full py-6">
-      <div className="relative h-[200px] sm:h-[280px] md:h-[350px] lg:h-[400px] overflow-hidden">
+    <section className="relative w-full py-8 md:py-12 bg-white">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+          className="group relative h-[150px] sm:h-[190px] md:h-[230px] lg:h-[260px] overflow-hidden rounded-2xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
+          data-testid="dv-middle-banner"
+        >
+          {/* Subtle animated gold border accent */}
+          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border border-[#D4AF37]/0 group-hover:border-[#D4AF37]/50 transition-colors duration-500" />
+
           {slides.map((slide, index) => (
             <div
               key={index}
@@ -80,24 +87,48 @@ const MiddleBanner: React.FC = () => {
                 index === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
             >
-              <div 
+              <div
                 onClick={() => slide.link && window.open(slide.link, '_blank', 'noopener,noreferrer')}
                 className={`w-full h-full ${slide.link ? 'cursor-pointer' : ''}`}
               >
                 <img
                   src={slide.image}
                   alt={slide.alt}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
+                    index === currentSlide ? 'scale-110' : 'scale-100'
+                  } group-hover:scale-[1.15]`}
                   loading="lazy"
                 />
               </div>
-              <div className="absolute inset-0 bg-black bg-opacity-20 pointer-events-none"></div>
+
+              {/* Cinematic gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+
+              {/* Gold radial glow on hover */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 25% 50%, rgba(212,175,55,0.18) 0%, transparent 60%)',
+                }}
+              />
 
               {slide.title && (
-                <div className="absolute bottom-6 left-8 z-10">
-                  <h2 className="text-white text-2xl md:text-3xl font-semibold drop-shadow-lg">
+                <div className="absolute inset-y-0 left-0 z-10 flex flex-col justify-center px-6 md:px-10 max-w-[70%]">
+                  <div className="flex items-center mb-2 md:mb-3">
+                    <span className="inline-block w-6 md:w-8 h-[1px] bg-[#D4AF37]" />
+                    <span className="ml-2 md:ml-3 text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-medium">
+                      Exclusive
+                    </span>
+                  </div>
+                  <h2 className="font-playfair text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]">
                     {slide.title[i18n.language as 'az' | 'ru' | 'en'] || slide.title.en || slide.title.az}
                   </h2>
+                  <span className="mt-3 md:mt-4 inline-flex items-center text-[10px] md:text-xs uppercase tracking-[0.3em] text-white/90 group-hover:text-[#D4AF37] transition-colors duration-300">
+                    Kəşf et
+                    <span className="ml-2 transition-transform duration-500 group-hover:translate-x-1.5">→</span>
+                  </span>
                 </div>
               )}
             </div>
@@ -107,29 +138,31 @@ const MiddleBanner: React.FC = () => {
             <>
               <button
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 z-10"
+                className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-md hover:bg-white p-1.5 md:p-2 rounded-full transition-all duration-300 z-30 opacity-0 group-hover:opacity-100 hover:scale-110 ring-1 ring-white/40"
                 aria-label="Previous slide"
+                data-testid="middle-banner-prev"
               >
-                <ChevronLeft className="h-5 w-5 text-gray-900" />
+                <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-gray-900" />
               </button>
 
               <button
                 onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 p-2 rounded-full transition-all duration-200 z-10"
+                className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-md hover:bg-white p-1.5 md:p-2 rounded-full transition-all duration-300 z-30 opacity-0 group-hover:opacity-100 hover:scale-110 ring-1 ring-white/40"
                 aria-label="Next slide"
+                data-testid="middle-banner-next"
               >
-                <ChevronRight className="h-5 w-5 text-gray-900" />
+                <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-900" />
               </button>
 
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+              <div className="absolute bottom-3 md:bottom-4 right-4 md:right-6 flex items-center space-x-1.5 z-30">
                 {slides.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                    className={`h-[3px] rounded-full transition-all duration-500 ${
                       index === currentSlide
-                        ? 'bg-white w-6'
-                        : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                        ? 'w-7 bg-[#D4AF37]'
+                        : 'w-3 bg-white/60 hover:bg-white'
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -138,6 +171,7 @@ const MiddleBanner: React.FC = () => {
             </>
           )}
         </div>
+      </div>
     </section>
   );
 };
