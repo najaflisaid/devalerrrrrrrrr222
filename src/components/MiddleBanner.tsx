@@ -74,7 +74,7 @@ const MiddleBanner: React.FC = () => {
     <section className="relative w-full py-8 md:py-12 bg-white">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div
-          className="group relative h-[150px] sm:h-[190px] md:h-[230px] lg:h-[260px] overflow-hidden rounded-2xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
+          className="group relative h-[180px] sm:h-[230px] md:h-[300px] lg:h-[340px] overflow-hidden rounded-2xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
           data-testid="dv-middle-banner"
         >
           {/* Subtle animated gold border accent */}
@@ -101,9 +101,8 @@ const MiddleBanner: React.FC = () => {
                 />
               </div>
 
-              {/* Cinematic gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+              {/* Cinematic gradient overlay (subtle) */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
 
               {/* Gold radial glow on hover */}
               <div
@@ -113,24 +112,6 @@ const MiddleBanner: React.FC = () => {
                     'radial-gradient(ellipse at 25% 50%, rgba(212,175,55,0.18) 0%, transparent 60%)',
                 }}
               />
-
-              {slide.title && (
-                <div className="absolute inset-y-0 left-0 z-10 flex flex-col justify-center px-6 md:px-10 max-w-[70%]">
-                  <div className="flex items-center mb-2 md:mb-3">
-                    <span className="inline-block w-6 md:w-8 h-[1px] bg-[#D4AF37]" />
-                    <span className="ml-2 md:ml-3 text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-medium">
-                      Exclusive
-                    </span>
-                  </div>
-                  <h2 className="font-playfair text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]">
-                    {slide.title[i18n.language as 'az' | 'ru' | 'en'] || slide.title.en || slide.title.az}
-                  </h2>
-                  <span className="mt-3 md:mt-4 inline-flex items-center text-[10px] md:text-xs uppercase tracking-[0.3em] text-white/90 group-hover:text-[#D4AF37] transition-colors duration-300">
-                    Kəşf et
-                    <span className="ml-2 transition-transform duration-500 group-hover:translate-x-1.5">→</span>
-                  </span>
-                </div>
-              )}
             </div>
           ))}
 
