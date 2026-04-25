@@ -72,78 +72,107 @@ const MiddleBanner: React.FC = () => {
 
   return (
     <section className="relative w-full py-8 md:py-12 bg-white">
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
         <div
-          className="group relative h-[180px] sm:h-[230px] md:h-[300px] lg:h-[340px] overflow-hidden rounded-2xl shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
+          className="group relative h-[200px] sm:h-[260px] md:h-[330px] lg:h-[380px] overflow-hidden bg-black"
           data-testid="dv-middle-banner"
+          style={{ clipPath: 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)' }}
         >
-          {/* Subtle animated gold border accent */}
-          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl border border-[#D4AF37]/0 group-hover:border-[#D4AF37]/50 transition-colors duration-500" />
-
+          {/* Image layer with slow cinematic pan */}
           {slides.map((slide, index) => (
             <div
               key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ${
+              className={`absolute inset-0 transition-opacity duration-[1400ms] ease-out ${
                 index === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
             >
               <div
                 onClick={() => slide.link && window.open(slide.link, '_blank', 'noopener,noreferrer')}
-                className={`w-full h-full ${slide.link ? 'cursor-pointer' : ''}`}
+                className={`absolute inset-0 ${slide.link ? 'cursor-pointer' : ''}`}
               >
                 <img
                   src={slide.image}
                   alt={slide.alt}
-                  className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                    index === currentSlide ? 'scale-110' : 'scale-100'
-                  } group-hover:scale-[1.15]`}
+                  className={`w-full h-full object-cover ${index === currentSlide ? 'dv-cine-pan' : ''}`}
                   loading="lazy"
                 />
               </div>
 
-              {/* Cinematic gradient overlay (subtle) */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
-
-              {/* Gold radial glow on hover */}
+              {/* Cinematic vignette */}
               <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    'radial-gradient(ellipse at 25% 50%, rgba(212,175,55,0.18) 0%, transparent 60%)',
+                    'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)',
                 }}
               />
+
+              {/* Top + bottom letterbox bars (cinema feel) */}
+              <div className="absolute top-0 left-0 right-0 h-[10%] md:h-[12%] bg-black pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 h-[10%] md:h-[12%] bg-black pointer-events-none" />
+
+              {/* Slow gold scanline */}
+              <div className="dv-scanline" />
             </div>
           ))}
+
+          {/* Film grain overlay */}
+          <div className="dv-grain absolute inset-0 pointer-events-none z-[2]" />
+
+          {/* Gold corner brackets (museum frame) */}
+          <span className="pointer-events-none absolute top-[14%] md:top-[16%] left-3 md:left-5 w-5 h-5 md:w-7 md:h-7 border-l-[1.5px] border-t-[1.5px] border-[#D4AF37] z-[3] transition-all duration-700 group-hover:w-7 group-hover:h-7 md:group-hover:w-10 md:group-hover:h-10" />
+          <span className="pointer-events-none absolute top-[14%] md:top-[16%] right-3 md:right-5 w-5 h-5 md:w-7 md:h-7 border-r-[1.5px] border-t-[1.5px] border-[#D4AF37] z-[3] transition-all duration-700 group-hover:w-7 group-hover:h-7 md:group-hover:w-10 md:group-hover:h-10" />
+          <span className="pointer-events-none absolute bottom-[14%] md:bottom-[16%] left-3 md:left-5 w-5 h-5 md:w-7 md:h-7 border-l-[1.5px] border-b-[1.5px] border-[#D4AF37] z-[3] transition-all duration-700 group-hover:w-7 group-hover:h-7 md:group-hover:w-10 md:group-hover:h-10" />
+          <span className="pointer-events-none absolute bottom-[14%] md:bottom-[16%] right-3 md:right-5 w-5 h-5 md:w-7 md:h-7 border-r-[1.5px] border-b-[1.5px] border-[#D4AF37] z-[3] transition-all duration-700 group-hover:w-7 group-hover:h-7 md:group-hover:w-10 md:group-hover:h-10" />
+
+          {/* Vertical decorative ornament — left side */}
+          <div className="hidden md:flex pointer-events-none absolute top-[16%] bottom-[16%] left-8 lg:left-12 z-[3] flex-col items-center justify-between">
+            <span className="w-[3px] h-[3px] rounded-full bg-[#D4AF37]" />
+            <span className="flex-1 my-2 w-[1px] bg-gradient-to-b from-[#D4AF37]/0 via-[#D4AF37]/60 to-[#D4AF37]/0" />
+            <span className="w-[3px] h-[3px] rounded-full bg-[#D4AF37]" />
+          </div>
+          <div className="hidden md:flex pointer-events-none absolute top-[16%] bottom-[16%] right-8 lg:right-12 z-[3] flex-col items-center justify-between">
+            <span className="w-[3px] h-[3px] rounded-full bg-[#D4AF37]" />
+            <span className="flex-1 my-2 w-[1px] bg-gradient-to-b from-[#D4AF37]/0 via-[#D4AF37]/60 to-[#D4AF37]/0" />
+            <span className="w-[3px] h-[3px] rounded-full bg-[#D4AF37]" />
+          </div>
+
+          {/* Tiny micro-label centered in top bar */}
+          <div className="pointer-events-none absolute top-0 left-0 right-0 h-[10%] md:h-[12%] flex items-center justify-center z-[3]">
+            <span className="text-[8px] md:text-[10px] uppercase tracking-[0.5em] text-[#D4AF37]/90 font-medium">
+              · DE VALEUR · MAISON ·
+            </span>
+          </div>
 
           {slides.length > 1 && (
             <>
               <button
                 onClick={prevSlide}
-                className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-md hover:bg-white p-1.5 md:p-2 rounded-full transition-all duration-300 z-30 opacity-0 group-hover:opacity-100 hover:scale-110 ring-1 ring-white/40"
+                className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-9 h-9 md:w-11 md:h-11 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/20 hover:border-[#D4AF37] hover:bg-black/60 rounded-full transition-all duration-500 z-30 opacity-0 group-hover:opacity-100 hover:scale-110"
                 aria-label="Previous slide"
                 data-testid="middle-banner-prev"
               >
-                <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-gray-900" />
+                <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-white" strokeWidth={1.3} />
               </button>
 
               <button
                 onClick={nextSlide}
-                className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-md hover:bg-white p-1.5 md:p-2 rounded-full transition-all duration-300 z-30 opacity-0 group-hover:opacity-100 hover:scale-110 ring-1 ring-white/40"
+                className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-9 h-9 md:w-11 md:h-11 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/20 hover:border-[#D4AF37] hover:bg-black/60 rounded-full transition-all duration-500 z-30 opacity-0 group-hover:opacity-100 hover:scale-110"
                 aria-label="Next slide"
                 data-testid="middle-banner-next"
               >
-                <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-900" />
+                <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-white" strokeWidth={1.3} />
               </button>
 
-              <div className="absolute bottom-3 md:bottom-4 right-4 md:right-6 flex items-center space-x-1.5 z-30">
+              <div className="absolute bottom-[3%] md:bottom-[4%] left-1/2 -translate-x-1/2 flex items-center gap-2 z-30">
                 {slides.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`h-[3px] rounded-full transition-all duration-500 ${
+                    className={`h-[2px] rounded-full transition-all duration-500 ${
                       index === currentSlide
-                        ? 'w-7 bg-[#D4AF37]'
-                        : 'w-3 bg-white/60 hover:bg-white'
+                        ? 'w-8 bg-[#D4AF37]'
+                        : 'w-3 bg-white/40 hover:bg-white/70'
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />

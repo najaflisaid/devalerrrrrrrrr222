@@ -903,6 +903,33 @@ body.dv-home-active select {
   z-index: 1;
 }
 
+/* Cinematic banner: slow Ken Burns + soft pan */
+@keyframes dv-cine-pan {
+  0%   { transform: scale(1.08) translate(0, 0); }
+  50%  { transform: scale(1.16) translate(-1.5%, -1%); }
+  100% { transform: scale(1.08) translate(0, 0); }
+}
+.dv-cine-pan {
+  animation: dv-cine-pan 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Slow scanline shimmer */
+@keyframes dv-scan {
+  0%   { transform: translateY(-110%); }
+  100% { transform: translateY(110%); }
+}
+.dv-scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 30%;
+  background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.10) 50%, transparent 100%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: dv-scan 8s linear infinite;
+  will-change: transform;
+}
+
 /* Magnetic button wrapper helper */
 .dv-magnetic {
   display: inline-block;
