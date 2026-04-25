@@ -7,7 +7,7 @@ const Features: React.FC = () => {
   const { t } = useTranslation();
   const { ref, inView } = useInView<HTMLDivElement>();
 
-  const subtitle = t('features.subtitle', { defaultValue: 'Bizim Öhdəliyimiz' });
+  const subtitle = t('features.subtitle', { defaultValue: 'BİZİM ÖHDƏLİYİMİZ' });
   const heading = t('features.heading', { defaultValue: 'Dəyər Fəlsəfəmiz' });
 
   const features = [
