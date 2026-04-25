@@ -81,6 +81,22 @@ const SignaturePiece3D: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
           {/* LEFT: text */}
           <div className={`order-2 md:order-1 dv-reveal ${inView ? 'is-in' : ''}`}>
+            {/* Brand name (auto from product) — desktop only, above eyebrow */}
+            {product.brand && (
+              <div className="hidden md:block mb-3 lg:mb-4">
+                <span
+                  className="font-playfair font-light text-black/90 leading-none tracking-tight whitespace-nowrap select-none"
+                  style={{
+                    fontSize: 'clamp(2.5rem, 5.5vw, 5rem)',
+                    letterSpacing: '-0.02em',
+                  }}
+                  data-testid="dv-signature-brand-desktop"
+                >
+                  {product.brand}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center mb-5">
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
               <span className="ml-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
@@ -125,10 +141,10 @@ const SignaturePiece3D: React.FC = () => {
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
           >
-            {/* Brand name (auto from product) — large display above the piece */}
+            {/* Brand name (auto from product) — mobile only, above the piece */}
             {product.brand && (
               <div
-                className="absolute -top-4 sm:-top-6 md:-top-8 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
+                className="md:hidden absolute -top-4 sm:-top-6 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
                 aria-hidden="true"
               >
                 <span

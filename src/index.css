@@ -882,7 +882,7 @@ body.dv-home-active select {
   100% { transform: translateY(0) rotate(-1.5deg) scale(1); }
 }
 .dv-piece-float {
-  animation: dv-piece-float 5s ease-in-out infinite;
+  animation: dv-piece-float 9s ease-in-out infinite;
   will-change: transform;
 }
 
