@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import CustomerLogin from './auth/CustomerLogin';
 import { productService } from '../services/productService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
+import type { Product } from '../types';
 
 const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -22,6 +23,9 @@ const Header: React.FC = () => {
   const [userRole, setUserRole] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isDropdownClosing, setIsDropdownClosing] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
@@ -240,8 +244,63 @@ const Header: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSearch(false);
-      setSearchQuery('');
+      closeSearchModal();
+    }
+  };
+
+  const closeSearchModal = () => {
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setHighlightIndex(-1);
+  };
+
+  // Load products when search modal opens
+  useEffect(() => {
+    if (showSearch && allProducts.length === 0) {
+      productService.getAll().then(setAllProducts).catch(() => setAllProducts([]));
+    }
+  }, [showSearch, allProducts.length]);
+
+  // Filter products as user types
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      setHighlightIndex(-1);
+      return;
+    }
+    const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+    const matches = allProducts
+      .filter((p) => {
+        const nameAz = p.name?.az?.toLowerCase() || '';
+        const nameRu = p.name?.ru?.toLowerCase() || '';
+        const nameEn = p.name?.en?.toLowerCase() || '';
+        const brand = (p.brand || '').toLowerCase();
+        return nameAz.includes(q) || nameRu.includes(q) || nameEn.includes(q) || brand.includes(q);
+      })
+      .slice(0, 8);
+    setSearchResults(matches);
+    setHighlightIndex(matches.length > 0 ? 0 : -1);
+    void lang;
+  }, [searchQuery, allProducts, i18n.language]);
+
+  const goToProduct = (p: Product) => {
+    navigate(`/products/${p.id}`);
+    closeSearchModal();
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (searchResults.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i + 1) % searchResults.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i - 1 + searchResults.length) % searchResults.length);
+    } else if (e.key === 'Enter' && highlightIndex >= 0) {
+      e.preventDefault();
+      goToProduct(searchResults[highlightIndex]);
     }
   };
 
@@ -680,8 +739,8 @@ const Header: React.FC = () => {
       {showLoginModal && <CustomerLogin onClose={() => setShowLoginModal(false)} />}
 
       {showSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-24">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-24" onClick={closeSearchModal}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleSearch} className="p-6">
               <div className="flex items-center gap-4">
                 <Search className="h-6 w-6 text-gray-400" />
@@ -689,26 +748,79 @@ const Header: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   placeholder={t('header.search')}
-                  className="flex-1 text-lg outline-none"
+                  className="flex-1 text-lg outline-none text-gray-900 placeholder-gray-400"
                   autoFocus
+                  data-testid="header-search-input"
                 />
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSearch(false);
-                    setSearchQuery('');
-                  }}
+                  onClick={closeSearchModal}
                   className="text-gray-400 hover:text-gray-600"
+                  data-testid="header-search-close-btn"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
+              {searchQuery && searchResults.length > 0 && (
+                <ul
+                  className="mt-4 max-h-96 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100"
+                  data-testid="header-search-results"
+                >
+                  {searchResults.map((p, idx) => {
+                    const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+                    const displayName = p.name?.[lang] || p.name?.az || p.name?.en || '';
+                    const isActive = idx === highlightIndex;
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() => goToProduct(p)}
+                          onMouseEnter={() => setHighlightIndex(idx)}
+                          className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${
+                            isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
+                          }`}
+                          data-testid={`header-search-result-${p.id}`}
+                        >
+                          {p.images?.[0] ? (
+                            <img
+                              src={p.images[0]}
+                              alt={displayName}
+                              className="w-12 h-12 object-cover rounded bg-gray-50 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-gray-100 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
+                            <div className="text-xs text-gray-500 truncate">{p.brand}</div>
+                          </div>
+                          <div className="text-sm font-semibold text-gray-900 flex-shrink-0">
+                            {(p.salePrice ?? p.price)} ₼
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {searchQuery && searchResults.length === 0 && (
+                <div className="mt-4 text-center text-sm text-gray-500 py-6" data-testid="header-search-no-results">
+                  {t('common.noResults', 'Nəticə tapılmadı')}
+                </div>
+              )}
+
               {searchQuery && (
                 <div className="mt-4 text-center">
-                  <button className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                    data-testid="header-search-submit-btn"
+                  >
                     {t('header.searchButton')}
                   </button>
                 </div>
