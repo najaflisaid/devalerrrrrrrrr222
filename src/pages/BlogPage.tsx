@@ -63,34 +63,34 @@ const BlogPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Editorial Header */}
+      {/* Editorial Header — compact */}
       <div className="border-b border-gray-100 overflow-hidden">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 relative">
           {/* Oversized faded backdrop word */}
           <span
             aria-hidden="true"
-            className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 select-none pointer-events-none font-playfair text-[200px] lg:text-[260px] leading-none font-light tracking-tighter"
+            className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 select-none pointer-events-none font-playfair text-[110px] lg:text-[140px] leading-none font-light tracking-tighter"
             style={{ color: '#F5F0E6', whiteSpace: 'nowrap' }}
           >
             Journal
           </span>
 
           <div className="relative">
-            <div className="flex items-baseline gap-4 md:gap-6">
-              <span className="font-playfair text-5xl md:text-7xl lg:text-8xl font-light text-black tracking-tight leading-none">
+            <div className="flex items-baseline gap-3 md:gap-4">
+              <span className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-none">
                 {t('blog.title') || 'Bloq'}
               </span>
-              <span className="font-playfair italic text-2xl md:text-3xl text-[#D4AF37] font-light">
+              <span className="font-playfair italic text-xl text-[#D4AF37] font-light">
                 /
               </span>
-              <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-gray-400 font-medium pb-2">
+              <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] text-gray-400 font-medium">
                 {new Date().getFullYear()}
               </span>
             </div>
 
-            <div className="mt-6 flex items-start gap-6">
-              <span className="hidden md:inline-block w-12 h-[1px] mt-3 flex-shrink-0" style={{ background: '#D4AF37' }} />
-              <p className="text-gray-500 text-base md:text-lg max-w-md font-light leading-relaxed">
+            <div className="mt-2 flex items-center gap-3">
+              <span className="hidden md:inline-block w-8 h-[1px] flex-shrink-0" style={{ background: '#D4AF37' }} />
+              <p className="text-gray-500 text-sm font-light leading-snug">
                 {t('blog.subtitle') || 'Ən son xəbərlər və məqalələr'}
               </p>
             </div>
