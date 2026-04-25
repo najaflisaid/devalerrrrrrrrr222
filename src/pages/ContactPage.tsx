@@ -146,7 +146,7 @@ const ContactPage: React.FC = () => {
                       <h4 className="font-semibold text-gray-900">{branch.name}</h4>
                       <p className="text-sm text-gray-600 mt-0.5">{branch.address}</p>
                     </div>
-                    <div className="h-48 bg-gray-100">
+                    <div className="h-36 bg-gray-100">
                       <iframe
                         title={branch.name}
                         src={`https://maps.google.com/maps?q=${branch.lat},${branch.lng}&hl=az&z=17&output=embed`}
