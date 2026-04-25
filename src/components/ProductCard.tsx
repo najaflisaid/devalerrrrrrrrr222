@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
@@ -15,7 +15,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const { t, i18n } = useTranslation();
   const { addToCart, addNotification } = useCart();
   const isB2BUser = localStorage.getItem('userRole') === 'b2b';
-  const [isHovered, setIsHovered] = useState(false);
 
   const handleWhatsAppOrder = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -71,21 +70,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
 
   // "Bitdi" göstəricisi yalnız B2B istifadəçilərə görünür
   const isOutOfStock = isB2BUser && product.stock === 0;
-  const currentImage = isHovered && product.images[1] ? product.images[1] : product.images[0];
+  const hasSecondImage = !!product.images[1];
 
   return (
     <div className="group relative">
       <Link to={`/product/${product.id}`} className="cursor-pointer block">
         <div
           className={`relative bg-gray-50 aspect-square rounded-lg overflow-hidden ${compact ? 'mb-2' : 'mb-4'} shadow-sm hover:shadow-lg transition-shadow duration-300`}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           <img
-            src={currentImage}
+            src={product.images[0]}
             alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
-            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+            className={`w-full h-full object-cover transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 ${
+              hasSecondImage ? 'group-hover:opacity-0' : ''
+            }`}
           />
+          {hasSecondImage && (
+            <img
+              src={product.images[1]}
+              alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-105"
+            />
+          )}
 
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
 

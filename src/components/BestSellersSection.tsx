@@ -165,7 +165,7 @@ const BestSellersSection: React.FC = () => {
                         <img
                           src={product.images?.[0] || product.imageUrl}
                           alt={getProductName(product)}
-                          className={`max-w-full max-h-full object-contain transition-all duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110 group-hover:-rotate-1 ${
+                          className={`max-w-full max-h-full object-contain transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110 group-hover:-rotate-1 ${
                             product.images?.[1] ? 'group-hover:opacity-0' : ''
                           }`}
                         />
@@ -174,7 +174,7 @@ const BestSellersSection: React.FC = () => {
                             src={product.images[1]}
                             alt={getProductName(product)}
                             aria-hidden="true"
-                            className="absolute inset-0 w-full h-full object-contain p-4 sm:p-6 opacity-0 scale-105 transition-all duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
+                            className="absolute inset-0 w-full h-full object-contain p-4 sm:p-6 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
                           />
                         )}
                       </div>
