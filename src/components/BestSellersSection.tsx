@@ -132,7 +132,7 @@ const BestSellersSection: React.FC = () => {
 
           <div
             ref={scrollContainerRef}
-            className="grid grid-rows-2 grid-flow-col gap-3 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-0 auto-cols-[calc(50%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
+            className="grid grid-rows-3 sm:grid-rows-2 grid-flow-col gap-2 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-2 sm:px-0 auto-cols-[calc(33.333%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, idx) => (
@@ -155,7 +155,7 @@ const BestSellersSection: React.FC = () => {
                         </span>
                       )}
 
-                      <div className="aspect-[3/4] flex items-center justify-center p-4 sm:p-6 relative">
+                      <div className="aspect-[3/4] flex items-center justify-center p-2 sm:p-6 relative">
                         <img
                           src={product.images?.[0] || product.imageUrl}
                           alt={getProductName(product)}
@@ -172,18 +172,18 @@ const BestSellersSection: React.FC = () => {
                             aria-hidden="true"
                             loading="lazy"
                             decoding="async"
-                            className="absolute inset-0 w-full h-full object-contain p-4 sm:p-6 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
+                            className="absolute inset-0 w-full h-full object-contain p-2 sm:p-6 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
                           />
                         )}
                       </div>
                     </div>
 
                     {/* Info */}
-                    <div className="pt-4 pb-2">
-                      <h3 className="text-sm md:text-[15px] text-black font-medium truncate">
+                    <div className="pt-2 pb-1 sm:pt-4 sm:pb-2 px-1 sm:px-0">
+                      <h3 className="text-[11px] sm:text-sm md:text-[15px] text-black font-medium truncate leading-tight">
                         <span className="dv-gold-line">{getProductName(product)}</span>
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1 font-light tracking-wide">
+                      <p className="text-[11px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1 font-light tracking-wide">
                         <span className="text-black font-medium">
                           {product.price?.toFixed(2)}
                         </span>{' '}

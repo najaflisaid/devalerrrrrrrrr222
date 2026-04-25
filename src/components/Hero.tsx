@@ -83,7 +83,7 @@ const Hero: React.FC = () => {
         aria-hidden="true"
       />
 
-      <div className="relative h-[340px] sm:h-[400px] md:h-[460px] lg:h-[520px] overflow-hidden">
+      <div className="relative h-[240px] sm:h-[400px] md:h-[460px] lg:h-[520px] overflow-hidden">
         {slides.map((slide, index) => (
           <div
             key={index}
