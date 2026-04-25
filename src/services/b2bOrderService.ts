@@ -25,17 +25,28 @@ export interface B2BOrder {
 export const createB2BOrder = async (order: B2BOrder) => {
   console.log('Creating B2B order in Firestore:', order);
   const ordersRef = collection(db, 'b2bOrders');
-  
+
+  // Atomically generate the next sequential order number
+  const counterRef = doc(db, 'counters', 'b2bOrders');
+  const orderNumber = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(counterRef);
+    const current = snap.exists() ? Number(snap.data().value || 0) : 0;
+    const next = current + 1;
+    tx.set(counterRef, { value: next });
+    return next;
+  });
+
   // Calculate subtotal (before discount)
   const subtotal = order.items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
-  
+
   const docRef = await addDoc(ordersRef, {
     ...order,
+    orderNumber,
     subtotal: subtotal,
     status: 'pending',
     createdAt: Timestamp.now()
   });
-  console.log('B2B order created with ID:', docRef.id);
+  console.log('B2B order created with ID:', docRef.id, 'orderNumber:', orderNumber);
 
   try {
     for (const item of order.items) {
@@ -49,7 +60,7 @@ export const createB2BOrder = async (order: B2BOrder) => {
     console.error('Error reducing stock:', error);
   }
 
-  return { id: docRef.id, ...order, subtotal };
+  return { id: docRef.id, orderNumber, ...order, subtotal };
 };
 
 export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string, orderNumber?: number) => {
@@ -299,23 +310,6 @@ export const removeOrderItem = async (orderId: string, itemIndex: number, produc
   // Calculate new subtotal and apply same discount percentage
   const subtotal = items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
   const newDiscountAmount = (subtotal * originalDiscountPercentage) / 100;
-  const newTotalAmount = subtotal - newDiscountAmount;
-
-  await updateDoc(orderRef, {
-    items,
-    totalAmount: newTotalAmount,
-    discountAmount: newDiscountAmount,
-    subtotal: subtotal
-  });
-
-  const productRef = doc(db, 'products', productId);
-  await updateDoc(productRef, {
-    stock: increment(quantity)
-  });
-
-  return { id: orderId, items, totalAmount: newTotalAmount, discountAmount: newDiscountAmount, subtotal };
-};
-;
   const newTotalAmount = subtotal - newDiscountAmount;
 
   await updateDoc(orderRef, {

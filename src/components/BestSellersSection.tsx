@@ -33,16 +33,16 @@ const BestSellersSection: React.FC = () => {
         if (container.scrollLeft >= maxScroll - 10) {
           container.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
-          container.scrollTo({ left: container.scrollLeft + 260, behavior: 'smooth' });
+          container.scrollTo({ left: container.scrollLeft + 300, behavior: 'smooth' });
         }
       }
-    }, 3500);
+    }, 1800);
     return () => clearInterval(interval);
   }, [isAutoScrolling, products]);
 
   const loadBestSellers = async () => {
     try {
-      const data = await productService.getBestSellers(12);
+      const data = await productService.getBestSellers(24);
       setProducts(data);
     } catch (error) {
       console.error('Error loading best sellers:', error);
@@ -132,13 +132,13 @@ const BestSellersSection: React.FC = () => {
 
           <div
             ref={scrollContainerRef}
-            className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-0"
+            className="grid grid-rows-2 grid-flow-col gap-3 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-0 auto-cols-[calc(50%-6px)] sm:auto-cols-[230px] md:auto-cols-[260px] lg:auto-cols-[290px]"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, idx) => (
               <div
                 key={product.id}
-                className={`flex-shrink-0 w-[calc(50%-6px)] sm:w-[230px] md:w-[260px] lg:w-[290px] dv-reveal ${inView ? 'is-in' : ''} ${idx < 5 ? `dv-reveal-delay-${idx + 1}` : ''}`}
+                className={`dv-reveal ${inView ? 'is-in' : ''} ${idx < 5 ? `dv-reveal-delay-${idx + 1}` : ''}`}
               >
                 <Tilt3D
                   maxTilt={6}
