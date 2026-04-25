@@ -171,11 +171,13 @@ const Header: React.FC = () => {
   };
 
   const handleDropdownLeave = () => {
-    setIsDropdownClosing(true);
     const timeout = setTimeout(() => {
-      setShowDropdown(false);
-      setIsDropdownClosing(false);
-    }, 320);
+      setIsDropdownClosing(true);
+      setTimeout(() => {
+        setShowDropdown(false);
+        setIsDropdownClosing(false);
+      }, 180);
+    }, 120);
     setDropdownTimeout(timeout);
   };
 
@@ -341,49 +343,65 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <div
-                    className={`fixed left-0 right-0 top-[64px] bg-white shadow-2xl border-t border-gray-200 dv-megamenu z-50 ${isDropdownClosing ? 'is-closing' : ''}`}
+                    className={`fixed left-0 right-0 top-[64px] z-50 dv-megamenu ${isDropdownClosing ? 'is-closing' : ''}`}
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
                   >
-                    <div className="max-w-[1440px] mx-auto px-8">
-                      <div className="grid grid-cols-2 divide-x divide-gray-200">
-                        {/* Categories Section */}
-                        <div className="py-8 pr-8 dv-megamenu-col">
-                          <h3 className="font-bold text-gray-900 mb-6 text-lg uppercase tracking-wide">{t('header.categories')}</h3>
-                          <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-                            {categories.map((category, idx) => (
-                              <button
-                                key={category}
-                                onClick={() => {
-                                  navigate(`/products?category=${encodeURIComponent(category)}`);
-                                  setShowDropdown(false);
-                                }}
-                                style={{ ['--dv-i' as any]: idx }}
-                                className="dv-megamenu-item text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg capitalize font-medium hover:bg-gray-50"
-                              >
-                                {getCategoryTranslation(category)}
-                              </button>
-                            ))}
+                    {/* invisible bridge to prevent hover gap between trigger and panel */}
+                    <div className="h-2 -mt-2" aria-hidden="true" />
+                    <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)]">
+                      <div className="max-w-[1200px] mx-auto px-10 py-12">
+                        <div className="grid grid-cols-2 gap-16">
+                          {/* Categories Section */}
+                          <div>
+                            <h3
+                              className="text-[11px] tracking-[0.2em] text-gray-400 uppercase mb-6 font-normal"
+                              style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '0.18em' }}
+                            >
+                              {t('header.categories')}
+                            </h3>
+                            <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
+                              {categories.map((category) => (
+                                <li key={category}>
+                                  <button
+                                    onClick={() => {
+                                      navigate(`/products?category=${encodeURIComponent(category)}`);
+                                      setShowDropdown(false);
+                                    }}
+                                    className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 capitalize transition-colors"
+                                    data-testid={`menu-category-${category}`}
+                                  >
+                                    <span className="dv-mega-text">{getCategoryTranslation(category)}</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        </div>
 
-                        {/* Brands Section */}
-                        <div className="py-8 pl-8 dv-megamenu-col">
-                          <h3 className="font-bold text-gray-900 mb-6 text-lg uppercase tracking-wide">{t('header.brands')}</h3>
-                          <div className="grid grid-cols-3 gap-x-6 gap-y-3">
-                            {brands.map((brand, idx) => (
-                              <button
-                                key={brand}
-                                onClick={() => {
-                                  navigate(`/products?brand=${encodeURIComponent(brand)}`);
-                                  setShowDropdown(false);
-                                }}
-                                style={{ ['--dv-i' as any]: idx }}
-                                className="dv-megamenu-item text-left text-sm text-gray-700 hover:text-black px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50"
-                              >
-                                {brand}
-                              </button>
-                            ))}
+                          {/* Brands Section */}
+                          <div>
+                            <h3
+                              className="text-[11px] tracking-[0.2em] text-gray-400 uppercase mb-6 font-normal"
+                              style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '0.18em' }}
+                            >
+                              {t('header.brands')}
+                            </h3>
+                            <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
+                              {brands.map((brand) => (
+                                <li key={brand}>
+                                  <button
+                                    onClick={() => {
+                                      navigate(`/products?brand=${encodeURIComponent(brand)}`);
+                                      setShowDropdown(false);
+                                    }}
+                                    className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 transition-colors"
+                                    data-testid={`menu-brand-${brand}`}
+                                  >
+                                    <span className="dv-mega-text">{brand}</span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         </div>
                       </div>
