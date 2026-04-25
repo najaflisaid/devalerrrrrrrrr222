@@ -62,24 +62,22 @@ const BlogPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden bg-slate-900">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"></div>
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 py-24 sm:py-32">
-          <div className="text-center">
-            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
-              {t('blog.title') || 'Bloq'}
-            </h1>
-            <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              {t('blog.subtitle') || 'Ən son xəbərlər və məqalələr'}
-            </p>
+    <div className="min-h-screen bg-white">
+      {/* Minimalist Header */}
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+          <div className="flex items-center mb-5">
+            <span className="inline-block w-8 h-[1px]" style={{ background: '#D4AF37' }} />
+            <span className="ml-3 text-[10px] uppercase tracking-[0.35em] text-gray-500 font-semibold">
+              {t('blog.eyebrow', { defaultValue: 'Journal · Stories' })}
+            </span>
           </div>
+          <h1 className="font-playfair text-4xl md:text-5xl lg:text-6xl font-light text-black tracking-tight leading-[1.05]">
+            {t('blog.title') || 'Bloq'}
+          </h1>
+          <p className="mt-4 text-gray-500 text-base md:text-lg max-w-xl font-light tracking-wide">
+            {t('blog.subtitle') || 'Ən son xəbərlər və məqalələr'}
+          </p>
         </div>
       </div>
 
