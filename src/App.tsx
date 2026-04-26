@@ -5,7 +5,6 @@ import Footer from './components/Footer';
 import BrandSlider from './components/BrandSlider';
 import Hero from './components/Hero';
 import CategoryBanner from './components/CategoryBanner';
-import Features from './components/Features';
 import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
 import StatsBand from './components/StatsBand';
@@ -41,7 +40,6 @@ const HomePage: React.FC = () => {
       <HomeProductBanners />
       <StatsBand />
       <CategoryBanner />
-      <Features />
     </>
   );
 };
