@@ -345,30 +345,6 @@ const WorkerDashboard: React.FC = () => {
         {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
 
-        {/* Vacation */}
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h3 className="font-playfair text-xl text-black mb-1">Məzuniyyət</h3>
-              {vacationStatus.locked ? (
-                <p className="text-sm text-gray-500">
-                  Açılmasına <strong className="text-black">{vacationStatus.daysLeft} gün</strong> qalıb (təxminən {fmtDate(vacationStatus.openedAt)})
-                </p>
-              ) : (
-                <p className="text-sm text-emerald-600">✓ Məzuniyyət açıqdır — istənilən vaxt müraciət edə bilərsiniz</p>
-              )}
-            </div>
-            <button
-              disabled={vacationStatus.locked}
-              onClick={() => { setReqType('leave'); setReqDesc(REQUEST_TEMPLATES.leave); setShowRequestForm(true); }}
-              className="px-5 py-2.5 border border-black text-black rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              data-testid="worker-vacation-btn"
-            >
-              Məzuniyyətə çıx
-            </button>
-          </div>
-        </section>
-
         {/* Fines & Rewards */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -495,6 +471,30 @@ const WorkerDashboard: React.FC = () => {
               {requests.map(r => <RequestRow key={r.id} item={r} />)}
             </ul>
           )}
+        </section>
+
+        {/* Vacation — ən aşağıda */}
+        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="font-playfair text-xl text-black mb-1">Məzuniyyət</h3>
+              {vacationStatus.locked ? (
+                <p className="text-sm text-gray-500">
+                  Açılmasına <strong className="text-black">{vacationStatus.daysLeft} gün</strong> qalıb (təxminən {fmtDate(vacationStatus.openedAt)})
+                </p>
+              ) : (
+                <p className="text-sm text-emerald-600">✓ Məzuniyyət açıqdır — istənilən vaxt müraciət edə bilərsiniz</p>
+              )}
+            </div>
+            <button
+              disabled={vacationStatus.locked}
+              onClick={() => { setReqType('leave'); setReqDesc(REQUEST_TEMPLATES.leave); setShowRequestForm(true); }}
+              className="px-5 py-2.5 border border-black text-black rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              data-testid="worker-vacation-btn"
+            >
+              Məzuniyyətə çıx
+            </button>
+          </div>
         </section>
       </main>
     </div>
