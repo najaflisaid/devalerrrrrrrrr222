@@ -1,20 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Loader2, LogOut, Star, CalendarDays, AlertOctagon, Award, Clock,
-  Send, Plus, Paperclip, TrendingUp, CheckCircle2, Hourglass, X,
-  Bell,
+  Loader2, LogOut, CalendarDays, AlertOctagon, Award, Clock,
+  Send, Plus, TrendingUp, CheckCircle2, Hourglass, X,
+  Bell, Briefcase, Activity, Trophy, Crown, Medal, FileText,
 } from 'lucide-react';
 import { useWorkerAuth } from '../../context/WorkerAuthContext';
 import {
   startWork, endWork, getTodayAttendance, listAttendance,
   listFines, listRewards, listSales, listRequests, submitRequest,
-  uploadRequestAttachment, listNotifications, markNotificationRead,
-  computeAttendancePercent, monthYM, daysSince,
+  listNotifications, markNotificationRead,
+  computeAttendancePercent, computePerformance, computeExperience,
+  getMonthlyLeaderboard, monthYM, daysSince,
 } from '../../services/workerService';
 import type {
   AttendanceEntry, Fine, Reward, SalesEntry, WorkerRequest,
-  RequestType, WorkerNotification,
+  RequestType, WorkerNotification, PerformanceBreakdown,
 } from '../../types/worker';
 
 const fmtDate = (iso: string) => {
@@ -23,7 +24,48 @@ const fmtDate = (iso: string) => {
 };
 const fmtTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
 
-const VACATION_UNLOCK_MONTHS = 6; // vacation opens after 6 months
+const VACATION_UNLOCK_MONTHS = 6;
+
+// ─── Application templates
+const REQUEST_TEMPLATES: Record<RequestType, string> = {
+  leave: `Hörmətli rəhbərlik,
+
+Mən ____ tarixindən ____ tarixinə qədər məzuniyyət istəyirəm.
+Səbəb: ____
+
+Hörmətlə,
+[Ad Soyad]`,
+  complaint: `Hörmətli rəhbərlik,
+
+Aşağıdakı mövzuda şikayətim var:
+____
+
+Xahiş edirəm araşdıraraq cavab verəsiniz.
+
+Hörmətlə,
+[Ad Soyad]`,
+  suggestion: `Hörmətli rəhbərlik,
+
+İş prosesini yaxşılaşdırmaq üçün təklifim var:
+____
+
+Hörmətlə,
+[Ad Soyad]`,
+  other: `Hörmətli rəhbərlik,
+
+Mövzu: ____
+İzahat: ____
+
+Hörmətlə,
+[Ad Soyad]`,
+};
+
+const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
+  leave: 'Məzuniyyət',
+  complaint: 'Şikayət',
+  suggestion: 'Təklif',
+  other: 'Digər',
+};
 
 const WorkerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -37,19 +79,20 @@ const WorkerDashboard: React.FC = () => {
   const [sales, setSales] = useState<SalesEntry[]>([]);
   const [requests, setRequests] = useState<WorkerRequest[]>([]);
   const [notifications, setNotifications] = useState<WorkerNotification[]>([]);
+  const [perf, setPerf] = useState<PerformanceBreakdown | null>(null);
+  const [leaderboard, setLeaderboard] = useState<Awaited<ReturnType<typeof getMonthlyLeaderboard>>>([]);
 
   const [busyClock, setBusyClock] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
-  const [reqDesc, setReqDesc] = useState('');
-  const [reqFile, setReqFile] = useState<File | null>(null);
+  const [reqDesc, setReqDesc] = useState(REQUEST_TEMPLATES.leave);
   const [submittingReq, setSubmittingReq] = useState(false);
 
   useEffect(() => { if (!loading && !worker) navigate('/workers', { replace: true }); }, [worker, loading, navigate]);
 
   const loadAll = async () => {
     if (!worker) return;
-    const [t, a, p, f, r, s, rq, nots] = await Promise.all([
+    const [t, a, p, f, r, s, rq, nots, pf, lb] = await Promise.all([
       getTodayAttendance(worker.id),
       listAttendance(worker.id, 31),
       computeAttendancePercent(worker.id),
@@ -58,12 +101,20 @@ const WorkerDashboard: React.FC = () => {
       listSales(worker.id, monthYM()),
       listRequests(worker.id),
       listNotifications(worker.id),
+      computePerformance(worker),
+      getMonthlyLeaderboard(),
     ]);
     setToday(t); setAttendance(a); setAttPercent(p);
     setFines(f); setRewards(r); setSales(s); setRequests(rq); setNotifications(nots);
+    setPerf(pf); setLeaderboard(lb);
   };
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [worker]);
+
+  // Auto-fill template when type changes (only if textarea is empty or contains a template)
+  useEffect(() => {
+    setReqDesc(REQUEST_TEMPLATES[reqType]);
+  }, [reqType]);
 
   const totalSales = useMemo(() => sales.reduce((s, x) => s + (x.amount || 0), 0), [sales]);
   const targetPercent = useMemo(() => {
@@ -71,7 +122,11 @@ const WorkerDashboard: React.FC = () => {
     return Math.min(100, Math.round((totalSales / worker.monthlyTarget) * 100));
   }, [totalSales, worker]);
 
-  // Vacation: opens after VACATION_UNLOCK_MONTHS from hireDate
+  const experience = useMemo(
+    () => worker ? computeExperience(worker.hireDate) : { years: 0, months: 0, days: 0, label: '—' },
+    [worker]
+  );
+
   const vacationStatus = useMemo(() => {
     if (!worker) return { locked: true, daysLeft: 0, openedAt: '' };
     const days = daysSince(worker.hireDate);
@@ -100,12 +155,11 @@ const WorkerDashboard: React.FC = () => {
     if (!worker || !reqDesc.trim()) return;
     setSubmittingReq(true);
     try {
-      let attachmentUrl: string | undefined;
-      if (reqFile) attachmentUrl = await uploadRequestAttachment(worker.id, reqFile);
       await submitRequest({
-        workerId: worker.id, type: reqType, description: reqDesc.trim(), attachmentUrl,
+        workerId: worker.id, type: reqType, description: reqDesc.trim(),
       });
-      setReqDesc(''); setReqFile(null); setShowRequestForm(false);
+      setReqDesc(REQUEST_TEMPLATES[reqType]);
+      setShowRequestForm(false);
       await loadAll();
     } finally { setSubmittingReq(false); }
   };
@@ -141,7 +195,7 @@ const WorkerDashboard: React.FC = () => {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        {/* Profile + Attendance row */}
+        {/* Profile + Performance row */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Profile */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -151,15 +205,16 @@ const WorkerDashboard: React.FC = () => {
                   ? <img src={worker.photo} alt={worker.name} className="w-full h-full object-cover" />
                   : <span>{worker.name?.[0]}{worker.surname?.[0]}</span>}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
+                {/* Experience badge — TOP */}
+                <div className="inline-flex items-center gap-1.5 bg-[#FFF8E5] border border-[#D4AF37]/40 px-3 py-1 rounded-full mb-2">
+                  <Briefcase className="h-3 w-3 text-[#8a6d10]" />
+                  <span className="text-[11px] uppercase tracking-wider text-[#8a6d10] font-semibold" data-testid="worker-experience">
+                    İş stajı: {experience.label}
+                  </span>
+                </div>
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
                 <p className="text-gray-500 text-sm mt-0.5">{worker.position}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className={`h-3.5 w-3.5 ${i < Math.round(worker.rating) ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-gray-300'}`} />
-                  ))}
-                  <span className="text-xs text-gray-500 ml-1">{worker.rating.toFixed(1)} / 5</span>
-                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs">
                   <div className="flex items-center gap-1.5 text-gray-600"><CalendarDays className="h-3.5 w-3.5" /> İşə başlama: <strong className="text-black">{fmtDate(worker.hireDate)}</strong></div>
                   <div className="flex items-center gap-1.5 text-gray-600"><CalendarDays className="h-3.5 w-3.5" /> Müqavilə: <strong className="text-black">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong></div>
@@ -168,22 +223,34 @@ const WorkerDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Attendance */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-2">Davamiyyət (bu ay)</h3>
+          {/* Performance % (rating) */}
+          <div className="bg-gradient-to-br from-[#FFF8E5] to-white rounded-2xl border border-[#D4AF37]/40 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs uppercase tracking-wider text-[#8a6d10] font-semibold flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5" /> Performans Reytinqi
+              </h3>
+            </div>
             <div className="flex items-end gap-2">
-              <span className="font-playfair text-4xl text-black">{attPercent}%</span>
-              <span className="text-xs text-gray-500 mb-1">{attendance.filter(a => a.date.startsWith(monthYM())).length} gün</span>
+              <span className="font-playfair text-5xl text-[#8a6d10] font-bold" data-testid="worker-performance-percent">{perf?.total ?? 0}%</span>
+              <span className="text-xs text-gray-500 mb-2">/ 100%</span>
             </div>
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-[#D4AF37] transition-all" style={{ width: `${attPercent}%` }} />
+            <div className="mt-3 h-2 bg-white rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] transition-all duration-700"
+                style={{ width: `${perf?.total ?? 0}%` }} />
             </div>
+            {perf && (
+              <div className="mt-4 grid grid-cols-3 gap-2 text-[10px]">
+                <PerfMini label="Davamiyyət" value={`${perf.attendance}%`} />
+                <PerfMini label="Vaxtında" value={`${perf.punctuality}%`} />
+                <PerfMini label="Hədəf" value={`${perf.target}%`} />
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Clock-in / Clock-out */}
+        {/* Attendance */}
         <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
               <h3 className="font-playfair text-xl text-black mb-1">İş Günü</h3>
               <p className="text-sm text-gray-500">
@@ -193,7 +260,11 @@ const WorkerDashboard: React.FC = () => {
                 <span className="text-black font-medium">Bitmə: {fmtTime(today?.endTime)}</span>
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-[10px] uppercase tracking-wider text-gray-500">Bu ay davamiyyət</div>
+                <div className="text-lg font-semibold text-black">{attPercent}%</div>
+              </div>
               <button onClick={handleStart} disabled={!!today?.startTime || busyClock}
                 className="px-5 py-2.5 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 data-testid="worker-clock-start">
@@ -210,7 +281,7 @@ const WorkerDashboard: React.FC = () => {
 
           {/* Daily log */}
           {attendance.length > 0 && (
-            <div className="mt-5 border-t border-gray-100 pt-4">
+            <div className="mt-3 border-t border-gray-100 pt-4">
               <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Gündəlik cədvəl (son 30 gün)</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -238,7 +309,7 @@ const WorkerDashboard: React.FC = () => {
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-playfair text-xl text-black mb-1">Aylıq Hədəf</h3>
-              <p className="text-sm text-gray-500">Bu ay üzrə satış göstəriciləriniz</p>
+              <p className="text-sm text-gray-500">Bu ay üzrə şəxsi satış göstəriciləriniz</p>
             </div>
             <TrendingUp className="h-5 w-5 text-[#D4AF37]" />
           </div>
@@ -256,6 +327,9 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </section>
 
+        {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
+        <LeaderboardSection items={leaderboard} currentId={worker.id} />
+
         {/* Vacation */}
         <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -271,7 +345,7 @@ const WorkerDashboard: React.FC = () => {
             </div>
             <button
               disabled={vacationStatus.locked}
-              onClick={() => { setReqType('leave'); setShowRequestForm(true); }}
+              onClick={() => { setReqType('leave'); setReqDesc(REQUEST_TEMPLATES.leave); setShowRequestForm(true); }}
               className="px-5 py-2.5 border border-black text-black rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               data-testid="worker-vacation-btn"
             >
@@ -325,38 +399,70 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </section>
 
+        {/* Notifications inline list */}
+        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-playfair text-xl text-black flex items-center gap-2">
+              <Bell className="h-4 w-4 text-[#D4AF37]" /> Bildirişlər ({notifications.length})
+              {unreadCount > 0 && <span className="text-[10px] bg-red-500 text-white rounded-full px-1.5 py-0.5">{unreadCount} yeni</span>}
+            </h3>
+          </div>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-gray-400">Hələ bildiriş yoxdur.</p>
+          ) : (
+            <ul className="space-y-2 max-h-80 overflow-y-auto">
+              {notifications.map(n => (
+                <li key={n.id} className={`p-3 rounded-lg border ${!n.read ? 'border-[#D4AF37]/40 bg-[#FFF8E5]/50' : 'border-gray-100 bg-gray-50/40'} cursor-pointer`}
+                    onClick={() => !n.read && markNotificationRead(n.id).then(loadAll)}
+                    data-testid={`worker-notification-${n.id}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm text-black flex-1 whitespace-pre-line">{n.message}</p>
+                    {!n.read && <span className="text-[9px] uppercase tracking-wider text-[#8a6d10] font-bold whitespace-nowrap">Yeni</span>}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString('az-AZ')}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* Requests */}
         <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-playfair text-xl text-black">Ərizə və müraciətlər</h3>
+            <h3 className="font-playfair text-xl text-black flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-700" /> Ərizə və müraciətlər
+            </h3>
             <button onClick={() => setShowRequestForm(s => !s)}
               className="flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-[0.18em] font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
               data-testid="worker-new-request-btn">
-              <Plus className="h-3.5 w-3.5" /> {showRequestForm ? 'Bağla' : 'Yeni'}
+              <Plus className="h-3.5 w-3.5" /> {showRequestForm ? 'Bağla' : 'Yeni ərizə'}
             </button>
           </div>
 
           {showRequestForm && (
             <form onSubmit={handleSubmitRequest} className="bg-gray-50 rounded-xl p-4 space-y-3 mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-gray-600 mb-1">Ərizə növü</label>
                 <select value={reqType} onChange={(e) => setReqType(e.target.value as RequestType)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm" data-testid="worker-request-type">
-                  <option value="leave">Məzuniyyət</option>
-                  <option value="complaint">Şikayət</option>
-                  <option value="suggestion">Təklif</option>
-                  <option value="other">Digər</option>
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent" data-testid="worker-request-type">
+                  {(Object.keys(REQUEST_TYPE_LABEL) as RequestType[]).map(k =>
+                    <option key={k} value={k}>{REQUEST_TYPE_LABEL[k]}</option>
+                  )}
                 </select>
-                <label className="px-3 py-2 border border-dashed border-gray-300 rounded-lg bg-white text-sm cursor-pointer flex items-center gap-2 sm:col-span-2 hover:bg-gray-100">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span className="text-gray-700 truncate">{reqFile ? reqFile.name : 'Fayl əlavə et (istəyə görə)'}</span>
-                  <input type="file" className="hidden" onChange={(e) => setReqFile(e.target.files?.[0] || null)} />
-                </label>
+                <p className="text-[11px] text-gray-500 mt-1">Növü dəyişdirdikdə şablon avtomatik yenilənir. Aşağıda ____ yerlərini öz məlumatınızla doldurun.</p>
               </div>
-              <textarea value={reqDesc} onChange={(e) => setReqDesc(e.target.value)} rows={3} required
-                placeholder="Qısa açıqlama yazın..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                data-testid="worker-request-desc" />
-              <div className="flex justify-end">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-gray-600 mb-1">Ərizə mətni (şablon)</label>
+                <textarea value={reqDesc} onChange={(e) => setReqDesc(e.target.value)} rows={10} required
+                  placeholder="Şablon avtomatik dolacaq..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono resize-y focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+                  data-testid="worker-request-desc" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setReqDesc(REQUEST_TEMPLATES[reqType])}
+                  className="px-4 py-2 text-xs uppercase tracking-wider border border-gray-300 rounded-lg hover:bg-gray-100">
+                  Şablonu sıfırla
+                </button>
                 <button type="submit" disabled={submittingReq}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50"
                   data-testid="worker-request-submit">
@@ -380,6 +486,72 @@ const WorkerDashboard: React.FC = () => {
   );
 };
 
+const PerfMini: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="bg-white/80 rounded-lg px-2 py-1.5 border border-[#D4AF37]/20">
+    <div className="text-gray-500 uppercase tracking-wider">{label}</div>
+    <div className="text-gray-900 font-semibold text-sm">{value}</div>
+  </div>
+);
+
+// ─── Leaderboard (names only, no amounts)
+const LeaderboardSection: React.FC<{
+  items: Awaited<ReturnType<typeof getMonthlyLeaderboard>>;
+  currentId: string;
+}> = ({ items, currentId }) => {
+  if (items.length === 0) return null;
+  const myRank = items.find(i => i.workerId === currentId);
+
+  const rankIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-4 w-4 text-[#D4AF37] fill-[#D4AF37]" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
+    if (rank === 3) return <Medal className="h-4 w-4 text-amber-700" />;
+    return <span className="text-xs font-mono text-gray-500 w-4 text-center">{rank}</span>;
+  };
+
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="leaderboard-section">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-[#D4AF37]" />
+          <h3 className="font-playfair text-xl text-black">Aylıq Reytinq</h3>
+        </div>
+        {myRank && (
+          <span className="text-xs text-gray-500">
+            Sənin yerin: <strong className="text-[#8a6d10]">#{myRank.rank}</strong>
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Bütün işçilərin aylıq satış sıralaması (məbləğlər məxfidir, yalnız ad-soyadlar göstərilir).
+      </p>
+      <ul className="divide-y divide-gray-100">
+        {items.map(i => {
+          const isMe = i.workerId === currentId;
+          return (
+            <li key={i.workerId}
+              className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMe ? 'bg-[#FFF8E5]/60' : ''}`}
+              data-testid={`leaderboard-row-${i.rank}`}>
+              <div className="w-8 flex items-center justify-center">{rankIcon(i.rank)}</div>
+              <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center text-xs font-medium text-gray-600 shrink-0">
+                {i.photo ? <img src={i.photo} alt="" className="w-full h-full object-cover" /> : `${i.name?.[0]}${i.surname?.[0]}`}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
+                  {i.name} {i.surname}{isMe && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
+                </p>
+                <p className="text-[11px] text-gray-500 truncate">{i.position}</p>
+              </div>
+              {!i.hasTotal && (
+                <span className="text-[10px] uppercase tracking-wider text-gray-400">qeydiyyatda yoxdur</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+};
+
 const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
   const StatusPill = () => {
     if (item.status === 'sent')
@@ -392,13 +564,8 @@ const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
     <li className="border border-gray-100 rounded-lg p-3 text-sm">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-black capitalize">{item.type}</p>
-          <p className="text-gray-600 mt-1">{item.description}</p>
-          {item.attachmentUrl && (
-            <a href={item.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-[#C99B1F] mt-1.5 hover:underline">
-              <Paperclip className="h-3 w-3" /> Əlavə fayl
-            </a>
-          )}
+          <p className="font-medium text-black">{REQUEST_TYPE_LABEL[item.type] || item.type}</p>
+          <p className="text-gray-700 mt-1 whitespace-pre-line">{item.description}</p>
           {item.adminResponse && (
             <p className="mt-2 text-[12px] text-gray-700 bg-gray-50 rounded p-2"><strong>Admin cavabı:</strong> {item.adminResponse}</p>
           )}
@@ -433,7 +600,7 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
               {items.map(n => (
                 <li key={n.id} className={`p-3 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 ${!n.read ? 'bg-amber-50/30' : ''}`}
                     onClick={() => !n.read && onRead(n.id)}>
-                  <p className="text-sm text-black">{n.message}</p>
+                  <p className="text-sm text-black whitespace-pre-line">{n.message}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{new Date(n.createdAt).toLocaleString('az-AZ')}</p>
                 </li>
               ))}

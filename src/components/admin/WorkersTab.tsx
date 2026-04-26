@@ -1,20 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Loader2, Plus, Search, Users, X, Edit2, Trash2, Star, Save,
-  AlertOctagon, Award as AwardIcon, TrendingUp, MailIcon,
-  Inbox, CheckCircle2, Hourglass, Paperclip, BellPlus,
+  Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
+  AlertOctagon, Award as AwardIcon, TrendingUp,
+  Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Trophy, Activity,
 } from 'lucide-react';
 import {
-  createWorker, listWorkers, updateWorker, deleteWorker, uploadWorkerPhoto,
+  createWorker, listWorkers, updateWorker, deleteWorker,
   addFine, listFines, deleteFine,
   addReward, listRewards, deleteReward,
   addSale, listSales,
   listRequests, updateRequestStatus,
   sendNotification,
+  listPositions, addPosition, deletePosition, updatePosition,
+  computePerformance,
   monthYM,
 } from '../../services/workerService';
 import type {
-  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus,
+  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position,
+  PerformanceBreakdown,
 } from '../../types/worker';
 
 type Mode = 'list' | 'create' | 'edit';
@@ -23,6 +26,7 @@ const fmt = (iso: string) => iso ? new Date(iso).toLocaleDateString('az-AZ') : '
 
 const WorkersTab: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<Mode>('list');
@@ -33,8 +37,8 @@ const WorkersTab: React.FC = () => {
   const refresh = async () => {
     setLoading(true);
     try {
-      const [w, r] = await Promise.all([listWorkers(), listRequests()]);
-      setWorkers(w); setAllRequests(r);
+      const [w, r, p] = await Promise.all([listWorkers(), listRequests(), listPositions()]);
+      setWorkers(w); setAllRequests(r); setPositions(p);
     } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); }, []);
@@ -52,14 +56,17 @@ const WorkersTab: React.FC = () => {
   }
 
   if (mode === 'create') {
-    return <WorkerForm onClose={() => setMode('list')} onSaved={async () => { setMode('list'); await refresh(); }} />;
+    return <WorkerForm positions={positions} onClose={() => setMode('list')} onSaved={async () => { setMode('list'); await refresh(); }} />;
   }
   if (mode === 'edit' && editing) {
-    return <WorkerDetail worker={editing} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh(); }} />;
+    return <WorkerDetail worker={editing} positions={positions} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh(); }} />;
   }
 
   return (
     <div className="space-y-6">
+      {/* Positions management */}
+      <PositionsPanel positions={positions} onChange={refresh} />
+
       {/* Workers list */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -92,8 +99,8 @@ const WorkersTab: React.FC = () => {
                 <th className="py-3 pr-4">Vəzifə</th>
                 <th className="py-3 pr-4">Email</th>
                 <th className="py-3 pr-4">İşə başlama</th>
-                <th className="py-3 pr-4">Reytinq</th>
                 <th className="py-3 pr-4">Hədəf (₼)</th>
+                <th className="py-3 pr-4">Aylıq cəmi (₼)</th>
                 <th className="py-3 pr-4">Status</th>
                 <th className="py-3"></th>
               </tr></thead>
@@ -111,14 +118,12 @@ const WorkersTab: React.FC = () => {
                     <td className="py-3 pr-4 text-gray-600">{w.position}</td>
                     <td className="py-3 pr-4 text-gray-600 text-xs">{w.email}</td>
                     <td className="py-3 pr-4 text-gray-600">{fmt(w.hireDate)}</td>
-                    <td className="py-3 pr-4">
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className={`h-3 w-3 ${i < Math.round(w.rating) ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-gray-300'}`} />
-                        ))}
-                      </div>
-                    </td>
                     <td className="py-3 pr-4 text-gray-700">{w.monthlyTarget?.toLocaleString() || '—'}</td>
+                    <td className="py-3 pr-4 text-gray-700">
+                      {w.monthlyTotalMonth === monthYM() && typeof w.monthlyTotalSales === 'number'
+                        ? w.monthlyTotalSales.toLocaleString()
+                        : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="py-3 pr-4">
                       <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${w.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                         {w.isActive ? 'Aktiv' : 'Deaktiv'}
@@ -144,50 +149,120 @@ const WorkersTab: React.FC = () => {
   );
 };
 
-// ───────────────────── Worker Form (create) ─────────────────────
-const WorkerForm: React.FC<{ onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ onClose, onSaved, existing }) => {
+// ───────────────────── Positions Panel ─────────────────────
+const PositionsPanel: React.FC<{ positions: Position[]; onChange: () => Promise<void> }> = ({ positions, onChange }) => {
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setBusy(true);
+    try { await addPosition(newName); setNewName(''); await onChange(); }
+    finally { setBusy(false); }
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editVal.trim()) return;
+    await updatePosition(id, editVal);
+    setEditId(null); setEditVal('');
+    await onChange();
+  };
+
+  const remove = async (p: Position) => {
+    if (!confirm(`"${p.name}" vəzifəsi silinsin?`)) return;
+    await deletePosition(p.id);
+    await onChange();
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Briefcase className="h-5 w-5 text-gray-700" />
+        <h2 className="text-xl font-bold text-gray-900">Vəzifələr ({positions.length})</h2>
+      </div>
+      <form onSubmit={submit} className="flex gap-2 mb-4">
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni vəzifə adı..."
+          className={inp + ' flex-1'} data-testid="position-add-input" />
+        <button disabled={busy || !newName.trim()}
+          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1.5"
+          data-testid="position-add-btn">
+          <Plus className="h-4 w-4" /> Əlavə et
+        </button>
+      </form>
+      {positions.length === 0 ? (
+        <p className="text-sm text-gray-400">Hələ vəzifə əlavə olunmayıb.</p>
+      ) : (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {positions.map(p => (
+            <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-gray-100 rounded-lg text-sm bg-gray-50/40">
+              {editId === p.id ? (
+                <>
+                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1'} autoFocus />
+                  <button onClick={() => saveEdit(p.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
+                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                </>
+              ) : (
+                <>
+                  <span className="text-gray-800 font-medium truncate">{p.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { setEditId(p.id); setEditVal(p.name); }} className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`position-edit-${p.id}`}>
+                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                    </button>
+                    <button onClick={() => remove(p)} className="p-1.5 hover:bg-red-50 rounded-lg" data-testid={`position-delete-${p.id}`}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// ───────────────────── Worker Form (create / edit) ─────────────────────
+const WorkerForm: React.FC<{ positions: Position[]; onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ positions, onClose, onSaved, existing }) => {
   const [name, setName] = useState(existing?.name || '');
   const [surname, setSurname] = useState(existing?.surname || '');
   const [email, setEmail] = useState(existing?.email || '');
   const [password, setPassword] = useState('');
-  const [position, setPosition] = useState(existing?.position || '');
+  const [position, setPosition] = useState(existing?.position || (positions[0]?.name || ''));
   const [hireDate, setHireDate] = useState(existing?.hireDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractStart, setContractStart] = useState(existing?.contractStart?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractEnd, setContractEnd] = useState(existing?.contractEnd?.slice(0, 10) || '');
-  const [rating, setRating] = useState(existing?.rating ?? 5);
   const [monthlyTarget, setMonthlyTarget] = useState(existing?.monthlyTarget?.toString() || '');
   const [photo, setPhoto] = useState(existing?.photo || '');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
+    if (!position) { setErr('Zəhmət olmasa vəzifə seçin (yoxdursa yuxarıda əlavə edin).'); return; }
     if (!existing && password.length < 6) { setErr('Şifrə ən az 6 simvol olmalıdır.'); return; }
     setBusy(true);
     try {
-      let photoUrl = photo;
       if (existing) {
-        if (photoFile) photoUrl = await uploadWorkerPhoto(existing.id, photoFile);
         await updateWorker(existing.id, {
-          name, surname, position, photo: photoUrl,
+          name, surname, position, photo: photo.trim(),
           hireDate, contractStart, contractEnd,
-          rating: Number(rating),
           monthlyTarget: Number(monthlyTarget) || 0,
+          isActive,
         });
       } else {
-        const w = await createWorker(email.trim().toLowerCase(), password, {
+        await createWorker(email.trim().toLowerCase(), password, {
           name, surname, position,
           hireDate, contractStart, contractEnd,
-          rating: Number(rating),
           monthlyTarget: Number(monthlyTarget) || 0,
-          photo: '',
+          photo: photo.trim(),
+          isActive,
         });
-        if (photoFile) {
-          const url = await uploadWorkerPhoto(w.id, photoFile);
-          await updateWorker(w.id, { photo: url });
-        }
       }
       onSaved();
     } catch (e: any) {
@@ -207,19 +282,34 @@ const WorkerForm: React.FC<{ onClose: () => void; onSaved: () => void; existing?
         <Field label="Soyad *"><input required value={surname} onChange={(e) => setSurname(e.target.value)} className={inp} data-testid="workers-form-surname" /></Field>
         <Field label="Email *"><input required type="email" value={email} disabled={!!existing} onChange={(e) => setEmail(e.target.value)} className={inp + (existing ? ' bg-gray-50 text-gray-500' : '')} data-testid="workers-form-email" /></Field>
         {!existing && <Field label="Şifrə * (ən az 6 simvol)"><input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className={inp} data-testid="workers-form-password" /></Field>}
-        <Field label="Vəzifə *"><input required value={position} onChange={(e) => setPosition(e.target.value)} className={inp} data-testid="workers-form-position" /></Field>
+        <Field label="Vəzifə *">
+          {positions.length === 0 ? (
+            <div className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">Əvvəlcə yuxarıdakı bölmədən vəzifə əlavə edin.</div>
+          ) : (
+            <select required value={position} onChange={(e) => setPosition(e.target.value)} className={inp} data-testid="workers-form-position">
+              <option value="">Vəzifə seç...</option>
+              {positions.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          )}
+        </Field>
         <Field label="İşə başlama tarixi *"><input required type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inp} /></Field>
         <Field label="Müqavilə başlama"><input type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} className={inp} /></Field>
         <Field label="Müqavilə bitmə"><input type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} className={inp} /></Field>
-        <Field label="Reytinq (0–5)"><input type="number" min={0} max={5} step={0.1} value={rating} onChange={(e) => setRating(Number(e.target.value))} className={inp} /></Field>
-        <Field label="Aylıq satış hədəfi (₼)"><input type="number" min={0} value={monthlyTarget} onChange={(e) => setMonthlyTarget(e.target.value)} className={inp} /></Field>
-        <Field label="Şəkil">
+        <Field label="Aylıq satış hədəfi (₼)"><input type="number" min={0} value={monthlyTarget} onChange={(e) => setMonthlyTarget(e.target.value)} className={inp} data-testid="workers-form-target" /></Field>
+        <Field label="Şəkil URL (link)">
           <div className="flex items-center gap-3">
-            {(photoFile || photo) && (
-              <img src={photoFile ? URL.createObjectURL(photoFile) : photo} alt="" className="w-12 h-12 rounded-full object-cover" />
+            {photo && (
+              <img src={photo} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-200" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             )}
-            <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} className="text-sm" />
+            <input type="url" value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="https://..." className={inp} data-testid="workers-form-photo-url" />
           </div>
+          <p className="text-[11px] text-gray-500 mt-1">Şəkilin açıq linkini yapışdırın (məs: imgur, postimage, firebase storage və s.)</p>
+        </Field>
+        <Field label="Status">
+          <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg cursor-pointer">
+            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <span className="text-sm">{isActive ? 'Aktiv' : 'Deaktiv'}</span>
+          </label>
         </Field>
         <div className="md:col-span-2 flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Ləğv et</button>
@@ -240,22 +330,24 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 );
 const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent';
 
-// ───────────────────── Worker Detail (edit + fines/rewards/sales/notify) ─────────────────────
-const WorkerDetail: React.FC<{ worker: Worker; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, onClose, onUpdated }) => {
-  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'notify'>('info');
+// ───────────────────── Worker Detail (edit + fines/rewards/sales/notify/total) ─────────────────────
+const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, onClose, onUpdated }) => {
+  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'total' | 'notify'>('info');
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [sales, setSales] = useState<SalesEntry[]>([]);
+  const [perf, setPerf] = useState<PerformanceBreakdown | null>(null);
 
   const reload = async () => {
-    const [f, r, s] = await Promise.all([
+    const [f, r, s, p] = await Promise.all([
       listFines(worker.id),
       listRewards(worker.id),
       listSales(worker.id),
+      computePerformance(worker),
     ]);
-    setFines(f); setRewards(r); setSales(s);
+    setFines(f); setRewards(r); setSales(s); setPerf(p);
   };
-  useEffect(() => { reload(); }, [worker.id]);
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [worker.id]);
 
   const handleDelete = async () => {
     if (!confirm(`${worker.name} ${worker.surname} işçisi silinsin?`)) return;
@@ -279,22 +371,95 @@ const WorkerDetail: React.FC<{ worker: Worker; onClose: () => void; onUpdated: (
         </button>
       </div>
 
-      <div className="flex border-b border-gray-100 mb-5">
+      {/* Performance summary */}
+      {perf && (
+        <div className="mb-5 grid grid-cols-2 md:grid-cols-5 gap-3">
+          <PerfCard label="Yekun reytinq" value={`${perf.total}%`} highlight />
+          <PerfCard label="Davamiyyət" value={`${perf.attendance}%`} />
+          <PerfCard label="Vaxtında" value={`${perf.punctuality}%`} />
+          <PerfCard label="Hədəf" value={`${perf.target}%`} />
+          <PerfCard label="Cərimə / Mükafat" value={`${perf.finesPenalty}/+${perf.rewardsBonus}`} />
+        </div>
+      )}
+
+      <div className="flex border-b border-gray-100 mb-5 overflow-x-auto">
         {([
-          ['info', 'Məlumat'], ['fines', 'Cərimələr'], ['rewards', 'Mükafatlar'], ['sales', 'Satışlar'], ['notify', 'Bildiriş'],
+          ['info', 'Məlumat'],
+          ['fines', 'Cərimələr'],
+          ['rewards', 'Mükafatlar'],
+          ['sales', 'Satışlar'],
+          ['total', 'Aylıq cəm'],
+          ['notify', 'Bildiriş'],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k as any)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === k ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap ${tab === k ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             {l}
           </button>
         ))}
       </div>
 
-      {tab === 'info' && <WorkerForm existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
+      {tab === 'info' && <WorkerForm positions={positions} existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
       {tab === 'fines' && <FinesPanel workerId={worker.id} items={fines} reload={reload} />}
       {tab === 'rewards' && <RewardsPanel workerId={worker.id} items={rewards} reload={reload} />}
       {tab === 'sales' && <SalesPanel workerId={worker.id} target={worker.monthlyTarget} items={sales} reload={reload} />}
+      {tab === 'total' && <MonthlyTotalPanel worker={worker} onSaved={onUpdated} />}
       {tab === 'notify' && <NotifyPanel workerId={worker.id} />}
+    </div>
+  );
+};
+
+const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> = ({ label, value, highlight }) => (
+  <div className={`rounded-lg p-3 border ${highlight ? 'border-[#D4AF37] bg-[#FFF8E5]' : 'border-gray-100 bg-gray-50/60'}`}>
+    <div className="text-[10px] uppercase tracking-wider text-gray-500 flex items-center gap-1"><Activity className="h-3 w-3" /> {label}</div>
+    <div className={`mt-1 font-semibold ${highlight ? 'text-2xl text-[#8a6d10]' : 'text-lg text-gray-800'}`}>{value}</div>
+  </div>
+);
+
+// ─── Monthly Total panel (admin enters worker's monthly total sales for leaderboard)
+const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
+  const ym = monthYM();
+  const isCurrent = worker.monthlyTotalMonth === ym;
+  const [total, setTotal] = useState<string>(isCurrent ? String(worker.monthlyTotalSales || '') : '');
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await updateWorker(worker.id, {
+        monthlyTotalSales: Number(total) || 0,
+        monthlyTotalMonth: ym,
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+      await onSaved();
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-gray-50/60 rounded-lg p-5 border border-gray-100">
+      <div className="flex items-center gap-2 mb-3">
+        <Trophy className="h-4 w-4 text-[#D4AF37]" />
+        <h3 className="font-semibold text-gray-900">Aylıq ümumi satış ({ym})</h3>
+      </div>
+      <p className="text-xs text-gray-600 mb-4">
+        Bu işçinin bu ay üçün ümumi satış məbləğini daxil edin. Bütün işçilər öz profilində <strong>sıralamanı</strong> görəcək (məbləğlər gizli qalacaq, yalnız ad-soyad).
+      </p>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Ümumi satış (₼)</label>
+          <input type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} className={inp} placeholder="0" data-testid="monthly-total-input" />
+        </div>
+        <button disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
+        </button>
+        {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
+      </form>
+      {isCurrent && (
+        <p className="text-xs text-gray-500 mt-3">
+          Cari dəyər: <strong>{(worker.monthlyTotalSales || 0).toLocaleString()} ₼</strong>
+        </p>
+      )}
     </div>
   );
 };
@@ -495,12 +660,7 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
                     <p className="font-medium text-black flex items-center gap-1.5">
                       {w ? `${w.name} ${w.surname}` : '—'} <span className="text-xs text-gray-500">· {r.type}</span>
                     </p>
-                    <p className="text-gray-700 mt-1">{r.description}</p>
-                    {r.attachmentUrl && (
-                      <a href={r.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-[#C99B1F] mt-1.5 hover:underline">
-                        <Paperclip className="h-3 w-3" /> Əlavə fayl
-                      </a>
-                    )}
+                    <p className="text-gray-700 mt-1 whitespace-pre-line">{r.description}</p>
                   </div>
                   <span className="text-[10px] text-gray-400">{new Date(r.createdAt).toLocaleString('az-AZ')}</span>
                 </div>

@@ -12,6 +12,8 @@ export interface Worker {
   rating: number;            // 0-100 — auto-computed performance score (%)
   isActive: boolean;
   monthlyTarget: number;     // current month's sales target ₼
+  monthlyTotalSales?: number;   // admin-entered monthly total sales (for leaderboard)
+  monthlyTotalMonth?: string;   // YYYY-MM — which month total applies to
   createdAt: string;
 }
 
@@ -78,4 +80,13 @@ export interface WorkerNotification {
   message: string;
   read: boolean;
   createdAt: string;
+}
+
+export interface PerformanceBreakdown {
+  attendance: number;     // % bu ay davamiyyət (0-100)
+  punctuality: number;    // % vaxtında işə başlama (0-100)
+  target: number;         // % aylıq hədəfin yerinə yetirilməsi (0-100)
+  finesPenalty: number;   // mənfi dəyər (cərimələrə görə)
+  rewardsBonus: number;   // müsbət dəyər (mükafatlara görə)
+  total: number;          // 0-100 yekun reytinq
 }

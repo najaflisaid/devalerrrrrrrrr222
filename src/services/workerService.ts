@@ -9,10 +9,11 @@ import {
 } from 'firebase/auth';
 import type {
   Worker, AttendanceEntry, Fine, Reward, SalesEntry,
-  WorkerRequest, RequestStatus, WorkerNotification,
+  WorkerRequest, RequestStatus, WorkerNotification, Position, PerformanceBreakdown,
 } from '../types/worker';
 
 const WORKERS = 'workers';
+const POSITIONS = 'worker_positions';
 const ATTENDANCE = 'worker_attendance';
 const FINES = 'worker_fines';
 const REWARDS = 'worker_rewards';
@@ -253,6 +254,149 @@ export const computeAttendancePercent = async (workerId: string): Promise<number
   const workingDaysSoFar = today.getDate(); // simple proxy
   const present = monthDays.length;
   return workingDaysSoFar === 0 ? 0 : Math.min(100, Math.round((present / workingDaysSoFar) * 100));
+};
+
+// ───────────────────── Positions ─────────────────────
+export const listPositions = async (): Promise<Position[]> => {
+  const snap = await getDocs(collection(db, POSITIONS));
+  return snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Omit<Position, 'id'>) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'az'));
+};
+
+export const addPosition = async (name: string): Promise<Position> => {
+  const data = { name: name.trim(), createdAt: nowIso() };
+  const ref = await addDoc(collection(db, POSITIONS), data);
+  return { id: ref.id, ...data };
+};
+
+export const updatePosition = async (id: string, name: string) => {
+  await updateDoc(doc(db, POSITIONS, id), { name: name.trim() });
+};
+
+export const deletePosition = async (id: string) => deleteDoc(doc(db, POSITIONS, id));
+
+// ───────────────────── Performance / Rating ─────────────────────
+// On-time threshold — başlama saatı bu vaxtdan əvvəl olmalıdır
+const ON_TIME_HOUR = 10;
+
+export const computePerformance = async (worker: Worker): Promise<PerformanceBreakdown> => {
+  const ym = monthYM();
+  const [attendance, fines, rewards, sales] = await Promise.all([
+    listAttendance(worker.id, 31),
+    listFines(worker.id),
+    listRewards(worker.id),
+    listSales(worker.id, ym),
+  ]);
+
+  const monthAttendance = attendance.filter(a => a.date.startsWith(ym) && a.startTime);
+  const today = new Date();
+  const workingDaysSoFar = today.getDate();
+  const attendanceScore = workingDaysSoFar === 0
+    ? 0
+    : Math.min(100, (monthAttendance.length / workingDaysSoFar) * 100);
+
+  // Punctuality — başlama saatına görə
+  const punctualityScore = monthAttendance.length === 0
+    ? 0
+    : (monthAttendance.filter(a => {
+        if (!a.startTime) return false;
+        const h = new Date(a.startTime).getHours();
+        return h < ON_TIME_HOUR;
+      }).length / monthAttendance.length) * 100;
+
+  // Target completion
+  const monthSales = sales.reduce((s, x) => s + (x.amount || 0), 0);
+  const targetScore = worker.monthlyTarget && worker.monthlyTarget > 0
+    ? Math.min(100, (monthSales / worker.monthlyTarget) * 100)
+    : 0;
+
+  // Fines penalty — bu ay üzrə cərimələrə görə
+  const monthFines = fines.filter(f => (f.date || '').startsWith(ym)).length;
+  const finesPenalty = -Math.min(30, monthFines * 5);
+
+  // Rewards bonus — bu ay üzrə mükafatlara görə
+  const monthRewards = rewards.filter(r => (r.date || '').startsWith(ym)).length;
+  const rewardsBonus = Math.min(15, monthRewards * 3);
+
+  // Coefficients: attendance 30%, punctuality 20%, target 50%
+  const total = Math.max(0, Math.min(100, Math.round(
+    attendanceScore * 0.30 +
+    punctualityScore * 0.20 +
+    targetScore * 0.50 +
+    finesPenalty +
+    rewardsBonus
+  )));
+
+  return {
+    attendance: Math.round(attendanceScore),
+    punctuality: Math.round(punctualityScore),
+    target: Math.round(targetScore),
+    finesPenalty,
+    rewardsBonus,
+    total,
+  };
+};
+
+// İş stajı — illər və aylar
+export const computeExperience = (hireDate: string): { years: number; months: number; days: number; label: string } => {
+  if (!hireDate) return { years: 0, months: 0, days: 0, label: '—' };
+  const start = new Date(hireDate);
+  const now = new Date();
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+  let days = now.getDate() - start.getDate();
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) { years -= 1; months += 12; }
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} il`);
+  if (months > 0) parts.push(`${months} ay`);
+  if (years === 0 && months === 0) parts.push(`${Math.max(0, days)} gün`);
+  return { years, months, days, label: parts.join(' ') || '0 gün' };
+};
+
+// ───────────────────── Leaderboard (monthly total sales) ─────────────────────
+export interface LeaderboardEntry {
+  workerId: string;
+  name: string;
+  surname: string;
+  photo?: string;
+  position: string;
+  rank: number;
+  total: number;        // monthly total sales (admin-only)
+  hasTotal: boolean;
+}
+
+export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
+  const ym = monthYM();
+  const workers = await listWorkers();
+  const active = workers.filter(w => w.isActive);
+  const withTotals = active.map(w => ({
+    worker: w,
+    total: (w.monthlyTotalMonth === ym ? (w.monthlyTotalSales || 0) : 0),
+    hasTotal: w.monthlyTotalMonth === ym && typeof w.monthlyTotalSales === 'number',
+  }));
+  // Sort: workers with totals first by total desc, then others alphabetically
+  withTotals.sort((a, b) => {
+    if (a.hasTotal && !b.hasTotal) return -1;
+    if (!a.hasTotal && b.hasTotal) return 1;
+    if (a.hasTotal && b.hasTotal) return b.total - a.total;
+    return `${a.worker.name} ${a.worker.surname}`.localeCompare(`${b.worker.name} ${b.worker.surname}`, 'az');
+  });
+  return withTotals.map((x, i) => ({
+    workerId: x.worker.id,
+    name: x.worker.name,
+    surname: x.worker.surname,
+    photo: x.worker.photo,
+    position: x.worker.position,
+    rank: i + 1,
+    total: x.total,
+    hasTotal: x.hasTotal,
+  }));
 };
 
 export type { Timestamp };
