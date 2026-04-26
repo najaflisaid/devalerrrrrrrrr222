@@ -4,14 +4,20 @@ export interface Worker {
   email: string;
   name: string;
   surname: string;
-  photo?: string;
-  position: string;
+  photo?: string;        // URL
+  position: string;      // matches Position.name
   hireDate: string;          // ISO date — işə başlama tarixi
   contractStart: string;     // ISO
   contractEnd: string;       // ISO
-  rating: number;            // 0-5
+  rating: number;            // 0-100 — auto-computed performance score (%)
   isActive: boolean;
   monthlyTarget: number;     // current month's sales target ₼
+  createdAt: string;
+}
+
+export interface Position {
+  id: string;
+  name: string;
   createdAt: string;
 }
 
