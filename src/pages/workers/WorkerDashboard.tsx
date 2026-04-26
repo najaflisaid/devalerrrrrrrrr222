@@ -205,7 +205,7 @@ const WorkerDashboard: React.FC = () => {
                 <div className="inline-flex items-center gap-1.5 bg-[#FFF8E5] border border-[#D4AF37]/40 px-3 py-1 rounded-full mb-2">
                   <Briefcase className="h-3 w-3 text-[#8a6d10]" />
                   <span className="text-[11px] uppercase tracking-wider text-[#8a6d10] font-semibold" data-testid="worker-experience">
-                    İş stajı: {experience.label}
+                    Təcrübə: {experience.label}
                   </span>
                 </div>
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
@@ -242,7 +242,7 @@ const WorkerDashboard: React.FC = () => {
               </div>
             )}
             <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
-              Satışların yüksək olması, hədəfi vurmaq və mükafatlar reytinqi qaldırır. Cərimələr və məzuniyyət istəkləri reytinqi azaldır.
+              Satışların yüksək olması, hədəfi tamamlamaq və mükafat almaq reytinqi qaldırır. Cərimələr reytinqi aşağı salır.
             </p>
           </div>
         </section>
@@ -465,7 +465,7 @@ const LeaderboardSection: React.FC<{
         )}
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Bütün işçilərin aylıq satış sıralaması (məbləğlər məxfidir, yalnız ad-soyadlar göstərilir).
+        Bütün işçilərin aylıq satış sıralaması
       </p>
       <ul className="divide-y divide-gray-100">
         {items.map(i => {

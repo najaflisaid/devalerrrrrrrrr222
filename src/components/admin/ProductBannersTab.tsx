@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Edit, Trash2, X } from 'lucide-react';
 import { getAllProductBanners, createProductBanner, updateProductBanner, deleteProductBanner, type ProductBanner } from '../../services/contentService';
+import { siteConfirm } from '../ui/NotificationProvider';
 
 const ProductBannersTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ const ProductBannersTab: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Silmək istədiyinizdən əminsiniz?')) {
       try {
         await deleteProductBanner(id);
         await loadBanners();

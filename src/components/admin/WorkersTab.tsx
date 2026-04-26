@@ -4,6 +4,7 @@ import {
   AlertOctagon, Award as AwardIcon, TrendingUp,
   Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Trophy, Activity,
 } from 'lucide-react';
+import { siteConfirm } from '../ui/NotificationProvider';
 import {
   createWorker, listWorkers, updateWorker, deleteWorker,
   addFine, listFines, deleteFine,
@@ -181,7 +182,7 @@ const PositionsPanel: React.FC<{ positions: Position[]; onChange: () => Promise<
   };
 
   const remove = async (p: Position) => {
-    if (!confirm(`"${p.name}" vəzifəsi silinsin?`)) return;
+    if (!await siteConfirm({ message: `"${p.name}" vəzifəsi silinsin?`, variant: 'danger', confirmLabel: 'Sil' })) return;
     await deletePosition(p.id);
     await onChange();
   };
@@ -359,7 +360,7 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; onClose: (
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [worker.id]);
 
   const handleDelete = async () => {
-    if (!confirm(`${worker.name} ${worker.surname} işçisi silinsin?`)) return;
+    if (!await siteConfirm({ message: `${worker.name} ${worker.surname} işçisi silinsin?`, variant: 'danger', confirmLabel: 'Sil' })) return;
     await deleteWorker(worker.id);
     await onUpdated();
     onClose();

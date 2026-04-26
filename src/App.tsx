@@ -33,6 +33,7 @@ import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
 import { ThemeProvider } from './context/ThemeContext';
+import { NotificationProvider } from './components/ui/NotificationProvider';
 import './i18n';
 
 const HomePage: React.FC = () => {
@@ -111,9 +112,11 @@ function App() {
     <ThemeProvider>
       <Router>
         <ScrollToTop />
-        <WorkerAuthProvider>
-          <AppContent />
-        </WorkerAuthProvider>
+        <NotificationProvider>
+          <WorkerAuthProvider>
+            <AppContent />
+          </WorkerAuthProvider>
+        </NotificationProvider>
       </Router>
     </ThemeProvider>
   );

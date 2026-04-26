@@ -13,6 +13,7 @@ import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
 import ConfirmModal from './ConfirmModal';
+import { siteConfirm } from '../ui/NotificationProvider';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import HomeSectionsTab from './HomeSectionsTab';
@@ -751,7 +752,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteBrand = async (id: string) => {
-    if (window.confirm('Bu markanı silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu markanı silmək istədiyinizdən əminsiniz?')) {
       try {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
@@ -793,7 +794,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (window.confirm('Bu kateqoriyanı silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu kateqoriyanı silmək istədiyinizdən əminsiniz?')) {
       try {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
@@ -808,7 +809,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteBlog = async (id: string) => {
-    if (window.confirm('Bu bloq yazısını silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu bloq yazısını silmək istədiyinizdən əminsiniz?')) {
       try {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
@@ -863,7 +864,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeletePartner = async (id: string) => {
-    if (window.confirm('Bu tərəfdaşı silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu tərəfdaşı silmək istədiyinizdən əminsiniz?')) {
       try {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
@@ -878,7 +879,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (window.confirm('Bu məhsulu silmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu məhsulu silmək istədiyinizdən əminsiniz?')) {
       try {
         await productService.delete(id);
         await loadData();
@@ -917,7 +918,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleApproveB2B = async (requestId: string, request: B2BRequest) => {
-    if (window.confirm('Bu müraciəti təsdiq edib B2B istifadəçi yaratmaq istəyirsiniz?')) {
+    if (await siteConfirm('Bu müraciəti təsdiq edib B2B istifadəçi yaratmaq istəyirsiniz?')) {
       try {
         const { collection, query, where, getDocs, doc, updateDoc, getDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
@@ -974,7 +975,7 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleRejectB2B = async (requestId: string) => {
-    if (window.confirm('Bu müraciəti rədd etmək istədiyinizdən əminsiniz?')) {
+    if (await siteConfirm('Bu müraciəti rədd etmək istədiyinizdən əminsiniz?')) {
       try {
         const { doc, updateDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
