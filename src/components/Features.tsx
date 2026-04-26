@@ -6,7 +6,6 @@ const Features: React.FC = () => {
   const { t } = useTranslation();
 
   const subtitle = t('features.subtitle', { defaultValue: 'BİZİM ÖHDƏLİYİMİZ' });
-  const heading = t('features.heading', { defaultValue: 'Dəyər Fəlsəfəmiz' });
 
   const features = [
     { icon: Award,       title: t('features.quality'),    description: t('features.qualityDesc') },
@@ -34,16 +33,13 @@ const Features: React.FC = () => {
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center mb-14 md:mb-20 dv-reveal is-in">
-          <div className="inline-flex items-center mb-4">
+          <div className="inline-flex items-center">
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold" data-testid="dv-features-subtitle">
               {subtitle}
             </span>
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
           </div>
-          <h2 className="font-playfair text-3xl md:text-5xl font-light text-black tracking-tight" data-testid="dv-features-heading">
-            {heading}
-          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-6">
