@@ -11,6 +11,7 @@ import ComingSoonTab from './ComingSoonTab';
 import AboutManagementTab from './AboutManagementTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
+import AdminToggleModal from './AdminToggleModal';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import HomeSectionsTab from './HomeSectionsTab';
@@ -83,6 +84,12 @@ const AdminPanel: React.FC = () => {
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('all');
   const [adminBrandFilter, setAdminBrandFilter] = useState('all');
   const [adminStockFilter, setAdminStockFilter] = useState('all');
+
+  // Admin role toggle modal state
+  const [adminToggleTarget, setAdminToggleTarget] = useState<{
+    userId: string; userName: string; newRole: 'admin' | 'customer';
+  } | null>(null);
+  const [toggleToast, setToggleToast] = useState<string>('');
 
   // Strip leading minus and any "-" so value cannot go below zero.
   // Empty string is allowed so the input can be cleared.
@@ -994,27 +1001,26 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleToggleAdmin = async (
+  const handleToggleAdmin = (
     userId: string,
     userName: string,
     newRole: 'admin' | 'customer'
   ) => {
-    const pwd = window.prompt('Şifrəni daxil edin:');
-    if (pwd === null) return;
-    if (pwd !== '20202025') {
-      alert('Yanlış şifrə.');
-      return;
-    }
-    const action = newRole === 'admin' ? 'admin etmək' : 'adminliyi almaq';
-    if (!window.confirm(`${userName} istifadəçisini ${action} istədiyinizdən əminsiniz?`)) return;
-    try {
-      await userService.setUserRole(userId, newRole);
-      await loadData();
-      alert(newRole === 'admin' ? 'İstifadəçi admin edildi.' : 'Adminlik geri alındı.');
-    } catch (error) {
-      console.error('Error toggling admin role:', error);
-      alert('Xəta baş verdi: ' + (error as Error).message);
-    }
+    // Açıb modal göstər (sayt-içi bildiriş + şifrə yoxlanışı)
+    setAdminToggleTarget({ userId, userName, newRole });
+  };
+
+  const confirmAdminToggle = async () => {
+    if (!adminToggleTarget) return;
+    const { userId, userName, newRole } = adminToggleTarget;
+    await userService.setUserRole(userId, newRole);
+    await loadData();
+    setToggleToast(
+      newRole === 'admin'
+        ? `${userName} artıq admindir`
+        : `${userName} artıq müştəridir`
+    );
+    setTimeout(() => setToggleToast(''), 3500);
   };
 
   const handleLogout = async () => {
@@ -2846,6 +2852,26 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
       </div>
+
+      {/* Admin role toggle modal */}
+      <AdminToggleModal
+        open={!!adminToggleTarget}
+        userName={adminToggleTarget?.userName || ''}
+        newRole={adminToggleTarget?.newRole || 'customer'}
+        onClose={() => setAdminToggleTarget(null)}
+        onConfirm={confirmAdminToggle}
+      />
+
+      {/* In-app toast */}
+      {toggleToast && (
+        <div
+          className="fixed bottom-6 right-6 z-[110] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm animate-in fade-in slide-in-from-bottom-4"
+          data-testid="admin-toast"
+        >
+          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+          {toggleToast}
+        </div>
+      )}
     </div>
   );
 };
