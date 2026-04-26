@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase } from 'lucide-react';
 import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
@@ -14,6 +14,7 @@ import PasswordProtectedSection from './PasswordProtectedSection';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import HomeSectionsTab from './HomeSectionsTab';
+import WorkersTab from './WorkersTab';
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -1031,6 +1032,7 @@ const AdminPanel: React.FC = () => {
     { id: 'b2b', label: t('admin.b2bRequests'), icon: Users },
     { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
     { id: 'b2bNotifications', label: 'B2B Bildirişlər', icon: Bell },
+    { id: 'workers', label: 'İşçilər', icon: Briefcase },
     { id: 'users', label: t('admin.users'), icon: Users },
   ];
 
@@ -2630,6 +2632,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'about' && <AboutManagementTab />}
 
         {activeTab === 'contactMessages' && <ContactMessagesTab />}
+        {activeTab === 'workers' && <WorkersTab />}
 
         {activeTab === 'siteSettings' && <SiteSettingsTab />}
 

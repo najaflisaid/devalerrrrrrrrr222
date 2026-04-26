@@ -26,6 +26,9 @@ import ContactPage from './pages/ContactPage';
 import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import B2BOrdersPage from './pages/B2BOrdersPage';
+import WorkerLogin from './pages/workers/WorkerLogin';
+import WorkerDashboard from './pages/workers/WorkerDashboard';
+import { WorkerAuthProvider } from './context/WorkerAuthContext';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
@@ -53,6 +56,10 @@ const AppContent: React.FC = () => {
     <>
       <div className="min-h-screen bg-white">
         <Routes>
+          {/* Worker routes */}
+          <Route path="/workers" element={<WorkerLogin />} />
+          <Route path="/workers/dashboard" element={<WorkerDashboard />} />
+
           {/* Existing Routes */}
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
@@ -104,7 +111,9 @@ function App() {
     <ThemeProvider>
       <Router>
         <ScrollToTop />
-        <AppContent />
+        <WorkerAuthProvider>
+          <AppContent />
+        </WorkerAuthProvider>
       </Router>
     </ThemeProvider>
   );
