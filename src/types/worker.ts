@@ -83,10 +83,10 @@ export interface WorkerNotification {
 }
 
 export interface PerformanceBreakdown {
-  attendance: number;     // % bu ay davamiyyət (0-100)
-  punctuality: number;    // % vaxtında işə başlama (0-100)
-  target: number;         // % aylıq hədəfin yerinə yetirilməsi (0-100)
+  salesScore: number;     // % aylıq hədəfin yerinə yetirilməsi (0-100)
+  hitBonus: number;       // hədəfi vuranlara bonus (+15 əgər hədəf 100%+)
   finesPenalty: number;   // mənfi dəyər (cərimələrə görə)
+  leavesPenalty: number;  // mənfi dəyər (məzuniyyət/icazə müraciətlərinə görə)
   rewardsBonus: number;   // müsbət dəyər (mükafatlara görə)
   total: number;          // 0-100 yekun reytinq
 }

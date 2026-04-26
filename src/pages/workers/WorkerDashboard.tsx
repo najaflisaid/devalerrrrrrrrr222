@@ -1,20 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Loader2, LogOut, CalendarDays, AlertOctagon, Award, Clock,
+  Loader2, LogOut, CalendarDays, AlertOctagon, Award,
   Send, Plus, TrendingUp, CheckCircle2, Hourglass, X,
   Bell, Briefcase, Activity, Trophy, Crown, Medal, FileText,
 } from 'lucide-react';
 import { useWorkerAuth } from '../../context/WorkerAuthContext';
 import {
-  startWork, endWork, getTodayAttendance, listAttendance,
   listFines, listRewards, listSales, listRequests, submitRequest,
   listNotifications, markNotificationRead,
-  computeAttendancePercent, computePerformance, computeExperience,
+  computePerformance, computeExperience,
   getMonthlyLeaderboard, monthYM, daysSince,
 } from '../../services/workerService';
 import type {
-  AttendanceEntry, Fine, Reward, SalesEntry, WorkerRequest,
+  Fine, Reward, SalesEntry, WorkerRequest,
   RequestType, WorkerNotification, PerformanceBreakdown,
 } from '../../types/worker';
 
@@ -86,9 +85,6 @@ const WorkerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { worker, loading, logout } = useWorkerAuth();
 
-  const [today, setToday] = useState<AttendanceEntry | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceEntry[]>([]);
-  const [attPercent, setAttPercent] = useState(0);
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [sales, setSales] = useState<SalesEntry[]>([]);
@@ -97,7 +93,6 @@ const WorkerDashboard: React.FC = () => {
   const [perf, setPerf] = useState<PerformanceBreakdown | null>(null);
   const [leaderboard, setLeaderboard] = useState<Awaited<ReturnType<typeof getMonthlyLeaderboard>>>([]);
 
-  const [busyClock, setBusyClock] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
   const [reqDesc, setReqDesc] = useState(REQUEST_TEMPLATES.leave);
@@ -107,10 +102,7 @@ const WorkerDashboard: React.FC = () => {
 
   const loadAll = async () => {
     if (!worker) return;
-    const [t, a, p, f, r, s, rq, nots, pf, lb] = await Promise.all([
-      getTodayAttendance(worker.id),
-      listAttendance(worker.id, 31),
-      computeAttendancePercent(worker.id),
+    const [f, r, s, rq, nots, pf, lb] = await Promise.all([
       listFines(worker.id),
       listRewards(worker.id),
       listSales(worker.id, monthYM()),
@@ -119,7 +111,6 @@ const WorkerDashboard: React.FC = () => {
       computePerformance(worker),
       getMonthlyLeaderboard(),
     ]);
-    setToday(t); setAttendance(a); setAttPercent(p);
     setFines(f); setRewards(r); setSales(s); setRequests(rq); setNotifications(nots);
     setPerf(pf); setLeaderboard(lb);
   };
@@ -153,17 +144,6 @@ const WorkerDashboard: React.FC = () => {
       openedAt: new Date(new Date(worker.hireDate).getTime() + required * 86400000).toISOString().slice(0, 10),
     };
   }, [worker]);
-
-  const handleStart = async () => {
-    if (!worker || busyClock) return;
-    setBusyClock(true);
-    try { const e = await startWork(worker.id); setToday(e); } finally { setBusyClock(false); }
-  };
-  const handleEnd = async () => {
-    if (!worker || busyClock) return;
-    setBusyClock(true);
-    try { const e = await endWork(worker.id); if (e) setToday(e); await loadAll(); } finally { setBusyClock(false); }
-  };
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,69 +234,17 @@ const WorkerDashboard: React.FC = () => {
                 style={{ width: `${perf?.total ?? 0}%` }} />
             </div>
             {perf && (
-              <div className="mt-4 grid grid-cols-3 gap-2 text-[10px]">
-                <PerfMini label="Davamiyyət" value={`${perf.attendance}%`} />
-                <PerfMini label="Vaxtında" value={`${perf.punctuality}%`} />
-                <PerfMini label="Hədəf" value={`${perf.target}%`} />
+              <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
+                <PerfMini label="Satış" value={`${perf.salesScore}%`} />
+                <PerfMini label="Hədəf bonus" value={perf.hitBonus > 0 ? `+${perf.hitBonus}` : '—'} />
+                <PerfMini label="Mükafat" value={perf.rewardsBonus > 0 ? `+${perf.rewardsBonus}` : '—'} />
+                <PerfMini label="Cərimə" value={perf.finesPenalty < 0 ? `${perf.finesPenalty}` : '—'} />
               </div>
             )}
+            <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+              Satışların yüksək olması, hədəfi vurmaq və mükafatlar reytinqi qaldırır. Cərimələr və məzuniyyət istəkləri reytinqi azaldır.
+            </p>
           </div>
-        </section>
-
-        {/* Attendance */}
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div>
-              <h3 className="font-playfair text-xl text-black mb-1">İş Günü</h3>
-              <p className="text-sm text-gray-500">
-                Bu gün:{' '}
-                <span className="text-black font-medium">Başlama: {fmtTime(today?.startTime)}</span>{'  '}
-                <span className="mx-1 text-gray-300">·</span>{'  '}
-                <span className="text-black font-medium">Bitmə: {fmtTime(today?.endTime)}</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider text-gray-500">Bu ay davamiyyət</div>
-                <div className="text-lg font-semibold text-black">{attPercent}%</div>
-              </div>
-              <button onClick={handleStart} disabled={!!today?.startTime || busyClock}
-                className="px-5 py-2.5 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                data-testid="worker-clock-start">
-                {busyClock && !today?.startTime && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <Clock className="h-3.5 w-3.5" /> İşə başla
-              </button>
-              <button onClick={handleEnd} disabled={!today?.startTime || !!today?.endTime || busyClock}
-                className="px-5 py-2.5 border border-gray-300 text-gray-800 rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                data-testid="worker-clock-end">
-                İşi sonlandır
-              </button>
-            </div>
-          </div>
-
-          {/* Daily log */}
-          {attendance.length > 0 && (
-            <div className="mt-3 border-t border-gray-100 pt-4">
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Gündəlik cədvəl (son 30 gün)</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                    <th className="py-2 pr-4">Tarix</th><th className="py-2 pr-4">Başlama</th><th className="py-2 pr-4">Bitmə</th><th className="py-2">Müddət</th>
-                  </tr></thead>
-                  <tbody>
-                    {attendance.slice(0, 10).map(a => (
-                      <tr key={a.id} className="border-b border-gray-50 last:border-0">
-                        <td className="py-2 pr-4 font-medium">{fmtDate(a.date + 'T00:00:00')}</td>
-                        <td className="py-2 pr-4">{fmtTime(a.startTime)}</td>
-                        <td className="py-2 pr-4">{fmtTime(a.endTime)}</td>
-                        <td className="py-2">{a.durationMs ? `${Math.floor(a.durationMs / 3600000)}s ${Math.floor((a.durationMs % 3600000) / 60000)}d` : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </section>
 
         {/* Targets / Performance */}

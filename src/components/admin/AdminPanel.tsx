@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase, ShieldCheck } from 'lucide-react';
 import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
@@ -999,6 +999,12 @@ const AdminPanel: React.FC = () => {
     userName: string,
     newRole: 'admin' | 'customer'
   ) => {
+    const pwd = window.prompt('Şifrəni daxil edin:');
+    if (pwd === null) return;
+    if (pwd !== '20202025') {
+      alert('Yanlış şifrə.');
+      return;
+    }
     const action = newRole === 'admin' ? 'admin etmək' : 'adminliyi almaq';
     if (!window.confirm(`${userName} istifadəçisini ${action} istədiyinizdən əminsiniz?`)) return;
     try {
@@ -2811,30 +2817,25 @@ const AdminPanel: React.FC = () => {
                       }`}>
                         {user.role === 'admin' ? 'Admin' : 'Müştəri'}
                       </span>
-                      {user.role === 'admin' ? (
+                      <button
+                        onClick={() => handleToggleAdmin(
+                          user.id,
+                          `${user.name} ${user.surname}`,
+                          user.role === 'admin' ? 'customer' : 'admin'
+                        )}
+                        title={user.role === 'admin' ? 'Adminliyi geri al' : 'Admin et'}
+                        className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-all"
+                        data-testid={`toggle-admin-${user.id}`}
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                      </button>
+                      {user.role !== 'admin' && (
                         <button
-                          onClick={() => handleToggleAdmin(user.id, `${user.name} ${user.surname}`, 'customer')}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-all"
-                          data-testid={`revoke-admin-${user.id}`}
+                          onClick={() => handleDeleteUser(user.id, `${user.name} ${user.surname}`)}
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
                         >
-                          Adminliyi al
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleToggleAdmin(user.id, `${user.name} ${user.surname}`, 'admin')}
-                            className="px-3 py-1.5 text-xs font-medium text-white bg-gray-900 rounded-lg hover:bg-black transition-all"
-                            data-testid={`make-admin-${user.id}`}
-                          >
-                            Admin et
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id, `${user.name} ${user.surname}`)}
-                            className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
                       )}
                     </div>
                   </div>

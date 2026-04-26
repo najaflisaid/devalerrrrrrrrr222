@@ -299,60 +299,74 @@ export const updatePosition = async (id: string, name: string) => {
 export const deletePosition = async (id: string) => deleteDoc(doc(db, POSITIONS, id));
 
 // ───────────────────── Performance / Rating ─────────────────────
-// On-time threshold — başlama saatı bu vaxtdan əvvəl olmalıdır
-const ON_TIME_HOUR = 10;
+// Reytinq emsalları:
+//   - 70%-i aylıq satış hədəfinə görə
+//   - +15 bonus hədəfi vuranda
+//   - hər mükafata +5 (max +20)
+//   - hər cəriməyə −8 (max −40)
+//   - hər təsdiqlənmiş məzuniyyət / icazəyə −5 (max −20)
+//   - Hədəf 0-dırsa, yalnız aktivlik baxımından qiymətləndirilir
 
 export const computePerformance = async (worker: Worker): Promise<PerformanceBreakdown> => {
   const ym = monthYM();
-  const [attendance, fines, rewards, sales] = await Promise.all([
-    listAttendance(worker.id, 31),
+  const [fines, rewards, sales, requests] = await Promise.all([
     listFines(worker.id),
     listRewards(worker.id),
     listSales(worker.id, ym),
+    listRequests(worker.id),
   ]);
 
-  const monthAttendance = attendance.filter(a => a.date.startsWith(ym) && a.startTime);
-  const workingDaysSoFar = bakuDay();
-  const attendanceScore = workingDaysSoFar === 0
-    ? 0
-    : Math.min(100, (monthAttendance.length / workingDaysSoFar) * 100);
-
-  // Punctuality — başlama saatına görə (Bakı vaxtı ilə)
-  const punctualityScore = monthAttendance.length === 0
-    ? 0
-    : (monthAttendance.filter(a => {
-        if (!a.startTime) return false;
-        return bakuHour(a.startTime) < ON_TIME_HOUR;
-      }).length / monthAttendance.length) * 100;
-
-  // Target completion
+  // Bu ay üzrə satış
   const monthSales = sales.reduce((s, x) => s + (x.amount || 0), 0);
-  const targetScore = worker.monthlyTarget && worker.monthlyTarget > 0
-    ? Math.min(100, (monthSales / worker.monthlyTarget) * 100)
-    : 0;
+  const target = worker.monthlyTarget || 0;
 
-  // Fines penalty — bu ay üzrə cərimələrə görə
-  const monthFines = fines.filter(f => (f.date || '').startsWith(ym)).length;
-  const finesPenalty = -Math.min(30, monthFines * 5);
+  // Aylıq cəm satış (admin daxil etmişsə) prioritetli olsun
+  const monthlyTotal = (worker.monthlyTotalMonth === ym && typeof worker.monthlyTotalSales === 'number')
+    ? worker.monthlyTotalSales
+    : monthSales;
 
-  // Rewards bonus — bu ay üzrə mükafatlara görə
-  const monthRewards = rewards.filter(r => (r.date || '').startsWith(ym)).length;
-  const rewardsBonus = Math.min(15, monthRewards * 3);
+  // Sales score (ümumi reytinqin 70%-i)
+  let salesScore = 0;
+  if (target > 0) {
+    salesScore = Math.min(100, (monthlyTotal / target) * 100);
+  } else if (monthlyTotal > 0) {
+    salesScore = 70; // hədəf yoxdur amma satış var
+  } else {
+    salesScore = 60; // baseline (yeni işçi və ya satış üçün məsul deyil)
+  }
 
-  // Coefficients: attendance 30%, punctuality 20%, target 50%
+  // Target hit bonus
+  const hitBonus = (target > 0 && monthlyTotal >= target) ? 15 : 0;
+
+  // Fines penalty (bu ay)
+  const monthFinesCount = fines.filter(f => (f.date || '').startsWith(ym)).length;
+  const finesPenalty = -Math.min(40, monthFinesCount * 8);
+
+  // Rewards bonus (bu ay)
+  const monthRewardsCount = rewards.filter(r => (r.date || '').startsWith(ym)).length;
+  const rewardsBonus = Math.min(20, monthRewardsCount * 5);
+
+  // Leave/permission penalty — bu ay üzrə təsdiqlənmiş `leave` müraciətləri
+  const monthLeavesCount = requests.filter(r =>
+    r.type === 'leave' &&
+    r.status === 'resolved' &&
+    (r.createdAt || '').startsWith(ym)
+  ).length;
+  const leavesPenalty = -Math.min(20, monthLeavesCount * 5);
+
   const total = Math.max(0, Math.min(100, Math.round(
-    attendanceScore * 0.30 +
-    punctualityScore * 0.20 +
-    targetScore * 0.50 +
+    salesScore * 0.70 +
+    hitBonus +
+    rewardsBonus +
     finesPenalty +
-    rewardsBonus
+    leavesPenalty
   )));
 
   return {
-    attendance: Math.round(attendanceScore),
-    punctuality: Math.round(punctualityScore),
-    target: Math.round(targetScore),
+    salesScore: Math.round(salesScore),
+    hitBonus,
     finesPenalty,
+    leavesPenalty,
     rewardsBonus,
     total,
   };
