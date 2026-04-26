@@ -132,6 +132,15 @@ export const userService = {
     }
   },
 
+  async setUserRole(userId: string, role: 'customer' | 'admin' | 'b2b'): Promise<void> {
+    const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+    if (!usersSnapshot.empty) {
+      await updateDoc(usersSnapshot.docs[0].ref, { role });
+    } else {
+      throw new Error('İstifadəçi tapılmadı');
+    }
+  },
+
   async updateUserDiscount(
     userId: string,
     discountPercentage: number,

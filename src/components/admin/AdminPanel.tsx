@@ -994,6 +994,23 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleToggleAdmin = async (
+    userId: string,
+    userName: string,
+    newRole: 'admin' | 'customer'
+  ) => {
+    const action = newRole === 'admin' ? 'admin etmək' : 'adminliyi almaq';
+    if (!window.confirm(`${userName} istifadəçisini ${action} istədiyinizdən əminsiniz?`)) return;
+    try {
+      await userService.setUserRole(userId, newRole);
+      await loadData();
+      alert(newRole === 'admin' ? 'İstifadəçi admin edildi.' : 'Adminlik geri alındı.');
+    } catch (error) {
+      console.error('Error toggling admin role:', error);
+      alert('Xəta baş verdi: ' + (error as Error).message);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       localStorage.removeItem('userRole');
@@ -2632,11 +2649,19 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'about' && <AboutManagementTab />}
 
         {activeTab === 'contactMessages' && <ContactMessagesTab />}
-        {activeTab === 'workers' && <WorkersTab />}
+        {activeTab === 'workers' && (
+          <PasswordProtectedSection sectionName="workers">
+            <WorkersTab />
+          </PasswordProtectedSection>
+        )}
 
         {activeTab === 'siteSettings' && <SiteSettingsTab />}
 
-        {activeTab === 'b2bNotifications' && <B2BNotificationsTab />}
+        {activeTab === 'b2bNotifications' && (
+          <PasswordProtectedSection sectionName="b2bNotifications">
+            <B2BNotificationsTab />
+          </PasswordProtectedSection>
+        )}
 
         {activeTab === 'b2bUsers' && (
           <PasswordProtectedSection sectionName="b2bUsers">
@@ -2782,17 +2807,34 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        user.role === 'admin' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'
+                        user.role === 'admin' ? 'bg-gray-900 text-white' : 'bg-blue-100 text-blue-800'
                       }`}>
                         {user.role === 'admin' ? 'Admin' : 'Müştəri'}
                       </span>
-                      {user.role !== 'admin' && (
+                      {user.role === 'admin' ? (
                         <button
-                          onClick={() => handleDeleteUser(user.id, `${user.name} ${user.surname}`)}
-                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
+                          onClick={() => handleToggleAdmin(user.id, `${user.name} ${user.surname}`, 'customer')}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-all"
+                          data-testid={`revoke-admin-${user.id}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          Adminliyi al
                         </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleToggleAdmin(user.id, `${user.name} ${user.surname}`, 'admin')}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-gray-900 rounded-lg hover:bg-black transition-all"
+                            data-testid={`make-admin-${user.id}`}
+                          >
+                            Admin et
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id, `${user.name} ${user.surname}`)}
+                            className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
