@@ -21,8 +21,33 @@ const SALES = 'worker_sales';
 const REQUESTS = 'worker_requests';
 const NOTIFICATIONS = 'worker_notifications';
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const TZ = 'Asia/Baku';
+
+// Bakıdakı tarixi YYYY-MM-DD formatında qaytarır
+const todayStr = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  return parts; // en-CA verir YYYY-MM-DD
+};
 const nowIso = () => new Date().toISOString();
+
+// Bakı saatına görə YYYY-MM (ay) qaytarır
+const bakuMonthYM = (d = new Date()) => {
+  const y = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric' }).format(d);
+  const m = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, month: '2-digit' }).format(d);
+  return `${y}-${m}`;
+};
+
+// Bakı saatına görə günün tarixinin günü (1-31)
+const bakuDay = (d = new Date()) => {
+  return Number(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, day: '2-digit' }).format(d));
+};
+
+// Bakı saatına görə saat (0-23)
+const bakuHour = (iso: string) => {
+  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false }).format(new Date(iso)));
+};
 
 // ───────────────────── Workers ─────────────────────
 export const createWorker = async (
@@ -238,9 +263,7 @@ export const markNotificationRead = async (id: string) => {
 };
 
 // ───────────────────── Helpers ─────────────────────
-export const monthYM = (d = new Date()) => {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-};
+export const monthYM = (d = new Date()) => bakuMonthYM(d);
 
 export const daysSince = (iso: string): number => {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -250,8 +273,7 @@ export const computeAttendancePercent = async (workerId: string): Promise<number
   const ym = monthYM();
   const items = await listAttendance(workerId, 31);
   const monthDays = items.filter(a => a.date.startsWith(ym) && a.startTime);
-  const today = new Date();
-  const workingDaysSoFar = today.getDate(); // simple proxy
+  const workingDaysSoFar = bakuDay(); // bu günün tarixi (Bakı vaxtı ilə)
   const present = monthDays.length;
   return workingDaysSoFar === 0 ? 0 : Math.min(100, Math.round((present / workingDaysSoFar) * 100));
 };
@@ -290,19 +312,17 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
   ]);
 
   const monthAttendance = attendance.filter(a => a.date.startsWith(ym) && a.startTime);
-  const today = new Date();
-  const workingDaysSoFar = today.getDate();
+  const workingDaysSoFar = bakuDay();
   const attendanceScore = workingDaysSoFar === 0
     ? 0
     : Math.min(100, (monthAttendance.length / workingDaysSoFar) * 100);
 
-  // Punctuality — başlama saatına görə
+  // Punctuality — başlama saatına görə (Bakı vaxtı ilə)
   const punctualityScore = monthAttendance.length === 0
     ? 0
     : (monthAttendance.filter(a => {
         if (!a.startTime) return false;
-        const h = new Date(a.startTime).getHours();
-        return h < ON_TIME_HOUR;
+        return bakuHour(a.startTime) < ON_TIME_HOUR;
       }).length / monthAttendance.length) * 100;
 
   // Target completion

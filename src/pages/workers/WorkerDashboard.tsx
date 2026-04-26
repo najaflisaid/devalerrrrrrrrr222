@@ -18,11 +18,26 @@ import type {
   RequestType, WorkerNotification, PerformanceBreakdown,
 } from '../../types/worker';
 
+const TZ = 'Asia/Baku';
+
 const fmtDate = (iso: string) => {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('az-AZ'); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleDateString('az-AZ', { timeZone: TZ });
+  } catch { return iso; }
 };
-const fmtTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+const fmtTime = (iso?: string) => iso
+  ? new Date(iso).toLocaleTimeString('az-AZ', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  : '—';
+const fmtDateTime = (iso: string) => {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('az-AZ', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return iso; }
+};
 
 const VACATION_UNLOCK_MONTHS = 6;
 
@@ -419,7 +434,7 @@ const WorkerDashboard: React.FC = () => {
                     <p className="text-sm text-black flex-1 whitespace-pre-line">{n.message}</p>
                     {!n.read && <span className="text-[9px] uppercase tracking-wider text-[#8a6d10] font-bold whitespace-nowrap">Yeni</span>}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString('az-AZ')}</p>
+                  <p className="text-[10px] text-gray-500 mt-1">{fmtDateTime(n.createdAt)}</p>
                 </li>
               ))}
             </ul>
@@ -572,7 +587,7 @@ const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusPill />
-          <span className="text-[10px] text-gray-400">{new Date(item.createdAt).toLocaleString('az-AZ')}</span>
+          <span className="text-[10px] text-gray-400">{fmtDateTime(item.createdAt)}</span>
         </div>
       </div>
     </li>
@@ -601,7 +616,7 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
                 <li key={n.id} className={`p-3 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 ${!n.read ? 'bg-amber-50/30' : ''}`}
                     onClick={() => !n.read && onRead(n.id)}>
                   <p className="text-sm text-black whitespace-pre-line">{n.message}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{new Date(n.createdAt).toLocaleString('az-AZ')}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{fmtDateTime(n.createdAt)}</p>
                 </li>
               ))}
             </ul>

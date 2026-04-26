@@ -22,7 +22,16 @@ import type {
 
 type Mode = 'list' | 'create' | 'edit';
 
-const fmt = (iso: string) => iso ? new Date(iso).toLocaleDateString('az-AZ') : '—';
+const TZ = 'Asia/Baku';
+const fmt = (iso: string) => iso
+  ? new Date(iso).toLocaleDateString('az-AZ', { timeZone: TZ })
+  : '—';
+const fmtDateTime = (iso: string) => iso
+  ? new Date(iso).toLocaleString('az-AZ', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    })
+  : '—';
 
 const WorkersTab: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -701,7 +710,7 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
                     </p>
                     <p className="text-gray-700 mt-1 whitespace-pre-line">{r.description}</p>
                   </div>
-                  <span className="text-[10px] text-gray-400">{new Date(r.createdAt).toLocaleString('az-AZ')}</span>
+                  <span className="text-[10px] text-gray-400">{fmtDateTime(r.createdAt)}</span>
                 </div>
 
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
