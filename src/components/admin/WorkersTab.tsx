@@ -469,23 +469,32 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [ok, setOk] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason || !amount) return;
+    setErr('');
+    if (!reason.trim()) { setErr('Səbəbi yazın.'); return; }
+    if (!amount || Number(amount) <= 0) { setErr('Məbləğ daxil edin.'); return; }
     setBusy(true);
     try {
-      await addFine({ workerId, reason, amount: Number(amount), date: new Date().toISOString() });
-      setReason(''); setAmount(''); await reload();
+      await addFine({ workerId, reason: reason.trim(), amount: Number(amount), date: new Date().toISOString() });
+      setReason(''); setAmount(''); setOk(true); setTimeout(() => setOk(false), 2000);
+      await reload();
+    } catch (e: any) {
+      setErr(e?.message || 'Xəta baş verdi.');
     } finally { setBusy(false); }
   };
   return (
     <div>
-      <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Səbəb" className={inp + ' sm:col-span-2'} data-testid="fine-reason" />
-        <div className="flex gap-2">
-          <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ ₼" className={inp} data-testid="fine-amount" />
-          <button disabled={busy} className="px-4 bg-red-600 text-white rounded-lg text-sm flex items-center gap-1.5"><Plus className="h-4 w-4" /></button>
-        </div>
+      {err && <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded-lg" data-testid="fine-err">{err}</div>}
+      {ok && <div className="mb-3 p-2 bg-emerald-50 text-emerald-700 text-xs rounded-lg inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Cərimə əlavə olundu</div>}
+      <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">
+        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Səbəb (məs: Gec gəlmə)" className={inp + ' sm:col-span-6'} data-testid="fine-reason" />
+        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ ₼" className={inp + ' sm:col-span-3'} data-testid="fine-amount" />
+        <button type="submit" disabled={busy} className="sm:col-span-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5" data-testid="fine-submit">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Cərimə əlavə et
+        </button>
       </form>
       {items.length === 0 ? <p className="text-sm text-gray-400">Cərimə yoxdur</p> : (
         <ul className="space-y-2">
@@ -511,26 +520,44 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'bonus' | 'thanks' | 'raise'>('bonus');
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [ok, setOk] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason) return;
+    setErr('');
+    if (!reason.trim()) { setErr('Səbəbi yazın.'); return; }
+    if ((type === 'bonus' || type === 'raise') && (!amount || Number(amount) <= 0)) {
+      setErr('Bonus / artım üçün məbləğ daxil edin.');
+      return;
+    }
     setBusy(true);
     try {
-      await addReward({ workerId, type, amount: amount ? Number(amount) : undefined, reason, date: new Date().toISOString() });
-      setReason(''); setAmount(''); await reload();
+      const payload: any = { workerId, type, reason: reason.trim(), date: new Date().toISOString() };
+      if (amount) payload.amount = Number(amount);
+      await addReward(payload);
+      setReason(''); setAmount(''); setOk(true); setTimeout(() => setOk(false), 2000);
+      await reload();
+    } catch (e: any) {
+      setErr(e?.message || 'Xəta baş verdi.');
     } finally { setBusy(false); }
   };
   return (
     <div>
-      <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
-        <select value={type} onChange={(e) => setType(e.target.value as any)} className={inp}>
-          <option value="bonus">Bonus (₼)</option><option value="thanks">Təşəkkür</option><option value="raise">Maaş artımı (%)</option>
+      {err && <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded-lg" data-testid="reward-err">{err}</div>}
+      {ok && <div className="mb-3 p-2 bg-emerald-50 text-emerald-700 text-xs rounded-lg inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Mükafat əlavə olundu</div>}
+      <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">
+        <select value={type} onChange={(e) => setType(e.target.value as any)} className={inp + ' sm:col-span-3'} data-testid="reward-type">
+          <option value="bonus">Bonus (₼)</option>
+          <option value="thanks">Təşəkkür</option>
+          <option value="raise">Maaş artımı (%)</option>
         </select>
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Səbəb" className={inp + ' sm:col-span-2'} data-testid="reward-reason" />
-        <div className="flex gap-2">
-          <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ" className={inp} data-testid="reward-amount" />
-          <button disabled={busy} className="px-4 bg-emerald-600 text-white rounded-lg text-sm flex items-center"><Plus className="h-4 w-4" /></button>
-        </div>
+        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Səbəb (məs: Yüksək satış)" className={inp + ' sm:col-span-4'} data-testid="reward-reason" />
+        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)}
+          placeholder={type === 'thanks' ? 'Məbləğ (istəyə görə)' : 'Məbləğ'}
+          className={inp + ' sm:col-span-2'} data-testid="reward-amount" />
+        <button type="submit" disabled={busy} className="sm:col-span-3 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5" data-testid="reward-submit">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Mükafat ver
+        </button>
       </form>
       {items.length === 0 ? <p className="text-sm text-gray-400">Mükafat yoxdur</p> : (
         <ul className="space-y-2">
@@ -595,23 +622,35 @@ const SalesPanel: React.FC<{ workerId: string; target: number; items: SalesEntry
 // ─── Notification panel
 const NotifyPanel: React.FC<{ workerId: string }> = ({ workerId }) => {
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!msg.trim()) return;
-    await sendNotification(workerId, msg.trim());
-    setMsg(''); setSent(true); setTimeout(() => setSent(false), 2500);
+    setErr('');
+    if (!msg.trim()) { setErr('Mesaj boşdur.'); return; }
+    setBusy(true);
+    try {
+      await sendNotification(workerId, msg.trim());
+      setMsg(''); setSent(true); setTimeout(() => setSent(false), 2500);
+    } catch (e: any) {
+      setErr(e?.message || 'Bildiriş göndərilmədi.');
+    } finally { setBusy(false); }
   };
   return (
     <form onSubmit={submit} className="space-y-3">
+      {err && <div className="p-2 bg-red-50 text-red-700 text-xs rounded-lg" data-testid="notify-err">{err}</div>}
       <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3}
         placeholder="İşçiyə göndəriləcək mesaj..."
         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
         data-testid="notify-msg" />
       <div className="flex items-center justify-between">
         {sent && <span className="text-xs text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Göndərildi</span>}
-        <button className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-[#C99B1F]"
-          data-testid="notify-send"><BellPlus className="h-4 w-4" /> Bildiriş göndər</button>
+        <button type="submit" disabled={busy} className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-[#C99B1F] disabled:opacity-50"
+          data-testid="notify-send">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellPlus className="h-4 w-4" />}
+          Bildiriş göndər
+        </button>
       </div>
     </form>
   );
