@@ -12,6 +12,7 @@ import AboutManagementTab from './AboutManagementTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
+import ConfirmModal from './ConfirmModal';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import HomeSectionsTab from './HomeSectionsTab';
@@ -89,7 +90,16 @@ const AdminPanel: React.FC = () => {
   const [adminToggleTarget, setAdminToggleTarget] = useState<{
     userId: string; userName: string; newRole: 'admin' | 'customer';
   } | null>(null);
-  const [toggleToast, setToggleToast] = useState<string>('');
+  // Generic confirm-delete state
+  const [deleteUserTarget, setDeleteUserTarget] = useState<{
+    userId: string; userName: string;
+  } | null>(null);
+  // Sayt-içi toast bildirişi (browser alert əvəzinə)
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, tone: 'success' | 'error' = 'success') => {
+    setToast({ message, tone });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // Strip leading minus and any "-" so value cannot go below zero.
   // Empty string is allowed so the input can be cleared.
@@ -988,16 +998,21 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (window.confirm(`${userName} istifadəçisini silmək istədiyinizdən əminsiniz?`)) {
-      try {
-        await userService.deleteUser(userId);
-        await loadData();
-        alert('İstifadəçi uğurla silindi!');
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Xəta baş verdi: ' + (error as Error).message);
-      }
+  const handleDeleteUser = (userId: string, userName: string) => {
+    setDeleteUserTarget({ userId, userName });
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteUserTarget) return;
+    const { userId, userName } = deleteUserTarget;
+    try {
+      await userService.deleteUser(userId);
+      await loadData();
+      showToast(`${userName} silindi`, 'success');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showToast('Silinmədi: ' + (error as Error).message, 'error');
+      throw error;
     }
   };
 
@@ -1006,7 +1021,6 @@ const AdminPanel: React.FC = () => {
     userName: string,
     newRole: 'admin' | 'customer'
   ) => {
-    // Açıb modal göstər (sayt-içi bildiriş + şifrə yoxlanışı)
     setAdminToggleTarget({ userId, userName, newRole });
   };
 
@@ -1015,12 +1029,10 @@ const AdminPanel: React.FC = () => {
     const { userId, userName, newRole } = adminToggleTarget;
     await userService.setUserRole(userId, newRole);
     await loadData();
-    setToggleToast(
-      newRole === 'admin'
-        ? `${userName} artıq admindir`
-        : `${userName} artıq müştəridir`
+    showToast(
+      newRole === 'admin' ? `${userName} artıq admindir` : `${userName} artıq müştəridir`,
+      'success'
     );
-    setTimeout(() => setToggleToast(''), 3500);
   };
 
   const handleLogout = async () => {
@@ -2862,14 +2874,27 @@ const AdminPanel: React.FC = () => {
         onConfirm={confirmAdminToggle}
       />
 
+      {/* Delete user confirm modal */}
+      <ConfirmModal
+        open={!!deleteUserTarget}
+        title="İstifadəçini sil"
+        message={`${deleteUserTarget?.userName || ''} istifadəçisini silmək istədiyinizə əminsiniz?\n\nBu əməliyyat geri qaytarıla bilməz.`}
+        confirmLabel="Sil"
+        variant="danger"
+        onClose={() => setDeleteUserTarget(null)}
+        onConfirm={confirmDeleteUser}
+      />
+
       {/* In-app toast */}
-      {toggleToast && (
+      {toast && (
         <div
-          className="fixed bottom-6 right-6 z-[110] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm animate-in fade-in slide-in-from-bottom-4"
+          className={`fixed bottom-6 right-6 z-[110] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm animate-in fade-in slide-in-from-bottom-4 ${
+            toast.tone === 'success' ? 'bg-gray-900 text-white' : 'bg-red-600 text-white'
+          }`}
           data-testid="admin-toast"
         >
-          <ShieldCheck className="h-4 w-4 text-emerald-400" />
-          {toggleToast}
+          <ShieldCheck className={`h-4 w-4 ${toast.tone === 'success' ? 'text-emerald-400' : 'text-white'}`} />
+          {toast.message}
         </div>
       )}
     </div>
