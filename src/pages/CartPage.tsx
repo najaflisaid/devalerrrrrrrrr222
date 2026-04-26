@@ -101,9 +101,15 @@ const CartPage: React.FC = () => {
       const createdOrder = await createB2BOrder(order);
       console.log('Order created:', createdOrder);
 
-      console.log('Sending email...');
-      await sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber);
-      console.log('Email sent successfully');
+      // Email göndərişi sifarişin uğuruna təsir etməməlidir.
+      // Sifariş Firestore-da uğurla yaradılıb; email yalnız admin-ə bildirişdir.
+      try {
+        console.log('Sending email...');
+        await sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber);
+        console.log('Email sent successfully');
+      } catch (emailError) {
+        console.warn('Email göndərilə bilmədi (sifariş yaradılıb):', emailError);
+      }
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);
         if (userData.discountUsageType === 'once' && userDiscount > 0 && userData.id) {
