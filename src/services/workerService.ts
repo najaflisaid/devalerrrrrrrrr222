@@ -133,13 +133,13 @@ export const getTodayAttendance = async (workerId: string): Promise<AttendanceEn
 
 export const listAttendance = async (workerId: string, days = 60): Promise<AttendanceEntry[]> => {
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-  const q = query(
-    collection(db, ATTENDANCE),
-    where('workerId', '==', workerId),
-    where('date', '>=', since)
-  );
+  // Composite index tələbindən qaçmaq üçün yalnız workerId üzrə sorğu, tarix in-memory filtrlənir.
+  const q = query(collection(db, ATTENDANCE), where('workerId', '==', workerId));
   const snap = await getDocs(q);
-  return snap.docs.map(d => d.data() as AttendanceEntry).sort((a, b) => b.date.localeCompare(a.date));
+  return snap.docs
+    .map(d => d.data() as AttendanceEntry)
+    .filter(a => a.date >= since)
+    .sort((a, b) => b.date.localeCompare(a.date));
 };
 
 export const listAllAttendanceToday = async (): Promise<AttendanceEntry[]> => {
