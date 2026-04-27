@@ -21,12 +21,14 @@ import {
   resetVacation,
   computePerformance,
   setMonthlyTotal,
+  setMonthlySalesHistory,
   monthYM,
 } from '../../services/workerService';
 import type {
   Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position, Branch, Training,
   PerformanceBreakdown,
 } from '../../types/worker';
+import MonthlySalesChart from '../MonthlySalesChart';
 
 type Mode = 'list' | 'create' | 'edit';
 
@@ -779,7 +781,12 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
       {tab === 'info' && <WorkerForm positions={positions} branches={branches} existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
       {tab === 'fines' && <FinesPanel workerId={worker.id} items={fines} reload={reload} />}
       {tab === 'rewards' && <RewardsPanel workerId={worker.id} items={rewards} reload={reload} />}
-      {tab === 'total' && <MonthlyTotalPanel worker={worker} onSaved={onUpdated} />}
+      {tab === 'total' && (
+        <div className="space-y-5">
+          <MonthlyTotalPanel worker={worker} onSaved={onUpdated} />
+          <MonthlyHistoryPanel worker={worker} onSaved={onUpdated} />
+        </div>
+      )}
       {tab === 'vacation' && <VacationPanel worker={worker} onUpdated={onUpdated} />}
       {tab === 'notify' && <NotifyPanel workerId={worker.id} />}
     </div>
@@ -1279,3 +1286,145 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
 };
 
 export default WorkersTab;
+
+// ─── 12 aylıq satış tarixçəsi paneli (admin)
+// Admin keçmiş 12 ay üçün satış məbləğlərini daxil edə / dəyişə bilər.
+// Cari ay daxil edildikdə monthlyTotalSales/Month də yenilənir.
+const AZ_MONTHS_LONG_ADM = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+
+const buildLast12Months = (): { ym: string; label: string }[] => {
+  const arr: { ym: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth();
+    const y = d.getFullYear();
+    arr.push({
+      ym: `${y}-${String(m + 1).padStart(2, '0')}`,
+      label: `${AZ_MONTHS_LONG_ADM[m]} ${y}`,
+    });
+  }
+  return arr;
+};
+
+const MonthlyHistoryPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
+  const months = useMemo(() => buildLast12Months(), []);
+  const currentYM = monthYM();
+  const initial: Record<string, string> = useMemo(() => {
+    const h = worker.salesHistory || {};
+    const m: Record<string, string> = {};
+    months.forEach(({ ym }) => {
+      const v = h[ym];
+      m[ym] = typeof v === 'number' && v > 0 ? String(v) : '';
+    });
+    return m;
+  }, [worker.salesHistory, months]);
+
+  const [values, setValues] = useState<Record<string, string>>(initial);
+  const [busy, setBusy] = useState(false);
+  const [savedYM, setSavedYM] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
+
+  // worker dəyişəndə state-i yenilə
+  useEffect(() => {
+    setValues(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worker.id]);
+
+  // Live preview üçün hazırkı dəyərlərdən salesHistory düzəlt
+  const livePreview = useMemo(() => {
+    const out: Record<string, number> = { ...(worker.salesHistory || {}) };
+    Object.entries(values).forEach(([k, v]) => {
+      const n = Number(v);
+      if (!Number.isNaN(n) && v !== '') out[k] = n;
+    });
+    return out;
+  }, [values, worker.salesHistory]);
+
+  const saveAll = async () => {
+    setBusy(true);
+    setErrorMsg('');
+    try {
+      const changed = months.filter(({ ym }) => (values[ym] || '') !== (initial[ym] || ''));
+      if (changed.length === 0) {
+        setSavedYM('all');
+        setTimeout(() => setSavedYM(''), 2000);
+        return;
+      }
+      for (const { ym } of changed) {
+        const n = Number(values[ym] || 0) || 0;
+        await setMonthlySalesHistory(worker.id, ym, n);
+      }
+      setSavedYM('all');
+      setTimeout(() => setSavedYM(''), 2500);
+      await onSaved();
+    } catch (err: any) {
+      console.error('Monthly history save failed:', err);
+      setErrorMsg(err?.message || 'Saxlamaq mümkün olmadı.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-100 p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-[#D4AF37]" /> 12 Aylıq Satış Tarixçəsi
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Hər ayın ümumi satışını ₼ ilə daxil edin. İşçi öz panelində eyni rəqəmləri qrafik kimi görəcək.
+          </p>
+        </div>
+        <button
+          onClick={saveAll}
+          disabled={busy}
+          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2"
+          data-testid="monthly-history-save"
+        >
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Hamısını saxla
+        </button>
+      </div>
+
+      {/* Mini chart preview */}
+      <MonthlySalesChart
+        salesHistory={livePreview}
+        target={worker.monthlyTarget || 0}
+        title="Önizləmə"
+        height={140}
+      />
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {months.map(({ ym, label }) => {
+          const isCurrent = ym === currentYM;
+          return (
+            <div key={ym} className={`rounded-lg border p-3 ${isCurrent ? 'border-[#D4AF37] bg-[#FFF8E5]/60' : 'border-gray-100 bg-gray-50/40'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-gray-700">{label}</label>
+                {isCurrent && <span className="text-[9px] uppercase tracking-wider text-[#8a6d10] font-semibold">cari</span>}
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  value={values[ym] ?? ''}
+                  onChange={(e) => setValues(v => ({ ...v, [ym]: e.target.value }))}
+                  className="w-full pl-2 pr-7 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/40 focus:border-[#D4AF37] bg-white"
+                  placeholder="0"
+                  data-testid={`history-input-${ym}`}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">₼</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3 text-xs">
+        {savedYM === 'all' && <span className="text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
+        {errorMsg && <span className="text-red-600">{errorMsg}</span>}
+      </div>
+    </div>
+  );
+};

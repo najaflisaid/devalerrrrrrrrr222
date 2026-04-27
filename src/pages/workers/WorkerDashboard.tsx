@@ -18,6 +18,7 @@ import type {
   Fine, Reward, SalesEntry, WorkerRequest,
   RequestType, WorkerNotification, PerformanceBreakdown, Training, BranchLeaderboardEntry,
 } from '../../types/worker';
+import MonthlySalesChart from '../../components/MonthlySalesChart';
 
 const TZ = 'Asia/Baku';
 
@@ -274,7 +275,7 @@ const WorkerDashboard: React.FC = () => {
           <div className="bg-gradient-to-br from-[#FFF8E5] to-white rounded-2xl border border-[#D4AF37]/40 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs uppercase tracking-wider text-[#8a6d10] font-semibold flex items-center gap-1.5">
-                <Activity className="h-3.5 w-3.5" /> Performans Reytinqi
+                <Activity className="h-3.5 w-3.5" /> Performans
               </h3>
             </div>
             <div className="flex items-end gap-2">
@@ -320,6 +321,13 @@ const WorkerDashboard: React.FC = () => {
             </div>
           </div>
         </section>
+
+        {/* 12 Aylıq satış qrafiki */}
+        <MonthlySalesChart
+          salesHistory={worker.salesHistory}
+          target={worker.monthlyTarget || 0}
+          title="12 Aylıq Satış Qrafikim"
+        />
 
         {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />

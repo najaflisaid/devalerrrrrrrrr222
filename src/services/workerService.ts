@@ -357,6 +357,17 @@ export const setMonthlyTotal = async (workerId: string, total: number, ym: strin
   } as any);
 };
 
+// İstənilən ay üçün satış tarixçəsini saxla / silməsi (12 aylıq qrafik üçün).
+// Əgər ay cari aydırsa, monthlyTotalSales/Month pointer-ləri də yenilənir.
+export const setMonthlySalesHistory = async (workerId: string, ym: string, amount: number) => {
+  const patch: any = { [`salesHistory.${ym}`]: amount };
+  if (ym === monthYM()) {
+    patch.monthlyTotalSales = amount;
+    patch.monthlyTotalMonth = ym;
+  }
+  await updateDoc(doc(db, WORKERS, workerId), patch);
+};
+
 // ───────────────────── Branches (Filiallar) ─────────────────────
 export const listBranches = async (): Promise<Branch[]> => {
   const snap = await getDocs(collection(db, BRANCHES));
