@@ -552,20 +552,6 @@ const ProductsPage: React.FC = () => {
                 </label>
               </div>
 
-              {isB2BUser && (
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={comingSoonFilter === 'comingSoon'}
-                      onChange={(e) => handleComingSoonFilterChange(e.target.checked)}
-                      className="mr-2 w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-blue-600">{t('common.comingSoonProducts')}</span>
-                  </label>
-                </div>
-              )}
-
               <button
                 onClick={() => {
                   setSelectedCategory('all');

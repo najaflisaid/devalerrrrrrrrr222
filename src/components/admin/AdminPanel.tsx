@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase, ShieldCheck, Lock } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -9,7 +9,6 @@ import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
-import ComingSoonTab from './ComingSoonTab';
 import AboutManagementTab from './AboutManagementTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
@@ -1100,7 +1099,6 @@ const AdminPanel: React.FC = () => {
 
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
-    { id: 'comingSoon', label: t('admin.comingSoon'), icon: Clock },
     { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
@@ -2708,8 +2706,6 @@ const AdminPanel: React.FC = () => {
           </div>
           </PasswordProtectedSection>
         )}
-
-        {activeTab === 'comingSoon' && <ComingSoonTab />}
 
         {activeTab === 'b2bOrders' && (
           <PasswordProtectedSection

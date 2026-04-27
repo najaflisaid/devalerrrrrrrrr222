@@ -115,12 +115,6 @@ const SiteSettingsTab: React.FC = () => {
         </button>
       </div>
 
-      {/* ========== Site Theme Toggle ========== */}
-      <SiteThemePanel />
-
-      {/* ========== Promise / Features Heading Editor ========== */}
-      <FeaturesHeadingPanel />
-
       <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
         {/* Copyright Text */}
         <div>
