@@ -20,6 +20,7 @@ import type {
   RequestType, WorkerNotification, PerformanceBreakdown, Training, BranchLeaderboardEntry,
 } from '../../types/worker';
 import MonthlySalesChart from '../../components/MonthlySalesChart';
+import InlineSignaturePad from '../../components/InlineSignaturePad';
 
 const TZ = 'Asia/Baku';
 
@@ -114,6 +115,7 @@ const WorkerDashboard: React.FC = () => {
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
   const [reqDesc, setReqDesc] = useState('');
+  const [reqSignature, setReqSignature] = useState<string>('');
   const [submittingReq, setSubmittingReq] = useState(false);
 
   useEffect(() => { if (!loading && !worker) navigate('/workers', { replace: true }); }, [worker, loading, navigate]);
@@ -184,12 +186,18 @@ const WorkerDashboard: React.FC = () => {
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!worker || !reqDesc.trim()) return;
+    if (!reqSignature) {
+      alert('Ərizəni göndərmək üçün əvvəlcə imza atmalısınız.');
+      return;
+    }
     setSubmittingReq(true);
     try {
       await submitRequest({
         workerId: worker.id, type: reqType, description: reqDesc.trim(),
+        signature: reqSignature,
       });
       setReqDesc(worker ? fillTemplate(REQUEST_TEMPLATES[reqType], worker.name, worker.surname) : '');
+      setReqSignature('');
       setShowRequestForm(false);
       await loadAll();
     } finally { setSubmittingReq(false); }
@@ -455,9 +463,20 @@ const WorkerDashboard: React.FC = () => {
                   style={{ fontFamily: '"Playfair Display", "Inter", Georgia, serif' }}
                   data-testid="worker-request-desc" />
               </div>
-              <div className="flex justify-end gap-2">
-                <button type="submit" disabled={submittingReq}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50"
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <InlineSignaturePad
+                  value={reqSignature}
+                  onChange={setReqSignature}
+                  label="İmza (məcburidir)"
+                  height={160}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[11px] text-gray-500">
+                  {reqSignature ? '✓ İmza əlavə olundu' : 'Ərizəni göndərmək üçün imza atın'}
+                </p>
+                <button type="submit" disabled={submittingReq || !reqSignature || !reqDesc.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="worker-request-submit">
                   {submittingReq ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   Göndər
@@ -821,26 +840,11 @@ const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | und
   );
 };
 
-// ─── Konfidensiallıq bildirişi (profilə daxil olanda göstərilir, qəbul edənə qədər qalır)
-const CONFIDENTIALITY_KEY = 'worker_confidentiality_acknowledged_v1';
-
+// ─── Konfidensiallıq bildirişi (profilə hər dəfə daxil olanda göstərilir)
 const ConfidentialityNotice: React.FC<{ workerId: string }> = ({ workerId }) => {
-  const storageKey = `${CONFIDENTIALITY_KEY}_${workerId}`;
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    try {
-      const acknowledged = localStorage.getItem(storageKey);
-      if (!acknowledged) setShow(true);
-    } catch {
-      setShow(true);
-    }
-  }, [storageKey]);
-
-  const accept = () => {
-    try { localStorage.setItem(storageKey, new Date().toISOString()); } catch { /* ignore */ }
-    setShow(false);
-  };
+  const [show, setShow] = useState(true);
+  // workerId dəyişəndə yenidən göstər (başqa hesabla daxil olunduqda)
+  useEffect(() => { setShow(true); }, [workerId]);
 
   if (!show) return null;
 
@@ -880,7 +884,7 @@ const ConfidentialityNotice: React.FC<{ workerId: string }> = ({ workerId }) => 
 
         <div className="p-5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
           <button
-            onClick={accept}
+            onClick={() => setShow(false)}
             className="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 inline-flex items-center gap-2"
             data-testid="confidentiality-accept"
           >

@@ -95,6 +95,7 @@ export interface WorkerRequest {
   type: RequestType;
   description: string;
   attachmentUrl?: string;
+  signature?: string; // data URL (base64 PNG) — işçinin əl imzası
   status: RequestStatus;
   adminResponse?: string;
   createdAt: string;

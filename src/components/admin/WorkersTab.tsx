@@ -1245,6 +1245,12 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
                           <span className="text-xs text-gray-500">· {r.type}</span>
                         </p>
                         <p className="text-gray-700 mt-1 whitespace-pre-line break-words">{r.description}</p>
+                        {r.signature && (
+                          <div className="mt-2 inline-block bg-white border border-gray-200 rounded-md p-1.5">
+                            <div className="text-[9px] uppercase tracking-wider text-gray-500 mb-0.5">İşçinin imzası</div>
+                            <img src={r.signature} alt="İmza" className="h-14 max-w-[200px] object-contain" />
+                          </div>
+                        )}
                       </div>
                       <span className="text-[10px] text-gray-400 shrink-0">{fmtDateTime(r.createdAt)}</span>
                     </div>
