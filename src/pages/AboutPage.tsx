@@ -150,18 +150,8 @@ const AboutPage: React.FC = () => {
           </div>
 
           <div className="grid md:grid-cols-12 gap-8 md:gap-16 px-2 md:px-0">
-            {/* LEFT column — eyebrow + heading */}
+            {/* LEFT column — heading */}
             <div className="md:col-span-5">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-                <span
-                  className="text-[10px] tracking-[0.45em] uppercase text-gray-500 font-medium"
-                  data-testid="about-mission-eyebrow"
-                >
-                  Notre Mission
-                </span>
-              </div>
-
               <h2
                 className="font-playfair text-4xl md:text-5xl lg:text-[3.75rem] font-light text-black leading-[1.05] tracking-tight"
                 data-testid="about-mission-heading"
@@ -169,12 +159,6 @@ const AboutPage: React.FC = () => {
                 {getField('mission_heading', t('about.ourMission'))}
                 <span style={{ color: '#D4AF37' }}>.</span>
               </h2>
-
-              <div className="hidden md:block mt-10">
-                <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-light">
-                  · Anno MMX ·
-                </span>
-              </div>
             </div>
 
             {/* RIGHT column — body text */}
@@ -186,11 +170,8 @@ const AboutPage: React.FC = () => {
                 {getField('mission', t('about.missionText'))}
               </p>
 
-              <div className="mt-10 flex items-center gap-4">
+              <div className="mt-10 flex items-center">
                 <span className="block w-10 h-[1px]" style={{ background: '#D4AF37' }} />
-                <span className="font-playfair italic text-gray-600 text-sm tracking-wide">
-                  Maison De Valeur
-                </span>
               </div>
             </div>
           </div>
