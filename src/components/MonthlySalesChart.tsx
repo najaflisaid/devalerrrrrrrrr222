@@ -15,6 +15,10 @@ export interface MonthlySalesChartProps {
   height?: number; // default 180
   className?: string;
   title?: string;
+  /** "rolling" — son 12 ay (default), "currentYear" — Yanvardan Dekabra qədər cari il */
+  mode?: 'rolling' | 'currentYear';
+  /** Orta satış göstərici. Default false. */
+  showAverage?: boolean;
 }
 
 interface MonthCell {
@@ -31,6 +35,21 @@ const buildLastNMonths = (n: number): MonthCell[] => {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const m = d.getMonth();
     const y = d.getFullYear();
+    const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+    arr.push({
+      ym,
+      shortLabel: AZ_MONTHS[m],
+      longLabel: `${AZ_MONTHS_LONG[m]} ${y}`,
+      value: 0,
+    });
+  }
+  return arr;
+};
+
+const buildCurrentYearMonths = (): MonthCell[] => {
+  const arr: MonthCell[] = [];
+  const y = new Date().getFullYear();
+  for (let m = 0; m < 12; m++) {
     const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
     arr.push({
       ym,
@@ -68,12 +87,14 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
   height = 180,
   className = '',
   title = '12 Aylıq Satış',
+  mode = 'rolling',
+  showAverage = false,
 }) => {
   const cells = useMemo(() => {
-    const months = buildLastNMonths(monthsCount);
+    const months = mode === 'currentYear' ? buildCurrentYearMonths() : buildLastNMonths(monthsCount);
     const hist = salesHistory || {};
     return months.map(m => ({ ...m, value: Number(hist[m.ym] || 0) }));
-  }, [salesHistory, monthsCount]);
+  }, [salesHistory, monthsCount, mode]);
 
   const maxVal = useMemo(
     () => Math.max(target || 0, ...cells.map(c => c.value), 1),
@@ -93,7 +114,9 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
       <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
         <div>
           <h3 className="font-playfair text-lg sm:text-xl text-black">{title}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Son {monthsCount} ayın satış göstəriciləri</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {mode === 'currentYear' ? `${new Date().getFullYear()} - Yanvar — Dekabr` : `Son ${monthsCount} ayın satış göstəriciləri`}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-full">
@@ -105,9 +128,11 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
               {overallTrend === 'none' && 'Məlumat yoxdur'}
             </span>
           </span>
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-[#8a6d10] rounded-full">
-            Orta: <strong>{fmt(avg)} ₼</strong>
-          </span>
+          {showAverage && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-[#8a6d10] rounded-full">
+              Orta: <strong>{fmt(avg)} ₼</strong>
+            </span>
+          )}
         </div>
       </div>
 

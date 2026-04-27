@@ -4,6 +4,7 @@ import {
   Loader2, LogOut, CalendarDays, AlertOctagon, Award,
   Send, Plus, TrendingUp, CheckCircle2, Hourglass, X,
   Bell, Activity, Trophy, Crown, Medal, FileText, GraduationCap, Building2, ExternalLink,
+  ChevronDown, ChevronUp, BarChart3, ShieldCheck, Sparkles,
 } from 'lucide-react';
 import { useWorkerAuth } from '../../context/WorkerAuthContext';
 import {
@@ -206,6 +207,9 @@ const WorkerDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Konfidensiallıq xəbərdarlığı — yalnız ilk girişdə */}
+      <ConfidentialityNotice workerId={worker.id} />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -322,12 +326,8 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* 12 Aylıq satış qrafiki */}
-        <MonthlySalesChart
-          salesHistory={worker.salesHistory}
-          target={worker.monthlyTarget || 0}
-          title="12 Aylıq Satış Qrafikim"
-        />
+        {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi */}
+        <SalesHistorySection salesHistory={worker.salesHistory} target={worker.monthlyTarget || 0} />
 
         {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
@@ -518,11 +518,13 @@ const LeaderboardSection: React.FC<{
   if (items.length === 0) return null;
   const myRank = items.find(i => i.workerId === currentId);
 
-  const rankIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="h-4 w-4 text-[#D4AF37] fill-[#D4AF37]" />;
-    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Medal className="h-4 w-4 text-amber-700" />;
-    return <span className="text-xs font-mono text-gray-500 w-4 text-center">{rank}</span>;
+  const rankBadge = (rank: number) => {
+    // 1, 2, 3 — qızıl/gümüş/bürünc fon ilə, qalanlar — sadə dairə
+    const base = 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0';
+    if (rank === 1) return <span className={`${base} bg-gradient-to-br from-[#D4AF37] to-[#F3E2A5] text-white shadow-md ring-2 ring-[#D4AF37]/30`}>1</span>;
+    if (rank === 2) return <span className={`${base} bg-gradient-to-br from-gray-300 to-gray-200 text-gray-800 shadow-sm`}>2</span>;
+    if (rank === 3) return <span className={`${base} bg-gradient-to-br from-amber-700 to-amber-500 text-white shadow-sm`}>3</span>;
+    return <span className={`${base} bg-gray-100 text-gray-600`}>{rank}</span>;
   };
 
   return (
@@ -548,23 +550,36 @@ const LeaderboardSection: React.FC<{
       <ul className="divide-y divide-gray-100">
         {items.map(i => {
           const isMe = i.workerId === currentId;
+          const isFirst = i.rank === 1 && i.hasTotal;
           return (
             <li key={i.workerId}
-              className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMe ? 'bg-[#FFF8E5]/60' : ''}`}
+              className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMe ? 'bg-[#FFF8E5]/60' : ''} ${isFirst ? 'bg-gradient-to-r from-[#FFF8E5]/80 to-transparent' : ''}`}
               data-testid={`leaderboard-row-${i.rank}`}>
-              <div className="w-8 flex items-center justify-center">{rankIcon(i.rank)}</div>
+              {rankBadge(i.rank)}
               <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center text-xs font-medium text-gray-600 shrink-0">
                 {i.photo ? <img src={i.photo} alt="" className="w-full h-full object-cover" /> : `${i.name?.[0]}${i.surname?.[0]}`}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
-                  {i.name} {i.surname}
-                  {i.branch && (
-                    <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-500 font-medium">· {i.branch}</span>
+                <p className={`text-sm truncate ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'} flex items-center gap-1.5 flex-wrap`}>
+                  <span>{i.name} {i.surname}</span>
+                  {isFirst && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] text-white text-[9px] uppercase tracking-wider font-bold shadow-sm" data-testid="best-of-month-badge">
+                      <Sparkles className="h-2.5 w-2.5" /> Ayın ən yaxşısı
+                    </span>
                   )}
-                  {isMe && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
+                  {isMe && <span className="text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
                 </p>
-                <p className="text-[11px] text-gray-500 truncate">{i.position}</p>
+                <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+                  <span>{i.position}</span>
+                  {i.branch && (
+                    <>
+                      <span className="text-gray-300">·</span>
+                      <span className="inline-flex items-center gap-0.5 text-gray-600">
+                        <Building2 className="h-2.5 w-2.5" /> {i.branch}
+                      </span>
+                    </>
+                  )}
+                </p>
               </div>
               {!i.hasTotal && (
                 <span className="text-[10px] uppercase tracking-wider text-gray-400">qeydiyyatda yoxdur</span>
@@ -750,3 +765,129 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
 };
 
 export default WorkerDashboard;
+
+// ─── Satışlarım — açılan/bağlanan bölmə (12 aylıq qrafik)
+const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined; target: number }> = ({ salesHistory, target }) => {
+  const [open, setOpen] = useState(false);
+  const totalThisYear = useMemo(() => {
+    const y = new Date().getFullYear();
+    const h = salesHistory || {};
+    let sum = 0;
+    for (let m = 1; m <= 12; m++) {
+      sum += Number(h[`${y}-${String(m).padStart(2, '0')}`] || 0);
+    }
+    return sum;
+  }, [salesHistory]);
+
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid="sales-history-section">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-3 px-6 py-5 hover:bg-gray-50 transition-colors"
+        data-testid="sales-history-toggle"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFF8E5] to-white border border-[#D4AF37]/40 flex items-center justify-center">
+            <BarChart3 className="h-5 w-5 text-[#D4AF37]" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-playfair text-xl text-black">Satışlarım</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {new Date().getFullYear()} ili üzrə aylıq satış qrafikim
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500">Bu ilin cəmi</p>
+            <p className="font-playfair text-base text-black">{totalThisYear.toLocaleString()} ₼</p>
+          </div>
+          {open ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
+        </div>
+      </button>
+      {open && (
+        <div className="px-6 pb-6 border-t border-gray-100 pt-5">
+          <MonthlySalesChart
+            salesHistory={salesHistory}
+            target={target}
+            title=""
+            mode="currentYear"
+            showAverage={false}
+            className="!p-0 !border-0 !shadow-none !rounded-none"
+          />
+        </div>
+      )}
+    </section>
+  );
+};
+
+// ─── Konfidensiallıq bildirişi (profilə daxil olanda göstərilir, qəbul edənə qədər qalır)
+const CONFIDENTIALITY_KEY = 'worker_confidentiality_acknowledged_v1';
+
+const ConfidentialityNotice: React.FC<{ workerId: string }> = ({ workerId }) => {
+  const storageKey = `${CONFIDENTIALITY_KEY}_${workerId}`;
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    try {
+      const acknowledged = localStorage.getItem(storageKey);
+      if (!acknowledged) setShow(true);
+    } catch {
+      setShow(true);
+    }
+  }, [storageKey]);
+
+  const accept = () => {
+    try { localStorage.setItem(storageKey, new Date().toISOString()); } catch { /* ignore */ }
+    setShow(false);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 animate-[fadeIn_0.2s_ease-out]" data-testid="confidentiality-notice">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-100 flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FFF8E5] to-white border border-[#D4AF37]/40 flex items-center justify-center shrink-0">
+            <ShieldCheck className="h-6 w-6 text-[#D4AF37]" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-playfair text-xl text-black leading-tight">Konfidensiallıq Bildirişi</h2>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] mt-1 font-semibold">De Valeur · Rəsmi xəbərdarlıq</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+          <p>
+            Hörmətli əməkdaş, sizin şəxsi panelinizdə əks olunan bütün məlumatlar — o cümlədən
+            <strong> aylıq satış göstəriciləri, hədəflər, performans reytinqi, mükafat və cərimə tarixçəsi, müraciətlər və daxili bildirişlər </strong>
+            — şirkətin <strong>kommersiya sirri</strong> və <strong>konfidensial məlumat</strong> kimi qiymətləndirilir.
+          </p>
+          <div className="bg-amber-50/60 border border-[#D4AF37]/30 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-[#8a6d10] flex items-center gap-1.5">
+              <AlertOctagon className="h-4 w-4" /> Diqqət
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-700">
+              <li>Bu məlumatları üçüncü şəxslərə (digər əməkdaşlar daxil olmaqla) göstərmək, paylaşmaq, ekran şəkli çıxarıb yaymaq və ya hər hansı formada açıqlamaq <strong>qadağandır</strong>.</li>
+              <li>Bu öhdəliyin pozulması imzaladığınız <strong>əmək müqaviləsinə</strong> və konfidensiallıq haqqında daxili qaydalara əsasən <strong>intizam, maddi və qanunvericiliklə nəzərdə tutulan digər məsuliyyət</strong> doğurur.</li>
+              <li>Profilinizə yalnız şəxsən daxil olmalısınız; giriş məlumatlarınızı heç kimlə paylaşmayın.</li>
+            </ul>
+          </div>
+          <p className="text-[12px] text-gray-500">
+            "Anladım və qəbul edirəm" düyməsinə basmaqla yuxarıda göstərilən şərtlərlə tanış olduğunuzu və onlara əməl etməyi öhdəyə götürdüyünüzü təsdiq edirsiniz.
+          </p>
+        </div>
+
+        <div className="p-5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+          <button
+            onClick={accept}
+            className="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 inline-flex items-center gap-2"
+            data-testid="confidentiality-accept"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Anladım və qəbul edirəm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
