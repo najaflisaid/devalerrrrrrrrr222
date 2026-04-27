@@ -73,12 +73,19 @@ const AdminPanel: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   // B2B sifariş bildirişi: pending statuslu sifarişlərin sayı (real-vaxt)
   const [pendingB2BOrdersCount, setPendingB2BOrdersCount] = useState(0);
+  // Admin şifrə ilə B2B Sifarişlər bölməsinə girəndən sonra "təsdiqlədiyi" miqdar.
+  // Yalnız bundan artıq YENİ sifariş gəldikdə badge yenidən görünəcək.
+  const [b2bAcknowledgedCount, setB2bAcknowledgedCount] = useState(0);
+  const b2bBadgeCount = Math.max(0, pendingB2BOrdersCount - b2bAcknowledgedCount);
 
   // B2B sifarişlərə real-vaxt qulaq as
   useEffect(() => {
     const q = query(collection(db, 'b2bOrders'), where('status', '==', 'pending'));
     const unsub = onSnapshot(q, (snap) => {
       setPendingB2BOrdersCount(snap.size);
+      // Yeni sifariş sayı təsdiqləniləndən aşağı düşübsə (məs. admin sifarişi tamamlayıb),
+      // acknowledged-i də uyğunlaşdır
+      setB2bAcknowledgedCount(prev => Math.min(prev, snap.size));
     }, (err) => {
       console.error('B2B orders snapshot error:', err);
     });
@@ -1076,7 +1083,7 @@ const AdminPanel: React.FC = () => {
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
     { id: 'comingSoon', label: t('admin.comingSoon'), icon: Clock },
-    { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: pendingB2BOrdersCount },
+    { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
     { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
@@ -2687,7 +2694,10 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'comingSoon' && <ComingSoonTab />}
 
         {activeTab === 'b2bOrders' && (
-          <PasswordProtectedSection sectionName="b2bOrders">
+          <PasswordProtectedSection
+            sectionName="b2bOrders"
+            onUnlock={() => setB2bAcknowledgedCount(pendingB2BOrdersCount)}
+          >
             <B2BOrdersTab />
           </PasswordProtectedSection>
         )}

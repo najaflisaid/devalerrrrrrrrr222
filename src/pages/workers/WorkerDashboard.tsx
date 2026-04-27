@@ -788,15 +788,6 @@ export default WorkerDashboard;
 // ─── Satışlarım — açılan/bağlanan bölmə (12 aylıq qrafik)
 const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined; target: number }> = ({ salesHistory, target }) => {
   const [open, setOpen] = useState(false);
-  const totalThisYear = useMemo(() => {
-    const y = new Date().getFullYear();
-    const h = salesHistory || {};
-    let sum = 0;
-    for (let m = 1; m <= 12; m++) {
-      sum += Number(h[`${y}-${String(m).padStart(2, '0')}`] || 0);
-    }
-    return sum;
-  }, [salesHistory]);
 
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid="sales-history-section">
@@ -816,13 +807,7 @@ const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | und
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-right">
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">Bu ilin cəmi</p>
-            <p className="font-playfair text-base text-black">{totalThisYear.toLocaleString()} ₼</p>
-          </div>
-          {open ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
-        </div>
+        {open ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
       </button>
       {open && (
         <div className="px-6 pb-6 border-t border-gray-100 pt-5">

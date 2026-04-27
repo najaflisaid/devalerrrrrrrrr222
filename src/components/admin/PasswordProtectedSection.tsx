@@ -5,9 +5,10 @@ import { passwordKeyForSection, verifyPassword } from '../../services/adminPassw
 interface PasswordProtectedSectionProps {
   children: React.ReactNode;
   sectionName: string;
+  onUnlock?: () => void;
 }
 
-const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ children, sectionName }) => {
+const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ children, sectionName, onUnlock }) => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +29,7 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
       const ok = await verifyPassword(key, password);
       if (ok) {
         setIsAuthenticated(true);
+        onUnlock?.();
       } else {
         setError('Yanlış şifrə');
         setPassword('');
