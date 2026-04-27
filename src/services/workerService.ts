@@ -287,17 +287,29 @@ export const listNotifications = async (workerId: string): Promise<WorkerNotific
   const snap = await getDocs(q);
   const all = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<WorkerNotification, 'id'>) }));
 
-  // Avtomatik təmizlik: 1 aydan (30 gün) köhnə bildirişləri sil
+  // 30 gündən köhnə bildirişləri filter et (göstərmə)
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
   const cutoff = Date.now() - THIRTY_DAYS_MS;
-  const expired = all.filter(n => {
-    const t = new Date(n.createdAt).getTime();
-    return Number.isFinite(t) && t < cutoff;
-  });
-  if (expired.length > 0) {
-    // Fonda silinir, list-ə mane olmasın
-    Promise.all(expired.map(n => deleteDoc(doc(db, NOTIFICATIONS, n.id)))).catch(() => {});
-  }
+
+  // Avtomatik fiziki silinmə yalnız 7 gündən bir baş verir (Firestore yazma kvotasını qoruyaq).
+  // Açar localStorage-də saxlanır.
+  try {
+    const ck = `worker_notif_cleanup_${workerId}`;
+    const last = Number(localStorage.getItem(ck) || 0);
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - last > oneWeek) {
+      const expired = all.filter(n => {
+        const t = new Date(n.createdAt).getTime();
+        return Number.isFinite(t) && t < cutoff;
+      });
+      if (expired.length > 0) {
+        // Maksimum 20 silinmə bir defədə — kvotanı qorumaq üçün
+        const toDelete = expired.slice(0, 20);
+        Promise.all(toDelete.map(n => deleteDoc(doc(db, NOTIFICATIONS, n.id)))).catch(() => {});
+      }
+      localStorage.setItem(ck, String(Date.now()));
+    }
+  } catch { /* ignore */ }
 
   return all
     .filter(n => {

@@ -26,19 +26,28 @@ export const createB2BOrder = async (order: B2BOrder) => {
   console.log('Creating B2B order in Firestore:', order);
   const ordersRef = collection(db, 'b2bOrders');
 
-  // Atomically generate the next sequential order number
+  // Sequential order number — quota xətası olarsa, timestamp əsaslı fallback istifadə olunur.
+  // Bu sifariş yaradılmasını bloklamamalıdır.
   const counterRef = doc(db, 'counters', 'b2bOrders');
-  const orderNumber = await runTransaction(db, async (tx) => {
-    const snap = await tx.get(counterRef);
-    const current = snap.exists() ? Number(snap.data().value || 0) : 0;
-    const next = current + 1;
-    tx.set(counterRef, { value: next });
-    return next;
-  });
+  let orderNumber: number;
+  try {
+    orderNumber = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      const current = snap.exists() ? Number(snap.data().value || 0) : 0;
+      const next = current + 1;
+      tx.set(counterRef, { value: next });
+      return next;
+    });
+  } catch (counterError) {
+    // Quota və ya digər səhv halında — sayğacı keç, timestamp əsaslı nömrə qoy
+    console.warn('Order counter transaction failed, using timestamp fallback:', counterError);
+    orderNumber = Number(String(Date.now()).slice(-8)); // son 8 rəqəm
+  }
 
   // Calculate subtotal (before discount)
   const subtotal = order.items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
 
+  // Sifariş sənədini yaradırıq — bu CƏHD UĞURSUZ olarsa, tam xəta atılmalıdır.
   const docRef = await addDoc(ordersRef, {
     ...order,
     orderNumber,
@@ -48,17 +57,23 @@ export const createB2BOrder = async (order: B2BOrder) => {
   });
   console.log('B2B order created with ID:', docRef.id, 'orderNumber:', orderNumber);
 
-  try {
-    for (const item of order.items) {
-      const productRef = doc(db, 'products', item.productId);
-      await updateDoc(productRef, {
-        stock: increment(-item.quantity)
-      });
-      console.log(`Stock reduced for product ${item.productId} by ${item.quantity}`);
-    }
-  } catch (error) {
-    console.error('Error reducing stock:', error);
-  }
+  // Stok yenilənməsi sifarişin yaradılmasından SONRA fonda baş verir.
+  // Quota və ya icazə xətası olarsa, sifariş yenə də uğurlu sayılır.
+  // Hər məhsul üçün ayrıca try/catch — birinin uğursuzluğu digərlərini bloklamasın.
+  setTimeout(() => {
+    (async () => {
+      for (const item of order.items) {
+        try {
+          const productRef = doc(db, 'products', item.productId);
+          await updateDoc(productRef, {
+            stock: increment(-item.quantity)
+          });
+        } catch (stockError) {
+          console.warn(`Stock update failed for ${item.productId} (sifariş uğurla yaradılıb):`, stockError);
+        }
+      }
+    })();
+  }, 0);
 
   return { id: docRef.id, orderNumber, ...order, subtotal };
 };
