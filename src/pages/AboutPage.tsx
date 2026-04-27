@@ -136,114 +136,67 @@ const AboutPage: React.FC = () => {
         </div>
 
         {/* ─────────────────────────────────────────── */}
-        {/* MISSION — Couture Manifesto (yeni dizayn) */}
+        {/* MISSION — Editorial Minimal (sayt konsepti)  */}
         {/* ─────────────────────────────────────────── */}
         <section
-          className="relative overflow-hidden rounded-[2px]"
+          className="relative bg-white"
           data-testid="about-mission-section"
-          style={{
-            background:
-              'linear-gradient(135deg, #FBF7EF 0%, #F4ECDC 100%)',
-          }}
         >
-          {/* Decorative grain / noise overlay */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-multiply"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-            }}
-          />
+          {/* Top hairline divider with gold mark */}
+          <div className="flex items-center gap-4 mb-12 md:mb-16">
+            <span className="block flex-1 h-[1px] bg-gray-200" />
+            <span className="block w-1.5 h-1.5 rotate-45" style={{ background: '#D4AF37' }} aria-hidden />
+            <span className="block flex-1 h-[1px] bg-gray-200" />
+          </div>
 
-          {/* Gold corner frame */}
-          <span aria-hidden className="absolute top-6 left-6 w-10 h-10 border-t border-l" style={{ borderColor: '#D4AF37' }} />
-          <span aria-hidden className="absolute top-6 right-6 w-10 h-10 border-t border-r" style={{ borderColor: '#D4AF37' }} />
-          <span aria-hidden className="absolute bottom-6 left-6 w-10 h-10 border-b border-l" style={{ borderColor: '#D4AF37' }} />
-          <span aria-hidden className="absolute bottom-6 right-6 w-10 h-10 border-b border-r" style={{ borderColor: '#D4AF37' }} />
-
-          <div className="relative grid md:grid-cols-12 gap-0">
-            {/* LEFT — vertical wordmark + giant quote */}
-            <div className="md:col-span-4 relative px-8 md:px-12 py-12 md:py-20 flex md:block items-center gap-6 border-b md:border-b-0 md:border-r border-stone-300/60">
-              <div
-                className="hidden md:block absolute left-12 top-20 text-[11px] tracking-[0.6em] uppercase text-stone-500 font-light"
-                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-              >
-                Maison · De Valeur · Manifeste
-              </div>
-
-              <div className="md:ml-24">
+          <div className="grid md:grid-cols-12 gap-8 md:gap-16 px-2 md:px-0">
+            {/* LEFT column — eyebrow + heading */}
+            <div className="md:col-span-5">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
                 <span
-                  aria-hidden
-                  className="block font-playfair leading-none select-none"
-                  style={{
-                    fontSize: 'clamp(120px, 18vw, 220px)',
-                    color: '#D4AF37',
-                    fontWeight: 400,
-                    lineHeight: 0.7,
-                    letterSpacing: '-0.05em',
-                  }}
-                >
-                  &ldquo;
-                </span>
-                <span
-                  className="block mt-2 text-[10px] tracking-[0.4em] uppercase text-stone-500 font-medium"
+                  className="text-[10px] tracking-[0.45em] uppercase text-gray-500 font-medium"
                   data-testid="about-mission-eyebrow"
                 >
-                  · Notre Mission ·
-                </span>
-              </div>
-            </div>
-
-            {/* RIGHT — manifesto text */}
-            <div className="md:col-span-8 px-8 md:px-14 py-12 md:py-20 relative">
-              {/* Top thin gold line */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className="block w-12 h-[1px]" style={{ background: '#D4AF37' }} />
-                <span className="text-[11px] tracking-[0.35em] uppercase text-stone-600 font-medium">
-                  Anno · MMX
+                  Notre Mission
                 </span>
               </div>
 
               <h2
-                className="font-playfair text-4xl md:text-5xl lg:text-6xl font-light text-stone-900 leading-[1.05] tracking-tight mb-8"
+                className="font-playfair text-4xl md:text-5xl lg:text-[3.75rem] font-light text-black leading-[1.05] tracking-tight"
                 data-testid="about-mission-heading"
               >
                 {getField('mission_heading', t('about.ourMission'))}
+                <span style={{ color: '#D4AF37' }}>.</span>
               </h2>
 
+              <div className="hidden md:block mt-10">
+                <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-light">
+                  · Anno MMX ·
+                </span>
+              </div>
+            </div>
+
+            {/* RIGHT column — body text */}
+            <div className="md:col-span-7 md:pt-3">
               <p
-                className="font-playfair text-lg md:text-xl leading-[1.7] text-stone-700 italic"
-                style={{ fontWeight: 300 }}
+                className="text-gray-700 text-base md:text-lg leading-[1.85] font-light"
                 data-testid="about-mission-text"
               >
-                <span
-                  className="float-left mr-3 mt-1 font-playfair leading-none"
-                  style={{
-                    fontSize: '4.5rem',
-                    color: '#D4AF37',
-                    fontWeight: 500,
-                    lineHeight: 0.85,
-                  }}
-                >
-                  {(getField('mission', t('about.missionText'))?.[0] || '').toUpperCase()}
-                </span>
-                {(getField('mission', t('about.missionText')) || '').slice(1)}
+                {getField('mission', t('about.missionText'))}
               </p>
 
-              {/* Bottom signature line */}
               <div className="mt-10 flex items-center gap-4">
-                <span className="block w-20 h-[1px]" style={{ background: '#D4AF37' }} />
-                <span
-                  className="font-playfair italic text-stone-700 text-lg tracking-wide"
-                  style={{ fontWeight: 400 }}
-                >
-                  De Valeur
+                <span className="block w-10 h-[1px]" style={{ background: '#D4AF37' }} />
+                <span className="font-playfair italic text-gray-600 text-sm tracking-wide">
+                  Maison De Valeur
                 </span>
-                <span className="block flex-1 h-[1px]" style={{ background: 'rgba(212,175,55,0.35)' }} />
               </div>
             </div>
           </div>
+
+          {/* Bottom hairline */}
+          <div className="mt-12 md:mt-16 h-[1px] bg-gray-200" />
         </section>
       </div>
     </div>
