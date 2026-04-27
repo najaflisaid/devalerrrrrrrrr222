@@ -71,26 +71,44 @@ const AdminPanel: React.FC = () => {
   const [contact, setContact] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // B2B sifariş bildirişi: pending statuslu sifarişlərin sayı (real-vaxt)
+  // B2B sifariş bildirişi: pending sifarişlərin sayı (real-vaxt)
   const [pendingB2BOrdersCount, setPendingB2BOrdersCount] = useState(0);
-  // Admin şifrə ilə B2B Sifarişlər bölməsinə girəndən sonra "təsdiqlədiyi" miqdar.
-  // Yalnız bundan artıq YENİ sifariş gəldikdə badge yenidən görünəcək.
-  const [b2bAcknowledgedCount, setB2bAcknowledgedCount] = useState(0);
-  const b2bBadgeCount = Math.max(0, pendingB2BOrdersCount - b2bAcknowledgedCount);
+  // Yalnız bu vaxtdan SONRA yaradılmış pending sifarişlər badge-də sayılır.
+  // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
+  const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
+  const [b2bLastSeen, setB2bLastSeen] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(B2B_ACK_KEY);
+      return raw ? Number(raw) || 0 : 0;
+    } catch { return 0; }
+  });
 
-  // B2B sifarişlərə real-vaxt qulaq as
+  // Real-vaxt: yalnız b2bLastSeen-dan sonra yaradılmış pending sifarişləri say
   useEffect(() => {
     const q = query(collection(db, 'b2bOrders'), where('status', '==', 'pending'));
     const unsub = onSnapshot(q, (snap) => {
-      setPendingB2BOrdersCount(snap.size);
-      // Yeni sifariş sayı təsdiqləniləndən aşağı düşübsə (məs. admin sifarişi tamamlayıb),
-      // acknowledged-i də uyğunlaşdır
-      setB2bAcknowledgedCount(prev => Math.min(prev, snap.size));
+      let count = 0;
+      snap.forEach(d => {
+        const data: any = d.data();
+        const ms = data?.createdAt?.toMillis ? data.createdAt.toMillis()
+          : (typeof data?.createdAt === 'number' ? data.createdAt
+            : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
+        if (ms > b2bLastSeen) count += 1;
+      });
+      setPendingB2BOrdersCount(count);
     }, (err) => {
       console.error('B2B orders snapshot error:', err);
     });
     return () => unsub();
-  }, []);
+  }, [b2bLastSeen]);
+
+  const acknowledgeB2bOrders = () => {
+    const now = Date.now();
+    setB2bLastSeen(now);
+    try { localStorage.setItem(B2B_ACK_KEY, String(now)); } catch { /* ignore */ }
+    setPendingB2BOrdersCount(0);
+  };
+  const b2bBadgeCount = pendingB2BOrdersCount;
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
@@ -2696,7 +2714,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'b2bOrders' && (
           <PasswordProtectedSection
             sectionName="b2bOrders"
-            onUnlock={() => setB2bAcknowledgedCount(pendingB2BOrdersCount)}
+            onUnlock={acknowledgeB2bOrders}
           >
             <B2BOrdersTab />
           </PasswordProtectedSection>
