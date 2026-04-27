@@ -752,10 +752,9 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
 
       {/* Performance summary */}
       {perf && (
-        <div className="mb-5 grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
           <PerfCard label="Performans" value={`${perf.total}%`} highlight />
           <PerfCard label="Satış" value={`${perf.salesScore}%`} />
-          <PerfCard label="Davamiyyət" value={`${perf.attendance}%`} />
           <PerfCard label="Mükafat" value={perf.rewardsBonus > 0 ? `+${perf.rewardsBonus}%` : '0%'} />
           <PerfCard label="Cərimə" value={perf.finesPenalty < 0 ? `${perf.finesPenalty}%` : '0%'} />
         </div>

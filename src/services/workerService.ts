@@ -424,22 +424,20 @@ export const ensureBirthdayGreeting = async (worker: Worker): Promise<void> => {
 };
 
 // ───────────────────── Performance / Rating ─────────────────────
-// Reytinq emsalları:
-//   - 70%-i aylıq satış hədəfinə görə
+// Reytinq əmsalları (yenilənib):
+//   - 85%-i aylıq satış hədəfinə görə
 //   - +15 bonus hədəfi vuranda
 //   - hər mükafata +5 (max +20)
 //   - hər cəriməyə −8 (max −40)
-//   - hər təsdiqlənmiş məzuniyyət / icazəyə −5 (max −20)
-//   - Hədəf 0-dırsa, yalnız aktivlik baxımından qiymətləndirilir
+//   - Davamiyyət və icazə artıq nəzərə alınmır
+//   - Hədəf 0-dırsa, satış varsa 70 baseline, yoxsa 60
 
 export const computePerformance = async (worker: Worker): Promise<PerformanceBreakdown> => {
   const ym = monthYM();
-  const [fines, rewards, sales, requests, attendance] = await Promise.all([
+  const [fines, rewards, sales] = await Promise.all([
     listFines(worker.id),
     listRewards(worker.id),
     listSales(worker.id, ym),
-    listRequests(worker.id),
-    computeAttendancePercent(worker.id),
   ]);
 
   // Bu ay üzrə satış
@@ -451,7 +449,7 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
     ? worker.monthlyTotalSales
     : monthSales;
 
-  // Sales score (ümumi reytinqin 70%-i)
+  // Sales score (ümumi reytinqin 85%-i)
   let salesScore = 0;
   if (target > 0) {
     salesScore = Math.min(100, (monthlyTotal / target) * 100);
@@ -472,30 +470,18 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
   const monthRewardsCount = rewards.filter(r => (r.date || '').startsWith(ym)).length;
   const rewardsBonus = Math.min(20, monthRewardsCount * 5);
 
-  // Leave/permission penalty — bu ay üzrə təsdiqlənmiş `leave` müraciətləri
-  const monthLeavesCount = requests.filter(r =>
-    r.type === 'leave' &&
-    r.status === 'resolved' &&
-    (r.createdAt || '').startsWith(ym)
-  ).length;
-  const leavesPenalty = -Math.min(20, monthLeavesCount * 5);
-
-  // Yekun = satış 60% + davamiyyət 25% + bonuslar - cərimələr
+  // Yekun = satış 85% + hədəf bonusu + mükafat bonusu - cərimə cəzası
   const total = Math.max(0, Math.min(100, Math.round(
-    salesScore * 0.60 +
-    attendance * 0.25 +
+    salesScore * 0.85 +
     hitBonus +
     rewardsBonus +
-    finesPenalty +
-    leavesPenalty
+    finesPenalty
   )));
 
   return {
     salesScore: Math.round(salesScore),
     hitBonus,
-    attendance,
     finesPenalty,
-    leavesPenalty,
     rewardsBonus,
     total,
   };

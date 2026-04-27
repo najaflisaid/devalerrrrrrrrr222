@@ -112,9 +112,7 @@ export interface WorkerNotification {
 export interface PerformanceBreakdown {
   salesScore: number;
   hitBonus: number;
-  attendance: number;
   finesPenalty: number;
-  leavesPenalty: number;
   rewardsBonus: number;
   total: number;
 }
