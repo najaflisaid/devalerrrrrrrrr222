@@ -701,25 +701,34 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
         {unread > 0 && <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center">{unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-100 z-50">
-          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-medium">Bildirişlər</span>
-            <button onClick={() => setOpen(false)}><X className="h-4 w-4 text-gray-500" /></button>
+        <>
+          {/* Mobile backdrop to dismiss */}
+          <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 mt-2 w-64 sm:w-80 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto bg-white rounded-xl shadow-xl border border-gray-100 z-50 origin-top-right animate-[fadeIn_0.18s_ease-out]"
+            style={{ animation: 'fadeIn 0.18s ease-out' }}
+          >
+            <div className="p-3 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+              <span className="text-sm font-medium text-gray-900">Bildirişlər</span>
+              <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-gray-100" aria-label="Bağla">
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+            {items.length === 0 ? (
+              <div className="p-6 text-center text-sm text-gray-400">Bildiriş yoxdur</div>
+            ) : (
+              <ul>
+                {items.map(n => (
+                  <li key={n.id} className={`p-3 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 ${!n.read ? 'bg-amber-50/30' : ''}`}
+                      onClick={() => !n.read && onRead(n.id)}>
+                    <p className="text-sm text-black whitespace-pre-line break-words">{n.message}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{fmtDateTime(n.createdAt)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          {items.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-400">Bildiriş yoxdur</div>
-          ) : (
-            <ul>
-              {items.map(n => (
-                <li key={n.id} className={`p-3 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 ${!n.read ? 'bg-amber-50/30' : ''}`}
-                    onClick={() => !n.read && onRead(n.id)}>
-                  <p className="text-sm text-black whitespace-pre-line">{n.message}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{fmtDateTime(n.createdAt)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        </>
       )}
     </div>
   );
