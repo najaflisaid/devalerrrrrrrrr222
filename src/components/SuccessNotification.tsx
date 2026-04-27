@@ -31,8 +31,8 @@ const SuccessNotification: React.FC<SuccessNotificationProps> = ({
   const Icon = isError ? XCircle : CheckCircle;
 
   return (
-    <div className="animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform animate-scaleIn">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1000] animate-fadeIn pointer-events-auto" data-testid="success-notification">
+      <div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-6 max-w-sm w-[calc(100vw-2rem)] sm:w-full transform animate-scaleIn border border-gray-100">
         <div className="flex items-start space-x-4">
           <div className="relative flex-shrink-0">
             <div className={`absolute inset-0 ${bgColor} rounded-full animate-ping opacity-20`}></div>

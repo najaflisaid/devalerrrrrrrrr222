@@ -101,37 +101,43 @@ const CartPage: React.FC = () => {
       const createdOrder = await createB2BOrder(order);
       console.log('Order created:', createdOrder);
 
-      // Email göndərişi sifarişin uğuruna təsir etməməlidir.
-      // Sifariş Firestore-da uğurla yaradılıb; email yalnız admin-ə bildirişdir.
-      try {
-        console.log('Sending email...');
-        await sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber);
-        console.log('Email sent successfully');
-      } catch (emailError) {
-        console.warn('Email göndərilə bilmədi (sifariş yaradılıb):', emailError);
-      }
+      // Sifariş Firestore-da yarandı — istifadəçiyə dərhal uğur bildirişi göstər.
+      // Email göndərilməsi və endirim yenilənməsi fonda baş versin (gözlətmə yoxdur).
+      clearCart();
+      setCustomerNote('');
+      setShowSuccess(true);
+      setLoading(false);
+
+      // Fonda: admin-ə email
+      sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber)
+        .then(() => console.log('Email sent successfully'))
+        .catch((emailError) => console.warn('Email göndərilə bilmədi (sifariş yaradılıb):', emailError));
+
+      // Fonda: birdəfəlik endirim istifadəçidə qeyd et
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);
         if (userData.discountUsageType === 'once' && userDiscount > 0 && userData.id) {
-          const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
-          const { db } = await import('../lib/firebase');
-          const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userData.id)));
-          if (!usersSnapshot.empty) {
-            await updateDoc(usersSnapshot.docs[0].ref, { discountUsed: true });
-            userData.discountUsed = true;
-            localStorage.setItem('userData', JSON.stringify(userData));
-          }
+          (async () => {
+            try {
+              const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+              const { db } = await import('../lib/firebase');
+              const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userData.id)));
+              if (!usersSnapshot.empty) {
+                await updateDoc(usersSnapshot.docs[0].ref, { discountUsed: true });
+                userData.discountUsed = true;
+                localStorage.setItem('userData', JSON.stringify(userData));
+              }
+            } catch (e) { console.warn('Discount update failed:', e); }
+          })();
         }
       }
 
-      clearCart();
-      setCustomerNote('');
-
-      setShowSuccess(true);
+      // Daha qısa keçid (1.5s) ki, müştəri uğur bildirişini görüb məhsullara qayıtsın
       setTimeout(() => {
         setShowSuccess(false);
         navigate('/products');
-      }, 3000);
+      }, 1500);
+      return;
     } catch (error: any) {
       console.error('Order error:', error);
       let message = 'Sifariş göndərilə bilmədi. ';
