@@ -9,11 +9,12 @@ import {
 } from 'firebase/auth';
 import type {
   Worker, AttendanceEntry, Fine, Reward, SalesEntry,
-  WorkerRequest, RequestStatus, WorkerNotification, Position, PerformanceBreakdown,
+  WorkerRequest, RequestStatus, WorkerNotification, Position, Branch, PerformanceBreakdown,
 } from '../types/worker';
 
 const WORKERS = 'workers';
 const POSITIONS = 'worker_positions';
+const BRANCHES = 'worker_branches';
 const ATTENDANCE = 'worker_attendance';
 const FINES = 'worker_fines';
 const REWARDS = 'worker_rewards';
@@ -70,6 +71,7 @@ export const createWorker = async (
     surname: data.surname,
     photo: data.photo || '',
     position: data.position,
+    branch: data.branch || '',
     hireDate: data.hireDate,
     contractStart: data.contractStart,
     contractEnd: data.contractEnd,
@@ -298,6 +300,36 @@ export const updatePosition = async (id: string, name: string) => {
 
 export const deletePosition = async (id: string) => deleteDoc(doc(db, POSITIONS, id));
 
+// ───────────────────── Monthly total + salesHistory helper ─────────────────────
+export const setMonthlyTotal = async (workerId: string, total: number, ym: string) => {
+  // salesHistory.${ym}-i nested update ilə yenilə (digər ayları silmədən)
+  await updateDoc(doc(db, WORKERS, workerId), {
+    monthlyTotalSales: total,
+    monthlyTotalMonth: ym,
+    [`salesHistory.${ym}`]: total,
+  } as any);
+};
+
+// ───────────────────── Branches (Filiallar) ─────────────────────
+export const listBranches = async (): Promise<Branch[]> => {
+  const snap = await getDocs(collection(db, BRANCHES));
+  return snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Omit<Branch, 'id'>) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'az'));
+};
+
+export const addBranch = async (name: string): Promise<Branch> => {
+  const data = { name: name.trim(), createdAt: nowIso() };
+  const ref = await addDoc(collection(db, BRANCHES), data);
+  return { id: ref.id, ...data };
+};
+
+export const updateBranch = async (id: string, name: string) => {
+  await updateDoc(doc(db, BRANCHES, id), { name: name.trim() });
+};
+
+export const deleteBranch = async (id: string) => deleteDoc(doc(db, BRANCHES, id));
+
 // ───────────────────── Performance / Rating ─────────────────────
 // Reytinq emsalları:
 //   - 70%-i aylıq satış hədəfinə görə
@@ -309,11 +341,12 @@ export const deletePosition = async (id: string) => deleteDoc(doc(db, POSITIONS,
 
 export const computePerformance = async (worker: Worker): Promise<PerformanceBreakdown> => {
   const ym = monthYM();
-  const [fines, rewards, sales, requests] = await Promise.all([
+  const [fines, rewards, sales, requests, attendance] = await Promise.all([
     listFines(worker.id),
     listRewards(worker.id),
     listSales(worker.id, ym),
     listRequests(worker.id),
+    computeAttendancePercent(worker.id),
   ]);
 
   // Bu ay üzrə satış
@@ -354,8 +387,10 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
   ).length;
   const leavesPenalty = -Math.min(20, monthLeavesCount * 5);
 
+  // Yekun = satış 60% + davamiyyət 25% + bonuslar - cərimələr
   const total = Math.max(0, Math.min(100, Math.round(
-    salesScore * 0.70 +
+    salesScore * 0.60 +
+    attendance * 0.25 +
     hitBonus +
     rewardsBonus +
     finesPenalty +
@@ -365,6 +400,7 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
   return {
     salesScore: Math.round(salesScore),
     hitBonus,
+    attendance,
     finesPenalty,
     leavesPenalty,
     rewardsBonus,
@@ -400,21 +436,41 @@ export interface LeaderboardEntry {
   surname: string;
   photo?: string;
   position: string;
+  branch?: string;
   rank: number;
-  total: number;        // monthly total sales (admin-only)
+  total: number;        // sales total used for ranking
+  fromMonth: string;    // hansı aydan götürülüb
   hasTotal: boolean;
 }
+
+// Helper: ən son mövcud satış total-ını və ayını qaytarır.
+// Cari ay üçün admin daxil etmişsə cari ay götürür; yoxsa salesHistory-dən ən son ayı seçir.
+const lastTotalForWorker = (w: Worker, currentYM: string): { total: number; fromMonth: string; hasTotal: boolean } => {
+  if (w.monthlyTotalMonth === currentYM && typeof w.monthlyTotalSales === 'number') {
+    return { total: w.monthlyTotalSales, fromMonth: currentYM, hasTotal: true };
+  }
+  const history = w.salesHistory || {};
+  const months = Object.keys(history).sort().reverse(); // ən yeni öncə
+  if (months.length > 0) {
+    const m = months[0];
+    return { total: history[m] || 0, fromMonth: m, hasTotal: true };
+  }
+  // Fallback: bəlkə monthlyTotalSales var amma ayı keçmişdir
+  if (typeof w.monthlyTotalSales === 'number' && w.monthlyTotalMonth) {
+    return { total: w.monthlyTotalSales, fromMonth: w.monthlyTotalMonth, hasTotal: true };
+  }
+  return { total: 0, fromMonth: '', hasTotal: false };
+};
 
 export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   const ym = monthYM();
   const workers = await listWorkers();
   const active = workers.filter(w => w.isActive);
-  const withTotals = active.map(w => ({
-    worker: w,
-    total: (w.monthlyTotalMonth === ym ? (w.monthlyTotalSales || 0) : 0),
-    hasTotal: w.monthlyTotalMonth === ym && typeof w.monthlyTotalSales === 'number',
-  }));
-  // Sort: workers with totals first by total desc, then others alphabetically
+  const withTotals = active.map(w => {
+    const { total, fromMonth, hasTotal } = lastTotalForWorker(w, ym);
+    return { worker: w, total, fromMonth, hasTotal };
+  });
+  // Sıralama: total-ı olanlar əvvəl total desc, sonra qalanlar əlifba sırası ilə
   withTotals.sort((a, b) => {
     if (a.hasTotal && !b.hasTotal) return -1;
     if (!a.hasTotal && b.hasTotal) return 1;
@@ -427,8 +483,10 @@ export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
     surname: x.worker.surname,
     photo: x.worker.photo,
     position: x.worker.position,
+    branch: x.worker.branch || '',
     rank: i + 1,
     total: x.total,
+    fromMonth: x.fromMonth,
     hasTotal: x.hasTotal,
   }));
 };

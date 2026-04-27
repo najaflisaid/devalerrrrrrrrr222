@@ -40,7 +40,15 @@ const fmtDateTime = (iso: string) => {
 
 const VACATION_UNLOCK_MONTHS = 6;
 
-// ─── Application templates
+// ─── Hər ərizə növü üçün qısa izahat (istifadəçiyə kömək)
+const REQUEST_TYPE_DESCRIPTION: Record<RequestType, string> = {
+  leave: 'Məzuniyyət üçün rəsmi xahiş — başlama və bitmə tarixini, səbəbi göstərin.',
+  complaint: 'İş yeri və ya proseslərlə bağlı şikayətinizi qeyd edin — rəhbərliyə baxılmaq üçün.',
+  suggestion: 'İş prosesini yaxşılaşdırmaq üçün təklifinizi yazın.',
+  other: 'Yuxarıdakı kateqoriyalara aid olmayan istənilən rəsmi müraciət üçün.',
+};
+
+// ─── Application templates (with __NAME__ placeholder)
 const REQUEST_TEMPLATES: Record<RequestType, string> = {
   leave: `Hörmətli rəhbərlik,
 
@@ -48,7 +56,7 @@ Mən ____ tarixindən ____ tarixinə qədər məzuniyyət istəyirəm.
 Səbəb: ____
 
 Hörmətlə,
-[Ad Soyad]`,
+__NAME__`,
   complaint: `Hörmətli rəhbərlik,
 
 Aşağıdakı mövzuda şikayətim var:
@@ -57,22 +65,26 @@ ____
 Xahiş edirəm araşdıraraq cavab verəsiniz.
 
 Hörmətlə,
-[Ad Soyad]`,
+__NAME__`,
   suggestion: `Hörmətli rəhbərlik,
 
 İş prosesini yaxşılaşdırmaq üçün təklifim var:
 ____
 
 Hörmətlə,
-[Ad Soyad]`,
+__NAME__`,
   other: `Hörmətli rəhbərlik,
 
 Mövzu: ____
 İzahat: ____
 
 Hörmətlə,
-[Ad Soyad]`,
+__NAME__`,
 };
+
+// İşçinin ad-soyadını şablonda __NAME__ yerinə qoyur
+const fillTemplate = (template: string, name: string, surname: string) =>
+  template.replace(/__NAME__/g, `${name} ${surname}`);
 
 const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   leave: 'Məzuniyyət',
@@ -95,7 +107,7 @@ const WorkerDashboard: React.FC = () => {
 
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
-  const [reqDesc, setReqDesc] = useState(REQUEST_TEMPLATES.leave);
+  const [reqDesc, setReqDesc] = useState('');
   const [submittingReq, setSubmittingReq] = useState(false);
 
   useEffect(() => { if (!loading && !worker) navigate('/workers', { replace: true }); }, [worker, loading, navigate]);
@@ -117,10 +129,11 @@ const WorkerDashboard: React.FC = () => {
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [worker]);
 
-  // Auto-fill template when type changes (only if textarea is empty or contains a template)
+  // Auto-fill template when type or worker changes — ad-soyad avtomatik yerləşir
   useEffect(() => {
-    setReqDesc(REQUEST_TEMPLATES[reqType]);
-  }, [reqType]);
+    if (!worker) return;
+    setReqDesc(fillTemplate(REQUEST_TEMPLATES[reqType], worker.name, worker.surname));
+  }, [reqType, worker]);
 
   const totalSales = useMemo(() => sales.reduce((s, x) => s + (x.amount || 0), 0), [sales]);
   const targetPercent = useMemo(() => {
@@ -153,7 +166,7 @@ const WorkerDashboard: React.FC = () => {
       await submitRequest({
         workerId: worker.id, type: reqType, description: reqDesc.trim(),
       });
-      setReqDesc(REQUEST_TEMPLATES[reqType]);
+      setReqDesc(worker ? fillTemplate(REQUEST_TEMPLATES[reqType], worker.name, worker.surname) : '');
       setShowRequestForm(false);
       await loadAll();
     } finally { setSubmittingReq(false); }
@@ -205,15 +218,35 @@ const WorkerDashboard: React.FC = () => {
                 <div className="inline-flex items-center gap-1.5 bg-[#FFF8E5] border border-[#D4AF37]/40 px-3 py-1 rounded-full mb-2">
                   <Briefcase className="h-3 w-3 text-[#8a6d10]" />
                   <span className="text-[11px] uppercase tracking-wider text-[#8a6d10] font-semibold" data-testid="worker-experience">
-                    Təcrübə: {experience.label}
+                    Təcrübə müddəti: {experience.label}
                   </span>
                 </div>
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
                 <p className="text-gray-500 text-sm mt-0.5">{worker.position}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs">
-                  <div className="flex items-center gap-1.5 text-gray-600"><CalendarDays className="h-3.5 w-3.5" /> İşə başlama: <strong className="text-black">{fmtDate(worker.hireDate)}</strong></div>
-                  <div className="flex items-center gap-1.5 text-gray-600"><CalendarDays className="h-3.5 w-3.5" /> Müqavilə: <strong className="text-black">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong></div>
-                </div>
+
+                {/* 5 sahəli profil cədvəli */}
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs" data-testid="worker-profile-fields">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Filial:</span>
+                    <strong className="text-black truncate">{worker.branch || '—'}</strong>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Vəzifə:</span>
+                    <strong className="text-black truncate">{worker.position || '—'}</strong>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Təcrübə müddəti:</span>
+                    <strong className="text-black">{experience.label}</strong>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">İşə başlama:</span>
+                    <strong className="text-black">{fmtDate(worker.hireDate)}</strong>
+                  </div>
+                  <div className="flex items-center gap-2 sm:col-span-2">
+                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Müqavilə müddəti:</span>
+                    <strong className="text-black">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
+                  </div>
+                </dl>
               </div>
             </div>
           </div>
@@ -236,9 +269,11 @@ const WorkerDashboard: React.FC = () => {
             {perf && (
               <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
                 <PerfMini label="Satış" value={`${perf.salesScore}%`} />
-                <PerfMini label="Hədəf bonus" value={perf.hitBonus > 0 ? `+${perf.hitBonus}` : '—'} />
-                <PerfMini label="Mükafat" value={perf.rewardsBonus > 0 ? `+${perf.rewardsBonus}` : '—'} />
-                <PerfMini label="Cərimə" value={perf.finesPenalty < 0 ? `${perf.finesPenalty}` : '—'} />
+                <PerfMini label="Davamiyyət" value={`${perf.attendance}%`} />
+                <PerfMini label="Hədəf bonus" value={`${perf.hitBonus}%`} />
+                <PerfMini label="Mükafat" value={`+${perf.rewardsBonus}%`} />
+                <PerfMini label="Cərimə" value={`${perf.finesPenalty}%`} />
+                <PerfMini label="Məzuniyyət" value={`${perf.leavesPenalty}%`} />
               </div>
             )}
             <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
@@ -282,17 +317,23 @@ const WorkerDashboard: React.FC = () => {
             {fines.length === 0 ? (
               <p className="text-sm text-gray-400">Cərimə qeydi yoxdur.</p>
             ) : (
-              <ul className="space-y-2">
-                {fines.map(f => (
-                  <li key={f.id} className="flex items-start justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
-                    <div>
-                      <p className="font-medium text-black">{f.reason}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{fmtDate(f.date)}</p>
-                    </div>
-                    <span className="text-red-600 font-medium">−{f.amount} ₼</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-2">
+                  {fines.map(f => (
+                    <li key={f.id} className="flex items-start justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
+                      <div>
+                        <p className="font-medium text-black">{f.reason}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{fmtDate(f.date)}</p>
+                      </div>
+                      <span className="text-red-600 font-medium">−{f.amount} ₼</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between" data-testid="fines-total">
+                  <span className="text-xs uppercase tracking-wider text-gray-600 font-semibold">Ümumi cərimə</span>
+                  <span className="text-red-600 font-bold text-base">−{fines.reduce((s, f) => s + (f.amount || 0), 0).toFixed(2)} ₼</span>
+                </div>
+              </>
             )}
           </div>
 
@@ -303,17 +344,23 @@ const WorkerDashboard: React.FC = () => {
             {rewards.length === 0 ? (
               <p className="text-sm text-gray-400">Mükafat qeydi yoxdur.</p>
             ) : (
-              <ul className="space-y-2">
-                {rewards.map(r => (
-                  <li key={r.id} className="flex items-start justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
-                    <div>
-                      <p className="font-medium text-black">{r.reason}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{fmtDate(r.date)} · {r.type}</p>
-                    </div>
-                    {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount} {r.type === 'raise' ? '%' : '₼'}</span> : null}
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-2">
+                  {rewards.map(r => (
+                    <li key={r.id} className="flex items-start justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
+                      <div>
+                        <p className="font-medium text-black">{r.reason}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{fmtDate(r.date)} · {r.type}</p>
+                      </div>
+                      {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount} {r.type === 'raise' ? '%' : '₼'}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between" data-testid="rewards-total">
+                  <span className="text-xs uppercase tracking-wider text-gray-600 font-semibold">Ümumi mükafat (₼)</span>
+                  <span className="text-emerald-600 font-bold text-base">+{rewards.filter(r => r.type !== 'raise').reduce((s, r) => s + (r.amount || 0), 0).toFixed(2)} ₼</span>
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -368,20 +415,21 @@ const WorkerDashboard: React.FC = () => {
                     <option key={k} value={k}>{REQUEST_TYPE_LABEL[k]}</option>
                   )}
                 </select>
-                <p className="text-[11px] text-gray-500 mt-1">Növü dəyişdirdikdə şablon avtomatik yenilənir. Aşağıda ____ yerlərini öz məlumatınızla doldurun.</p>
+                {/* Ərizə izahatı — istifadəçiyə kömək */}
+                <p className="text-xs text-gray-700 bg-amber-50/60 border border-amber-200 rounded-lg px-3 py-2 mt-2 leading-relaxed" data-testid="worker-request-description">
+                  <span className="font-semibold text-amber-900">İzahat:</span> {REQUEST_TYPE_DESCRIPTION[reqType]}
+                </p>
+                <p className="text-[11px] text-gray-500 mt-1">Aşağıdakı şablonu öz məlumatlarınızla doldurun. Adınız və soyadınız avtomatik yerləşdirilir. Mətni istədiyiniz kimi redaktə edə, silə və ya əlavə yaza bilərsiniz.</p>
               </div>
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-gray-600 mb-1">Ərizə mətni (şablon)</label>
+                <label className="block text-[11px] uppercase tracking-wider text-gray-600 mb-1">Ərizə mətni</label>
                 <textarea value={reqDesc} onChange={(e) => setReqDesc(e.target.value)} rows={10} required
                   placeholder="Şablon avtomatik dolacaq..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono resize-y focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-[15px] leading-[1.7] resize-y focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+                  style={{ fontFamily: '"Playfair Display", "Inter", Georgia, serif' }}
                   data-testid="worker-request-desc" />
               </div>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setReqDesc(REQUEST_TEMPLATES[reqType])}
-                  className="px-4 py-2 text-xs uppercase tracking-wider border border-gray-300 rounded-lg hover:bg-gray-100">
-                  Şablonu sıfırla
-                </button>
                 <button type="submit" disabled={submittingReq}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-[#C99B1F] disabled:opacity-50"
                   data-testid="worker-request-submit">
@@ -416,7 +464,7 @@ const WorkerDashboard: React.FC = () => {
             </div>
             <button
               disabled={vacationStatus.locked}
-              onClick={() => { setReqType('leave'); setReqDesc(REQUEST_TEMPLATES.leave); setShowRequestForm(true); }}
+              onClick={() => { setReqType('leave'); setReqDesc(worker ? fillTemplate(REQUEST_TEMPLATES.leave, worker.name, worker.surname) : ''); setShowRequestForm(true); }}
               className="px-5 py-2.5 border border-black text-black rounded-lg uppercase tracking-[0.18em] text-xs font-medium hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               data-testid="worker-vacation-btn"
             >
@@ -480,7 +528,11 @@ const LeaderboardSection: React.FC<{
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm truncate ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
-                  {i.name} {i.surname}{isMe && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
+                  {i.name} {i.surname}
+                  {i.branch && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-500 font-medium">· {i.branch}</span>
+                  )}
+                  {isMe && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
                 </p>
                 <p className="text-[11px] text-gray-500 truncate">{i.position}</p>
               </div>
@@ -501,7 +553,7 @@ const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
       return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-amber-50 text-amber-700"><Hourglass className="h-3 w-3" /> Göndərildi</span>;
     if (item.status === 'review')
       return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-50 text-blue-700"><Hourglass className="h-3 w-3" /> Baxılır</span>;
-    return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Həll olundu</span>;
+    return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Təsdiq olundu</span>;
   };
   return (
     <li className="border border-gray-100 rounded-lg p-3 text-sm">
@@ -510,7 +562,7 @@ const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
           <p className="font-medium text-black">{REQUEST_TYPE_LABEL[item.type] || item.type}</p>
           <p className="text-gray-700 mt-1 whitespace-pre-line">{item.description}</p>
           {item.adminResponse && (
-            <p className="mt-2 text-[12px] text-gray-700 bg-gray-50 rounded p-2"><strong>Admin cavabı:</strong> {item.adminResponse}</p>
+            <p className="mt-2 text-[12px] text-gray-700 bg-gray-50 rounded p-2"><strong>Cavab:</strong> {item.adminResponse}</p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">

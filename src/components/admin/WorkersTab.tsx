@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
-  Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Trophy, Activity,
+  Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, Trophy, Activity,
 } from 'lucide-react';
 import { siteConfirm } from '../ui/NotificationProvider';
 import {
@@ -13,11 +13,13 @@ import {
   listRequests, updateRequestStatus,
   sendNotification,
   listPositions, addPosition, deletePosition, updatePosition,
+  listBranches, addBranch, deleteBranch, updateBranch,
   computePerformance,
+  setMonthlyTotal,
   monthYM,
 } from '../../services/workerService';
 import type {
-  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position,
+  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position, Branch,
   PerformanceBreakdown,
 } from '../../types/worker';
 
@@ -37,6 +39,7 @@ const fmtDateTime = (iso: string) => iso
 const WorkersTab: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<Mode>('list');
@@ -47,8 +50,8 @@ const WorkersTab: React.FC = () => {
   const refresh = async () => {
     setLoading(true);
     try {
-      const [w, r, p] = await Promise.all([listWorkers(), listRequests(), listPositions()]);
-      setWorkers(w); setAllRequests(r); setPositions(p);
+      const [w, r, p, b] = await Promise.all([listWorkers(), listRequests(), listPositions(), listBranches()]);
+      setWorkers(w); setAllRequests(r); setPositions(p); setBranches(b);
     } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); }, []);
@@ -57,7 +60,7 @@ const WorkersTab: React.FC = () => {
     const q = search.trim().toLowerCase();
     if (!q) return workers;
     return workers.filter(w =>
-      `${w.name} ${w.surname} ${w.email} ${w.position}`.toLowerCase().includes(q)
+      `${w.name} ${w.surname} ${w.email} ${w.position} ${w.branch || ''}`.toLowerCase().includes(q)
     );
   }, [workers, search]);
 
@@ -66,16 +69,19 @@ const WorkersTab: React.FC = () => {
   }
 
   if (mode === 'create') {
-    return <WorkerForm positions={positions} onClose={() => setMode('list')} onSaved={async () => { setMode('list'); await refresh(); }} />;
+    return <WorkerForm positions={positions} branches={branches} onClose={() => setMode('list')} onSaved={async () => { setMode('list'); await refresh(); }} />;
   }
   if (mode === 'edit' && editing) {
-    return <WorkerDetail worker={editing} positions={positions} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh(); }} />;
+    return <WorkerDetail worker={editing} positions={positions} branches={branches} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh(); }} />;
   }
 
   return (
     <div className="space-y-6">
       {/* Positions management */}
       <PositionsPanel positions={positions} onChange={refresh} />
+
+      {/* Branches management */}
+      <BranchesPanel branches={branches} onChange={refresh} />
 
       {/* Workers list */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -107,6 +113,7 @@ const WorkersTab: React.FC = () => {
               <thead><tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100">
                 <th className="py-3 pr-4">İşçi</th>
                 <th className="py-3 pr-4">Vəzifə</th>
+                <th className="py-3 pr-4">Filial</th>
                 <th className="py-3 pr-4">Email</th>
                 <th className="py-3 pr-4">İşə başlama</th>
                 <th className="py-3 pr-4">Hədəf (₼)</th>
@@ -126,6 +133,7 @@ const WorkersTab: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 pr-4 text-gray-600">{w.position}</td>
+                    <td className="py-3 pr-4 text-gray-600">{w.branch || <span className="text-gray-300">—</span>}</td>
                     <td className="py-3 pr-4 text-gray-600 text-xs">{w.email}</td>
                     <td className="py-3 pr-4 text-gray-600">{fmt(w.hireDate)}</td>
                     <td className="py-3 pr-4 text-gray-700">{w.monthlyTarget?.toLocaleString() || '—'}</td>
@@ -235,13 +243,90 @@ const PositionsPanel: React.FC<{ positions: Position[]; onChange: () => Promise<
   );
 };
 
+// ───────────────────── Branches Panel (Filiallar) ─────────────────────
+const BranchesPanel: React.FC<{ branches: Branch[]; onChange: () => Promise<void> }> = ({ branches, onChange }) => {
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setBusy(true);
+    try { await addBranch(newName); setNewName(''); await onChange(); }
+    finally { setBusy(false); }
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editVal.trim()) return;
+    await updateBranch(id, editVal);
+    setEditId(null); setEditVal('');
+    await onChange();
+  };
+
+  const remove = async (b: Branch) => {
+    if (!await siteConfirm({ message: `"${b.name}" filialı silinsin?`, variant: 'danger', confirmLabel: 'Sil' })) return;
+    await deleteBranch(b.id);
+    await onChange();
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Building2 className="h-5 w-5 text-gray-700" />
+        <h2 className="text-xl font-bold text-gray-900">Filiallar ({branches.length})</h2>
+      </div>
+      <form onSubmit={submit} className="flex gap-2 mb-4">
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni filial adı..."
+          className={inp + ' flex-1'} data-testid="branch-add-input" />
+        <button disabled={busy || !newName.trim()}
+          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1.5"
+          data-testid="branch-add-btn">
+          <Plus className="h-4 w-4" /> Əlavə et
+        </button>
+      </form>
+      {branches.length === 0 ? (
+        <p className="text-sm text-gray-400">Hələ filial əlavə olunmayıb.</p>
+      ) : (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {branches.map(b => (
+            <li key={b.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-gray-100 rounded-lg text-sm bg-gray-50/40">
+              {editId === b.id ? (
+                <>
+                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1'} autoFocus />
+                  <button onClick={() => saveEdit(b.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
+                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                </>
+              ) : (
+                <>
+                  <span className="text-gray-800 font-medium truncate">{b.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { setEditId(b.id); setEditVal(b.name); }} className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`branch-edit-${b.id}`}>
+                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                    </button>
+                    <button onClick={() => remove(b)} className="p-1.5 hover:bg-red-50 rounded-lg" data-testid={`branch-delete-${b.id}`}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // ───────────────────── Worker Form (create / edit) ─────────────────────
-const WorkerForm: React.FC<{ positions: Position[]; onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ positions, onClose, onSaved, existing }) => {
+const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ positions, branches, onClose, onSaved, existing }) => {
   const [name, setName] = useState(existing?.name || '');
   const [surname, setSurname] = useState(existing?.surname || '');
   const [email, setEmail] = useState(existing?.email || '');
   const [password, setPassword] = useState('');
   const [position, setPosition] = useState(existing?.position || (positions[0]?.name || ''));
+  const [branch, setBranch] = useState(existing?.branch || '');
   const [hireDate, setHireDate] = useState(existing?.hireDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractStart, setContractStart] = useState(existing?.contractStart?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractEnd, setContractEnd] = useState(existing?.contractEnd?.slice(0, 10) || '');
@@ -260,14 +345,14 @@ const WorkerForm: React.FC<{ positions: Position[]; onClose: () => void; onSaved
     try {
       if (existing) {
         await updateWorker(existing.id, {
-          name, surname, position, photo: photo.trim(),
+          name, surname, position, branch: branch || '', photo: photo.trim(),
           hireDate, contractStart, contractEnd,
           monthlyTarget: Number(monthlyTarget) || 0,
           isActive,
         });
       } else {
         await createWorker(email.trim().toLowerCase(), password, {
-          name, surname, position,
+          name, surname, position, branch: branch || '',
           hireDate, contractStart, contractEnd,
           monthlyTarget: Number(monthlyTarget) || 0,
           photo: photo.trim(),
@@ -299,6 +384,16 @@ const WorkerForm: React.FC<{ positions: Position[]; onClose: () => void; onSaved
             <select required value={position} onChange={(e) => setPosition(e.target.value)} className={inp} data-testid="workers-form-position">
               <option value="">Vəzifə seç...</option>
               {positions.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          )}
+        </Field>
+        <Field label="Filial">
+          {branches.length === 0 ? (
+            <div className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">Əvvəlcə yuxarıdakı bölmədən filial əlavə edin.</div>
+          ) : (
+            <select value={branch} onChange={(e) => setBranch(e.target.value)} className={inp} data-testid="workers-form-branch">
+              <option value="">— Filial seçin —</option>
+              {branches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
             </select>
           )}
         </Field>
@@ -341,7 +436,7 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent';
 
 // ───────────────────── Worker Detail (edit + fines/rewards/sales/notify/total) ─────────────────────
-const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, onClose, onUpdated }) => {
+const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: Branch[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, branches, onClose, onUpdated }) => {
   const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'total' | 'notify'>('info');
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -385,10 +480,10 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; onClose: (
       {perf && (
         <div className="mb-5 grid grid-cols-2 md:grid-cols-5 gap-3">
           <PerfCard label="Yekun reytinq" value={`${perf.total}%`} highlight />
+          <PerfCard label="Satış" value={`${perf.salesScore}%`} />
           <PerfCard label="Davamiyyət" value={`${perf.attendance}%`} />
-          <PerfCard label="Vaxtında" value={`${perf.punctuality}%`} />
-          <PerfCard label="Hədəf" value={`${perf.target}%`} />
-          <PerfCard label="Cərimə / Mükafat" value={`${perf.finesPenalty}/+${perf.rewardsBonus}`} />
+          <PerfCard label="Mükafat" value={perf.rewardsBonus > 0 ? `+${perf.rewardsBonus}%` : '0%'} />
+          <PerfCard label="Cərimə" value={perf.finesPenalty < 0 ? `${perf.finesPenalty}%` : '0%'} />
         </div>
       )}
 
@@ -408,7 +503,7 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; onClose: (
         ))}
       </div>
 
-      {tab === 'info' && <WorkerForm positions={positions} existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
+      {tab === 'info' && <WorkerForm positions={positions} branches={branches} existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
       {tab === 'fines' && <FinesPanel workerId={worker.id} items={fines} reload={reload} />}
       {tab === 'rewards' && <RewardsPanel workerId={worker.id} items={rewards} reload={reload} />}
       {tab === 'sales' && <SalesPanel workerId={worker.id} target={worker.monthlyTarget} items={sales} reload={reload} />}
@@ -437,10 +532,7 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
     e.preventDefault();
     setBusy(true);
     try {
-      await updateWorker(worker.id, {
-        monthlyTotalSales: Number(total) || 0,
-        monthlyTotalMonth: ym,
-      });
+      await setMonthlyTotal(worker.id, Number(total) || 0, ym);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       await onSaved();
     } finally { setBusy(false); }
@@ -693,7 +785,7 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
           <option value="all">Hamısı</option>
           <option value="sent">Göndərildi</option>
           <option value="review">Baxılır</option>
-          <option value="resolved">Həll olundu</option>
+          <option value="resolved">Təsdiq olundu</option>
         </select>
       </div>
       {filtered.length === 0 ? (
@@ -716,7 +808,7 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
 
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <input
-                    placeholder="Admin cavabı..."
+                    placeholder="Cavab..."
                     defaultValue={r.adminResponse || ''}
                     onChange={(e) => setResponseMap(m => ({ ...m, [r.id]: e.target.value }))}
                     className={inp + ' flex-1 min-w-[200px]'}
@@ -727,7 +819,7 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
                   </button>
                   <button onClick={() => updateStatus(r.id, 'resolved', r)}
                     className="px-3 py-1.5 text-xs border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 inline-flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Həll olundu
+                    <CheckCircle2 className="h-3 w-3" /> Təsdiq olundu
                   </button>
                 </div>
               </li>

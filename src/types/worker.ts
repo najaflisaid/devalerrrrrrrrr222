@@ -6,6 +6,7 @@ export interface Worker {
   surname: string;
   photo?: string;        // URL
   position: string;      // matches Position.name
+  branch?: string;       // matches Branch.name (filial)
   hireDate: string;          // ISO date — işə başlama tarixi
   contractStart: string;     // ISO
   contractEnd: string;       // ISO
@@ -14,10 +15,17 @@ export interface Worker {
   monthlyTarget: number;     // current month's sales target ₼
   monthlyTotalSales?: number;   // admin-entered monthly total sales (for leaderboard)
   monthlyTotalMonth?: string;   // YYYY-MM — which month total applies to
+  salesHistory?: Record<string, number>; // { 'YYYY-MM': total } — historical totals for leaderboard fallback
   createdAt: string;
 }
 
 export interface Position {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Branch {
   id: string;
   name: string;
   createdAt: string;
@@ -85,6 +93,7 @@ export interface WorkerNotification {
 export interface PerformanceBreakdown {
   salesScore: number;     // % aylıq hədəfin yerinə yetirilməsi (0-100)
   hitBonus: number;       // hədəfi vuranlara bonus (+15 əgər hədəf 100%+)
+  attendance: number;     // % davamiyyət (0-100)
   finesPenalty: number;   // mənfi dəyər (cərimələrə görə)
   leavesPenalty: number;  // mənfi dəyər (məzuniyyət/icazə müraciətlərinə görə)
   rewardsBonus: number;   // müsbət dəyər (mükafatlara görə)
