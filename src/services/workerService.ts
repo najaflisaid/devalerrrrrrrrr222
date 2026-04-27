@@ -9,12 +9,13 @@ import {
 } from 'firebase/auth';
 import type {
   Worker, AttendanceEntry, Fine, Reward, SalesEntry,
-  WorkerRequest, RequestStatus, WorkerNotification, Position, Branch, PerformanceBreakdown,
+  WorkerRequest, RequestStatus, WorkerNotification, Position, Branch, Training, BranchLeaderboardEntry, PerformanceBreakdown,
 } from '../types/worker';
 
 const WORKERS = 'workers';
 const POSITIONS = 'worker_positions';
 const BRANCHES = 'worker_branches';
+const TRAININGS = 'worker_trainings';
 const ATTENDANCE = 'worker_attendance';
 const FINES = 'worker_fines';
 const REWARDS = 'worker_rewards';
@@ -330,6 +331,52 @@ export const updateBranch = async (id: string, name: string) => {
 
 export const deleteBranch = async (id: string) => deleteDoc(doc(db, BRANCHES, id));
 
+// ───────────────────── Trainings (Təlimlər) ─────────────────────
+export const listTrainings = async (): Promise<Training[]> => {
+  const snap = await getDocs(collection(db, TRAININGS));
+  return snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Omit<Training, 'id'>) }))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+};
+
+export const addTraining = async (data: Omit<Training, 'id' | 'createdAt'>): Promise<Training> => {
+  const payload = { ...data, createdAt: nowIso() };
+  const ref = await addDoc(collection(db, TRAININGS), payload);
+  return { id: ref.id, ...payload };
+};
+
+export const updateTraining = async (id: string, patch: Partial<Training>) => {
+  await updateDoc(doc(db, TRAININGS, id), patch as any);
+};
+
+export const deleteTraining = async (id: string) => deleteDoc(doc(db, TRAININGS, id));
+
+// ───────────────────── Vacation reset ─────────────────────
+// Admin işçinin məzuniyyətə çıxdığını qeyd edib sayğacı sıfırlayır → 6 ay yenidən hesablanır.
+export const resetVacation = async (workerId: string) => {
+  await updateDoc(doc(db, WORKERS, workerId), { vacationResetAt: nowIso() } as any);
+};
+
+// ───────────────────── Birthday greeting ─────────────────────
+// İşçi giriş etdiyində dashboard çağırır. Bugün ad-günüdürsə və hələ tebrik bildirişi
+// göndərilməyibsə, bildiriş yaradır və işarələyir.
+export const ensureBirthdayGreeting = async (worker: Worker): Promise<void> => {
+  if (!worker.birthDate) return;
+  const today = new Date();
+  const todayMD = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const bd = new Date(worker.birthDate);
+  if (Number.isNaN(bd.getTime())) return;
+  const bdMD = `${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
+  if (todayMD !== bdMD) return;
+  if (worker.birthdayGreetedYear === today.getFullYear()) return;
+
+  await sendNotification(
+    worker.id,
+    `🎉 Ad gününüz mübarək, ${worker.name}!\n\nDe Valeur ailəsi olaraq sizi səmimi qəlbdən təbrik edirik. Sağlam, uğurlu və xoşbəxt bir il arzulayırıq!`
+  );
+  await updateDoc(doc(db, WORKERS, worker.id), { birthdayGreetedYear: today.getFullYear() } as any);
+};
+
 // ───────────────────── Performance / Rating ─────────────────────
 // Reytinq emsalları:
 //   - 70%-i aylıq satış hədəfinə görə
@@ -489,6 +536,34 @@ export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
     fromMonth: x.fromMonth,
     hasTotal: x.hasTotal,
   }));
+};
+
+// ───────────────────── Branch leaderboard (filial reytinqi) ─────────────────────
+export const getBranchLeaderboard = async (): Promise<BranchLeaderboardEntry[]> => {
+  const ym = monthYM();
+  const workers = await listWorkers();
+  const active = workers.filter(w => w.isActive);
+  const byBranch = new Map<string, { workerCount: number; totalSales: number }>();
+
+  for (const w of active) {
+    const branchName = (w.branch || '').trim();
+    if (!branchName) continue; // filialı təyin olunmayanları reytinqdə göstərmirik
+    const { total } = lastTotalForWorker(w, ym);
+    const cur = byBranch.get(branchName) || { workerCount: 0, totalSales: 0 };
+    cur.workerCount += 1;
+    cur.totalSales += total || 0;
+    byBranch.set(branchName, cur);
+  }
+
+  const list = Array.from(byBranch.entries()).map(([name, v]) => ({
+    name,
+    workerCount: v.workerCount,
+    totalSales: v.totalSales,
+    rank: 0,
+  }));
+  list.sort((a, b) => b.totalSales - a.totalSales);
+  list.forEach((x, i) => { x.rank = i + 1; });
+  return list;
 };
 
 export type { Timestamp };

@@ -3,18 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   Loader2, LogOut, CalendarDays, AlertOctagon, Award,
   Send, Plus, TrendingUp, CheckCircle2, Hourglass, X,
-  Bell, Briefcase, Activity, Trophy, Crown, Medal, FileText,
+  Bell, Activity, Trophy, Crown, Medal, FileText, GraduationCap, Building2, ExternalLink,
 } from 'lucide-react';
 import { useWorkerAuth } from '../../context/WorkerAuthContext';
 import {
   listFines, listRewards, listSales, listRequests, submitRequest,
   listNotifications, markNotificationRead,
   computePerformance, computeExperience,
-  getMonthlyLeaderboard, monthYM, daysSince,
+  getMonthlyLeaderboard, getBranchLeaderboard,
+  listTrainings, ensureBirthdayGreeting,
+  monthYM, daysSince,
 } from '../../services/workerService';
 import type {
   Fine, Reward, SalesEntry, WorkerRequest,
-  RequestType, WorkerNotification, PerformanceBreakdown,
+  RequestType, WorkerNotification, PerformanceBreakdown, Training, BranchLeaderboardEntry,
 } from '../../types/worker';
 
 const TZ = 'Asia/Baku';
@@ -39,14 +41,6 @@ const fmtDateTime = (iso: string) => {
 };
 
 const VACATION_UNLOCK_MONTHS = 6;
-
-// ─── Hər ərizə növü üçün qısa izahat (istifadəçiyə kömək)
-const REQUEST_TYPE_DESCRIPTION: Record<RequestType, string> = {
-  leave: 'Məzuniyyət üçün rəsmi xahiş — başlama və bitmə tarixini, səbəbi göstərin.',
-  complaint: 'İş yeri və ya proseslərlə bağlı şikayətinizi qeyd edin — rəhbərliyə baxılmaq üçün.',
-  suggestion: 'İş prosesini yaxşılaşdırmaq üçün təklifinizi yazın.',
-  other: 'Yuxarıdakı kateqoriyalara aid olmayan istənilən rəsmi müraciət üçün.',
-};
 
 // ─── Application templates (with __NAME__ placeholder)
 const REQUEST_TEMPLATES: Record<RequestType, string> = {
@@ -73,6 +67,13 @@ ____
 
 Hörmətlə,
 __NAME__`,
+  explanation: `Hörmətli rəhbərlik,
+
+Mövzu: ____
+İzahatım: ____
+
+Hörmətlə,
+__NAME__`,
   other: `Hörmətli rəhbərlik,
 
 Mövzu: ____
@@ -90,6 +91,7 @@ const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   leave: 'Məzuniyyət',
   complaint: 'Şikayət',
   suggestion: 'Təklif',
+  explanation: 'İzahat',
   other: 'Digər',
 };
 
@@ -104,6 +106,8 @@ const WorkerDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<WorkerNotification[]>([]);
   const [perf, setPerf] = useState<PerformanceBreakdown | null>(null);
   const [leaderboard, setLeaderboard] = useState<Awaited<ReturnType<typeof getMonthlyLeaderboard>>>([]);
+  const [branchLeaderboard, setBranchLeaderboard] = useState<BranchLeaderboardEntry[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
 
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
@@ -114,7 +118,10 @@ const WorkerDashboard: React.FC = () => {
 
   const loadAll = async () => {
     if (!worker) return;
-    const [f, r, s, rq, nots, pf, lb] = await Promise.all([
+    // Doğum gününü yoxla və lazım gələrsə tebrik bildirişi yarat
+    try { await ensureBirthdayGreeting(worker); } catch (err) { console.warn('Birthday greeting:', err); }
+
+    const [f, r, s, rq, nots, pf, lb, blb, tr] = await Promise.all([
       listFines(worker.id),
       listRewards(worker.id),
       listSales(worker.id, monthYM()),
@@ -122,9 +129,11 @@ const WorkerDashboard: React.FC = () => {
       listNotifications(worker.id),
       computePerformance(worker),
       getMonthlyLeaderboard(),
+      getBranchLeaderboard(),
+      listTrainings(),
     ]);
     setFines(f); setRewards(r); setSales(s); setRequests(rq); setNotifications(nots);
-    setPerf(pf); setLeaderboard(lb);
+    setPerf(pf); setLeaderboard(lb); setBranchLeaderboard(blb); setTrainings(tr);
   };
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [worker]);
@@ -148,13 +157,15 @@ const WorkerDashboard: React.FC = () => {
 
   const vacationStatus = useMemo(() => {
     if (!worker) return { locked: true, daysLeft: 0, openedAt: '' };
-    const days = daysSince(worker.hireDate);
+    // Sayğacın başlanğıcı: əgər admin sıfırlayıbsa vacationResetAt, deyilsə hireDate
+    const baseIso = worker.vacationResetAt || worker.hireDate;
+    const days = daysSince(baseIso);
     const required = VACATION_UNLOCK_MONTHS * 30;
     const daysLeft = Math.max(0, required - days);
     return {
       locked: daysLeft > 0,
       daysLeft,
-      openedAt: new Date(new Date(worker.hireDate).getTime() + required * 86400000).toISOString().slice(0, 10),
+      openedAt: new Date(new Date(baseIso).getTime() + required * 86400000).toISOString().slice(0, 10),
     };
   }, [worker]);
 
@@ -207,45 +218,44 @@ const WorkerDashboard: React.FC = () => {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Profile */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden border-2 border-[#D4AF37]/40 flex items-center justify-center text-2xl font-playfair text-gray-500 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="w-36 h-36 rounded-full bg-gray-100 overflow-hidden border-2 border-[#D4AF37]/40 flex items-center justify-center text-3xl font-playfair text-gray-500 shrink-0">
                 {worker.photo
                   ? <img src={worker.photo} alt={worker.name} className="w-full h-full object-cover" />
                   : <span>{worker.name?.[0]}{worker.surname?.[0]}</span>}
               </div>
               <div className="flex-1 min-w-0">
-                {/* Experience badge — TOP */}
-                <div className="inline-flex items-center gap-1.5 bg-[#FFF8E5] border border-[#D4AF37]/40 px-3 py-1 rounded-full mb-2">
-                  <Briefcase className="h-3 w-3 text-[#8a6d10]" />
-                  <span className="text-[11px] uppercase tracking-wider text-[#8a6d10] font-semibold" data-testid="worker-experience">
-                    Təcrübə müddəti: {experience.label}
-                  </span>
-                </div>
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
                 <p className="text-gray-500 text-sm mt-0.5">{worker.position}</p>
 
-                {/* 5 sahəli profil cədvəli */}
+                {/* Profil cədvəli */}
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs" data-testid="worker-profile-fields">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Filial:</span>
+                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Filial:</span>
                     <strong className="text-black truncate">{worker.branch || '—'}</strong>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Vəzifə:</span>
+                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Vəzifə:</span>
                     <strong className="text-black truncate">{worker.position || '—'}</strong>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Təcrübə müddəti:</span>
+                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Təcrübə müddəti:</span>
                     <strong className="text-black">{experience.label}</strong>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">İşə başlama:</span>
+                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">İşə başlama:</span>
                     <strong className="text-black">{fmtDate(worker.hireDate)}</strong>
                   </div>
                   <div className="flex items-center gap-2 sm:col-span-2">
-                    <span className="text-gray-500 w-28 shrink-0 uppercase tracking-wider text-[10px]">Müqavilə müddəti:</span>
+                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Müqavilə müddəti:</span>
                     <strong className="text-black">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
                   </div>
+                  {worker.birthDate && (
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Doğum tarixi:</span>
+                      <strong className="text-black">{fmtDate(worker.birthDate)}</strong>
+                    </div>
+                  )}
                 </dl>
               </div>
             </div>
@@ -267,13 +277,10 @@ const WorkerDashboard: React.FC = () => {
                 style={{ width: `${perf?.total ?? 0}%` }} />
             </div>
             {perf && (
-              <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
+              <div className="mt-4 grid grid-cols-3 gap-2 text-[10px]">
                 <PerfMini label="Satış" value={`${perf.salesScore}%`} />
-                <PerfMini label="Davamiyyət" value={`${perf.attendance}%`} />
-                <PerfMini label="Hədəf bonus" value={`${perf.hitBonus}%`} />
                 <PerfMini label="Mükafat" value={`+${perf.rewardsBonus}%`} />
                 <PerfMini label="Cərimə" value={`${perf.finesPenalty}%`} />
-                <PerfMini label="Məzuniyyət" value={`${perf.leavesPenalty}%`} />
               </div>
             )}
             <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
@@ -307,6 +314,12 @@ const WorkerDashboard: React.FC = () => {
 
         {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
+
+        {/* Branch leaderboard — filial üzrə komanda reytinqi */}
+        <BranchLeaderboardSection items={branchLeaderboard} currentBranch={worker.branch || ''} />
+
+        {/* Trainings — admin tərəfindən təyin edilmiş təlim materialları */}
+        <TrainingsSection items={trainings} />
 
         {/* Fines & Rewards */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -415,10 +428,6 @@ const WorkerDashboard: React.FC = () => {
                     <option key={k} value={k}>{REQUEST_TYPE_LABEL[k]}</option>
                   )}
                 </select>
-                {/* Ərizə izahatı — istifadəçiyə kömək */}
-                <p className="text-xs text-gray-700 bg-amber-50/60 border border-amber-200 rounded-lg px-3 py-2 mt-2 leading-relaxed" data-testid="worker-request-description">
-                  <span className="font-semibold text-amber-900">İzahat:</span> {REQUEST_TYPE_DESCRIPTION[reqType]}
-                </p>
                 <p className="text-[11px] text-gray-500 mt-1">Aşağıdakı şablonu öz məlumatlarınızla doldurun. Adınız və soyadınız avtomatik yerləşdirilir. Mətni istədiyiniz kimi redaktə edə, silə və ya əlavə yaza bilərsiniz.</p>
               </div>
               <div>
@@ -543,6 +552,86 @@ const LeaderboardSection: React.FC<{
           );
         })}
       </ul>
+    </section>
+  );
+};
+
+// ─── Branch leaderboard (filial üzrə komanda reytinqi)
+const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; currentBranch: string }> = ({ items, currentBranch }) => {
+  if (items.length === 0) return null;
+  const rankIcon = (rank: number) => {
+    if (rank === 1) return <Crown className="h-4 w-4 text-[#D4AF37] fill-[#D4AF37]" />;
+    if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />;
+    if (rank === 3) return <Medal className="h-4 w-4 text-amber-700" />;
+    return <span className="text-xs font-mono text-gray-500 w-4 text-center">{rank}</span>;
+  };
+  const totalAll = items.reduce((s, b) => s + b.totalSales, 0);
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="branch-leaderboard-section">
+      <div className="flex items-center gap-2 mb-3">
+        <Building2 className="h-5 w-5 text-[#D4AF37]" />
+        <h3 className="font-playfair text-xl text-black">Filiallar üzrə Komanda Reytinqi</h3>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Hansı filialın ümumi performansı qabaqdadır — komanda yarışı.
+      </p>
+      <ul className="divide-y divide-gray-100">
+        {items.map(b => {
+          const isMine = b.name === currentBranch;
+          const sharePct = totalAll > 0 ? Math.round((b.totalSales / totalAll) * 100) : 0;
+          return (
+            <li key={b.name}
+              className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMine ? 'bg-[#FFF8E5]/60' : ''}`}
+              data-testid={`branch-rank-${b.rank}`}>
+              <div className="w-8 flex items-center justify-center">{rankIcon(b.rank)}</div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate ${isMine ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
+                  {b.name}
+                  {isMine && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Mənim filialım</span>}
+                </p>
+                <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5]" style={{ width: `${sharePct}%` }} />
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-gray-500">{b.workerCount} işçi</p>
+                <p className="text-sm font-semibold text-[#8a6d10]">{sharePct}%</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+};
+
+// ─── Trainings section
+const TrainingsSection: React.FC<{ items: Training[] }> = ({ items }) => {
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="trainings-section">
+      <div className="flex items-center gap-2 mb-3">
+        <GraduationCap className="h-5 w-5 text-[#D4AF37]" />
+        <h3 className="font-playfair text-xl text-black">Təlim Materialları</h3>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400">Hələ təlim materialı əlavə olunmayıb.</p>
+      ) : (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {items.map(t => (
+            <li key={t.id} className="border border-gray-200 rounded-xl p-4 hover:border-[#D4AF37]/60 hover:bg-[#FFF8E5]/30 transition-colors" data-testid={`training-${t.id}`}>
+              <a href={t.url} target="_blank" rel="noopener noreferrer" className="block">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-black truncate">{t.title}</p>
+                    {t.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{t.description}</p>}
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-[#D4AF37] shrink-0 mt-0.5" />
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 };

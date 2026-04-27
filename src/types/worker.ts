@@ -31,6 +31,21 @@ export interface Branch {
   createdAt: string;
 }
 
+export interface Training {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface BranchLeaderboardEntry {
+  name: string;
+  workerCount: number;
+  totalSales: number;
+  rank: number;
+}
+
 export interface AttendanceEntry {
   id: string;
   workerId: string;
@@ -68,7 +83,7 @@ export interface SalesEntry {
 }
 
 export type RequestStatus = 'sent' | 'review' | 'resolved';
-export type RequestType = 'leave' | 'complaint' | 'suggestion' | 'other';
+export type RequestType = 'leave' | 'complaint' | 'suggestion' | 'explanation' | 'other';
 
 export interface WorkerRequest {
   id: string;
@@ -98,4 +113,6 @@ export interface PerformanceBreakdown {
   leavesPenalty: number;  // mənfi dəyər (məzuniyyət/icazə müraciətlərinə görə)
   rewardsBonus: number;   // müsbət dəyər (mükafatlara görə)
   total: number;          // 0-100 yekun reytinq
+}
+   // 0-100 yekun reytinq
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
-  Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, Trophy, Activity,
+  Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, GraduationCap, RotateCcw, Trophy, Activity,
 } from 'lucide-react';
 import { siteConfirm } from '../ui/NotificationProvider';
 import {
@@ -14,12 +14,14 @@ import {
   sendNotification,
   listPositions, addPosition, deletePosition, updatePosition,
   listBranches, addBranch, deleteBranch, updateBranch,
+  listTrainings, addTraining, updateTraining, deleteTraining,
+  resetVacation,
   computePerformance,
   setMonthlyTotal,
   monthYM,
 } from '../../services/workerService';
 import type {
-  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position, Branch,
+  Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position, Branch, Training,
   PerformanceBreakdown,
 } from '../../types/worker';
 
@@ -82,6 +84,9 @@ const WorkersTab: React.FC = () => {
 
       {/* Branches management */}
       <BranchesPanel branches={branches} onChange={refresh} />
+
+      {/* Trainings management */}
+      <TrainingsPanel />
 
       {/* Workers list */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -319,6 +324,110 @@ const BranchesPanel: React.FC<{ branches: Branch[]; onChange: () => Promise<void
   );
 };
 
+// ───────────────────── Trainings Panel (Təlimlər) ─────────────────────
+const TrainingsPanel: React.FC = () => {
+  const [items, setItems] = useState<Training[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ title: string; url: string; description: string }>({ title: '', url: '', description: '' });
+
+  const refresh = async () => {
+    setLoading(true);
+    try { setItems(await listTrainings()); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { refresh(); }, []);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !url.trim()) return;
+    setBusy(true);
+    try {
+      await addTraining({ title: title.trim(), url: url.trim(), description: description.trim() });
+      setTitle(''); setUrl(''); setDescription('');
+      await refresh();
+    } finally { setBusy(false); }
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editData.title.trim() || !editData.url.trim()) return;
+    await updateTraining(id, editData);
+    setEditId(null);
+    await refresh();
+  };
+
+  const remove = async (t: Training) => {
+    if (!await siteConfirm({ message: `"${t.title}" təlim materialı silinsin?`, variant: 'danger', confirmLabel: 'Sil' })) return;
+    await deleteTraining(t.id);
+    await refresh();
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap className="h-5 w-5 text-gray-700" />
+        <h2 className="text-xl font-bold text-gray-900">Təlim Materialları ({items.length})</h2>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">İşçilərə paylaşmaq üçün təlim videoları, sənədləri və ya hər hansı bir link əlavə edin.</p>
+
+      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-4">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Başlıq (məs: Satış texnikaları)" className={inp + ' md:col-span-4'} data-testid="training-title" />
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://link..." type="url" className={inp + ' md:col-span-4'} data-testid="training-url" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Qısa təsvir (istəyə görə)" className={inp + ' md:col-span-3'} />
+        <button disabled={busy || !title.trim() || !url.trim()}
+          className="md:col-span-1 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+          data-testid="training-add-btn">
+          <Plus className="h-4 w-4" />
+        </button>
+      </form>
+
+      {loading ? (
+        <p className="text-sm text-gray-400">Yüklənir...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-gray-400">Hələ təlim əlavə olunmayıb.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map(t => (
+            <li key={t.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50/40" data-testid={`training-${t.id}`}>
+              {editId === t.id ? (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                  <input value={editData.title} onChange={(e) => setEditData(d => ({ ...d, title: e.target.value }))} className={inp + ' md:col-span-4'} />
+                  <input value={editData.url} onChange={(e) => setEditData(d => ({ ...d, url: e.target.value }))} className={inp + ' md:col-span-4'} />
+                  <input value={editData.description} onChange={(e) => setEditData(d => ({ ...d, description: e.target.value }))} className={inp + ' md:col-span-3'} />
+                  <div className="md:col-span-1 flex items-center gap-1">
+                    <button onClick={() => saveEdit(t.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
+                    <button onClick={() => setEditId(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-black">{t.title}</p>
+                    <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate block">{t.url}</a>
+                    {t.description && <p className="text-xs text-gray-600 mt-1">{t.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { setEditId(t.id); setEditData({ title: t.title, url: t.url, description: t.description || '' }); }} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                    </button>
+                    <button onClick={() => remove(t)} className="p-1.5 hover:bg-red-50 rounded-lg">
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // ───────────────────── Worker Form (create / edit) ─────────────────────
 const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ positions, branches, onClose, onSaved, existing }) => {
   const [name, setName] = useState(existing?.name || '');
@@ -327,6 +436,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
   const [password, setPassword] = useState('');
   const [position, setPosition] = useState(existing?.position || (positions[0]?.name || ''));
   const [branch, setBranch] = useState(existing?.branch || '');
+  const [birthDate, setBirthDate] = useState(existing?.birthDate?.slice(0, 10) || '');
   const [hireDate, setHireDate] = useState(existing?.hireDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractStart, setContractStart] = useState(existing?.contractStart?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractEnd, setContractEnd] = useState(existing?.contractEnd?.slice(0, 10) || '');
@@ -346,6 +456,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
       if (existing) {
         await updateWorker(existing.id, {
           name, surname, position, branch: branch || '', photo: photo.trim(),
+          birthDate: birthDate || '',
           hireDate, contractStart, contractEnd,
           monthlyTarget: Number(monthlyTarget) || 0,
           isActive,
@@ -353,6 +464,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
       } else {
         await createWorker(email.trim().toLowerCase(), password, {
           name, surname, position, branch: branch || '',
+          birthDate: birthDate || '',
           hireDate, contractStart, contractEnd,
           monthlyTarget: Number(monthlyTarget) || 0,
           photo: photo.trim(),
@@ -398,6 +510,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
           )}
         </Field>
         <Field label="İşə başlama tarixi *"><input required type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inp} /></Field>
+        <Field label="Doğum tarixi"><input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inp} data-testid="workers-form-birthdate" /></Field>
         <Field label="Müqavilə başlama"><input type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} className={inp} /></Field>
         <Field label="Müqavilə bitmə"><input type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} className={inp} /></Field>
         <Field label="Aylıq satış hədəfi (₼)"><input type="number" min={0} value={monthlyTarget} onChange={(e) => setMonthlyTarget(e.target.value)} className={inp} data-testid="workers-form-target" /></Field>
@@ -461,6 +574,12 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
     onClose();
   };
 
+  const handleResetVacation = async () => {
+    if (!await siteConfirm({ message: `${worker.name} ${worker.surname} üçün məzuniyyət sayğacı sıfırlansın? (yenidən 6 ay sayılacaq)`, variant: 'default', confirmLabel: 'Sıfırla' })) return;
+    await resetVacation(worker.id);
+    await onUpdated();
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-5">
@@ -473,6 +592,20 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
         </div>
         <button onClick={handleDelete} className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50" data-testid="workers-delete">
           <Trash2 className="h-3.5 w-3.5" /> Sil
+        </button>
+      </div>
+
+      {/* Vacation reset shortcut */}
+      <div className="mb-5 flex items-center justify-between bg-amber-50/40 border border-amber-200 rounded-lg p-3">
+        <div className="text-xs text-amber-900">
+          <strong>Məzuniyyət sayğacı:</strong> İşçi məzuniyyətə çıxdıqdan sonra burdan sıfırlayın — 6 ay yenidən hesablanacaq.
+        </div>
+        <button
+          onClick={handleResetVacation}
+          data-testid="workers-reset-vacation"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-100"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Məzuniyyəti sıfırla
         </button>
       </div>
 
