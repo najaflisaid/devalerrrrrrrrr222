@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase, ShieldCheck } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase, ShieldCheck, Lock } from 'lucide-react';
 import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
@@ -16,6 +16,7 @@ import ConfirmModal from './ConfirmModal';
 import { siteConfirm } from '../ui/NotificationProvider';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
+import PasswordsManagementTab from './PasswordsManagementTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import type { Product, User, B2BRequest, Brand } from '../../types';
@@ -1076,6 +1077,7 @@ const AdminPanel: React.FC = () => {
     { id: 'b2bNotifications', label: 'B2B Bildirişlər', icon: Bell },
     { id: 'workers', label: 'İşçilər', icon: Briefcase },
     { id: 'users', label: t('admin.users'), icon: Users },
+    { id: 'passwords', label: 'Şifrələr', icon: Lock },
   ];
 
   return (
@@ -2681,6 +2683,12 @@ const AdminPanel: React.FC = () => {
         )}
 
         {activeTab === 'siteSettings' && <SiteSettingsTab />}
+
+        {activeTab === 'passwords' && (
+          <PasswordProtectedSection sectionName="passwordsAdmin">
+            <PasswordsManagementTab />
+          </PasswordProtectedSection>
+        )}
 
         {activeTab === 'b2bNotifications' && (
           <PasswordProtectedSection sectionName="b2bNotifications">

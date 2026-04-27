@@ -5,6 +5,7 @@ import {
   Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, GraduationCap, RotateCcw, Trophy, Activity,
 } from 'lucide-react';
 import { siteConfirm } from '../ui/NotificationProvider';
+import { verifyPassword } from '../../services/adminPasswordService';
 import {
   createWorker, listWorkers, updateWorker, deleteWorker,
   addFine, listFines, deleteFine,
@@ -27,6 +28,38 @@ import type {
 
 type Mode = 'list' | 'create' | 'edit';
 
+// Şifrə yoxlama modalı — redaktə əməliyyatları üçün
+const askEditPassword = async (): Promise<boolean> => new Promise((resolve) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center px-4';
+  wrap.innerHTML = `
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h3 class="font-semibold text-gray-900">Redaktə kilidi</h3>
+      </div>
+      <p class="text-xs text-gray-600 mb-4">Bu əməliyyat üçün redaktə şifrəsini daxil edin.</p>
+      <input type="password" id="__pw_input" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Şifrə..." autofocus />
+      <p id="__pw_err" class="hidden mt-2 text-xs text-red-600">Yanlış şifrə</p>
+      <div class="mt-4 flex justify-end gap-2">
+        <button id="__pw_cancel" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Ləğv et</button>
+        <button id="__pw_ok" class="px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800">Təsdiq</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const inp = wrap.querySelector('#__pw_input') as HTMLInputElement;
+  const err = wrap.querySelector('#__pw_err') as HTMLElement;
+  const close = (val: boolean) => { document.body.removeChild(wrap); resolve(val); };
+  const tryOk = async () => {
+    const ok = await verifyPassword('workersEdit', inp.value);
+    if (ok) close(true); else { err.classList.remove('hidden'); inp.value = ''; inp.focus(); }
+  };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryOk(); if (e.key === 'Escape') close(false); });
+  (wrap.querySelector('#__pw_ok') as HTMLElement).addEventListener('click', tryOk);
+  (wrap.querySelector('#__pw_cancel') as HTMLElement).addEventListener('click', () => close(false));
+  setTimeout(() => inp.focus(), 50);
+});
+
 const TZ = 'Asia/Baku';
 const fmt = (iso: string) => iso
   ? new Date(iso).toLocaleDateString('az-AZ', { timeZone: TZ })
@@ -48,6 +81,14 @@ const WorkersTab: React.FC = () => {
   const [editing, setEditing] = useState<Worker | null>(null);
 
   const [allRequests, setAllRequests] = useState<WorkerRequest[]>([]);
+  const [editUnlocked, setEditUnlocked] = useState(false);
+
+  const requireEditUnlock = async (): Promise<boolean> => {
+    if (editUnlocked) return true;
+    const ok = await askEditPassword();
+    if (ok) setEditUnlocked(true);
+    return ok;
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -102,11 +143,16 @@ const WorkersTab: React.FC = () => {
                 className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent w-56"
                 data-testid="workers-search" />
             </div>
-            <button onClick={() => setMode('create')}
+            <button onClick={async () => { if (await requireEditUnlock()) setMode('create'); }}
               className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800"
               data-testid="workers-add-btn">
               <Plus className="h-4 w-4" /> Yeni İşçi
             </button>
+            {editUnlocked && (
+              <button onClick={() => setEditUnlocked(false)} className="text-xs text-gray-500 hover:text-gray-700 underline">
+                🔒 Kilidlə
+              </button>
+            )}
           </div>
         </div>
 
@@ -153,7 +199,7 @@ const WorkersTab: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      <button onClick={() => { setEditing(w); setMode('edit'); }}
+                      <button onClick={async () => { if (await requireEditUnlock()) { setEditing(w); setMode('edit'); } }}
                         className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`workers-edit-${w.id}`}>
                         <Edit2 className="h-3.5 w-3.5 text-gray-700" />
                       </button>

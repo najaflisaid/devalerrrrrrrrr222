@@ -145,10 +145,13 @@ const WorkerDashboard: React.FC = () => {
   }, [reqType, worker]);
 
   const totalSales = useMemo(() => sales.reduce((s, x) => s + (x.amount || 0), 0), [sales]);
-  const targetPercent = useMemo(() => {
+  // Display percent — gerçək faiz (100%-dən yuxarı da göstərə bilir)
+  const targetPercentDisplay = useMemo(() => {
     if (!worker?.monthlyTarget) return 0;
-    return Math.min(100, Math.round((totalSales / worker.monthlyTarget) * 100));
+    return Math.round((totalSales / worker.monthlyTarget) * 100);
   }, [totalSales, worker]);
+  // Bar width — vizual üçün 100%-də saxlanır
+  const targetPercentBar = Math.min(100, targetPercentDisplay);
 
   const experience = useMemo(
     () => worker ? computeExperience(worker.hireDate) : { years: 0, months: 0, days: 0, label: '—' },
@@ -199,7 +202,7 @@ const WorkerDashboard: React.FC = () => {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-semibold">De Valeur · İşçi Paneli</p>
+            <p className="text-[10px] uppercase tracking-[0.35em] text-[#D4AF37] font-semibold">De Valeur</p>
             <h1 className="font-playfair text-xl text-black mt-0.5">Salam, {worker.name} 👋</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -218,18 +221,17 @@ const WorkerDashboard: React.FC = () => {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Profile */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <div className="w-36 h-36 rounded-full bg-gray-100 overflow-hidden border-2 border-[#D4AF37]/40 flex items-center justify-center text-3xl font-playfair text-gray-500 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-6 text-center sm:text-left items-center">
+              <div className="w-36 h-36 rounded-full bg-gray-100 overflow-hidden border-2 border-[#D4AF37]/40 shrink-0 relative">
                 {worker.photo
-                  ? <img src={worker.photo} alt={worker.name} className="w-full h-full object-cover" />
-                  : <span>{worker.name?.[0]}{worker.surname?.[0]}</span>}
+                  ? <img src={worker.photo} alt={worker.name} className="absolute inset-0 w-full h-full object-cover block" />
+                  : <span className="absolute inset-0 flex items-center justify-center text-3xl font-playfair text-gray-500">{worker.name?.[0]}{worker.surname?.[0]}</span>}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 w-full">
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
-                <p className="text-gray-500 text-sm mt-0.5">{worker.position}</p>
 
                 {/* Profil cədvəli */}
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs" data-testid="worker-profile-fields">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs text-left" data-testid="worker-profile-fields">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Filial:</span>
                     <strong className="text-black truncate">{worker.branch || '—'}</strong>
@@ -304,10 +306,10 @@ const WorkerDashboard: React.FC = () => {
                 <span className="font-playfair text-3xl text-black">{totalSales.toFixed(0)}</span>
                 <span className="text-sm text-gray-500"> / {worker.monthlyTarget?.toFixed(0) || '—'} ₼</span>
               </div>
-              <span className="text-2xl font-light text-[#D4AF37]">{targetPercent}%</span>
+              <span className={`text-2xl font-light ${targetPercentDisplay >= 100 ? 'text-emerald-600' : 'text-[#D4AF37]'}`}>{targetPercentDisplay}%</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] transition-all duration-700" style={{ width: `${targetPercent}%` }} />
+              <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] transition-all duration-700" style={{ width: `${targetPercentBar}%` }} />
             </div>
           </div>
         </section>
@@ -510,15 +512,19 @@ const LeaderboardSection: React.FC<{
 
   return (
     <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="leaderboard-section">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-[#D4AF37]" />
-          <h3 className="font-playfair text-xl text-black">Aylıq Reytinq</h3>
+          <h3 className="font-playfair text-xl text-black">Reytinq</h3>
         </div>
         {myRank && (
-          <span className="text-xs text-gray-500">
-            Sənin yerin: <strong className="text-[#8a6d10]">#{myRank.rank}</strong>
-          </span>
+          <div
+            data-testid="my-rank-badge"
+            className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border-2 border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] to-white shadow-sm"
+          >
+            <span className="text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">Sənin yerin</span>
+            <span className="font-playfair text-3xl font-bold text-[#8a6d10] leading-none">{myRank.rank}</span>
+          </div>
         )}
       </div>
       <p className="text-xs text-gray-500 mb-4">
@@ -637,6 +643,7 @@ const TrainingsSection: React.FC<{ items: Training[] }> = ({ items }) => {
 };
 
 const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
+  const [open, setOpen] = useState(false);
   const StatusPill = () => {
     if (item.status === 'sent')
       return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-amber-50 text-amber-700"><Hourglass className="h-3 w-3" /> Göndərildi</span>;
@@ -644,21 +651,43 @@ const RequestRow: React.FC<{ item: WorkerRequest }> = ({ item }) => {
       return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-50 text-blue-700"><Hourglass className="h-3 w-3" /> Baxılır</span>;
     return <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Təsdiq olundu</span>;
   };
+
+  // Önizləmə — birinci qeyri-boş sətir, qısaldılmış
+  const preview = (item.description || '')
+    .split('\n')
+    .map(s => s.trim())
+    .find(s => s.length > 0) || '';
+
   return (
-    <li className="border border-gray-100 rounded-lg p-3 text-sm">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <li className="border border-gray-100 rounded-lg text-sm overflow-hidden transition-shadow hover:shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full text-left p-3 flex items-start justify-between gap-3 flex-wrap hover:bg-gray-50/60"
+        data-testid={`request-row-toggle-${item.id}`}
+      >
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-black">{REQUEST_TYPE_LABEL[item.type] || item.type}</p>
-          <p className="text-gray-700 mt-1 whitespace-pre-line">{item.description}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-black">{REQUEST_TYPE_LABEL[item.type] || item.type}</p>
+            <span className="text-[11px] text-gray-400">{fmtDateTime(item.createdAt)}</span>
+          </div>
+          {!open && preview && (
+            <p className="text-gray-500 text-xs mt-1 truncate">{preview}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <StatusPill />
+          <span className="text-[10px] text-gray-400">{open ? 'Bağla' : 'Aç'}</span>
+        </div>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 border-t border-gray-100 pt-3" data-testid={`request-row-body-${item.id}`}>
+          <p className="text-gray-700 whitespace-pre-line">{item.description}</p>
           {item.adminResponse && (
             <p className="mt-2 text-[12px] text-gray-700 bg-gray-50 rounded p-2"><strong>Cavab:</strong> {item.adminResponse}</p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <StatusPill />
-          <span className="text-[10px] text-gray-400">{fmtDateTime(item.createdAt)}</span>
-        </div>
-      </div>
+      )}
     </li>
   );
 };
@@ -672,7 +701,7 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
         {unread > 0 && <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center">{unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-100 z-50">
+        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-100 z-50">
           <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-sm font-medium">Bildirişlər</span>
             <button onClick={() => setOpen(false)}><X className="h-4 w-4 text-gray-500" /></button>

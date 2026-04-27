@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, X } from 'lucide-react';
+import { Lock, X, Loader2 } from 'lucide-react';
+import { passwordKeyForSection, verifyPassword } from '../../services/adminPasswordService';
 
 interface PasswordProtectedSectionProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
-  const CORRECT_PASSWORD = '20202025';
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setIsAuthenticated(false);
@@ -18,14 +19,23 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
     setError('');
   }, [sectionName]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === CORRECT_PASSWORD) {
-      setIsAuthenticated(true);
-      setError('');
-    } else {
-      setError('Yanlış şifrə');
-      setPassword('');
+    setBusy(true);
+    setError('');
+    try {
+      const key = passwordKeyForSection(sectionName);
+      const ok = await verifyPassword(key, password);
+      if (ok) {
+        setIsAuthenticated(true);
+      } else {
+        setError('Yanlış şifrə');
+        setPassword('');
+      }
+    } catch {
+      setError('Şifrə yoxlanıla bilmədi');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -66,8 +76,10 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
           )}
           <button
             type="submit"
-            className="w-full bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-all font-medium shadow-md hover:shadow-lg"
+            disabled={busy}
+            className="w-full bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Daxil ol
           </button>
         </form>
