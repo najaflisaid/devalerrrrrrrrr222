@@ -1294,17 +1294,14 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
 export default WorkersTab;
 
 // ─── 12 aylıq satış tarixçəsi paneli (admin)
-// Admin keçmiş 12 ay üçün satış məbləğlərini daxil edə / dəyişə bilər.
+// Admin cari ilin 12 ayı (Yanvar-Dekabr) üçün satış məbləğlərini daxil edə / dəyişə bilər.
 // Cari ay daxil edildikdə monthlyTotalSales/Month də yenilənir.
 const AZ_MONTHS_LONG_ADM = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
 
-const buildLast12Months = (): { ym: string; label: string }[] => {
+const buildCurrentYearMonthsAdm = (): { ym: string; label: string }[] => {
   const arr: { ym: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const m = d.getMonth();
-    const y = d.getFullYear();
+  const y = new Date().getFullYear();
+  for (let m = 0; m < 12; m++) {
     arr.push({
       ym: `${y}-${String(m + 1).padStart(2, '0')}`,
       label: `${AZ_MONTHS_LONG_ADM[m]} ${y}`,
@@ -1314,7 +1311,7 @@ const buildLast12Months = (): { ym: string; label: string }[] => {
 };
 
 const MonthlyHistoryPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
-  const months = useMemo(() => buildLast12Months(), []);
+  const months = useMemo(() => buildCurrentYearMonthsAdm(), []);
   const currentYM = monthYM();
   const initial: Record<string, string> = useMemo(() => {
     const h = worker.salesHistory || {};
@@ -1399,6 +1396,8 @@ const MonthlyHistoryPanel: React.FC<{ worker: Worker; onSaved: () => Promise<voi
         target={worker.monthlyTarget || 0}
         title="Önizləmə"
         height={140}
+        mode="currentYear"
+        showAverage={false}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">

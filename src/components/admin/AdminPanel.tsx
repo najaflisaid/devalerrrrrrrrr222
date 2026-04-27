@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Clock, Search, Settings, Bell, Briefcase, ShieldCheck, Lock } from 'lucide-react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
@@ -69,6 +71,19 @@ const AdminPanel: React.FC = () => {
   const [contact, setContact] = useState<ContactData | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // B2B sifariş bildirişi: pending statuslu sifarişlərin sayı (real-vaxt)
+  const [pendingB2BOrdersCount, setPendingB2BOrdersCount] = useState(0);
+
+  // B2B sifarişlərə real-vaxt qulaq as
+  useEffect(() => {
+    const q = query(collection(db, 'b2bOrders'), where('status', '==', 'pending'));
+    const unsub = onSnapshot(q, (snap) => {
+      setPendingB2BOrdersCount(snap.size);
+    }, (err) => {
+      console.error('B2B orders snapshot error:', err);
+    });
+    return () => unsub();
+  }, []);
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
@@ -1061,7 +1076,7 @@ const AdminPanel: React.FC = () => {
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
     { id: 'comingSoon', label: t('admin.comingSoon'), icon: Clock },
-    { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag },
+    { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: pendingB2BOrdersCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
     { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
@@ -1102,18 +1117,28 @@ const AdminPanel: React.FC = () => {
           <nav className="flex space-x-2 overflow-x-auto pb-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const badgeCount = (tab as any).badge || 0;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
                       ? 'bg-gray-900 text-white shadow-md'
                       : 'bg-white text-gray-700 hover:bg-gray-100'
                   }`}
+                  data-testid={`admin-tab-${tab.id}`}
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
+                  {badgeCount > 0 && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow animate-pulse"
+                      data-testid={`tab-badge-${tab.id}`}
+                    >
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
