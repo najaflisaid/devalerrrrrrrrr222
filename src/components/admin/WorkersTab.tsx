@@ -81,14 +81,6 @@ const WorkersTab: React.FC = () => {
   const [editing, setEditing] = useState<Worker | null>(null);
 
   const [allRequests, setAllRequests] = useState<WorkerRequest[]>([]);
-  const [editUnlocked, setEditUnlocked] = useState(false);
-
-  const requireEditUnlock = async (): Promise<boolean> => {
-    if (editUnlocked) return true;
-    const ok = await askEditPassword();
-    if (ok) setEditUnlocked(true);
-    return ok;
-  };
 
   const refresh = async () => {
     setLoading(true);
@@ -143,16 +135,11 @@ const WorkersTab: React.FC = () => {
                 className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent w-56"
                 data-testid="workers-search" />
             </div>
-            <button onClick={async () => { if (await requireEditUnlock()) setMode('create'); }}
+            <button onClick={() => setMode('create')}
               className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800"
               data-testid="workers-add-btn">
               <Plus className="h-4 w-4" /> Yeni İşçi
             </button>
-            {editUnlocked && (
-              <button onClick={() => setEditUnlocked(false)} className="text-xs text-gray-500 hover:text-gray-700 underline">
-                🔒 Kilidlə
-              </button>
-            )}
           </div>
         </div>
 
@@ -199,7 +186,7 @@ const WorkersTab: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      <button onClick={async () => { if (await requireEditUnlock()) { setEditing(w); setMode('edit'); } }}
+                      <button onClick={() => { setEditing(w); setMode('edit'); }}
                         className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`workers-edit-${w.id}`}>
                         <Edit2 className="h-3.5 w-3.5 text-gray-700" />
                       </button>
@@ -474,12 +461,97 @@ const TrainingsPanel: React.FC = () => {
   );
 };
 
+// ───────────────────── Vacation Panel (Məzuniyyət) ─────────────────────
+const VacationPanel: React.FC<{ worker: Worker; onUpdated: () => Promise<void> }> = ({ worker, onUpdated }) => {
+  const [resetAt, setResetAt] = useState<string>(worker.vacationResetAt || worker.hireDate);
+  const [busy, setBusy] = useState(false);
+
+  const dayMs = 86400000;
+  const requiredDays = 6 * 30; // 6 ay
+  const baseDate = new Date(resetAt);
+  const today = new Date();
+  const daysPassed = Math.max(0, Math.floor((today.getTime() - baseDate.getTime()) / dayMs));
+  const daysLeft = Math.max(0, requiredDays - daysPassed);
+  const percent = Math.min(100, Math.round((daysPassed / requiredDays) * 100));
+  const unlockDate = new Date(baseDate.getTime() + requiredDays * dayMs);
+
+  const handleReset = async () => {
+    if (!await askEditPassword()) return;
+    if (!await siteConfirm({
+      message: `${worker.name} ${worker.surname} üçün məzuniyyət sayğacı sıfırlansın? (yenidən 6 ay sayılacaq)`,
+      variant: 'default',
+      confirmLabel: 'Sıfırla',
+    })) return;
+    setBusy(true);
+    try {
+      await resetVacation(worker.id);
+      setResetAt(new Date().toISOString());
+      await onUpdated();
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4" data-testid="vacation-panel">
+      <div className="flex items-center gap-2">
+        <RotateCcw className="h-5 w-5 text-amber-700" />
+        <h3 className="text-lg font-bold text-gray-900">Məzuniyyət Statusu</h3>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Sayğac başladığı tarix</p>
+          <p className="text-sm font-semibold text-gray-900">{baseDate.toLocaleDateString('az-AZ', { timeZone: TZ })}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Keçən gün</p>
+          <p className="text-sm font-semibold text-gray-900">{daysPassed} gün</p>
+        </div>
+        <div className={`rounded-lg p-4 ${daysLeft === 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+          <p className="text-[10px] uppercase tracking-wider text-gray-700 mb-1">{daysLeft === 0 ? 'Status' : 'Qalan gün'}</p>
+          <p className={`text-sm font-semibold ${daysLeft === 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
+            {daysLeft === 0 ? 'Açıqdır ✓' : `${daysLeft} gün`}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-gray-600">İrəliləyiş</span>
+          <span className="text-xs font-semibold text-gray-900">{percent}%</span>
+        </div>
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full transition-all ${percent === 100 ? 'bg-emerald-500' : 'bg-amber-400'}`} style={{ width: `${percent}%` }} />
+        </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          Açılma tarixi: <strong>{unlockDate.toLocaleDateString('az-AZ', { timeZone: TZ })}</strong>
+        </p>
+      </div>
+
+      <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <p className="text-xs text-gray-600">
+          İşçi məzuniyyətə çıxdıqdan sonra burdan sıfırlayın — 6 ay yenidən hesablanacaq.
+        </p>
+        <button
+          onClick={handleReset}
+          disabled={busy}
+          data-testid="workers-reset-vacation"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-50 disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+          Məzuniyyəti sıfırla
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ───────────────────── Worker Form (create / edit) ─────────────────────
 const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose: () => void; onSaved: () => void; existing?: Worker }> = ({ positions, branches, onClose, onSaved, existing }) => {
   const [name, setName] = useState(existing?.name || '');
   const [surname, setSurname] = useState(existing?.surname || '');
   const [email, setEmail] = useState(existing?.email || '');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(existing?.loginPassword || '');
+  const [showPassword, setShowPassword] = useState(false);
   const [position, setPosition] = useState(existing?.position || (positions[0]?.name || ''));
   const [branch, setBranch] = useState(existing?.branch || '');
   const [birthDate, setBirthDate] = useState(existing?.birthDate?.slice(0, 10) || '');
@@ -505,6 +577,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
           birthDate: birthDate || '',
           hireDate, contractStart, contractEnd,
           monthlyTarget: Number(monthlyTarget) || 0,
+          loginPassword: password || existing.loginPassword || '',
           isActive,
         });
       } else {
@@ -534,7 +607,32 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
         <Field label="Ad *"><input required value={name} onChange={(e) => setName(e.target.value)} className={inp} data-testid="workers-form-name" /></Field>
         <Field label="Soyad *"><input required value={surname} onChange={(e) => setSurname(e.target.value)} className={inp} data-testid="workers-form-surname" /></Field>
         <Field label="Email *"><input required type="email" value={email} disabled={!!existing} onChange={(e) => setEmail(e.target.value)} className={inp + (existing ? ' bg-gray-50 text-gray-500' : '')} data-testid="workers-form-email" /></Field>
-        {!existing && <Field label="Şifrə * (ən az 6 simvol)"><input required type="text" value={password} onChange={(e) => setPassword(e.target.value)} className={inp} data-testid="workers-form-password" /></Field>}
+        <Field label={existing ? 'Daxilolma şifrəsi' : 'Şifrə * (ən az 6 simvol)'}>
+          <div className="flex items-stretch gap-2">
+            <input
+              required={!existing}
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={existing ? 'Şifrə (saxlandıqda yenilənir)' : 'Şifrə daxil edin'}
+              className={inp + ' flex-1'}
+              data-testid="workers-form-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(s => !s)}
+              className="px-3 border border-gray-300 rounded-lg text-xs hover:bg-gray-50"
+              data-testid="workers-form-password-toggle"
+            >
+              {showPassword ? 'Gizlət' : 'Göstər'}
+            </button>
+          </div>
+          {existing && (
+            <p className="text-[11px] text-amber-700 mt-1">
+              ⚠ Şifrəni dəyişmək yalnız bu ekrandakı qeydi yeniləyir. Firebase Auth-dakı əsas şifrə yaratma anında təyin olunduğu üçün avtomatik dəyişməyə bilər — işçi köhnə şifrə ilə daxil ola bilərsə, müvafiq olaraq Firebase Auth-da əl ilə yeniləyin.
+            </p>
+          )}
+        </Field>
         <Field label="Vəzifə *">
           {positions.length === 0 ? (
             <div className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">Əvvəlcə yuxarıdakı bölmədən vəzifə əlavə edin.</div>
@@ -596,7 +694,7 @@ const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ri
 
 // ───────────────────── Worker Detail (edit + fines/rewards/sales/notify/total) ─────────────────────
 const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: Branch[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, branches, onClose, onUpdated }) => {
-  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'total' | 'notify'>('info');
+  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'total' | 'vacation' | 'notify'>('info');
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [sales, setSales] = useState<SalesEntry[]>([]);
@@ -614,16 +712,11 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [worker.id]);
 
   const handleDelete = async () => {
+    if (!await askEditPassword()) return;
     if (!await siteConfirm({ message: `${worker.name} ${worker.surname} işçisi silinsin?`, variant: 'danger', confirmLabel: 'Sil' })) return;
     await deleteWorker(worker.id);
     await onUpdated();
     onClose();
-  };
-
-  const handleResetVacation = async () => {
-    if (!await siteConfirm({ message: `${worker.name} ${worker.surname} üçün məzuniyyət sayğacı sıfırlansın? (yenidən 6 ay sayılacaq)`, variant: 'default', confirmLabel: 'Sıfırla' })) return;
-    await resetVacation(worker.id);
-    await onUpdated();
   };
 
   return (
@@ -641,24 +734,10 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
         </button>
       </div>
 
-      {/* Vacation reset shortcut */}
-      <div className="mb-5 flex items-center justify-between bg-amber-50/40 border border-amber-200 rounded-lg p-3">
-        <div className="text-xs text-amber-900">
-          <strong>Məzuniyyət sayğacı:</strong> İşçi məzuniyyətə çıxdıqdan sonra burdan sıfırlayın — 6 ay yenidən hesablanacaq.
-        </div>
-        <button
-          onClick={handleResetVacation}
-          data-testid="workers-reset-vacation"
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-100"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> Məzuniyyəti sıfırla
-        </button>
-      </div>
-
       {/* Performance summary */}
       {perf && (
         <div className="mb-5 grid grid-cols-2 md:grid-cols-5 gap-3">
-          <PerfCard label="Yekun reytinq" value={`${perf.total}%`} highlight />
+          <PerfCard label="Performans" value={`${perf.total}%`} highlight />
           <PerfCard label="Satış" value={`${perf.salesScore}%`} />
           <PerfCard label="Davamiyyət" value={`${perf.attendance}%`} />
           <PerfCard label="Mükafat" value={perf.rewardsBonus > 0 ? `+${perf.rewardsBonus}%` : '0%'} />
@@ -673,6 +752,7 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
           ['rewards', 'Mükafatlar'],
           ['sales', 'Satışlar'],
           ['total', 'Aylıq cəm'],
+          ['vacation', 'Məzuniyyət'],
           ['notify', 'Bildiriş'],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k as any)}
@@ -687,6 +767,7 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
       {tab === 'rewards' && <RewardsPanel workerId={worker.id} items={rewards} reload={reload} />}
       {tab === 'sales' && <SalesPanel workerId={worker.id} target={worker.monthlyTarget} items={sales} reload={reload} />}
       {tab === 'total' && <MonthlyTotalPanel worker={worker} onSaved={onUpdated} />}
+      {tab === 'vacation' && <VacationPanel worker={worker} onUpdated={onUpdated} />}
       {tab === 'notify' && <NotifyPanel workerId={worker.id} />}
     </div>
   );
@@ -785,7 +866,7 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
                 <p className="text-xs text-gray-500">{fmt(f.date)}</p></div>
               <div className="flex items-center gap-3">
                 <span className="text-red-600 font-medium">−{f.amount} ₼</span>
-                <button onClick={async () => { await deleteFine(f.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
+                <button onClick={async () => { if (!await askEditPassword()) return; await deleteFine(f.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
               </div>
             </li>
           ))}
@@ -848,7 +929,7 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
                 <p className="text-xs text-gray-500">{fmt(r.date)} · {r.type}</p></div>
               <div className="flex items-center gap-3">
                 {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount}{r.type === 'raise' ? '%' : ' ₼'}</span> : null}
-                <button onClick={async () => { await deleteReward(r.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
+                <button onClick={async () => { if (!await askEditPassword()) return; await deleteReward(r.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
               </div>
             </li>
           ))}

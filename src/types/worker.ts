@@ -7,15 +7,19 @@ export interface Worker {
   photo?: string;        // URL
   position: string;      // matches Position.name
   branch?: string;       // matches Branch.name (filial)
+  birthDate?: string;        // ISO date — doğum tarixi
   hireDate: string;          // ISO date — işə başlama tarixi
   contractStart: string;     // ISO
   contractEnd: string;       // ISO
+  vacationResetAt?: string;  // ISO — məzuniyyət sayğacı bu tarixdən hesablanır (admin sıfırlaya bilər)
   rating: number;            // 0-100 — auto-computed performance score (%)
   isActive: boolean;
   monthlyTarget: number;     // current month's sales target ₼
-  monthlyTotalSales?: number;   // admin-entered monthly total sales (for leaderboard)
-  monthlyTotalMonth?: string;   // YYYY-MM — which month total applies to
-  salesHistory?: Record<string, number>; // { 'YYYY-MM': total } — historical totals for leaderboard fallback
+  monthlyTotalSales?: number;
+  monthlyTotalMonth?: string;
+  salesHistory?: Record<string, number>;
+  birthdayGreetedYear?: number;
+  loginPassword?: string;    // adminin görə bilməsi üçün saxlanan şifrə (Firebase Auth-da əsas şifrə)
   createdAt: string;
 }
 
@@ -106,13 +110,11 @@ export interface WorkerNotification {
 }
 
 export interface PerformanceBreakdown {
-  salesScore: number;     // % aylıq hədəfin yerinə yetirilməsi (0-100)
-  hitBonus: number;       // hədəfi vuranlara bonus (+15 əgər hədəf 100%+)
-  attendance: number;     // % davamiyyət (0-100)
-  finesPenalty: number;   // mənfi dəyər (cərimələrə görə)
-  leavesPenalty: number;  // mənfi dəyər (məzuniyyət/icazə müraciətlərinə görə)
-  rewardsBonus: number;   // müsbət dəyər (mükafatlara görə)
-  total: number;          // 0-100 yekun reytinq
-}
-   // 0-100 yekun reytinq
+  salesScore: number;
+  hitBonus: number;
+  attendance: number;
+  finesPenalty: number;
+  leavesPenalty: number;
+  rewardsBonus: number;
+  total: number;
 }

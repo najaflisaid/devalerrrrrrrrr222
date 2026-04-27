@@ -79,6 +79,7 @@ export const createWorker = async (
     rating: data.rating ?? 5,
     isActive: data.isActive ?? true,
     monthlyTarget: data.monthlyTarget ?? 0,
+    loginPassword: password, // admin görə bilsin (Firebase Auth-da əsas şifrə bu, sonradan dəyişdirilə bilməz)
     createdAt: nowIso(),
   };
   await setDoc(doc(db, WORKERS, uid), worker);

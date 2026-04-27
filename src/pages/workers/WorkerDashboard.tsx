@@ -222,7 +222,7 @@ const WorkerDashboard: React.FC = () => {
           {/* Profile */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-start gap-6 text-center sm:text-left items-center">
-              <div className="w-36 h-36 rounded-full bg-gray-100 overflow-hidden border-2 border-[#D4AF37]/40 shrink-0 relative">
+              <div className="w-36 h-36 rounded-full overflow-hidden shrink-0 relative ring-2 ring-[#D4AF37]/40 ring-offset-2 ring-offset-white bg-gray-100">
                 {worker.photo
                   ? <img src={worker.photo} alt={worker.name} className="absolute inset-0 w-full h-full object-cover block" />
                   : <span className="absolute inset-0 flex items-center justify-center text-3xl font-playfair text-gray-500">{worker.name?.[0]}{worker.surname?.[0]}</span>}
