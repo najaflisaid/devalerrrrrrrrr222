@@ -144,7 +144,14 @@ const WorkerDashboard: React.FC = () => {
     setReqDesc(fillTemplate(REQUEST_TEMPLATES[reqType], worker.name, worker.surname));
   }, [reqType, worker]);
 
-  const totalSales = useMemo(() => sales.reduce((s, x) => s + (x.amount || 0), 0), [sales]);
+  const totalSales = useMemo(() => {
+    // Admin "Ümumi satış" sahəsində bu ay üçün məbləğ daxil edibsə, onu prioritet say.
+    // Bu, admin paneli ilə işçi panelinin eyni rəqəmi göstərməsini təmin edir.
+    if (worker?.monthlyTotalMonth === monthYM() && typeof worker?.monthlyTotalSales === 'number') {
+      return worker.monthlyTotalSales;
+    }
+    return sales.reduce((s, x) => s + (x.amount || 0), 0);
+  }, [sales, worker]);
   // Display percent — gerçək faiz (100%-dən yuxarı da göstərə bilir)
   const targetPercentDisplay = useMemo(() => {
     if (!worker?.monthlyTarget) return 0;

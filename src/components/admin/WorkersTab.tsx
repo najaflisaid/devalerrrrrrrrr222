@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
@@ -798,20 +798,56 @@ const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> 
 const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
   const ym = monthYM();
   const isCurrent = worker.monthlyTotalMonth === ym;
-  const [total, setTotal] = useState<string>(isCurrent ? String(worker.monthlyTotalSales || '') : '');
-  const [target, setTarget] = useState<string>(String(worker.monthlyTarget || ''));
+  const initialTotal = isCurrent ? String(worker.monthlyTotalSales || '') : '';
+  const initialTarget = String(worker.monthlyTarget || '');
+  const [total, setTotal] = useState<string>(initialTotal);
+  const [target, setTarget] = useState<string>(initialTarget);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  // Initial dəyərləri saxla — yalnız dəyişən sahələri update edək
+  const initialTotalRef = useRef<string>(initialTotal);
+  const initialTargetRef = useRef<string>(initialTarget);
+
+  // worker dəyişəndə (məs. başqa işçi seçiləndə) state-i yenilə
+  useEffect(() => {
+    const newInitTotal = worker.monthlyTotalMonth === ym ? String(worker.monthlyTotalSales || '') : '';
+    const newInitTarget = String(worker.monthlyTarget || '');
+    setTotal(newInitTotal);
+    setTarget(newInitTarget);
+    initialTotalRef.current = newInitTotal;
+    initialTargetRef.current = newInitTarget;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worker.id, worker.monthlyTotalSales, worker.monthlyTotalMonth, worker.monthlyTarget]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    setErrorMsg('');
     try {
-      await setMonthlyTotal(worker.id, Number(total) || 0, ym);
-      // Hədəfi də saxla
-      await updateWorker(worker.id, { monthlyTarget: Number(target) || 0 });
-      setSaved(true); setTimeout(() => setSaved(false), 2000);
+      const targetChanged = target.trim() !== initialTargetRef.current.trim();
+      const totalChanged = total.trim() !== initialTotalRef.current.trim();
+
+      if (!targetChanged && !totalChanged) {
+        setSaved(true); setTimeout(() => setSaved(false), 2000);
+        return;
+      }
+
+      // Yalnız dəyişən sahələri yenilə — boş qalmış sahə təsadüfən 0-a yazılmasın
+      if (targetChanged) {
+        await updateWorker(worker.id, { monthlyTarget: Number(target) || 0 });
+      }
+      if (totalChanged) {
+        await setMonthlyTotal(worker.id, Number(total) || 0, ym);
+      }
+
+      initialTotalRef.current = total;
+      initialTargetRef.current = target;
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
       await onSaved();
+    } catch (err: any) {
+      console.error('MonthlyTotal save failed:', err);
+      setErrorMsg(err?.message || 'Saxlamaq mümkün olmadı. Yenidən cəhd edin.');
     } finally { setBusy(false); }
   };
 
@@ -826,7 +862,8 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
         <h3 className="font-semibold text-gray-900">Aylıq satış ({ym})</h3>
       </div>
       <p className="text-xs text-gray-600">
-        Bu işçinin bu ay üzrə <strong>satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin. Sıralamada məbləğ gizli qalır, yalnız ad-soyad göstərilir.
+        Bu işçinin bu ay üzrə <strong>satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin.
+        İşçinin öz panelində də eyni məbləğ göstəriləcək. Yalnız dəyişdirdiyiniz xanaya yazıb saxlayın — boş qoyduğunuz xana toxunulmadan qalır.
       </p>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -850,11 +887,12 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
           </div>
         )}
 
-        <div className="md:col-span-2 flex items-center gap-3">
+        <div className="md:col-span-2 flex items-center gap-3 flex-wrap">
           <button disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
           </button>
           {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
+          {errorMsg && <span className="text-xs text-red-600">{errorMsg}</span>}
         </div>
       </form>
 
