@@ -334,8 +334,8 @@ const WorkerDashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi */}
-        <SalesHistorySection salesHistory={worker.salesHistory} target={worker.monthlyTarget || 0} />
+        {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi (hədəf göstərilmir, çünki hər ay fərqli olur) */}
+        <SalesHistorySection salesHistory={worker.salesHistory} />
 
         {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
@@ -785,8 +785,8 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
 
 export default WorkerDashboard;
 
-// ─── Satışlarım — açılan/bağlanan bölmə (12 aylıq qrafik)
-const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined; target: number }> = ({ salesHistory, target }) => {
+// ─── Satışlarım — açılan/bağlanan bölmə (12 aylıq qrafik, hədəfsiz)
+const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined }> = ({ salesHistory }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -813,7 +813,7 @@ const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | und
         <div className="px-6 pb-6 border-t border-gray-100 pt-5">
           <MonthlySalesChart
             salesHistory={salesHistory}
-            target={target}
+            target={0}
             title=""
             mode="currentYear"
             showAverage={false}

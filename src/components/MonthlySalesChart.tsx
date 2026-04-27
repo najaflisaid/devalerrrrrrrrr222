@@ -205,9 +205,11 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
         <span className="inline-flex items-center gap-1">
           <span className="w-2 h-2 rounded-sm bg-gradient-to-t from-[#D4AF37] to-[#F3E2A5]" /> Aylıq satış
         </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm bg-gradient-to-t from-emerald-400 to-emerald-300" /> Hədəfə çatdı
-        </span>
+        {target > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm bg-gradient-to-t from-emerald-400 to-emerald-300" /> Hədəfə çatdı
+          </span>
+        )}
         <span className="inline-flex items-center gap-1">
           <TrendingUp className="h-3 w-3 text-emerald-500" /> artım
           <TrendingDown className="h-3 w-3 text-red-500 ml-1" /> azalma
