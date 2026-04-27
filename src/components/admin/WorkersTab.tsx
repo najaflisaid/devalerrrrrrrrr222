@@ -8,10 +8,11 @@ import { siteConfirm } from '../ui/NotificationProvider';
 import { verifyPassword } from '../../services/adminPasswordService';
 import {
   createWorker, listWorkers, updateWorker, deleteWorker,
+  changeWorkerPassword,
   addFine, listFines, deleteFine,
-  addReward, listRewards, deleteReward,
+  addReward, listRewards, deleteReward, updateReward,
   addSale, listSales,
-  listRequests, updateRequestStatus,
+  listRequests, updateRequestStatus, deleteRequest,
   sendNotification,
   listPositions, addPosition, deletePosition, updatePosition,
   listBranches, addBranch, deleteBranch, updateBranch,
@@ -112,16 +113,7 @@ const WorkersTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Positions management */}
-      <PositionsPanel positions={positions} onChange={refresh} />
-
-      {/* Branches management */}
-      <BranchesPanel branches={branches} onChange={refresh} />
-
-      {/* Trainings management */}
-      <TrainingsPanel />
-
-      {/* Workers list */}
+      {/* Workers list — ƏVVƏL gəlir, sürətli giriş üçün */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-2">
@@ -201,6 +193,13 @@ const WorkersTab: React.FC = () => {
 
       {/* Requests inbox */}
       <RequestsInbox items={allRequests} workers={workers} onUpdated={refresh} />
+
+      {/* Aşağıda: Vəzifələr, Filiallar, Təlim — kompakt 2x2 grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PositionsPanel positions={positions} onChange={refresh} />
+        <BranchesPanel branches={branches} onChange={refresh} />
+        <div className="lg:col-span-2"><TrainingsPanel /></div>
+      </div>
     </div>
   );
 };
@@ -234,41 +233,43 @@ const PositionsPanel: React.FC<{ positions: Position[]; onChange: () => Promise<
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Briefcase className="h-5 w-5 text-gray-700" />
-        <h2 className="text-xl font-bold text-gray-900">Vəzifələr ({positions.length})</h2>
-      </div>
-      <form onSubmit={submit} className="flex gap-2 mb-4">
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni vəzifə adı..."
-          className={inp + ' flex-1'} data-testid="position-add-input" />
+    <details className="bg-white rounded-xl shadow-sm border border-gray-200 group">
+      <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none hover:bg-gray-50/60 rounded-xl">
+        <Briefcase className="h-4 w-4 text-gray-700" />
+        <h2 className="text-sm font-bold text-gray-900 flex-1">Vəzifələr <span className="text-gray-400 font-normal">({positions.length})</span></h2>
+        <span className="text-xs text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+      </summary>
+      <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+      <form onSubmit={submit} className="flex gap-2 mb-3">
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni vəzifə..."
+          className={inp + ' flex-1 text-sm py-1.5'} data-testid="position-add-input" />
         <button disabled={busy || !newName.trim()}
-          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1.5"
+          className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1"
           data-testid="position-add-btn">
-          <Plus className="h-4 w-4" /> Əlavə et
+          <Plus className="h-3.5 w-3.5" /> Əlavə
         </button>
       </form>
       {positions.length === 0 ? (
-        <p className="text-sm text-gray-400">Hələ vəzifə əlavə olunmayıb.</p>
+        <p className="text-xs text-gray-400">Hələ vəzifə yoxdur.</p>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {positions.map(p => (
-            <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-gray-100 rounded-lg text-sm bg-gray-50/40">
+            <li key={p.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 border border-gray-100 rounded-md text-xs bg-gray-50/40">
               {editId === p.id ? (
                 <>
-                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1'} autoFocus />
-                  <button onClick={() => saveEdit(p.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
-                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1 text-xs py-1'} autoFocus />
+                  <button onClick={() => saveEdit(p.id)} className="p-1 hover:bg-emerald-50 rounded"><Save className="h-3 w-3 text-emerald-600" /></button>
+                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1 hover:bg-gray-100 rounded"><X className="h-3 w-3 text-gray-500" /></button>
                 </>
               ) : (
                 <>
                   <span className="text-gray-800 font-medium truncate">{p.name}</span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => { setEditId(p.id); setEditVal(p.name); }} className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`position-edit-${p.id}`}>
-                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button onClick={() => { setEditId(p.id); setEditVal(p.name); }} className="p-1 hover:bg-gray-100 rounded" data-testid={`position-edit-${p.id}`}>
+                      <Edit2 className="h-3 w-3 text-gray-600" />
                     </button>
-                    <button onClick={() => remove(p)} className="p-1.5 hover:bg-red-50 rounded-lg" data-testid={`position-delete-${p.id}`}>
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    <button onClick={() => remove(p)} className="p-1 hover:bg-red-50 rounded" data-testid={`position-delete-${p.id}`}>
+                      <Trash2 className="h-3 w-3 text-red-500" />
                     </button>
                   </div>
                 </>
@@ -277,7 +278,8 @@ const PositionsPanel: React.FC<{ positions: Position[]; onChange: () => Promise<
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </details>
   );
 };
 
@@ -310,41 +312,43 @@ const BranchesPanel: React.FC<{ branches: Branch[]; onChange: () => Promise<void
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Building2 className="h-5 w-5 text-gray-700" />
-        <h2 className="text-xl font-bold text-gray-900">Filiallar ({branches.length})</h2>
-      </div>
-      <form onSubmit={submit} className="flex gap-2 mb-4">
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni filial adı..."
-          className={inp + ' flex-1'} data-testid="branch-add-input" />
+    <details className="bg-white rounded-xl shadow-sm border border-gray-200 group">
+      <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none hover:bg-gray-50/60 rounded-xl">
+        <Building2 className="h-4 w-4 text-gray-700" />
+        <h2 className="text-sm font-bold text-gray-900 flex-1">Filiallar <span className="text-gray-400 font-normal">({branches.length})</span></h2>
+        <span className="text-xs text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+      </summary>
+      <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+      <form onSubmit={submit} className="flex gap-2 mb-3">
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Yeni filial..."
+          className={inp + ' flex-1 text-sm py-1.5'} data-testid="branch-add-input" />
         <button disabled={busy || !newName.trim()}
-          className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1.5"
+          className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1"
           data-testid="branch-add-btn">
-          <Plus className="h-4 w-4" /> Əlavə et
+          <Plus className="h-3.5 w-3.5" /> Əlavə
         </button>
       </form>
       {branches.length === 0 ? (
-        <p className="text-sm text-gray-400">Hələ filial əlavə olunmayıb.</p>
+        <p className="text-xs text-gray-400">Hələ filial yoxdur.</p>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {branches.map(b => (
-            <li key={b.id} className="flex items-center justify-between gap-2 px-3 py-2 border border-gray-100 rounded-lg text-sm bg-gray-50/40">
+            <li key={b.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 border border-gray-100 rounded-md text-xs bg-gray-50/40">
               {editId === b.id ? (
                 <>
-                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1'} autoFocus />
-                  <button onClick={() => saveEdit(b.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
-                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                  <input value={editVal} onChange={(e) => setEditVal(e.target.value)} className={inp + ' flex-1 text-xs py-1'} autoFocus />
+                  <button onClick={() => saveEdit(b.id)} className="p-1 hover:bg-emerald-50 rounded"><Save className="h-3 w-3 text-emerald-600" /></button>
+                  <button onClick={() => { setEditId(null); setEditVal(''); }} className="p-1 hover:bg-gray-100 rounded"><X className="h-3 w-3 text-gray-500" /></button>
                 </>
               ) : (
                 <>
                   <span className="text-gray-800 font-medium truncate">{b.name}</span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => { setEditId(b.id); setEditVal(b.name); }} className="p-1.5 hover:bg-gray-100 rounded-lg" data-testid={`branch-edit-${b.id}`}>
-                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button onClick={() => { setEditId(b.id); setEditVal(b.name); }} className="p-1 hover:bg-gray-100 rounded" data-testid={`branch-edit-${b.id}`}>
+                      <Edit2 className="h-3 w-3 text-gray-600" />
                     </button>
-                    <button onClick={() => remove(b)} className="p-1.5 hover:bg-red-50 rounded-lg" data-testid={`branch-delete-${b.id}`}>
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    <button onClick={() => remove(b)} className="p-1 hover:bg-red-50 rounded" data-testid={`branch-delete-${b.id}`}>
+                      <Trash2 className="h-3 w-3 text-red-500" />
                     </button>
                   </div>
                 </>
@@ -353,7 +357,8 @@ const BranchesPanel: React.FC<{ branches: Branch[]; onChange: () => Promise<void
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </details>
   );
 };
 
@@ -400,55 +405,55 @@ const TrainingsPanel: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <GraduationCap className="h-5 w-5 text-gray-700" />
-        <h2 className="text-xl font-bold text-gray-900">Təlim Materialları ({items.length})</h2>
-      </div>
-      <p className="text-xs text-gray-500 mb-4">İşçilərə paylaşmaq üçün təlim videoları, sənədləri və ya hər hansı bir link əlavə edin.</p>
-
-      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-4">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Başlıq (məs: Satış texnikaları)" className={inp + ' md:col-span-4'} data-testid="training-title" />
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://link..." type="url" className={inp + ' md:col-span-4'} data-testid="training-url" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Qısa təsvir (istəyə görə)" className={inp + ' md:col-span-3'} />
+    <details className="bg-white rounded-xl shadow-sm border border-gray-200 group">
+      <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none hover:bg-gray-50/60 rounded-xl">
+        <GraduationCap className="h-4 w-4 text-gray-700" />
+        <h2 className="text-sm font-bold text-gray-900 flex-1">Təlim Materialları <span className="text-gray-400 font-normal">({items.length})</span></h2>
+        <span className="text-xs text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+      </summary>
+      <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-12 gap-1.5 mb-3">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Başlıq" className={inp + ' md:col-span-3 text-xs py-1.5'} data-testid="training-title" />
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://link..." type="url" className={inp + ' md:col-span-4 text-xs py-1.5'} data-testid="training-url" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Qısa təsvir" className={inp + ' md:col-span-4 text-xs py-1.5'} />
         <button disabled={busy || !title.trim() || !url.trim()}
-          className="md:col-span-1 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+          className="md:col-span-1 px-2 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center justify-center gap-1"
           data-testid="training-add-btn">
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </form>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Yüklənir...</p>
+        <p className="text-xs text-gray-400">Yüklənir...</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-gray-400">Hələ təlim əlavə olunmayıb.</p>
+        <p className="text-xs text-gray-400">Hələ təlim yoxdur.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {items.map(t => (
-            <li key={t.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50/40" data-testid={`training-${t.id}`}>
+            <li key={t.id} className="border border-gray-100 rounded-md p-2 bg-gray-50/40 text-xs" data-testid={`training-${t.id}`}>
               {editId === t.id ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                  <input value={editData.title} onChange={(e) => setEditData(d => ({ ...d, title: e.target.value }))} className={inp + ' md:col-span-4'} />
-                  <input value={editData.url} onChange={(e) => setEditData(d => ({ ...d, url: e.target.value }))} className={inp + ' md:col-span-4'} />
-                  <input value={editData.description} onChange={(e) => setEditData(d => ({ ...d, description: e.target.value }))} className={inp + ' md:col-span-3'} />
-                  <div className="md:col-span-1 flex items-center gap-1">
-                    <button onClick={() => saveEdit(t.id)} className="p-1.5 hover:bg-emerald-50 rounded-lg"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
-                    <button onClick={() => setEditId(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-1.5">
+                  <input value={editData.title} onChange={(e) => setEditData(d => ({ ...d, title: e.target.value }))} className={inp + ' md:col-span-3 text-xs py-1'} />
+                  <input value={editData.url} onChange={(e) => setEditData(d => ({ ...d, url: e.target.value }))} className={inp + ' md:col-span-4 text-xs py-1'} />
+                  <input value={editData.description} onChange={(e) => setEditData(d => ({ ...d, description: e.target.value }))} className={inp + ' md:col-span-4 text-xs py-1'} />
+                  <div className="md:col-span-1 flex items-center gap-0.5">
+                    <button onClick={() => saveEdit(t.id)} className="p-1 hover:bg-emerald-50 rounded"><Save className="h-3 w-3 text-emerald-600" /></button>
+                    <button onClick={() => setEditId(null)} className="p-1 hover:bg-gray-100 rounded"><X className="h-3 w-3 text-gray-500" /></button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-black">{t.title}</p>
-                    <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate block">{t.url}</a>
-                    {t.description && <p className="text-xs text-gray-600 mt-1">{t.description}</p>}
+                    <p className="font-medium text-black truncate">{t.title}</p>
+                    <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 hover:underline truncate block">{t.url}</a>
+                    {t.description && <p className="text-[11px] text-gray-600 mt-0.5 line-clamp-1">{t.description}</p>}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => { setEditId(t.id); setEditData({ title: t.title, url: t.url, description: t.description || '' }); }} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                      <Edit2 className="h-3.5 w-3.5 text-gray-600" />
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button onClick={() => { setEditId(t.id); setEditData({ title: t.title, url: t.url, description: t.description || '' }); }} className="p-1 hover:bg-gray-100 rounded">
+                      <Edit2 className="h-3 w-3 text-gray-600" />
                     </button>
-                    <button onClick={() => remove(t)} className="p-1.5 hover:bg-red-50 rounded-lg">
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    <button onClick={() => remove(t)} className="p-1 hover:bg-red-50 rounded">
+                      <Trash2 className="h-3 w-3 text-red-500" />
                     </button>
                   </div>
                 </div>
@@ -457,7 +462,8 @@ const TrainingsPanel: React.FC = () => {
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </details>
   );
 };
 
@@ -558,7 +564,6 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
   const [hireDate, setHireDate] = useState(existing?.hireDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractStart, setContractStart] = useState(existing?.contractStart?.slice(0, 10) || new Date().toISOString().slice(0, 10));
   const [contractEnd, setContractEnd] = useState(existing?.contractEnd?.slice(0, 10) || '');
-  const [monthlyTarget, setMonthlyTarget] = useState(existing?.monthlyTarget?.toString() || '');
   const [photo, setPhoto] = useState(existing?.photo || '');
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
   const [busy, setBusy] = useState(false);
@@ -572,12 +577,23 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
     setBusy(true);
     try {
       if (existing) {
+        // Şifrə dəyişibsə Firebase Auth-da da yenilə
+        const newPw = (password || '').trim();
+        const oldPw = (existing.loginPassword || '').trim();
+        if (newPw && newPw !== oldPw) {
+          try {
+            await changeWorkerPassword(existing.email, oldPw, newPw);
+          } catch (e: any) {
+            setBusy(false);
+            setErr(`Auth şifrəsi dəyişilə bilmədi: ${e?.message || e}. Firestore qeydi yenilənmədi.`);
+            return;
+          }
+        }
         await updateWorker(existing.id, {
           name, surname, position, branch: branch || '', photo: photo.trim(),
           birthDate: birthDate || '',
           hireDate, contractStart, contractEnd,
-          monthlyTarget: Number(monthlyTarget) || 0,
-          loginPassword: password || existing.loginPassword || '',
+          loginPassword: newPw || oldPw,
           isActive,
         });
       } else {
@@ -585,7 +601,7 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
           name, surname, position, branch: branch || '',
           birthDate: birthDate || '',
           hireDate, contractStart, contractEnd,
-          monthlyTarget: Number(monthlyTarget) || 0,
+          monthlyTarget: 0,
           photo: photo.trim(),
           isActive,
         });
@@ -657,7 +673,6 @@ const WorkerForm: React.FC<{ positions: Position[]; branches: Branch[]; onClose:
         <Field label="Doğum tarixi"><input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inp} data-testid="workers-form-birthdate" /></Field>
         <Field label="Müqavilə başlama"><input type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} className={inp} /></Field>
         <Field label="Müqavilə bitmə"><input type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} className={inp} /></Field>
-        <Field label="Aylıq satış hədəfi (₼)"><input type="number" min={0} value={monthlyTarget} onChange={(e) => setMonthlyTarget(e.target.value)} className={inp} data-testid="workers-form-target" /></Field>
         <Field label="Şəkil URL (link)">
           <div className="flex items-center gap-3">
             {photo && (
@@ -694,7 +709,7 @@ const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ri
 
 // ───────────────────── Worker Detail (edit + fines/rewards/sales/notify/total) ─────────────────────
 const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: Branch[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, branches, onClose, onUpdated }) => {
-  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'sales' | 'total' | 'vacation' | 'notify'>('info');
+  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'total' | 'vacation' | 'notify'>('info');
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [sales, setSales] = useState<SalesEntry[]>([]);
@@ -750,8 +765,7 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
           ['info', 'Məlumat'],
           ['fines', 'Cərimələr'],
           ['rewards', 'Mükafatlar'],
-          ['sales', 'Satışlar'],
-          ['total', 'Aylıq cəm'],
+          ['total', 'Aylıq satış'],
           ['vacation', 'Məzuniyyət'],
           ['notify', 'Bildiriş'],
         ] as const).map(([k, l]) => (
@@ -765,7 +779,6 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
       {tab === 'info' && <WorkerForm positions={positions} branches={branches} existing={worker} onClose={onClose} onSaved={async () => { await onUpdated(); }} />}
       {tab === 'fines' && <FinesPanel workerId={worker.id} items={fines} reload={reload} />}
       {tab === 'rewards' && <RewardsPanel workerId={worker.id} items={rewards} reload={reload} />}
-      {tab === 'sales' && <SalesPanel workerId={worker.id} target={worker.monthlyTarget} items={sales} reload={reload} />}
       {tab === 'total' && <MonthlyTotalPanel worker={worker} onSaved={onUpdated} />}
       {tab === 'vacation' && <VacationPanel worker={worker} onUpdated={onUpdated} />}
       {tab === 'notify' && <NotifyPanel workerId={worker.id} />}
@@ -780,11 +793,12 @@ const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> 
   </div>
 );
 
-// ─── Monthly Total panel (admin enters worker's monthly total sales for leaderboard)
+// ─── Monthly Total panel (admin enters worker's monthly total sales for leaderboard + monthly target)
 const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
   const ym = monthYM();
   const isCurrent = worker.monthlyTotalMonth === ym;
   const [total, setTotal] = useState<string>(isCurrent ? String(worker.monthlyTotalSales || '') : '');
+  const [target, setTarget] = useState<string>(String(worker.monthlyTarget || ''));
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -793,33 +807,59 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
     setBusy(true);
     try {
       await setMonthlyTotal(worker.id, Number(total) || 0, ym);
+      // Hədəfi də saxla
+      await updateWorker(worker.id, { monthlyTarget: Number(target) || 0 });
       setSaved(true); setTimeout(() => setSaved(false), 2000);
       await onSaved();
     } finally { setBusy(false); }
   };
 
+  const totalNum = Number(total) || 0;
+  const targetNum = Number(target) || 0;
+  const percent = targetNum > 0 ? Math.round((totalNum / targetNum) * 100) : 0;
+
   return (
-    <div className="bg-gray-50/60 rounded-lg p-5 border border-gray-100">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="bg-gray-50/60 rounded-lg p-5 border border-gray-100 space-y-4">
+      <div className="flex items-center gap-2">
         <Trophy className="h-4 w-4 text-[#D4AF37]" />
-        <h3 className="font-semibold text-gray-900">Aylıq ümumi satış ({ym})</h3>
+        <h3 className="font-semibold text-gray-900">Aylıq satış ({ym})</h3>
       </div>
-      <p className="text-xs text-gray-600 mb-4">
-        Bu işçinin bu ay üçün ümumi satış məbləğini daxil edin. Bütün işçilər öz profilində <strong>sıralamanı</strong> görəcək (məbləğlər gizli qalacaq, yalnız ad-soyad).
+      <p className="text-xs text-gray-600">
+        Bu işçinin bu ay üzrə <strong>satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin. Sıralamada məbləğ gizli qalır, yalnız ad-soyad göstərilir.
       </p>
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
+      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi (₼)</label>
+          <input type="number" min={0} value={target} onChange={(e) => setTarget(e.target.value)} className={inp} placeholder="0" data-testid="monthly-target-input" />
+        </div>
+        <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Ümumi satış (₼)</label>
           <input type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} className={inp} placeholder="0" data-testid="monthly-total-input" />
         </div>
-        <button disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
-        </button>
-        {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
+
+        {targetNum > 0 && (
+          <div className="md:col-span-2">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-gray-600">Hədəfin yerinə yetirilməsi</span>
+              <span className={`font-semibold ${percent >= 100 ? 'text-emerald-600' : 'text-[#8a6d10]'}`}>{percent}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full transition-all ${percent >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5]'}`} style={{ width: `${Math.min(100, percent)}%` }} />
+            </div>
+          </div>
+        )}
+
+        <div className="md:col-span-2 flex items-center gap-3">
+          <button disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
+          </button>
+          {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
+        </div>
       </form>
+
       {isCurrent && (
-        <p className="text-xs text-gray-500 mt-3">
-          Cari dəyər: <strong>{(worker.monthlyTotalSales || 0).toLocaleString()} ₼</strong>
+        <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+          Cari saxlanmış məbləğ: <strong>{(worker.monthlyTotalSales || 0).toLocaleString()} ₼</strong> · Hədəf: <strong>{(worker.monthlyTarget || 0).toLocaleString()} ₼</strong>
         </p>
       )}
     </div>
@@ -833,6 +873,9 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ reason: string; amount: string }>({ reason: '', amount: '' });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
@@ -847,6 +890,14 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
       setErr(e?.message || 'Xəta baş verdi.');
     } finally { setBusy(false); }
   };
+
+  const saveEdit = async (id: string) => {
+    if (!await askEditPassword()) return;
+    await updateFine(id, { reason: editData.reason.trim(), amount: Number(editData.amount) || 0 });
+    setEditId(null);
+    await reload();
+  };
+
   return (
     <div>
       {err && <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded-lg" data-testid="fine-err">{err}</div>}
@@ -861,13 +912,29 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
       {items.length === 0 ? <p className="text-sm text-gray-400">Cərimə yoxdur</p> : (
         <ul className="space-y-2">
           {items.map(f => (
-            <li key={f.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0">
-              <div><p className="font-medium text-black flex items-center gap-1.5"><AlertOctagon className="h-3.5 w-3.5 text-red-500" /> {f.reason}</p>
-                <p className="text-xs text-gray-500">{fmt(f.date)}</p></div>
-              <div className="flex items-center gap-3">
-                <span className="text-red-600 font-medium">−{f.amount} ₼</span>
-                <button onClick={async () => { if (!await askEditPassword()) return; await deleteFine(f.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
-              </div>
+            <li key={f.id} className="border border-gray-100 rounded-lg p-3 text-sm">
+              {editId === f.id ? (
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                  <input value={editData.reason} onChange={(e) => setEditData(d => ({ ...d, reason: e.target.value }))} className={inp + ' sm:col-span-6 text-xs py-1.5'} />
+                  <input type="number" value={editData.amount} onChange={(e) => setEditData(d => ({ ...d, amount: e.target.value }))} className={inp + ' sm:col-span-3 text-xs py-1.5'} />
+                  <div className="sm:col-span-3 flex items-center gap-1 justify-end">
+                    <button onClick={() => saveEdit(f.id)} className="p-1.5 hover:bg-emerald-50 rounded"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
+                    <button onClick={() => setEditId(null)} className="p-1.5 hover:bg-gray-100 rounded"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-black flex items-center gap-1.5"><AlertOctagon className="h-3.5 w-3.5 text-red-500" /> {f.reason}</p>
+                    <p className="text-xs text-gray-500">{fmt(f.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-red-600 font-medium">−{f.amount} ₼</span>
+                    <button onClick={() => { setEditId(f.id); setEditData({ reason: f.reason, amount: String(f.amount) }); }} title="Redaktə"><Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" /></button>
+                    <button onClick={async () => { if (!await askEditPassword()) return; await deleteFine(f.id); await reload(); }} title="Sil"><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -884,6 +951,17 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ reason: string; amount: string; type: 'bonus' | 'thanks' | 'raise' }>({ reason: '', amount: '', type: 'bonus' });
+
+  const saveEdit = async (id: string) => {
+    if (!await askEditPassword()) return;
+    const patch: Partial<Reward> = { reason: editData.reason.trim(), type: editData.type };
+    if (editData.amount) patch.amount = Number(editData.amount);
+    await updateReward(id, patch);
+    setEditId(null);
+    await reload();
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
@@ -924,13 +1002,34 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
       {items.length === 0 ? <p className="text-sm text-gray-400">Mükafat yoxdur</p> : (
         <ul className="space-y-2">
           {items.map(r => (
-            <li key={r.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0">
-              <div><p className="font-medium text-black flex items-center gap-1.5"><AwardIcon className="h-3.5 w-3.5 text-[#D4AF37]" /> {r.reason}</p>
-                <p className="text-xs text-gray-500">{fmt(r.date)} · {r.type}</p></div>
-              <div className="flex items-center gap-3">
-                {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount}{r.type === 'raise' ? '%' : ' ₼'}</span> : null}
-                <button onClick={async () => { if (!await askEditPassword()) return; await deleteReward(r.id); await reload(); }}><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
-              </div>
+            <li key={r.id} className="border border-gray-100 rounded-lg p-3 text-sm">
+              {editId === r.id ? (
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                  <select value={editData.type} onChange={(e) => setEditData(d => ({ ...d, type: e.target.value as any }))} className={inp + ' sm:col-span-3 text-xs py-1.5'}>
+                    <option value="bonus">Bonus</option>
+                    <option value="thanks">Təşəkkür</option>
+                    <option value="raise">Artım %</option>
+                  </select>
+                  <input value={editData.reason} onChange={(e) => setEditData(d => ({ ...d, reason: e.target.value }))} className={inp + ' sm:col-span-4 text-xs py-1.5'} />
+                  <input type="number" value={editData.amount} onChange={(e) => setEditData(d => ({ ...d, amount: e.target.value }))} className={inp + ' sm:col-span-3 text-xs py-1.5'} />
+                  <div className="sm:col-span-2 flex items-center gap-1 justify-end">
+                    <button onClick={() => saveEdit(r.id)} className="p-1.5 hover:bg-emerald-50 rounded"><Save className="h-3.5 w-3.5 text-emerald-600" /></button>
+                    <button onClick={() => setEditId(null)} className="p-1.5 hover:bg-gray-100 rounded"><X className="h-3.5 w-3.5 text-gray-500" /></button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-black flex items-center gap-1.5"><AwardIcon className="h-3.5 w-3.5 text-[#D4AF37]" /> {r.reason}</p>
+                    <p className="text-xs text-gray-500">{fmt(r.date)} · {r.type}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount}{r.type === 'raise' ? '%' : ' ₼'}</span> : null}
+                    <button onClick={() => { setEditId(r.id); setEditData({ reason: r.reason, amount: String(r.amount || ''), type: r.type }); }} title="Redaktə"><Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" /></button>
+                    <button onClick={async () => { if (!await askEditPassword()) return; await deleteReward(r.id); await reload(); }} title="Sil"><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -1080,6 +1179,15 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
                   <button onClick={() => updateStatus(r.id, 'resolved', r)}
                     className="px-3 py-1.5 text-xs border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 inline-flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" /> Təsdiq olundu
+                  </button>
+                  <button onClick={async () => {
+                    if (!await siteConfirm({ message: 'Bu müraciəti silmək istədiyinizə əminsiniz?', variant: 'danger', confirmLabel: 'Sil' })) return;
+                    await deleteRequest(r.id);
+                    await onUpdated();
+                  }}
+                    className="px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-lg hover:bg-red-50 inline-flex items-center gap-1"
+                    data-testid={`request-delete-${r.id}`}>
+                    <Trash2 className="h-3 w-3" /> Sil
                   </button>
                 </div>
               </li>

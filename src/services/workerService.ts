@@ -6,6 +6,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { db, storage, getSecondaryAuth } from '../lib/firebase';
 import {
   createUserWithEmailAndPassword, signOut as fbSignOut,
+  signInWithEmailAndPassword, updatePassword,
 } from 'firebase/auth';
 import type {
   Worker, AttendanceEntry, Fine, Reward, SalesEntry,
@@ -111,6 +112,22 @@ export const deleteWorker = async (id: string) => {
   await deleteDoc(doc(db, WORKERS, id));
 };
 
+// İşçinin Firebase Auth şifrəsini dəyişdirir (köhnə şifrəni bilməklə)
+// Əgər oldPassword yoxdursa və ya səhvdirsə xəta atılır.
+export const changeWorkerPassword = async (
+  email: string,
+  oldPassword: string,
+  newPassword: string
+): Promise<void> => {
+  if (!oldPassword) {
+    throw new Error('Köhnə şifrə qeydiyyatda yoxdur. Bu işçinin Firebase Auth şifrəsi avtomatik dəyişilə bilməz. Onu silib yenidən yaradın.');
+  }
+  const sAuth = getSecondaryAuth();
+  const cred = await signInWithEmailAndPassword(sAuth, email, oldPassword);
+  await updatePassword(cred.user, newPassword);
+  await fbSignOut(sAuth);
+};
+
 export const uploadWorkerPhoto = async (workerId: string, file: File): Promise<string> => {
   const path = `workers/${workerId}/${Date.now()}_${file.name}`;
   const r = storageRef(storage, path);
@@ -206,6 +223,14 @@ export const listRewards = async (workerId: string): Promise<Reward[]> => {
 
 export const deleteReward = async (id: string) => deleteDoc(doc(db, REWARDS, id));
 
+export const updateReward = async (id: string, patch: Partial<Reward>) => {
+  await updateDoc(doc(db, REWARDS, id), patch as any);
+};
+
+export const updateFine = async (id: string, patch: Partial<Fine>) => {
+  await updateDoc(doc(db, FINES, id), patch as any);
+};
+
 // ───────────────────── Sales (for performance) ─────────────────────
 export const addSale = async (data: Omit<SalesEntry, 'id'>): Promise<SalesEntry> => {
   const ref = await addDoc(collection(db, SALES), data);
@@ -245,6 +270,8 @@ export const updateRequestStatus = async (
     status, adminResponse: adminResponse || '', updatedAt: nowIso(),
   });
 };
+
+export const deleteRequest = async (id: string) => deleteDoc(doc(db, REQUESTS, id));
 
 // ───────────────────── Notifications ─────────────────────
 export const sendNotification = async (workerId: string, message: string) => {
