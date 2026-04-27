@@ -424,13 +424,17 @@ export const ensureBirthdayGreeting = async (worker: Worker): Promise<void> => {
 };
 
 // ───────────────────── Performance / Rating ─────────────────────
-// Reytinq əmsalları (yenilənib):
+// Reytinq əmsalları:
 //   - 85%-i aylıq satış hədəfinə görə
 //   - +15 bonus hədəfi vuranda
 //   - hər mükafata +5 (max +20)
 //   - hər cəriməyə −8 (max −40)
-//   - Davamiyyət və icazə artıq nəzərə alınmır
-//   - Hədəf 0-dırsa, satış varsa 70 baseline, yoxsa 60
+//   - Davamiyyət və icazə nəzərə alınmır
+//
+// Aybaşı (carryover) qaydası:
+//   Yeni ay başladıqda və admin hələ cari ay üçün heç bir məlumat (satış, cərimə, mükafat)
+//   daxil etməyibsə, reytinq KEÇƏN AYın göstəricilərinə görə qalır. Cari ayda ilk məlumat
+//   daxil olduqda dərhal cari aya keçir və faiz dəyişir.
 
 export const computePerformance = async (worker: Worker): Promise<PerformanceBreakdown> => {
   const ym = monthYM();
@@ -440,37 +444,49 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
     listSales(worker.id, ym),
   ]);
 
-  // Bu ay üzrə satış
+  // Cari ay göstəriciləri
   const monthSales = sales.reduce((s, x) => s + (x.amount || 0), 0);
-  const target = worker.monthlyTarget || 0;
+  const adminTotalThisMonth = worker.monthlyTotalMonth === ym && typeof worker.monthlyTotalSales === 'number';
+  const monthFinesCount = fines.filter(f => (f.date || '').startsWith(ym)).length;
+  const monthRewardsCount = rewards.filter(r => (r.date || '').startsWith(ym)).length;
 
-  // Aylıq cəm satış (admin daxil etmişsə) prioritetli olsun
-  const monthlyTotal = (worker.monthlyTotalMonth === ym && typeof worker.monthlyTotalSales === 'number')
-    ? worker.monthlyTotalSales
-    : monthSales;
+  // Cari ayda hər hansı bir aktivlik var?
+  const hasCurrentMonthActivity =
+    adminTotalThisMonth || monthSales > 0 || monthFinesCount > 0 || monthRewardsCount > 0;
+
+  // Hesablanacaq dövrü təyin edirik (cari ay vs. ən son fəal ay)
+  let evalSalesTotal = adminTotalThisMonth ? (worker.monthlyTotalSales as number) : monthSales;
+  let evalFinesCount = monthFinesCount;
+  let evalRewardsCount = monthRewardsCount;
+
+  if (!hasCurrentMonthActivity) {
+    // Keçmişdən ən son aktiv ayı tapırıq
+    const history = worker.salesHistory || {};
+    const months = Object.keys(history).sort().reverse();
+    const lastMonth = months[0] || worker.monthlyTotalMonth || '';
+    if (lastMonth) {
+      evalSalesTotal = history[lastMonth] ?? (worker.monthlyTotalSales || 0);
+      evalFinesCount = fines.filter(f => (f.date || '').startsWith(lastMonth)).length;
+      evalRewardsCount = rewards.filter(r => (r.date || '').startsWith(lastMonth)).length;
+    }
+  }
+
+  const target = worker.monthlyTarget || 0;
 
   // Sales score (ümumi reytinqin 85%-i)
   let salesScore = 0;
   if (target > 0) {
-    salesScore = Math.min(100, (monthlyTotal / target) * 100);
-  } else if (monthlyTotal > 0) {
-    salesScore = 70; // hədəf yoxdur amma satış var
+    salesScore = Math.min(100, (evalSalesTotal / target) * 100);
+  } else if (evalSalesTotal > 0) {
+    salesScore = 70;
   } else {
-    salesScore = 60; // baseline (yeni işçi və ya satış üçün məsul deyil)
+    salesScore = 60;
   }
 
-  // Target hit bonus
-  const hitBonus = (target > 0 && monthlyTotal >= target) ? 15 : 0;
+  const hitBonus = (target > 0 && evalSalesTotal >= target) ? 15 : 0;
+  const finesPenalty = -Math.min(40, evalFinesCount * 8);
+  const rewardsBonus = Math.min(20, evalRewardsCount * 5);
 
-  // Fines penalty (bu ay)
-  const monthFinesCount = fines.filter(f => (f.date || '').startsWith(ym)).length;
-  const finesPenalty = -Math.min(40, monthFinesCount * 8);
-
-  // Rewards bonus (bu ay)
-  const monthRewardsCount = rewards.filter(r => (r.date || '').startsWith(ym)).length;
-  const rewardsBonus = Math.min(20, monthRewardsCount * 5);
-
-  // Yekun = satış 85% + hədəf bonusu + mükafat bonusu - cərimə cəzası
   const total = Math.max(0, Math.min(100, Math.round(
     salesScore * 0.85 +
     hitBonus +
