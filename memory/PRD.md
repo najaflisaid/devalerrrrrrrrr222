@@ -1,64 +1,50 @@
-# PRD - İşçi İdarəetmə Sistemi (De Valeur)
+# De Valeur — Product Requirement Document
 
-## Problem Statement
-1. QR kod sistemi silinsin
-2. İşçi "İşə Başla" bassın → Admin-ə sorğu gəlsin
-3. Admin təsdiq/ləğv edə bilsin
-4. Çıxış üçün də eyni sistem
-5. Cərimə sistemi - məbləğ + bal ayrı
+## Original Problem Statement
+Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De Valeur lüks məhsul ticarət saytı. Çoxdilli (AZ/RU/EN), B2B portal, admin panel, işçi idarəetmə sistemi və QR-kod izləməsi mövcuddur.
 
-## Architecture
-- **Frontend**: Vite + React + TypeScript
-- **Backend**: Firebase (Firestore, Auth)
-- **Database**: Firebase Firestore
-- **Real-time**: Firebase onSnapshot listeners
+## Tech Stack
+- React 18 + TypeScript + Vite 5
+- Tailwind CSS, Playfair Display + Inter (fonts)
+- Firebase (Firestore, Auth, Storage)
+- i18next (AZ / RU / EN)
+- React Router 7
+- Web3Forms (B2B sifariş emaili — limit problemi)
 
-## What's Been Implemented (2024-03-30)
+## User Personas
+- **Müştəri**: Sayta baxır, məhsul alır (WhatsApp + kredit ərizəsi)
+- **B2B partner**: Loginlə daxil olur, b2b qiymətlərlə sifariş verir
+- **Admin**: /admin paneldən bütün məzmunu idarə edir
+- **İşçi**: /workers QR kod ilə davamiyyət
 
-### YENİ: Sorğu Sistemi
-- [x] **İşçi Dashboard-da**:
-  - "İşə Başla" düyməsi (giriş sorğusu göndərir)
-  - "Çıxış Et" düyməsi (çıxış sorğusu göndərir)
-  - Gözləmədə olan sorğu statusu göstərilir
-  - Ləğv edilmiş sorğu mesajı göstərilir
+## Sessions Done
+### 2026-01-27 (current session)
+1. **Preview bərpası**: `yarn install` ilə vite quraşdırıldı, frontend supervisor altında işə salındı
+2. **B2B sifariş "Quota exceeded" xətası**: `CartPage.tsx`-də `sendB2BOrderEmail` çağırışı try/catch-ə alındı. Web3Forms email kvotası dolsa da, sifariş Firebase-də yaradılır və istifadəçiyə uğur bildirişi göstərilir
+3. **Haqqımızda səhifəsi tam admin nəzarəti** (`AboutManagementTab.tsx`):
+   - Səhifə başlığı + sloqan (3 dil)
+   - Hekayə başlığı + məzmunu (3 dil)
+   - Şəkil URL
+   - **4 statistika kartı (idarə oluna bilən: ikon, dəyər, etiket, 3 dildə)** — yeni əlavə oluna və silinə bilər
+   - Missiya başlığı + mətni (3 dil)
+4. **Missiya bölməsinin yenidən dizaynı** (`AboutPage.tsx`):
+   - "Couture Manifesto" stilində: cream/ivory fon (#FBF7EF → #F4ECDC gradient)
+   - Sol tərəfdə vertikal "MAISON · DE VALEUR · MANIFESTE" wordmark
+   - Böyük qızılı dırnaq işarəsi
+   - Qızılı corner brackets (4 küncdə)
+   - Drop-cap (ilk hərf qızılı, 4.5rem)
+   - Playfair italic mətn
+   - "ANNO · MMX" + "NOTRE MISSION" eyebrows
+   - "De Valeur" imzası altda
 
-- [x] **Admin Panelində "Sorğular" tabı**:
-  - Real-time sorğu siyahısı
-  - Təsdiq/Ləğv düymələri
-  - Gözləyən sorğu sayı badge ilə göstərilir
-  - Ləğv səbəbi yazıla bilər
+## Pending / Backlog
+- **P1**: Web3Forms əvəzinə Resend və ya admin paneldə real-time bildiriş zəngi (email kvota probleminin həqiqi həlli)
+- **P2**: Firestore index-ləri (test_reports/iteration_5.json-dan: attendance_requests, performance kolleksiyaları üçün)
+- **P2**: Admin session persistence (workers/admin paneldə tab navigasiyası problemi)
+- **P3**: PWA dəstəyi mobil cihazlar üçün
 
-- [x] **Request Service** (`/app/src/services/requestService.ts`):
-  - createAttendanceRequest - sorğu yaratma
-  - approveRequest - təsdiq (avtomatik checkIn/checkOut)
-  - rejectRequest - ləğv
-  - subscribeToPendingRequests - real-time admin dinləmə
-  - subscribeToMyRequests - işçinin öz sorğularını dinləmə
-
-### SİLİNDİ:
-- [x] QR kod sistemi (QRCodePanel RealTimeMonitoring-dən silindi)
-- [x] QRScanPage artıq istifadə olunmur
-
-### Cərimə Sistemi:
-- [x] Məbləğ (₼) + Bal ayrı yazılır
-- [x] İşçi Dashboard-da cərimələr göstərilir
-
-## Firebase Index Tələbi ⚠️
-Admin paneli üçün bu indexlər Firebase Console-da yaradılmalıdır:
-- `attendance_requests` collection: `status` + `sorguVaxti`
-- `performances` collection: mövcud index tələbi
-
-## URLs
-- İşçi Dashboard: /workers/dashboard
-- Admin Panel: /workers/admin
-- Sorğular: Admin Panel → "Sorğular" tabı
-
-## Test Credentials
-- Admin: rasimgasimzade@gmail.com / Rasim2323
-
-## Update (2026-01)
-### B2B Sifariş Səhifəsi - Ödəniş Məlumatları
-- Müştəri B2B sifariş səhifəsində (`src/pages/B2BOrdersPage.tsx`) ödəniş bölməsinə **Ümumi borc** sütunu əlavə olundu (Əvvəlki borc + qaimə məbləği)
-- "Ödənişin tamamlanma tarixi" yazısı "Yeni qaimə üzrə ödənişin tamamlanma tarixi" ilə əvəz olundu
-- Müştəri adının yanında soyad artıq həm müştəri səhifəsində (line 436), həm də admin panelində (B2BOrdersTab line 620, 1000) göstərilir
-
+## Key Files Modified
+- `/app/src/pages/CartPage.tsx`
+- `/app/src/services/contentService.ts`
+- `/app/src/components/admin/AboutManagementTab.tsx`
+- `/app/src/pages/AboutPage.tsx`

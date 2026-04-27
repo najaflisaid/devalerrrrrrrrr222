@@ -15,18 +15,38 @@ export interface Banner {
   is_active: boolean;
 }
 
+export interface AboutStat {
+  icon: string; // 'award' | 'users' | 'globe' | 'trending-up' | 'star' | 'shield' | 'crown' | 'gem'
+  value_az: string;
+  value_ru: string;
+  value_en: string;
+  label_az: string;
+  label_ru: string;
+  label_en: string;
+}
+
 export interface AboutPage {
   id?: string;
   title_az: string;
   title_ru: string;
   title_en: string;
+  slogan_az?: string;
+  slogan_ru?: string;
+  slogan_en?: string;
+  story_heading_az?: string;
+  story_heading_ru?: string;
+  story_heading_en?: string;
   content_az: string;
   content_ru: string;
   content_en: string;
+  mission_heading_az?: string;
+  mission_heading_ru?: string;
+  mission_heading_en?: string;
   mission_az: string;
   mission_ru: string;
   mission_en: string;
   image_url?: string;
+  stats?: AboutStat[];
 }
 
 export interface ProductBanner {
