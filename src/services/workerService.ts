@@ -285,7 +285,25 @@ export const sendNotification = async (workerId: string, message: string) => {
 export const listNotifications = async (workerId: string): Promise<WorkerNotification[]> => {
   const q = query(collection(db, NOTIFICATIONS), where('workerId', '==', workerId));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<WorkerNotification, 'id'>) }))
+  const all = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<WorkerNotification, 'id'>) }));
+
+  // Avtomatik təmizlik: 1 aydan (30 gün) köhnə bildirişləri sil
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - THIRTY_DAYS_MS;
+  const expired = all.filter(n => {
+    const t = new Date(n.createdAt).getTime();
+    return Number.isFinite(t) && t < cutoff;
+  });
+  if (expired.length > 0) {
+    // Fonda silinir, list-ə mane olmasın
+    Promise.all(expired.map(n => deleteDoc(doc(db, NOTIFICATIONS, n.id)))).catch(() => {});
+  }
+
+  return all
+    .filter(n => {
+      const t = new Date(n.createdAt).getTime();
+      return !Number.isFinite(t) || t >= cutoff;
+    })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 };
 
