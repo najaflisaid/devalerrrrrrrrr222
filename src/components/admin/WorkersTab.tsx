@@ -3,6 +3,7 @@ import {
   Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
   Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, GraduationCap, RotateCcw, Trophy, Activity,
+  ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { siteConfirm } from '../ui/NotificationProvider';
 import { verifyPassword } from '../../services/adminPasswordService';
@@ -1121,8 +1122,12 @@ const NotifyPanel: React.FC<{ workerId: string }> = ({ workerId }) => {
 const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpdated: () => Promise<void> }> = ({ items, workers, onUpdated }) => {
   const [filter, setFilter] = useState<'all' | RequestStatus>('all');
   const [responseMap, setResponseMap] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
   const filtered = items.filter(i => filter === 'all' || i.status === filter);
   const findWorker = (id: string) => workers.find(w => w.id === id);
+
+  // Yeni / həll olunmamış müraciətlərin sayı (qırmızı bildiriş üçün)
+  const pendingCount = items.filter(i => i.status === 'sent' || i.status === 'review').length;
 
   const updateStatus = async (id: string, status: RequestStatus, currentRequest: WorkerRequest) => {
     const r = responseMap[id] ?? currentRequest.adminResponse ?? '';
@@ -1134,66 +1139,103 @@ const RequestsInbox: React.FC<{ items: WorkerRequest[]; workers: Worker[]; onUpd
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Inbox className="h-5 w-5 text-gray-700" />
-          <h2 className="text-xl font-bold">Müraciətlər ({items.length})</h2>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Compact collapsible header */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+        data-testid="requests-inbox-toggle"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="relative">
+            <Inbox className="h-5 w-5 text-gray-700" />
+            {pendingCount > 0 && (
+              <span
+                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse"
+                data-testid="requests-pending-badge"
+              >
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
+          </div>
+          <h2 className="text-base font-semibold text-black">Müraciətlər</h2>
+          <span className="text-xs text-gray-500">({items.length})</span>
+          {pendingCount > 0 && (
+            <span className="hidden sm:inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[11px] font-medium">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+              {pendingCount} yeni
+            </span>
+          )}
         </div>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className={inp + ' w-44'}>
-          <option value="all">Hamısı</option>
-          <option value="sent">Göndərildi</option>
-          <option value="review">Baxılır</option>
-          <option value="resolved">Təsdiq olundu</option>
-        </select>
-      </div>
-      {filtered.length === 0 ? (
-        <p className="text-sm text-gray-400 py-6 text-center">Müraciət yoxdur.</p>
-      ) : (
-        <ul className="space-y-3">
-          {filtered.map(r => {
-            const w = findWorker(r.workerId);
-            return (
-              <li key={r.id} className="border border-gray-100 rounded-lg p-4 text-sm">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-black flex items-center gap-1.5">
-                      {w ? `${w.name} ${w.surname}` : '—'} <span className="text-xs text-gray-500">· {r.type}</span>
-                    </p>
-                    <p className="text-gray-700 mt-1 whitespace-pre-line">{r.description}</p>
-                  </div>
-                  <span className="text-[10px] text-gray-400">{fmtDateTime(r.createdAt)}</span>
-                </div>
+        {open ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+      </button>
 
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <input
-                    placeholder="Cavab..."
-                    defaultValue={r.adminResponse || ''}
-                    onChange={(e) => setResponseMap(m => ({ ...m, [r.id]: e.target.value }))}
-                    className={inp + ' flex-1 min-w-[200px]'}
-                  />
-                  <button onClick={() => updateStatus(r.id, 'review', r)}
-                    className="px-3 py-1.5 text-xs border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 inline-flex items-center gap-1">
-                    <Hourglass className="h-3 w-3" /> Baxılır
-                  </button>
-                  <button onClick={() => updateStatus(r.id, 'resolved', r)}
-                    className="px-3 py-1.5 text-xs border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 inline-flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Təsdiq olundu
-                  </button>
-                  <button onClick={async () => {
-                    if (!await siteConfirm({ message: 'Bu müraciəti silmək istədiyinizə əminsiniz?', variant: 'danger', confirmLabel: 'Sil' })) return;
-                    await deleteRequest(r.id);
-                    await onUpdated();
-                  }}
-                    className="px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-lg hover:bg-red-50 inline-flex items-center gap-1"
-                    data-testid={`request-delete-${r.id}`}>
-                    <Trash2 className="h-3 w-3" /> Sil
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+      {open && (
+        <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+          <div className="flex items-center justify-end mb-3">
+            <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className={inp + ' w-44 text-sm'}>
+              <option value="all">Hamısı</option>
+              <option value="sent">Göndərildi</option>
+              <option value="review">Baxılır</option>
+              <option value="resolved">Təsdiq olundu</option>
+            </select>
+          </div>
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 py-4 text-center">Müraciət yoxdur.</p>
+          ) : (
+            <ul className="space-y-2">
+              {filtered.map(r => {
+                const w = findWorker(r.workerId);
+                const isPending = r.status === 'sent' || r.status === 'review';
+                return (
+                  <li
+                    key={r.id}
+                    className={`border rounded-lg p-3 text-sm ${isPending ? 'border-red-100 bg-red-50/30' : 'border-gray-100'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-black flex items-center gap-1.5 flex-wrap">
+                          {isPending && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                          {w ? `${w.name} ${w.surname}` : '—'}
+                          <span className="text-xs text-gray-500">· {r.type}</span>
+                        </p>
+                        <p className="text-gray-700 mt-1 whitespace-pre-line break-words">{r.description}</p>
+                      </div>
+                      <span className="text-[10px] text-gray-400 shrink-0">{fmtDateTime(r.createdAt)}</span>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <input
+                        placeholder="Cavab..."
+                        defaultValue={r.adminResponse || ''}
+                        onChange={(e) => setResponseMap(m => ({ ...m, [r.id]: e.target.value }))}
+                        className={inp + ' flex-1 min-w-[180px] text-sm py-1.5'}
+                      />
+                      <button onClick={() => updateStatus(r.id, 'review', r)}
+                        className="px-2.5 py-1 text-xs border border-blue-200 text-blue-700 rounded-md hover:bg-blue-50 inline-flex items-center gap-1">
+                        <Hourglass className="h-3 w-3" /> Baxılır
+                      </button>
+                      <button onClick={() => updateStatus(r.id, 'resolved', r)}
+                        className="px-2.5 py-1 text-xs border border-emerald-200 text-emerald-700 rounded-md hover:bg-emerald-50 inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Təsdiq
+                      </button>
+                      <button onClick={async () => {
+                        if (!await siteConfirm({ message: 'Bu müraciəti silmək istədiyinizə əminsiniz?', variant: 'danger', confirmLabel: 'Sil' })) return;
+                        await deleteRequest(r.id);
+                        await onUpdated();
+                      }}
+                        className="px-2.5 py-1 text-xs border border-red-200 text-red-700 rounded-md hover:bg-red-50 inline-flex items-center gap-1"
+                        data-testid={`request-delete-${r.id}`}>
+                        <Trash2 className="h-3 w-3" /> Sil
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
