@@ -11,6 +11,8 @@ import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
 import PrivacyPolicyTab from './PrivacyPolicyTab';
+import ReturnPolicyTab from './ReturnPolicyTab';
+import CareersTab from './CareersTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
@@ -1178,6 +1180,8 @@ const AdminPanel: React.FC = () => {
     { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
     { id: 'about', label: 'Haqqımızda', icon: Info },
     { id: 'privacy', label: 'Məxfilik Siyasəti', icon: ShieldCheck },
+    { id: 'return', label: 'Qaytarılma', icon: FileText },
+    { id: 'careers', label: 'Karyera', icon: Briefcase },
     { id: 'brands', label: t('admin.brands'), icon: Tag },
     { id: 'categories', label: t('admin.categories'), icon: Tag },
     { id: 'blogs', label: t('admin.blog'), icon: FileText },
@@ -2805,6 +2809,8 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'about' && <AboutManagementTab />}
         {activeTab === 'privacy' && <PrivacyPolicyTab />}
+        {activeTab === 'return' && <ReturnPolicyTab />}
+        {activeTab === 'careers' && <CareersTab />}
 
         {activeTab === 'contactMessages' && <ContactMessagesTab />}
         {activeTab === 'workers' && (

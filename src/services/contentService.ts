@@ -387,27 +387,148 @@ export const DEFAULT_PRIVACY_POLICY: PrivacyPolicy = {
   ],
 };
 
-export const getPrivacyPolicy = async (): Promise<PrivacyPolicy> => {
+// Generic legal/info doc (privacy, return policy, etc.)
+export type LegalDoc = PrivacyPolicy;
+
+export const getLegalDoc = async (docId: string, defaults: LegalDoc): Promise<LegalDoc> => {
   try {
-    const ref = doc(db, 'site_content', 'privacy_policy');
+    const ref = doc(db, 'site_content', docId);
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      const data = snap.data() as Partial<PrivacyPolicy>;
+      const data = snap.data() as Partial<LegalDoc>;
       return {
-        hero: { ...DEFAULT_PRIVACY_POLICY.hero, ...(data.hero || {}) },
-        signature: data.signature || DEFAULT_PRIVACY_POLICY.signature,
+        hero: { ...defaults.hero, ...(data.hero || {}) },
+        signature: data.signature || defaults.signature,
         sections: (data.sections && data.sections.length > 0)
           ? data.sections
-          : DEFAULT_PRIVACY_POLICY.sections,
+          : defaults.sections,
       };
     }
   } catch (err) {
-    console.error('getPrivacyPolicy:', err);
+    console.error(`getLegalDoc(${docId}):`, err);
   }
-  return DEFAULT_PRIVACY_POLICY;
+  return defaults;
+};
+
+export const updateLegalDoc = async (docId: string, data: LegalDoc) => {
+  const ref = doc(db, 'site_content', docId);
+  await setDoc(ref, { ...data, updated_at: new Date().toISOString() }, { merge: true });
+};
+
+export const getPrivacyPolicy = async (): Promise<PrivacyPolicy> => {
+  return getLegalDoc('privacy_policy', DEFAULT_PRIVACY_POLICY);
 };
 
 export const updatePrivacyPolicy = async (data: PrivacyPolicy) => {
-  const ref = doc(db, 'site_content', 'privacy_policy');
-  await setDoc(ref, { ...data, updated_at: new Date().toISOString() }, { merge: true });
+  return updateLegalDoc('privacy_policy', data);
+};
+
+// ============================================================
+// Return Policy — based on Azerbaijani consumer protection law
+// (İstehlakçıların hüquqlarının müdafiəsi haqqında qanun, mad. 16)
+// ============================================================
+export const DEFAULT_RETURN_POLICY: PrivacyPolicy = {
+  hero: {
+    eyebrow: 'Maison · De Valeur',
+    title: 'Qaytarılma',
+    titleAccent: 'Şərtləri',
+    intro:
+      '"İstehlakçıların hüquqlarının müdafiəsi haqqında" Azərbaycan Respublikası Qanununun 16-cı maddəsinə uyğun olaraq, satın aldığınız malları 14 təqvim günü ərzində geri qaytara və ya dəyişdirə bilərsiniz.',
+    badgeLeft: '14 gün geri qaytarma hüququ',
+    badgeRight: 'Qanunla təsdiqlənmiş',
+    lastUpdated: '28.04.2026',
+  },
+  signature: '— DE VALEUR MMC —',
+  sections: [
+    {
+      id: 'period',
+      no: '01',
+      title: '14 günlük qaytarma müddəti',
+      body: 'Müştəri DE VALEUR-dan satın aldığı lazımi keyfiyyətli qeyri-ərzaq malları satınalma tarixindən başlayaraq 14 (on dörd) təqvim günü ərzində geri qaytara və ya dəyişdirə bilər.\n\nBu hüquq "İstehlakçıların hüquqlarının müdafiəsi haqqında" Azərbaycan Respublikası Qanununun 16-cı maddəsi ilə tənzimlənir.',
+    },
+    {
+      id: 'conditions',
+      no: '02',
+      title: 'Qaytarma şərtləri',
+      body: 'Mal yalnız aşağıdakı şərtlər tam yerinə yetirildikdə qaytarıla bilər:\n\n- Mal istifadə olunmamış olmalıdır\n- Bütün əmtəə nişanları (etiket, brend yarlığı, tag-lar) pozulmamış və yerində qalmalıdır\n- Orijinal qutu və qablaşdırma toxunulmamış vəziyyətdə olmalıdır\n- Komplekt aksesuarlar (sertifikat, zəmanət vərəqəsi, qoruyucu kisə və s.) tam şəkildə təqdim olunmalıdır\n- Satınalmanı təsdiq edən kassa çeki və ya elektron qəbz mövcud olmalıdır\n- Malın ümumi görkəmi və istehlak xüsusiyyətləri saxlanılmış olmalıdır',
+    },
+    {
+      id: 'not-returnable',
+      no: '03',
+      title: 'Qaytarıla bilməyən mallar',
+      body: 'Qanunvericiliyə əsasən aşağıdakı kateqoriya mallar geri qaytarıla bilməz:\n\n- Şəxsi gigiyena malları\n- İstifadə izi olan və ya nişanları pozulmuş mallar\n- Sifariş üzrə fərdi (gravür, həkketmə) hazırlanmış mallar\n- Endirim aksiyaları çərçivəsində son satış olaraq satılan mallar (xüsusi şərt qeyd olunduqda)\n- Müştərinin günahı üzündən zədələnmiş mallar',
+    },
+    {
+      id: 'process',
+      no: '04',
+      title: 'Qaytarma proseduru',
+      body: 'Qaytarma prosesi 4 sadə addımdan ibarətdir:\n\n- 1. info@devaleur.az ünvanına və ya +994 77 757 72 77 nömrəsinə müraciət edin\n- 2. Sifariş nömrəsini, malın adını və qaytarma səbəbini bildirin\n- 3. Bizim mütəxəssisimiz sizinlə əlaqə saxlayıb qaytarma üsulunu razılaşdırır\n- 4. Mal yoxlanılır və müsbət nəticədə vəsait qaytarılır',
+    },
+    {
+      id: 'refund',
+      no: '05',
+      title: 'Vəsaitin qaytarılması',
+      body: 'Mal təhvil alındıqdan və yoxlanıldıqdan sonra:\n\n- Bank kartı ilə ödəniş edilibsə — eyni karta 3-10 iş günü ərzində qaytarılır\n- Nağd ödəniş edilibsə — kassadan dərhal qaytarılır\n- Köçürmə yolu ilə — müştərinin göstərdiyi hesaba qaytarılır\n\nQaytarma məbləği orijinal ödəniş məbləğinə bərabərdir; çatdırılma haqqı geri qaytarılmır (zərər səbəbli qaytarmalar istisna olmaqla).',
+    },
+    {
+      id: 'defective',
+      no: '06',
+      title: 'Qüsurlu mal halında',
+      body: 'Əgər mal istehsal qüsuru ilə təhvil verilibsə və ya zəmanət müddəti ərzində xarab olubsa:\n\n- Müştəri pulsuz təmir, dəyişdirmə və ya tam vəsaitin qaytarılmasını tələb edə bilər\n- Çatdırılma haqqı bizim hesabımıza ödənilir\n- Mütəxəssis ekspertizası 14 iş günü ərzində aparılır\n- Qanunvericiliklə nəzərdə tutulmuş bütün hüquqlar müdafiə olunur',
+    },
+    {
+      id: 'exchange',
+      no: '07',
+      title: 'Dəyişdirmə',
+      body: 'Əgər mal sizə uyğun gəlmirsə (rəng, ölçü, model), 14 gün ərzində eyni və ya başqa malla dəyişdirə bilərsiniz. Qiymət fərqi olduğu halda:\n\n- Daha bahalı mal seçilərsə — fərq əlavə ödənilir\n- Daha ucuz mal seçilərsə — fərq müştəriyə qaytarılır',
+    },
+    {
+      id: 'contact',
+      no: '08',
+      title: 'Əlaqə',
+      body: 'Qaytarma və dəyişdirmə ilə bağlı suallarınız üçün:\n\n- Email: info@devaleur.az\n- Telefon: +994 77 757 72 77\n- İş saatları: Bazar ertəsi - Şənbə, 10:00 - 20:00\n- Vebsayt: www.devaleur.az',
+    },
+  ],
+};
+
+export const getReturnPolicy = async (): Promise<PrivacyPolicy> => {
+  return getLegalDoc('return_policy', DEFAULT_RETURN_POLICY);
+};
+
+export const updateReturnPolicy = async (data: PrivacyPolicy) => {
+  return updateLegalDoc('return_policy', data);
+};
+
+// ============================================================
+// Vacancies — admin-managed careers list
+// ============================================================
+export interface Vacancy {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;        // "Tam ştat" / "Yarım ştat" / "Müqavilə" / "Praktika"
+  description: string; // body, supports `- ` bullets and blank-line paragraphs
+  contactEmail: string;
+  isOpen: boolean;
+  createdAt?: string;
+}
+
+export const getVacancies = async (): Promise<Vacancy[]> => {
+  try {
+    const ref = doc(db, 'site_content', 'vacancies');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as { items?: Vacancy[] };
+      return data.items || [];
+    }
+  } catch (err) {
+    console.error('getVacancies:', err);
+  }
+  return [];
+};
+
+export const updateVacancies = async (items: Vacancy[]) => {
+  const ref = doc(db, 'site_content', 'vacancies');
+  await setDoc(ref, { items, updated_at: new Date().toISOString() }, { merge: true });
 };

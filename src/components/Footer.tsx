@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-white text-gray-900 border-t border-gray-200">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-8">
           <div>
             <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-12 mb-4" />
             <p className="text-gray-700 text-sm font-medium mb-3">
@@ -178,13 +178,25 @@ const Footer: React.FC = () => {
                   {t('footer.emailAddress')}
                 </a>
               </li>
-              <li className="pt-2 mt-2 border-t border-gray-100">
-                <Link
-                  to="/privacy-policy"
-                  className="inline-flex items-center text-gray-600 text-sm hover:text-gray-900 transition-colors"
-                  data-testid="footer-privacy-link"
-                >
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-4">Keçidlər</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/privacy-policy" className="text-gray-600 hover:text-gray-900 transition-colors text-sm" data-testid="footer-privacy-link">
                   Məxfilik Siyasəti
+                </Link>
+              </li>
+              <li>
+                <Link to="/return-policy" className="text-gray-600 hover:text-gray-900 transition-colors text-sm" data-testid="footer-return-link">
+                  Qaytarılma
+                </Link>
+              </li>
+              <li>
+                <Link to="/careers" className="text-gray-600 hover:text-gray-900 transition-colors text-sm" data-testid="footer-careers-link">
+                  Karyera
                 </Link>
               </li>
             </ul>
