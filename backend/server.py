@@ -243,7 +243,7 @@ async def chat_endpoint(req: ChatRequest):
             api_key=api_key,
             session_id=req.session_id,
             system_message=system_message,
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        ).with_model("openai", "gpt-4o-mini")
 
         user_msg = UserMessage(text=req.message.strip())
         reply = await chat.send_message(user_msg)
