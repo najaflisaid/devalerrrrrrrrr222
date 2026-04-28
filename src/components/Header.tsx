@@ -64,6 +64,7 @@ const Header: React.FC = () => {
 
             localStorage.setItem('userName', userData.name || user.email || '');
             localStorage.setItem('userRole', newRole);
+            window.dispatchEvent(new Event('userRoleChanged'));
             localStorage.setItem('userEmail', user.email || '');
             localStorage.setItem('userId', user.uid);
 
@@ -206,6 +207,7 @@ const Header: React.FC = () => {
     try {
       await signOut(auth);
       localStorage.removeItem('userRole');
+      window.dispatchEvent(new Event('userRoleChanged'));
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userPhone');

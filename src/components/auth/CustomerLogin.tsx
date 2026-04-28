@@ -65,6 +65,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
           }
 
           localStorage.setItem('userRole', newRole);
+          window.dispatchEvent(new Event('userRoleChanged'));
           localStorage.setItem('userName', userData.name || email);
           localStorage.setItem('userEmail', email);
           localStorage.setItem('userId', userId);
@@ -131,6 +132,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
         });
 
         localStorage.setItem('userRole', 'customer');
+        window.dispatchEvent(new Event('userRoleChanged'));
         localStorage.setItem('userName', name);
         localStorage.setItem('userSurname', surname);
         localStorage.setItem('userEmail', email);

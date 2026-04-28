@@ -123,9 +123,29 @@ const AppContent: React.FC = () => {
         ))}
       </div>
 
-      <AiChatWidget />
+      <AiChatWidgetGate />
     </>
   );
+};
+
+// AI Chat is hidden for B2B users / admins / workers — only retail customers / guests see it
+const AiChatWidgetGate: React.FC = () => {
+  const [role, setRole] = React.useState<string | null>(() => localStorage.getItem('userRole'));
+
+  React.useEffect(() => {
+    const onStorage = () => setRole(localStorage.getItem('userRole'));
+    window.addEventListener('storage', onStorage);
+    // Also listen for custom auth events fired in same tab
+    window.addEventListener('userRoleChanged', onStorage);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('userRoleChanged', onStorage);
+    };
+  }, []);
+
+  // Hide for B2B, admin, worker — show for guests and retail customers only
+  if (role === 'b2b' || role === 'admin' || role === 'worker') return null;
+  return <AiChatWidget />;
 };
 
 function App() {

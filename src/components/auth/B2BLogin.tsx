@@ -37,6 +37,7 @@ const B2BLogin: React.FC = () => {
     try {
       await signOut(auth);
       localStorage.removeItem('userRole');
+      window.dispatchEvent(new Event('userRoleChanged'));
       localStorage.removeItem('userName');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userPhone');
@@ -108,6 +109,7 @@ const B2BLogin: React.FC = () => {
           }
 
           localStorage.setItem('userRole', 'b2b');
+          window.dispatchEvent(new Event('userRoleChanged'));
           localStorage.setItem('userName', userData.name || email);
           localStorage.setItem('userEmail', email);
           localStorage.setItem('userPhone', userData.phone || '');

@@ -387,6 +387,11 @@ const B2BOrdersPage: React.FC = () => {
 
               const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
               const itemsCount = order.items?.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0) || 0;
+              const dateShort = (() => {
+                const d = orderDate;
+                const pad = (n: number) => n.toString().padStart(2, '0');
+                return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+              })();
               const dateFormatted = (() => {
                 const d = orderDate;
                 const pad = (n: number) => n.toString().padStart(2, '0');
@@ -395,33 +400,30 @@ const B2BOrdersPage: React.FC = () => {
 
               return (
                 <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all">
-                  {/* COMPACT HEADER — always visible */}
+                  {/* COMPACT HEADER — order #, date, items, status (NO amount) */}
                   <button
                     onClick={() => toggleExpand(order.id)}
-                    className="w-full p-4 sm:p-5 hover:bg-gray-50 transition-colors text-left"
+                    className="w-full px-4 py-3 sm:px-5 sm:py-4 hover:bg-gray-50 transition-colors text-left"
                     data-testid={`b2b-order-toggle-${order.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusInfo.color} flex-shrink-0`}>
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium hidden sm:inline">{statusInfo.label}</span>
+                      <div className={`w-9 h-9 rounded-full ${statusInfo.color} flex items-center justify-center flex-shrink-0`}>
+                        <StatusIcon className="h-4 w-4" />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <p className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <p className="font-semibold text-gray-900 text-sm truncate">
                             #{(order as any).orderNumber ?? order.id.slice(0, 8)}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">{dateFormatted}</p>
+                          <p className="text-xs text-gray-500 flex-shrink-0">{dateShort}</p>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">
-                          {itemsCount} məhsul · {order.customerName} {order.customerLastname || ''}
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {itemsCount} məhsul
                         </p>
-                      </div>
-
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-lg sm:text-xl font-bold text-blue-600 tabular-nums">{order.totalAmount?.toFixed(2)} ₼</p>
-                        <p className="text-[10px] text-gray-400 hidden sm:block">{statusInfo.label}</p>
                       </div>
 
                       <div className="text-gray-400 flex-shrink-0">
@@ -432,8 +434,11 @@ const B2BOrdersPage: React.FC = () => {
 
                   {/* EXPANDED DETAILS */}
                   {isExpanded && (
-                  <div className="p-4 sm:p-5 pt-0 border-t border-gray-100 bg-gray-50/30">
-                    <div className="pt-4">
+                  <div className="px-4 pb-4 sm:px-5 sm:pb-5 border-t border-gray-100 bg-gray-50/30">
+                    <div className="pt-4 flex items-center justify-between mb-3 text-xs text-gray-500">
+                      <span>{dateFormatted}</span>
+                      <span className="font-bold text-blue-600 text-lg">{order.totalAmount?.toFixed(2)} ₼</span>
+                    </div>
                       <h3 className="font-semibold mb-3 text-sm">{t('b2b.products')}</h3>
                       <div className="space-y-3">
                         {order.items?.map((item: any, index: number) => {
@@ -465,7 +470,6 @@ const B2BOrdersPage: React.FC = () => {
                           );
                         })}
                       </div>
-                    </div>
 
                     <div className="border-t border-gray-200 mt-4 pt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

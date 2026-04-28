@@ -62,6 +62,8 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
   const userId = localStorage.getItem('userId');
   const userRole = localStorage.getItem('userRole');
   const userName = localStorage.getItem('userName') || 'Anonim';
+  // Allow ANY logged-in user (customer, b2b, etc.) to leave a review
+  const isLoggedIn = !!userId;
   const isCustomer = userRole === 'customer' && !!userId;
   const isAdmin = userRole === 'admin';
 
@@ -83,7 +85,10 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
   const avg = computeAverageRating(reviews);
 
   const handleSubmit = async () => {
-    if (!isCustomer) return;
+    if (!isLoggedIn) {
+      alert('Rəy yazmaq üçün öncə hesabınıza giriş edin');
+      return;
+    }
     if (rating < 1) {
       alert('Reytinq verin (1-5 ulduz)');
       return;
@@ -135,9 +140,15 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
             </div>
           )}
         </div>
-        {isCustomer && !myExistingReview && !showForm && (
+        {!myExistingReview && !showForm && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              if (!isLoggedIn) {
+                alert('Rəy yazmaq üçün öncə hesabınıza giriş edin');
+                return;
+              }
+              setShowForm(true);
+            }}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
             data-testid="review-add-btn"
           >
@@ -194,13 +205,13 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
         </div>
       )}
 
-      {!isCustomer && !isAdmin && (
+      {!isLoggedIn && (
         <div className="mb-4 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
-          Rəy yazmaq üçün müştəri kimi giriş edin.
+          Rəy yazmaq üçün öncə hesabınıza giriş edin.
         </div>
       )}
 
-      {showForm && isCustomer && (
+      {showForm && isLoggedIn && (
         <div className="mb-5 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">Reytinq</label>
