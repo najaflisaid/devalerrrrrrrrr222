@@ -160,7 +160,7 @@ const AboutPage: React.FC = () => {
 
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* STORY */}
-        <div className="grid md:grid-cols-2 gap-12 mb-20">
+        <div className="grid md:grid-cols-2 gap-12 mb-20 items-center">
           <div>
             <h2 className="font-playfair text-3xl mb-6" data-testid="about-story-heading">
               {getField('story_heading', t('about.ourStory'))}

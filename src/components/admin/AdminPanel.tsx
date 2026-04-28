@@ -502,17 +502,17 @@ const AdminPanel: React.FC = () => {
           ru: newProduct.descRu || newProduct.descAz,
           en: newProduct.descEn || newProduct.descAz
         },
-        price: parseFloat(newProduct.price),
-        salePrice: newProduct.salePrice ? parseFloat(newProduct.salePrice) : null,
-        b2bPrice: newProduct.b2bPrice ? parseFloat(newProduct.b2bPrice) : null,
-        b2bSalePrice: newProduct.b2bSalePrice ? parseFloat(newProduct.b2bSalePrice) : null,
+        price: Math.max(0, parseFloat(newProduct.price) || 0),
+        salePrice: newProduct.salePrice ? Math.max(0, parseFloat(newProduct.salePrice)) : null,
+        b2bPrice: newProduct.b2bPrice ? Math.max(0, parseFloat(newProduct.b2bPrice)) : null,
+        b2bSalePrice: newProduct.b2bSalePrice ? Math.max(0, parseFloat(newProduct.b2bSalePrice)) : null,
         images: validImages,
         brand: newProduct.brand,
         category: newProduct.category,
         gender: newProduct.gender,
         isEnabled: true,
         isBestseller: newProduct.isBestseller,
-        stock: parseInt(newProduct.stock) || 0,
+        stock: Math.max(0, parseInt(newProduct.stock) || 0),
         visibleTo: newProduct.visibleTo,
         createdAt: new Date()
       };
@@ -609,17 +609,17 @@ const AdminPanel: React.FC = () => {
           ru: editProduct.descRu || editProduct.descAz,
           en: editProduct.descEn || editProduct.descAz
         },
-        price: parseFloat(editProduct.price),
-        salePrice: editProduct.salePrice ? parseFloat(editProduct.salePrice) : null,
-        b2bPrice: editProduct.b2bPrice ? parseFloat(editProduct.b2bPrice) : null,
-        b2bSalePrice: editProduct.b2bSalePrice ? parseFloat(editProduct.b2bSalePrice) : null,
+        price: Math.max(0, parseFloat(editProduct.price) || 0),
+        salePrice: editProduct.salePrice ? Math.max(0, parseFloat(editProduct.salePrice)) : null,
+        b2bPrice: editProduct.b2bPrice ? Math.max(0, parseFloat(editProduct.b2bPrice)) : null,
+        b2bSalePrice: editProduct.b2bSalePrice ? Math.max(0, parseFloat(editProduct.b2bSalePrice)) : null,
         images: validImages,
         brand: editProduct.brand,
         category: editProduct.category,
         gender: editProduct.gender,
         isBestseller: editProduct.isBestseller,
         comingSoon: editProduct.comingSoon,
-        stock: parseInt(editProduct.stock) || 0,
+        stock: Math.max(0, parseInt(editProduct.stock) || 0),
         visibleTo: editProduct.visibleTo,
       };
 
@@ -1236,8 +1236,9 @@ const AdminPanel: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <input
                     type="number"
+                    min="0"
                     value={priceRange[0]}
-                    onChange={(e) => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])}
+                    onChange={(e) => setPriceRange([Math.max(0, parseFloat(e.target.value) || 0), priceRange[1]])}
                     className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
                     placeholder="Min"
                   />
@@ -1254,8 +1255,9 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <input
                     type="number"
+                    min="0"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseFloat(e.target.value) || 1000])}
+                    onChange={(e) => setPriceRange([priceRange[0], Math.max(0, parseFloat(e.target.value) || 1000)])}
                     className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
                     placeholder="Max"
                   />

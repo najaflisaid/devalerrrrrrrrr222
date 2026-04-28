@@ -279,14 +279,17 @@ const ProductsPage: React.FC = () => {
   // Read price params after products are loaded
   useEffect(() => {
     if (products.length > 0 && !priceInitialized) {
-      const prices = products.map(p => {
-        if (isB2BUser) {
-          return p.b2bSalePrice || p.b2bPrice || p.salePrice || p.price;
-        }
-        return p.salePrice || p.price;
-      });
-      const min = Math.floor(Math.min(...prices));
-      const max = Math.ceil(Math.max(...prices));
+      const prices = products
+        .map(p => {
+          if (isB2BUser) {
+            return p.b2bSalePrice || p.b2bPrice || p.salePrice || p.price;
+          }
+          return p.salePrice || p.price;
+        })
+        .filter(price => typeof price === 'number' && price > 0);
+
+      const min = prices.length > 0 ? Math.max(0, Math.floor(Math.min(...prices))) : 0;
+      const max = prices.length > 0 ? Math.max(min, Math.ceil(Math.max(...prices))) : 1000;
       setMinPrice(min);
       setMaxPrice(max);
 
