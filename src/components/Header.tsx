@@ -323,7 +323,7 @@ const Header: React.FC = () => {
       {/* Main Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 gap-3">
+          <div className="flex items-center justify-between h-16">
 
             {/* Mobile Menu Button */}
             <button
@@ -334,16 +334,15 @@ const Header: React.FC = () => {
               <Menu className="h-6 w-6" />
             </button>
 
-            {/* Logo - sits right after hamburger on mobile (no overlap), normal flex on desktop */}
-            <Link to="/" className="flex-shrink-0">
-              <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-8 sm:h-9 md:h-10" />
-            </Link>
+            {/* Logo - Always centered on mobile, left on desktop */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 md:static md:transform-none">
+              <Link to="/">
+                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-8 sm:h-9 md:h-10" />
+              </Link>
+            </div>
 
-            {/* Mobile-only spacer pushes icons to the right edge */}
-            <div className="flex-1 md:hidden" />
-
-            {/* Desktop Navigation - Left */}
-            <nav className="hidden md:flex items-center space-x-6">
+            {/* Desktop Navigation - Centered */}
+            <nav className="hidden md:flex flex-1 items-center justify-center space-x-6">
               <Link to="/" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.home')}
               </Link>
@@ -453,7 +452,7 @@ const Header: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-3 sm:gap-4 md:gap-5 md:ml-auto">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
               <button
                 onClick={toggleLanguage}
                 className="hidden md:block text-sm font-medium text-gray-900 hover:text-gray-600 uppercase"
@@ -467,7 +466,7 @@ const Header: React.FC = () => {
                 aria-label="Search"
                 data-testid="header-search-btn"
               >
-                <Search className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
               </button>
 
               {/* B2B Bildiriş İkonu */}
@@ -482,7 +481,7 @@ const Header: React.FC = () => {
                     }}
                     className="relative p-1"
                   >
-                    <Bell className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
                     {b2bNotifications.length > 0 && !notificationsRead && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                         {b2bNotifications.length}
@@ -555,7 +554,7 @@ const Header: React.FC = () => {
               )}
 
               <button onClick={() => navigate('/cart')} className="relative p-1 -m-1" aria-label="Cart">
-                <ShoppingCart className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                     {getTotalItems()}
@@ -569,7 +568,7 @@ const Header: React.FC = () => {
                 title="Wishlist"
                 data-testid="header-wishlist-btn"
               >
-                <Heart className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
+                <Heart className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
                 {wishlistCount > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white"
