@@ -51,53 +51,119 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  // Handler for category change - clears search and discount filter, updates URL
+  // Handler for category change - auto-resets incompatible brand/gender so products are always visible
   const handleCategoryChange = (category: string) => {
     clearSearchOnFilterChange();
     setSelectedCategory(category);
     // Clear discount filter when category is selected
     setDiscountFilter('all');
-    updateURLParams({ 
+
+    const updates: Record<string, string | null> = {
       category: category === 'all' ? null : category,
       search: null,
-      discount: null
-    });
+      discount: null,
+    };
+
+    if (category !== 'all') {
+      // If current brand has no product in this category → reset brand
+      if (selectedBrand !== 'all') {
+        const brandMatches = products.some(
+          (p) => p.category === category && p.brand === selectedBrand
+        );
+        if (!brandMatches) {
+          setSelectedBrand('all');
+          updates.brand = null;
+        }
+      }
+      // If current gender has no product in this category → reset gender
+      if (selectedGender !== 'all') {
+        const genderMatches = products.some(
+          (p) => p.category === category && p.gender === selectedGender
+        );
+        if (!genderMatches) {
+          setSelectedGender('all');
+          updates.gender = null;
+        }
+      }
+    }
+
+    updateURLParams(updates);
   };
 
-  // Handler for brand change - clears search and discount filter, updates URL, resets category
+  // Handler for brand change - auto-resets incompatible category/gender so products are always visible
   const handleBrandChange = (brand: string) => {
     clearSearchOnFilterChange();
     setSelectedBrand(brand);
-    // Clear discount filter when brand is selected
     setDiscountFilter('all');
+
+    const updates: Record<string, string | null> = {
+      brand: brand === 'all' ? null : brand,
+      search: null,
+      discount: null,
+    };
+
     if (brand !== 'all') {
-      setSelectedCategory('all');
-      updateURLParams({ 
-        brand: brand === 'all' ? null : brand,
-        category: null,
-        search: null,
-        discount: null
-      });
-    } else {
-      updateURLParams({ 
-        brand: null,
-        search: null,
-        discount: null
-      });
+      // If current category has no product in this brand → reset category
+      if (selectedCategory !== 'all') {
+        const categoryMatches = products.some(
+          (p) => p.brand === brand && p.category === selectedCategory
+        );
+        if (!categoryMatches) {
+          setSelectedCategory('all');
+          updates.category = null;
+        }
+      }
+      // If current gender has no product in this brand → reset gender
+      if (selectedGender !== 'all') {
+        const genderMatches = products.some(
+          (p) => p.brand === brand && p.gender === selectedGender
+        );
+        if (!genderMatches) {
+          setSelectedGender('all');
+          updates.gender = null;
+        }
+      }
     }
+
+    updateURLParams(updates);
   };
 
-  // Handler for gender change - clears search and discount filter, updates URL
+  // Handler for gender change - auto-resets incompatible category/brand so products are always visible
   const handleGenderChange = (gender: string) => {
     clearSearchOnFilterChange();
     setSelectedGender(gender);
-    // Clear discount filter when gender is selected
     setDiscountFilter('all');
-    updateURLParams({ 
+
+    const updates: Record<string, string | null> = {
       gender: gender === 'all' ? null : gender,
       search: null,
-      discount: null
-    });
+      discount: null,
+    };
+
+    if (gender !== 'all') {
+      // If current category has no product for this gender → reset category
+      if (selectedCategory !== 'all') {
+        const categoryMatches = products.some(
+          (p) => p.gender === gender && p.category === selectedCategory
+        );
+        if (!categoryMatches) {
+          setSelectedCategory('all');
+          updates.category = null;
+        }
+      }
+      // If current brand has no product for this gender → reset brand
+      if (selectedBrand !== 'all') {
+        const brandMatches = products.some(
+          (p) => p.gender === gender && p.brand === selectedBrand
+        );
+        if (!brandMatches) {
+          setSelectedBrand('all');
+          updates.brand = null;
+        }
+      }
+    }
+
+    updateURLParams(updates);
   };
 
   // Handler for discount filter change - clears all filters and updates URL
