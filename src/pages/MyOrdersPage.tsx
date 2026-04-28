@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Package,
@@ -9,6 +9,9 @@ import {
   Truck,
   XCircle,
   CreditCard,
+  PenLine,
+  RotateCcw,
+  Bike,
 } from 'lucide-react';
 import {
   getUserOrders,
@@ -23,7 +26,8 @@ const statusBadge = (status: CustomerOrderStatus) => {
     pending_payment: 'bg-amber-100 text-amber-800',
     payment_failed: 'bg-red-100 text-red-800',
     preparing: 'bg-blue-100 text-blue-800',
-    shipping: 'bg-purple-100 text-purple-800',
+    courier_handover: 'bg-indigo-100 text-indigo-800',
+    on_the_way: 'bg-purple-100 text-purple-800',
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-gray-200 text-gray-700',
   };
@@ -33,8 +37,9 @@ const statusBadge = (status: CustomerOrderStatus) => {
 const STAGES: { key: CustomerOrderStatus; label: string; icon: any }[] = [
   { key: 'pending_payment', label: 'Ödəniş', icon: CreditCard },
   { key: 'preparing', label: 'Hazırlanır', icon: Package },
-  { key: 'shipping', label: 'Yoldadır', icon: Truck },
-  { key: 'delivered', label: 'Təhvil verildi', icon: CheckCircle2 },
+  { key: 'courier_handover', label: 'Kuryerə verildi', icon: Bike },
+  { key: 'on_the_way', label: 'Yolda', icon: Truck },
+  { key: 'delivered', label: 'Təhvil aldı', icon: CheckCircle2 },
 ];
 
 const formatDate = (raw: any) => {
@@ -47,9 +52,146 @@ const formatDate = (raw: any) => {
 const stageIndex = (status: CustomerOrderStatus): number => {
   if (status === 'pending_payment' || status === 'payment_failed') return 0;
   if (status === 'preparing') return 1;
-  if (status === 'shipping') return 2;
-  if (status === 'delivered') return 3;
+  if (status === 'courier_handover') return 2;
+  if (status === 'on_the_way') return 3;
+  if (status === 'delivered') return 4;
   return 0;
+};
+
+// ─── Signature pad (canvas) ────────────────────────────────
+interface SigPadProps {
+  onConfirm: (dataUrl: string) => void;
+  onClose: () => void;
+  loading: boolean;
+}
+const SignaturePad: React.FC<SigPadProps> = ({ onConfirm, onClose, loading }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef(false);
+  const lastRef = useRef<{ x: number; y: number } | null>(null);
+  const [hasSignature, setHasSignature] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(ratio, ratio);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#111';
+    }
+  }, []);
+
+  const getPos = (e: any) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const isTouch = e.touches && e.touches.length > 0;
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  const start = (e: any) => {
+    e.preventDefault();
+    drawingRef.current = true;
+    lastRef.current = getPos(e);
+  };
+  const move = (e: any) => {
+    if (!drawingRef.current) return;
+    e.preventDefault();
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx || !lastRef.current) return;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastRef.current.x, lastRef.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastRef.current = pos;
+    setHasSignature(true);
+  };
+  const end = () => {
+    drawingRef.current = false;
+    lastRef.current = null;
+  };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setHasSignature(false);
+    }
+  };
+  const confirm = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    onConfirm(dataUrl);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={() => !loading && onClose()}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        data-testid="signature-pad-modal"
+      >
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">Təhvil aldığınızı təsdiqləyin</h3>
+          <p className="text-xs text-gray-500 mt-0.5">İmzanızı aşağıdakı sahədə çəkin</p>
+        </div>
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-44 touch-none cursor-crosshair bg-white"
+            onMouseDown={start}
+            onMouseMove={move}
+            onMouseUp={end}
+            onMouseLeave={end}
+            onTouchStart={start}
+            onTouchMove={move}
+            onTouchEnd={end}
+            data-testid="signature-canvas"
+          />
+        </div>
+        <div className="flex items-center justify-between mt-3 gap-2">
+          <button
+            onClick={clear}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            data-testid="signature-clear"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Təmizlə
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200"
+            >
+              Ləğv et
+            </button>
+            <button
+              onClick={confirm}
+              disabled={!hasSignature || loading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              data-testid="signature-confirm"
+            >
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              Təsdiq et
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const MyOrdersPage: React.FC = () => {
@@ -57,6 +199,7 @@ const MyOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [signOrderId, setSignOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -80,12 +223,14 @@ const MyOrdersPage: React.FC = () => {
     }
   };
 
-  const handleConfirm = async (orderId: string) => {
-    setConfirmingId(orderId);
+  const handleConfirmWithSignature = async (signatureDataUrl: string) => {
+    if (!signOrderId) return;
+    setConfirmingId(signOrderId);
     try {
-      await customerConfirmDelivered(orderId);
+      await customerConfirmDelivered(signOrderId, signatureDataUrl);
       const userId = localStorage.getItem('userId');
       if (userId) await load(userId);
+      setSignOrderId(null);
     } catch (e) {
       alert('Təsdiq baş tutmadı: ' + (e as Error).message);
     } finally {
@@ -134,8 +279,8 @@ const MyOrdersPage: React.FC = () => {
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-5">
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider">Sifariş</p>
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Sifariş №</p>
+                      <p className="text-2xl font-bold text-gray-900">
                         #{order.orderNumber ?? order.id?.slice(0, 6)}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
@@ -151,7 +296,7 @@ const MyOrdersPage: React.FC = () => {
                   {/* Stage timeline */}
                   {order.status !== 'cancelled' && order.status !== 'payment_failed' && (
                     <div className="mb-5">
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-5 gap-1">
                         {STAGES.map((stg, i) => {
                           const Icon = stg.icon;
                           const reached = i <= idx;
@@ -169,7 +314,7 @@ const MyOrdersPage: React.FC = () => {
                                 <Icon className="h-4 w-4" />
                               </div>
                               <span
-                                className={`text-[11px] font-medium ${
+                                className={`text-[10px] sm:text-[11px] font-medium leading-tight ${
                                   reached ? 'text-gray-900' : 'text-gray-400'
                                 }`}
                               >
@@ -182,7 +327,7 @@ const MyOrdersPage: React.FC = () => {
                       <div className="relative mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="absolute inset-y-0 left-0 bg-gray-900 transition-all"
-                          style={{ width: `${(idx / 3) * 100}%` }}
+                          style={{ width: `${(idx / 4) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -235,19 +380,15 @@ const MyOrdersPage: React.FC = () => {
                       <span className="text-gray-500">Cəmi: </span>
                       <span className="text-lg font-bold text-gray-900">{order.totalAmount.toFixed(2)} ₼</span>
                     </div>
-                    {order.status === 'shipping' && (
+                    {order.status === 'on_the_way' && (
                       <button
-                        onClick={() => handleConfirm(order.id!)}
+                        onClick={() => setSignOrderId(order.id!)}
                         disabled={confirmingId === order.id}
                         className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-60"
                         data-testid={`my-order-confirm-${order.id}`}
                       >
-                        {confirmingId === order.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4" />
-                        )}
-                        Təhvil aldım
+                        <PenLine className="h-4 w-4" />
+                        Təhvil aldım (imza)
                       </button>
                     )}
                   </div>
@@ -267,12 +408,30 @@ const MyOrdersPage: React.FC = () => {
                       )}
                     </div>
                   )}
+                  {order.customerSignature && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">İmzanız:</p>
+                      <img
+                        src={order.customerSignature}
+                        alt="signature"
+                        className="h-16 bg-gray-50 rounded border border-gray-200"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {signOrderId && (
+        <SignaturePad
+          loading={!!confirmingId}
+          onClose={() => setSignOrderId(null)}
+          onConfirm={handleConfirmWithSignature}
+        />
+      )}
     </div>
   );
 };

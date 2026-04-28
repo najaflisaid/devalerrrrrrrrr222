@@ -5,6 +5,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  setDoc,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -22,42 +23,58 @@ export interface DeliveryMethod {
 
 const COLLECTION = 'delivery_methods';
 
+let __seedAttempted = false;
+
 export const getDeliveryMethods = async (activeOnly = false): Promise<DeliveryMethod[]> => {
   const snap = await getDocs(collection(db, COLLECTION));
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as DeliveryMethod));
 
-  // Seed default methods on first run
-  if (list.length === 0) {
-    const defaults: Omit<DeliveryMethod, 'id' | 'createdAt'>[] = [
+  // Seed default methods on first run with deterministic IDs to avoid duplicates
+  if (list.length === 0 && !__seedAttempted) {
+    __seedAttempted = true;
+    const defaults: { id: string; data: Omit<DeliveryMethod, 'id' | 'createdAt'> }[] = [
       {
-        name: 'Filialdan götürmə',
-        description: 'Mağazamızdan özünüz götürün',
-        price: 0,
-        estimatedDays: 'Eyni gün',
-        isActive: true,
-        order: 1,
+        id: 'pickup',
+        data: {
+          name: 'Filialdan götürmə',
+          description: 'Mağazamızdan özünüz götürün',
+          price: 0,
+          estimatedDays: 'Eyni gün',
+          isActive: true,
+          order: 1,
+        },
       },
       {
-        name: 'Kuryer ilə çatdırılma',
-        description: 'Bakı daxili kuryer xidməti',
-        price: 5,
-        estimatedDays: '1-2 iş günü',
-        isActive: true,
-        order: 2,
+        id: 'courier',
+        data: {
+          name: 'Kuryer ilə çatdırılma',
+          description: 'Bakı daxili kuryer xidməti',
+          price: 5,
+          estimatedDays: '1-2 iş günü',
+          isActive: true,
+          order: 2,
+        },
       },
       {
-        name: 'Poçt ilə çatdırılma',
-        description: 'Region və şəhərlərarası poçt',
-        price: 10,
-        estimatedDays: '3-5 iş günü',
-        isActive: true,
-        order: 3,
+        id: 'post',
+        data: {
+          name: 'Poçt ilə çatdırılma',
+          description: 'Region və şəhərlərarası poçt',
+          price: 10,
+          estimatedDays: '3-5 iş günü',
+          isActive: true,
+          order: 3,
+        },
       },
     ];
     try {
       await Promise.all(
-        defaults.map((m) =>
-          addDoc(collection(db, COLLECTION), { ...m, createdAt: Timestamp.now() })
+        defaults.map((d) =>
+          setDoc(
+            doc(db, COLLECTION, d.id),
+            { ...d.data, createdAt: Timestamp.now() },
+            { merge: false }
+          )
         )
       );
       const reloaded = await getDocs(collection(db, COLLECTION));

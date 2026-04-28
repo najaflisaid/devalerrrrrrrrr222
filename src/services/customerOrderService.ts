@@ -16,7 +16,8 @@ export type CustomerOrderStatus =
   | 'pending_payment'
   | 'payment_failed'
   | 'preparing'
-  | 'shipping'
+  | 'courier_handover'
+  | 'on_the_way'
   | 'delivered'
   | 'cancelled';
 
@@ -49,10 +50,14 @@ export interface CustomerOrder {
   paymentStatus?: 'success' | 'failed' | 'unknown';
   epointTransaction?: string;
   epointCode?: string;
+  customerSignature?: string; // base64 PNG of customer signature
   createdAt?: any;
   paidAt?: any;
+  courierHandoverAt?: any;
+  onTheWayAt?: any;
   deliveredAt?: any;
   customerConfirmedAt?: any;
+  isReadByAdmin?: boolean;
 }
 
 const COLLECTION = 'customer_orders';
@@ -114,17 +119,28 @@ export const updateCustomerOrderStatus = async (
 ): Promise<void> => {
   const ref = doc(db, COLLECTION, orderId);
   const data: any = { status };
+  if (status === 'courier_handover') data.courierHandoverAt = Timestamp.now();
+  if (status === 'on_the_way') data.onTheWayAt = Timestamp.now();
   if (status === 'delivered') data.deliveredAt = Timestamp.now();
   await updateDoc(ref, data);
 };
 
-export const customerConfirmDelivered = async (orderId: string): Promise<void> => {
+export const customerConfirmDelivered = async (
+  orderId: string,
+  signatureDataUrl?: string
+): Promise<void> => {
   const ref = doc(db, COLLECTION, orderId);
-  await updateDoc(ref, {
+  const data: any = {
     status: 'delivered',
     customerConfirmedAt: Timestamp.now(),
     deliveredAt: Timestamp.now(),
-  });
+  };
+  if (signatureDataUrl) data.customerSignature = signatureDataUrl;
+  await updateDoc(ref, data);
+};
+
+export const markOrderReadByAdmin = async (orderId: string): Promise<void> => {
+  await updateDoc(doc(db, COLLECTION, orderId), { isReadByAdmin: true });
 };
 
 export const deleteCustomerOrder = async (orderId: string): Promise<void> => {
@@ -136,7 +152,8 @@ export const STATUS_LABELS_AZ: Record<CustomerOrderStatus, string> = {
   pending_payment: 'Ödəniş gözləyir',
   payment_failed: 'Ödəniş uğursuz',
   preparing: 'Hazırlanır',
-  shipping: 'Yoldadır',
+  courier_handover: 'Kuryerə verildi',
+  on_the_way: 'Yoldadır',
   delivered: 'Təhvil verildi',
   cancelled: 'Ləğv edildi',
 };

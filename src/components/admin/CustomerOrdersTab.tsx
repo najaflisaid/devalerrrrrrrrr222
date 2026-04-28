@@ -4,6 +4,7 @@ import {
   getAllCustomerOrders,
   updateCustomerOrderStatus,
   deleteCustomerOrder,
+  markOrderReadByAdmin,
   STATUS_LABELS_AZ,
   type CustomerOrder,
   type CustomerOrderStatus,
@@ -12,7 +13,8 @@ import {
 const STATUS_OPTIONS: CustomerOrderStatus[] = [
   'pending_payment',
   'preparing',
-  'shipping',
+  'courier_handover',
+  'on_the_way',
   'delivered',
   'cancelled',
   'payment_failed',
@@ -23,7 +25,8 @@ const statusBadge = (status: CustomerOrderStatus) => {
     pending_payment: 'bg-amber-100 text-amber-800',
     payment_failed: 'bg-red-100 text-red-800',
     preparing: 'bg-blue-100 text-blue-800',
-    shipping: 'bg-purple-100 text-purple-800',
+    courier_handover: 'bg-indigo-100 text-indigo-800',
+    on_the_way: 'bg-purple-100 text-purple-800',
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-gray-200 text-gray-700',
   };
@@ -32,7 +35,8 @@ const statusBadge = (status: CustomerOrderStatus) => {
 
 const statusIcon = (status: CustomerOrderStatus) => {
   if (status === 'preparing') return <Package className="h-4 w-4" />;
-  if (status === 'shipping') return <Truck className="h-4 w-4" />;
+  if (status === 'courier_handover') return <Truck className="h-4 w-4" />;
+  if (status === 'on_the_way') return <Truck className="h-4 w-4" />;
   if (status === 'delivered') return <CheckCircle2 className="h-4 w-4" />;
   if (status === 'pending_payment') return <Clock className="h-4 w-4" />;
   if (status === 'payment_failed' || status === 'cancelled') return <XCircle className="h-4 w-4" />;
@@ -246,6 +250,17 @@ const CustomerOrdersTab: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {order.customerSignature && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Müştəri imzası (Təhvil aldı):</p>
+                  <img
+                    src={order.customerSignature}
+                    alt="signature"
+                    className="h-20 bg-gray-50 rounded border border-gray-200"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

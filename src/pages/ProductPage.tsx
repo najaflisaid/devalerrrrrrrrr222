@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
+import ProductReviews from '../components/ProductReviews';
 import type { Product } from '../types';
 
 const ProductPage: React.FC = () => {
@@ -294,6 +295,10 @@ const ProductPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto mt-8">
+          <ProductReviews productId={product.id} />
         </div>
       </div>
 

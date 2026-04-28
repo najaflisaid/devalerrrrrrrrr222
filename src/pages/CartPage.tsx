@@ -729,7 +729,7 @@ const CartPage: React.FC = () => {
                               </div>
                             </div>
                             <span className="text-xs font-semibold text-gray-900 flex-shrink-0 whitespace-nowrap">
-                              {m.price > 0 ? `${m.price.toFixed(2)} ₼` : 'Pulsuz'}
+                              {m.price > 0 ? `${m.price.toFixed(2)} ₼` : ''}
                             </span>
                           </div>
                         </button>

@@ -5,6 +5,7 @@ import { ChevronLeft, ShoppingCart } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
+import ProductReviews from '../components/ProductReviews';
 import type { Product } from '../types';
 
 const ProductDetailsPage: React.FC = () => {
@@ -298,6 +299,12 @@ const ProductDetailsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {product && (
+          <div className="max-w-4xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
+            <ProductReviews productId={product.id} />
+          </div>
+        )}
       </div>
 
       {showCreditForm && product && (

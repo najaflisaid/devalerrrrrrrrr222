@@ -79,16 +79,25 @@ const AdminPanel: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   // B2B sifariş bildirişi: pending sifarişlərin sayı (real-vaxt)
   const [pendingB2BOrdersCount, setPendingB2BOrdersCount] = useState(0);
+  // Müştəri sifariş bildirişi: yeni (oxunmamış) ödənilmiş sifarişlərin sayı
+  const [pendingCustomerOrdersCount, setPendingCustomerOrdersCount] = useState(0);
   // Müraciətlər bildirişi: yeni (oxunmamış) əlaqə mesajları sayı
   const [newContactMessagesCount, setNewContactMessagesCount] = useState(0);
   // Yalnız bu vaxtdan SONRA yaradılmış pending sifarişlər badge-də sayılır.
   // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
   const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
+  const CUSTOMER_ORDERS_ACK_KEY = 'admin_customer_orders_last_seen_ms';
   const CONTACT_ACK_KEY = 'admin_contact_messages_last_seen_ms';
   const B2B_REQ_ACK_KEY = 'admin_b2b_requests_last_seen_ms';
   const [b2bLastSeen, setB2bLastSeen] = useState<number>(() => {
     try {
       const raw = localStorage.getItem(B2B_ACK_KEY);
+      return raw ? Number(raw) || 0 : 0;
+    } catch { return 0; }
+  });
+  const [customerOrdersLastSeen, setCustomerOrdersLastSeen] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(CUSTOMER_ORDERS_ACK_KEY);
       return raw ? Number(raw) || 0 : 0;
     } catch { return 0; }
   });
@@ -124,6 +133,27 @@ const AdminPanel: React.FC = () => {
     });
     return () => unsub();
   }, [b2bLastSeen]);
+
+  // Real-vaxt: yalnız customerOrdersLastSeen-dan sonra yaradılmış aktiv müştəri sifarişləri
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'customer_orders'), (snap) => {
+      let count = 0;
+      snap.forEach(d => {
+        const data: any = d.data();
+        // Yalnız ödənilmiş və ya hazırlanan, oxunmamış sifarişlər
+        if (data.status === 'pending_payment' || data.status === 'cancelled' || data.status === 'payment_failed') return;
+        if (data.isReadByAdmin) return;
+        const ms = data?.createdAt?.toMillis ? data.createdAt.toMillis()
+          : (typeof data?.createdAt === 'number' ? data.createdAt
+            : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
+        if (ms > customerOrdersLastSeen) count += 1;
+      });
+      setPendingCustomerOrdersCount(count);
+    }, (err) => {
+      console.error('Customer orders snapshot error:', err);
+    });
+    return () => unsub();
+  }, [customerOrdersLastSeen]);
 
   // Yeni əlaqə mesajları (müraciətlər) — real-vaxt
   // Yalnız contactLastSeen-dan sonra gələn mesajlar badge-də sayılır.
@@ -186,7 +216,14 @@ const AdminPanel: React.FC = () => {
     try { localStorage.setItem(B2B_ACK_KEY, String(now)); } catch { /* ignore */ }
     setPendingB2BOrdersCount(0);
   };
+  const acknowledgeCustomerOrders = () => {
+    const now = Date.now();
+    setCustomerOrdersLastSeen(now);
+    try { localStorage.setItem(CUSTOMER_ORDERS_ACK_KEY, String(now)); } catch { /* ignore */ }
+    setPendingCustomerOrdersCount(0);
+  };
   const b2bBadgeCount = pendingB2BOrdersCount;
+  const customerBadgeCount = pendingCustomerOrdersCount;
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
@@ -1178,7 +1215,7 @@ const AdminPanel: React.FC = () => {
 
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
-    { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag },
+    { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
     { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
     { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
@@ -2802,6 +2839,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'customerOrders' && (
           <PasswordProtectedSection
             sectionName="customerOrders"
+            onUnlock={acknowledgeCustomerOrders}
           >
             <CustomerOrdersTab />
           </PasswordProtectedSection>
@@ -3076,3 +3114,4 @@ const AdminPanel: React.FC = () => {
 };
 
 export default AdminPanel;
+ort default AdminPanel;
