@@ -77,9 +77,16 @@ const AdminPanel: React.FC = () => {
   // Yalnız bu vaxtdan SONRA yaradılmış pending sifarişlər badge-də sayılır.
   // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
   const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
+  const CONTACT_ACK_KEY = 'admin_contact_messages_last_seen_ms';
   const [b2bLastSeen, setB2bLastSeen] = useState<number>(() => {
     try {
       const raw = localStorage.getItem(B2B_ACK_KEY);
+      return raw ? Number(raw) || 0 : 0;
+    } catch { return 0; }
+  });
+  const [contactLastSeen, setContactLastSeen] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(CONTACT_ACK_KEY);
       return raw ? Number(raw) || 0 : 0;
     } catch { return 0; }
   });
@@ -104,15 +111,31 @@ const AdminPanel: React.FC = () => {
   }, [b2bLastSeen]);
 
   // Yeni əlaqə mesajları (müraciətlər) — real-vaxt
+  // Yalnız contactLastSeen-dan sonra gələn mesajlar badge-də sayılır.
   useEffect(() => {
-    const q = query(collection(db, 'contact_messages'), where('status', '==', 'new'));
+    const q = query(collection(db, 'contact_messages'));
     const unsub = onSnapshot(q, (snap) => {
-      setNewContactMessagesCount(snap.size);
+      let count = 0;
+      snap.forEach(d => {
+        const data: any = d.data();
+        const ms = data?.createdAt?.toMillis ? data.createdAt.toMillis()
+          : (typeof data?.createdAt === 'number' ? data.createdAt
+            : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
+        if (ms > contactLastSeen) count += 1;
+      });
+      setNewContactMessagesCount(count);
     }, (err) => {
       console.error('Contact messages snapshot error:', err);
     });
     return () => unsub();
-  }, []);
+  }, [contactLastSeen]);
+
+  const acknowledgeContactMessages = () => {
+    const now = Date.now();
+    setContactLastSeen(now);
+    try { localStorage.setItem(CONTACT_ACK_KEY, String(now)); } catch { /* ignore */ }
+    setNewContactMessagesCount(0);
+  };
 
   const acknowledgeB2bOrders = () => {
     const now = Date.now();
@@ -1121,7 +1144,7 @@ const AdminPanel: React.FC = () => {
     { id: 'categories', label: t('admin.categories'), icon: Tag },
     { id: 'blogs', label: t('admin.blog'), icon: FileText },
     { id: 'partners', label: t('admin.partners'), icon: Building2 },
-    { id: 'contactMessages', label: 'Müraciətlər', icon: Mail },
+    { id: 'contactMessages', label: 'Müraciətlər', icon: Mail, badge: newContactMessagesCount },
     { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Info },
     { id: 'b2b', label: t('admin.b2bRequests'), icon: Users },
     { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
@@ -1157,7 +1180,11 @@ const AdminPanel: React.FC = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === 'contactMessages') acknowledgeContactMessages();
+                    if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
+                  }}
                   className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
                       ? 'bg-gray-900 text-white shadow-md'
