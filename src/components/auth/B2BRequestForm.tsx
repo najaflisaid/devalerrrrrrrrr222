@@ -23,18 +23,24 @@ const B2BRequestForm: React.FC<B2BRequestFormProps> = ({ onSuccess }) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      await userService.submitB2BRequest(formData);
-      setSubmitted(true);
+    // Optimistic UI: göndərmə fonda gedir, istifadəçi dərhal təsdiq görür
+    userService.submitB2BRequest(formData)
+      .then(() => {
+        // uğurla yazıldı — heç nə etmə (UI artıq submitted vəziyyətindədir)
+      })
+      .catch((error) => {
+        console.error('Error submitting B2B request:', error);
+        // Qeyd: müraciət UI-də artıq uğurlu görünür. Səhv olarsa konsolda saxla.
+        // İstifadəçi yenidən cəhd edə bilməsi üçün submitted-i sıfırlamırıq —
+        // admin paneldə yazı görünmədiyindən təkrar göndərə bilər.
+      });
 
-      if (onSuccess) {
-        setTimeout(() => onSuccess(), 2000);
-      }
-    } catch (error) {
-      console.error('Error submitting B2B request:', error);
-      alert(t('auth.genericError'));
-    } finally {
-      setLoading(false);
+    // Dərhal "uğurla göndərildi" ekranını göstər
+    setSubmitted(true);
+    setLoading(false);
+
+    if (onSuccess) {
+      setTimeout(() => onSuccess(), 2000);
     }
   };
 

@@ -78,6 +78,7 @@ const AdminPanel: React.FC = () => {
   // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
   const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
   const CONTACT_ACK_KEY = 'admin_contact_messages_last_seen_ms';
+  const B2B_REQ_ACK_KEY = 'admin_b2b_requests_last_seen_ms';
   const [b2bLastSeen, setB2bLastSeen] = useState<number>(() => {
     try {
       const raw = localStorage.getItem(B2B_ACK_KEY);
@@ -90,6 +91,13 @@ const AdminPanel: React.FC = () => {
       return raw ? Number(raw) || 0 : 0;
     } catch { return 0; }
   });
+  const [b2bReqLastSeen, setB2bReqLastSeen] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(B2B_REQ_ACK_KEY);
+      return raw ? Number(raw) || 0 : 0;
+    } catch { return 0; }
+  });
+  const [pendingB2BRequestsCount, setPendingB2BRequestsCount] = useState(0);
 
   // Real-vaxt: yalnız b2bLastSeen-dan sonra yaradılmış pending sifarişləri say
   useEffect(() => {
@@ -135,6 +143,34 @@ const AdminPanel: React.FC = () => {
     setContactLastSeen(now);
     try { localStorage.setItem(CONTACT_ACK_KEY, String(now)); } catch { /* ignore */ }
     setNewContactMessagesCount(0);
+  };
+
+  // Yeni B2B sorğuları — real-vaxt
+  useEffect(() => {
+    const q = query(collection(db, 'b2bRequests'), where('status', '==', 'pending'));
+    const unsub = onSnapshot(q, (snap) => {
+      let count = 0;
+      snap.forEach(d => {
+        const data: any = d.data();
+        const raw = data?.created_at;
+        const ms = raw?.toMillis ? raw.toMillis()
+          : (typeof raw === 'number' ? raw
+            : raw instanceof Date ? raw.getTime()
+              : (raw?.seconds ? raw.seconds * 1000 : 0));
+        if (ms > b2bReqLastSeen) count += 1;
+      });
+      setPendingB2BRequestsCount(count);
+    }, (err) => {
+      console.error('B2B requests snapshot error:', err);
+    });
+    return () => unsub();
+  }, [b2bReqLastSeen]);
+
+  const acknowledgeB2BRequests = () => {
+    const now = Date.now();
+    setB2bReqLastSeen(now);
+    try { localStorage.setItem(B2B_REQ_ACK_KEY, String(now)); } catch { /* ignore */ }
+    setPendingB2BRequestsCount(0);
   };
 
   const acknowledgeB2bOrders = () => {
@@ -1146,7 +1182,7 @@ const AdminPanel: React.FC = () => {
     { id: 'partners', label: t('admin.partners'), icon: Building2 },
     { id: 'contactMessages', label: 'Müraciətlər', icon: Mail, badge: newContactMessagesCount },
     { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Info },
-    { id: 'b2b', label: t('admin.b2bRequests'), icon: Users },
+    { id: 'b2b', label: t('admin.b2bRequests'), icon: Users, badge: pendingB2BRequestsCount },
     { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
     { id: 'b2bNotifications', label: 'B2B Bildirişlər', icon: Bell },
     { id: 'workers', label: 'İşçilər', icon: Briefcase },
@@ -1184,6 +1220,7 @@ const AdminPanel: React.FC = () => {
                     setActiveTab(tab.id);
                     if (tab.id === 'contactMessages') acknowledgeContactMessages();
                     if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
+                    if (tab.id === 'b2b') acknowledgeB2BRequests();
                   }}
                   className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
