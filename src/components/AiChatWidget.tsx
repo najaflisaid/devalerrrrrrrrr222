@@ -38,7 +38,9 @@ const compactProducts = (products: Product[]) => {
     return inStock + bs;
   };
   const ranked = [...visible].sort((a, b) => score(b) - score(a));
-  return ranked.slice(0, 60).map((p) => {
+  // Send ALL products so AI can match any customer request.
+  // Top 60 ranked products get a short description; the rest are compact rows.
+  return ranked.map((p, idx) => {
     const desc = p.description?.az || p.description?.en || p.description?.ru || '';
     return {
       id: p.id,
@@ -50,7 +52,8 @@ const compactProducts = (products: Product[]) => {
       salePrice: typeof p.salePrice === 'number' ? p.salePrice : null,
       stock: typeof p.stock === 'number' ? p.stock : null,
       isBestseller: !!p.isBestseller,
-      description: desc.slice(0, 220),  // Trim to keep prompt small
+      // Only include description for top 60 ranked products to keep prompt size reasonable
+      description: idx < 60 ? desc.slice(0, 180) : '',
     };
   });
 };
@@ -125,16 +128,107 @@ const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick })
   );
 };
 
-const PRODUCT_MARKER_RE = /\[\[PRODUCT:([a-zA-Z0-9_-]+)\]\]/g;
+const PRODUCT_MARKER_RE = /\[\[PRODUCT:([^\]\s]+)\]\]/g;
 
 interface AssistantContentProps {
   text: string;
   productMap: Record<string, Product>;
+  setProductMap: React.Dispatch<React.SetStateAction<Record<string, Product>>>;
   lang: 'az' | 'ru' | 'en';
   onProductClick: (id: string) => void;
 }
 
-const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, lang, onProductClick }) => {
+// Resolve a marker id to an actual product. Tries:
+// 1) exact ID match
+// 2) case-insensitive ID match
+// 3) prefix/contains ID match (truncated)
+// 4) match by product name field (AI sometimes returns model name instead of ID)
+const resolveProduct = (rawId: string, productMap: Record<string, Product>): Product | null => {
+  if (productMap[rawId]) return productMap[rawId];
+  const lower = rawId.toLowerCase();
+  const products = Object.values(productMap);
+  // Case-insensitive ID match
+  const ci = products.find((p) => p.id.toLowerCase() === lower);
+  if (ci) return ci;
+  // Match by product name (AI sometimes uses model number e.g. "F20694/6")
+  const byName = products.find((p) => {
+    const az = (p.name?.az || '').toLowerCase();
+    const en = (p.name?.en || '').toLowerCase();
+    const ru = (p.name?.ru || '').toLowerCase();
+    return az === lower || en === lower || ru === lower;
+  });
+  if (byName) return byName;
+  // Partial name match
+  if (rawId.length >= 4) {
+    const partial = products.find((p) => {
+      const az = (p.name?.az || '').toLowerCase();
+      const en = (p.name?.en || '').toLowerCase();
+      return az.includes(lower) || en.includes(lower) || lower.includes(az) || lower.includes(en);
+    });
+    if (partial) return partial;
+  }
+  // Prefix / contains ID match
+  if (rawId.length >= 6) {
+    const prefix = products.find((p) => p.id.startsWith(rawId) || rawId.startsWith(p.id));
+    if (prefix) return prefix;
+    const contains = products.find((p) => p.id.includes(rawId) || rawId.includes(p.id));
+    if (contains) return contains;
+  }
+  return null;
+};
+
+const LazyProductCard: React.FC<{
+  productId: string;
+  setProductMap: React.Dispatch<React.SetStateAction<Record<string, Product>>>;
+  lang: 'az' | 'ru' | 'en';
+  onClick: () => void;
+}> = ({ productId, setProductMap, lang, onClick }) => {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    productService
+      .getById(productId)
+      .then((p) => {
+        if (cancelled) return;
+        if (p) {
+          setProduct(p);
+          setProductMap((prev) => (prev[productId] ? prev : { ...prev, [productId]: p }));
+        } else {
+          setFailed(true);
+        }
+      })
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, setProductMap]);
+  if (failed) {
+    return (
+      <button
+        onClick={onClick}
+        className="my-2 inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700"
+      >
+        Məhsula bax →
+      </button>
+    );
+  }
+  if (!product) {
+    return (
+      <div className="my-2 w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center gap-3 animate-pulse">
+        <div className="w-14 h-14 rounded-lg bg-gray-200" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-2 bg-gray-200 rounded w-1/3" />
+          <div className="h-3 bg-gray-200 rounded w-2/3" />
+          <div className="h-3 bg-gray-200 rounded w-1/4" />
+        </div>
+      </div>
+    );
+  }
+  return <ProductMiniCard product={product} lang={lang} onClick={onClick} />;
+};
+
+const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, setProductMap, lang, onProductClick }) => {
   // Split text on [[PRODUCT:id]] markers and render text + cards
   const segments: Array<{ kind: 'text'; value: string } | { kind: 'product'; id: string }> = [];
   let lastIndex = 0;
@@ -160,23 +254,23 @@ const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, l
             </div>
           );
         }
-        const p = productMap[seg.id];
-        if (!p) {
-          // Fallback: simple link if product not in current map
+        const p = resolveProduct(seg.id, productMap);
+        if (p) {
           return (
-            <button
+            <ProductMiniCard
               key={i}
-              onClick={() => onProductClick(seg.id)}
-              className="my-2 inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700"
-            >
-              Məhsula bax →
-            </button>
+              product={p}
+              lang={lang}
+              onClick={() => onProductClick(p.id)}
+            />
           );
         }
+        // Lazy-fetch the product directly by id
         return (
-          <ProductMiniCard
+          <LazyProductCard
             key={i}
-            product={p}
+            productId={seg.id}
+            setProductMap={setProductMap}
             lang={lang}
             onClick={() => onProductClick(seg.id)}
           />
@@ -511,6 +605,7 @@ const AiChatWidget: React.FC = () => {
                     <AssistantContent
                       text={m.content}
                       productMap={productMap}
+                      setProductMap={setProductMap}
                       lang={lang}
                       onProductClick={handleProductClick}
                     />

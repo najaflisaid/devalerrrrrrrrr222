@@ -101,33 +101,41 @@ Hər cavabın sonunda yumşaq satış sualı:
 - Modelin/şirkətin kimliyini açıqlama (sən sadəcə De Valeur AI-san)
 
 📦 MƏHSUL KATALOQU İSTİFADƏSİ:
-Aşağıda saytda olan real məhsulların STATİSTİKASI və SİYAHISI veriləcək.
-Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/AZ QALIB/STOKDA YOX), və qısa təsviri var.
+Aşağıda saytın TAM məhsul kataloqu veriləcək (bütün məhsullar — yüzdən çox ola bilər).
+Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/AZ QALIB/STOKDA YOX), və əksər hallarda qısa təsviri var.
 SADƏCƏ bu siyahıdakı məhsulları təklif et və düzgün cinsə uyğunlaşdır.
 Olmayan məhsul ad/brend uydurma.
 
+🔍 MƏHSUL TAPMA STRATEGİYASI:
+Müştəri konkret nəsə istəyəndə (məs. "Festina qadın saatı, 300 manat altı") — siyahını ZEHNİNDƏ skan et və ən yaxşı uyğunluqları tap.
+Brendinə, cinsinə, qiymət diapazonuna, açar sözə (məs. "klassik", "sport", "qızıl") əsasən axtar.
+Müştəri ümumi danışırsa (məs. "hədiyyə üçün nəsə") — sual verərək ehtiyacı dəqiqləşdir, sonra tövsiyə et.
+
 🖼️ MƏHSUL KARTI FORMATI (ÇOX VACİB):
-Müştəriyə hər hansı məhsul tövsiyə etdikdə, məhsulun ID-si əsasında belə marker yaz:
+Müştəriyə hər hansı məhsul tövsiyə etdikdə, məhsulun **TAM ID-si** əsasında belə marker yaz:
 [[PRODUCT:ID-BURAYA]]
+
+⚠️ ID-NI KATALOQDAN OLDUĞU KİMİ KÖÇÜR — modeli/adı ID kimi yazma!
+Kataloqda hər məhsul "ID:abcXYZ123 | brend — model..." formatında verilir. Buradakı `abcXYZ123` HAMISINI köçür.
+ID-lər adətən 15-25 simvoldan ibarətdir (məs. `28DTXyVTkXbSeMwO3moQ`). Qısaltma!
 
 Bu marker frontend tərəfindən avtomatik gözəl şəkilli kartla əvəz olunacaq — şəkil + ad + brend + qiymət göstəriləcək, klikləndikdə müştəri məhsul səhifəsinə keçəcək.
 
 Buna görə MARKER YAZARKƏN qiymət, brend və adı təkrar yazma — onlar onsuz da kartda görünəcək. Marker yan-yana yox, ayrı sətirdə dur.
 
-Düzgün nümunə:
+Düzgün nümunə (real Firestore ID ilə):
 "Sizə bu variantı tövsiyə edirəm:
 
-[[PRODUCT:abc123]]
+[[PRODUCT:28DTXyVTkXbSeMwO3moQ]]
 
 Klassik dizayn, gündəlik istifadə üçün ideal seçim. Hansı haqda daha ətraflı danışım?"
 
-Yanlış nümunə (TƏKRAR YAZMA):
-"FESTINA F20600/1 — 229₼ [[PRODUCT:abc123]] Premium İspan brendi..."
+YANLIŞ (model nömrəsini ID kimi yazma):
+[[PRODUCT:F20694/6]]   ← BU YANLIŞDIR, modeldir, ID deyil
+[[PRODUCT:F20694]]     ← BU DA YANLIŞDIR
 
-Doğru nümunə (qısa izah + marker):
-"FESTINA F20600/1 sizə uyğundur:
-[[PRODUCT:abc123]]
-Premium İspan brendi, klassik xətt."
+DOĞRU (kataloqdakı tam ID-ni köçür):
+[[PRODUCT:GsSUXSEOvZxK9pq2gh]]   ← BU DOĞRUDUR
 
 Bir cavabda maks 3 marker. Hər marker ayrı sətirdə.
 """
@@ -173,7 +181,7 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-def _format_products(products: List[ChatProduct], limit: int = 60) -> str:
+def _format_products(products: List[ChatProduct], limit: int = 500) -> str:
     if not products:
         return "(Hal-hazırda kataloq boşdur — müştərini bizimlə birbaşa əlaqə saxlamağa dəvət et.)"
     rows: List[str] = []
@@ -300,7 +308,7 @@ async def chat_endpoint(req: ChatRequest):
         + _format_knowledge(req.knowledge)
         + "\n\n"
         + _catalog_summary(req.products)
-        + "\n\n📦 SAYTDAKI MƏHSUL KATALOQU (real məlumat, ən aktual əvvəldə):\n"
+        + "\n\n📦 SAYTDAKI TAM MƏHSUL KATALOQU (real məlumat, hamısı stokdan asılı olmayaraq, ən aktual əvvəldə):\n"
         + _format_products(req.products)
         + "\n\n📝 ƏVVƏLKİ SÖHBƏT:\n"
         + _format_history(req.history)
