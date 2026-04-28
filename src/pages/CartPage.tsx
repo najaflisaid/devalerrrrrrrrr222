@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
+import { createCustomerOrder } from '../services/customerOrderService';
+import { createEpointPayment } from '../services/epointPaymentService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 
@@ -18,6 +20,9 @@ const CartPage: React.FC = () => {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [customerNote, setCustomerNote] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhoneInput, setCustomerPhoneInput] = useState(() => localStorage.getItem('userPhone') || '');
+  const [showCheckout, setShowCheckout] = useState(false);
   const userDiscount = getUserDiscount();
 
   const handleWhatsAppOrder = async () => {
@@ -28,30 +33,89 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    let message = 'Salam! Aşağıdakı məhsulları sifariş etmək istəyirəm:\n\n';
+    // Customers must use Epoint payment - show checkout form
+    setShowCheckout(true);
+  };
 
-    items.forEach((item, index) => {
-      const productName = item.product.name[i18n.language as 'az' | 'ru' | 'en'] || item.product.name.en || item.product.name.az;
-      const price = getItemPrice(item);
-      const productUrl = `${window.location.origin}/product/${item.product.id}`;
+  const handleEpointCheckout = async () => {
+    if (items.length === 0) return;
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName') || '';
+    const userEmail = localStorage.getItem('userEmail') || '';
 
-      message += `${index + 1}. ${productName}\n`;
-      message += `   Brend: ${item.product.brand}\n`;
-      message += `   Miqdar: ${item.quantity}\n`;
-      message += `   Qiymət: ${price.toFixed(2)}₼ x ${item.quantity} = ${(price * item.quantity).toFixed(2)}₼\n`;
-      message += `   Link: ${productUrl}\n\n`;
-    });
+    if (!userId || !userEmail) {
+      setErrorMessage('Sifariş üçün giriş etmiş olmalısınız.');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
+      return;
+    }
 
-    message += `Ümumi məbləğ: ${getTotalPrice().toFixed(2)}₼`;
+    if (!customerPhoneInput.trim()) {
+      setErrorMessage('Zəhmət olmasa telefon nömrənizi daxil edin.');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      return;
+    }
 
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/994777577277?text=${encodedMessage}`, '_blank');
+    if (!customerAddress.trim()) {
+      setErrorMessage('Zəhmət olmasa çatdırılma ünvanını daxil edin.');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      return;
+    }
 
-    clearCart();
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 2000);
+    setLoading(true);
+    try {
+      const orderItems = items.map((item) => {
+        const price = item.product.salePrice || item.product.price;
+        const productName =
+          item.product.name[i18n.language as 'az' | 'ru' | 'en'] ||
+          item.product.name.en ||
+          item.product.name.az;
+        return {
+          productId: item.product.id,
+          productName,
+          image: item.product.images?.[0] || '',
+          quantity: item.quantity,
+          price,
+        };
+      });
+
+      const subtotal = getTotalPrice();
+      const discount = getDiscountAmount();
+      const total = userDiscount > 0 ? getDiscountedTotal() : subtotal;
+
+      const { id: orderId } = await createCustomerOrder({
+        userId,
+        customerName: userName,
+        customerEmail: userEmail,
+        customerPhone: customerPhoneInput.trim(),
+        customerAddress: customerAddress.trim(),
+        notes: customerNote.trim() || '',
+        items: orderItems,
+        subtotal,
+        discountAmount: discount,
+        totalAmount: total,
+        paymentMethod: 'epoint',
+      } as any);
+
+      sessionStorage.setItem('pending_epoint_order_id', orderId);
+
+      const { redirect_url } = await createEpointPayment({
+        order_id: orderId,
+        amount: total,
+      });
+
+      window.location.href = redirect_url;
+    } catch (error: any) {
+      console.error('Epoint checkout error:', error);
+      setErrorMessage(
+        error.message || 'Ödəniş başladıla bilmədi. Zəhmət olmasa yenidən cəhd edin.'
+      );
+      setShowError(true);
+      setTimeout(() => setShowError(false), 6000);
+      setLoading(false);
+    }
   };
 
   const handleB2BOrder = async () => {
@@ -383,9 +447,14 @@ const CartPage: React.FC = () => {
                 onClick={handleWhatsAppOrder}
                 disabled={loading}
                 className="w-full bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-900 transition-colors font-medium flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed mb-3"
+                data-testid="cart-checkout-btn"
               >
                 <ShoppingBag className="h-5 w-5" />
-                {loading ? t('cart.sending') : t('cart.completeOrder')}
+                {loading
+                  ? t('cart.sending')
+                  : isB2BUser
+                  ? t('cart.completeOrder')
+                  : 'Epoint ilə ödə'}
               </button>
 
               <button
@@ -419,6 +488,86 @@ const CartPage: React.FC = () => {
           productPrice={getTotalPrice()}
           onClose={() => setShowCreditForm(false)}
         />
+      )}
+
+      {showCheckout && !isB2BUser && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => !loading && setShowCheckout(false)}>
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="cart-checkout-modal"
+          >
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">Çatdırılma məlumatları</h2>
+            <p className="text-sm text-gray-500 mb-5">Sifarişi tamamlamaq üçün məlumatları doldurun.</p>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
+                <input
+                  type="tel"
+                  value={customerPhoneInput}
+                  onChange={(e) => setCustomerPhoneInput(e.target.value)}
+                  placeholder="+994 XX XXX XX XX"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+                  data-testid="checkout-phone-input"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
+                <textarea
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  placeholder="Şəhər, küçə, ev/mənzil"
+                  rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none"
+                  data-testid="checkout-address-input"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Qeyd (istəyə bağlı)</label>
+                <textarea
+                  value={customerNote}
+                  onChange={(e) => setCustomerNote(e.target.value)}
+                  placeholder="Əlavə qeyd..."
+                  rows={2}
+                  maxLength={500}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3 mb-5 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Ödəniləcək məbləğ:</span>
+                <span className="font-bold text-gray-900 text-lg">
+                  {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} ₼
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCheckout(false)}
+                disabled={loading}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-60"
+              >
+                Ləğv et
+              </button>
+              <button
+                onClick={handleEpointCheckout}
+                disabled={loading}
+                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                data-testid="checkout-pay-btn"
+              >
+                {loading ? 'Yönləndirilir...' : 'Epoint-ə keç'}
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-400 mt-4 text-center">
+              Ödəniş Epoint vasitəsilə təhlükəsiz şəkildə həyata keçirilir.
+            </p>
+          </div>
+        </div>
       )}
     </>
   );

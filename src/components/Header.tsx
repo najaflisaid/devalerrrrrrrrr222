@@ -418,6 +418,11 @@ const Header: React.FC = () => {
               <Link to="/contact" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.contact')}
               </Link>
+              {isLoggedIn && userRole === 'customer' && (
+                <Link to="/my-orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-my-orders-link">
+                  Sifarişlərim
+                </Link>
+              )}
               {isLoggedIn && userRole === 'b2b' && (
                 <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                   {t('header.myOrders')}
@@ -664,6 +669,18 @@ const Header: React.FC = () => {
                     {t('header.contact')}
                   </Link>
                   </div>
+
+                  {isLoggedIn && userRole === 'customer' && (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
+                    <Link
+                      to="/my-orders"
+                      className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      Sifarişlərim
+                    </Link>
+                    </div>
+                  )}
 
                   {isLoggedIn && userRole === 'b2b' && (
                     <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>

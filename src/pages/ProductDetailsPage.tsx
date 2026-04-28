@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ShoppingCart } from 'lucide-react';
 import { productService } from '../services/productService';
-import { orderService } from '../services/orderService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import type { Product } from '../types';
@@ -75,23 +74,14 @@ const ProductDetailsPage: React.FC = () => {
   };
 
   const handleWhatsAppOrder = async () => {
+    // Customers now use Epoint via cart
     if (!product) return;
-
-    const productName = product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az;
-    const displayPrice = getDisplayPrice();
-    const totalAmount = displayPrice * quantity;
-    const productUrl = `${window.location.origin}/product/${product.id}`;
-
-    let message = `Salam! Aşağıdakı məhsulu sifariş etmək istəyirəm:\n\n`;
-    message += `Məhsul: ${productName}\n`;
-    message += `Brend: ${product.brand}\n`;
-    message += `Miqdar: ${quantity}\n`;
-    message += `Qiymət: ${displayPrice.toFixed(2)}₼\n`;
-    message += `Ümumi: ${totalAmount.toFixed(2)}₼\n`;
-    message += `Link: ${productUrl}`;
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/994777577277?text=${encodedMessage}`, '_blank');
+    if (isB2BUser && product.stock === 0) {
+      addNotification('Bu məhsul bitib', 'error');
+      return;
+    }
+    addToCart(product, quantity);
+    navigate('/cart');
   };
 
   if (loading) {

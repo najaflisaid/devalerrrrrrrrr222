@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Share2, ShoppingCart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
@@ -9,6 +9,7 @@ import type { Product } from '../types';
 
 const ProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
@@ -37,23 +38,9 @@ const ProductPage: React.FC = () => {
   };
 
   const handleWhatsAppOrder = () => {
-    if (!product) return;
-    const productName =
-      product.name[i18n.language as 'az' | 'ru' | 'en'] ||
-      product.name.en ||
-      product.name.az;
-
-    const price = product.salePrice || product.price;
-    const productLink = window.location.href;
-    const message = encodeURIComponent(
-`🛍 Məhsul: ${productName}
-📦 Say: ${quantity}
-💰 Qiymət: ${price.toFixed(2)} ₼
-💵 Cəm: ${(price * quantity).toFixed(2)} ₼
-🔗 Link: ${productLink}`
-    );
-
-    window.open(`https://wa.me/994777577277?text=${message}`, '_blank');
+    // Removed: customers now use Epoint payment via cart
+    if (product) addToCart(product, quantity);
+    navigate('/cart');
   };
 
   const nextImage = () => {

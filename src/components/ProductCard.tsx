@@ -16,23 +16,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const { addToCart, addNotification } = useCart();
   const isB2BUser = localStorage.getItem('userRole') === 'b2b';
 
-  const handleWhatsAppOrder = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const productName = product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az;
-    let price: number;
-
-    if (isB2BUser) {
-      price = product.b2bSalePrice || product.b2bPrice || product.salePrice || product.price;
-    } else {
-      price = product.salePrice || product.price;
-    }
-
-    const message = t('product.whatsappMessage', { name: productName, price: price });
-    window.open(`https://wa.me/994777577277?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
   let displayPrice: number;
   let originalPrice: number | null = null;
 
