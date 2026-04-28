@@ -3114,4 +3114,3 @@ const AdminPanel: React.FC = () => {
 };
 
 export default AdminPanel;
-ort default AdminPanel;
