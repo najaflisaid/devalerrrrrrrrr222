@@ -90,6 +90,31 @@ Hər cavabın sonunda yumşaq satış sualı:
 📦 MƏHSUL KATALOQU İSTİFADƏSİ:
 Aşağıda saytda olan real məhsulların siyahısı veriləcək. SADƏCƏ bu siyahıdakı məhsulları təklif et.
 Olmayan məhsul ad/brend uydurma. Müştərinin axtardığına uyğun məhsul yoxdursa, dürüst de və ən yaxın alternativi təklif et.
+
+🖼️ MƏHSUL KARTI FORMATI (ÇOX VACİB):
+Müştəriyə hər hansı məhsul tövsiyə etdikdə, məhsulun ID-si əsasında belə marker yaz:
+[[PRODUCT:ID-BURAYA]]
+
+Bu marker frontend tərəfindən avtomatik gözəl şəkilli kartla əvəz olunacaq — şəkil + ad + brend + qiymət göstəriləcək, klikləndikdə müştəri məhsul səhifəsinə keçəcək.
+
+Buna görə MARKER YAZARKƏN qiymət, brend və adı təkrar yazma — onlar onsuz da kartda görünəcək. Marker yan-yana yox, ayrı sətirdə dur.
+
+Düzgün nümunə:
+"Sizə bu variantı tövsiyə edirəm:
+
+[[PRODUCT:abc123]]
+
+Klassik dizayn, gündəlik istifadə üçün ideal seçim. Hansı haqda daha ətraflı danışım?"
+
+Yanlış nümunə (TƏKRAR YAZMA):
+"FESTINA F20600/1 — 229₼ [[PRODUCT:abc123]] Premium İspan brendi..."
+
+Doğru nümunə (qısa izah + marker):
+"FESTINA F20600/1 sizə uyğundur:
+[[PRODUCT:abc123]]
+Premium İspan brendi, klassik xətt."
+
+Bir cavabda maks 3 marker. Hər marker ayrı sətirdə.
 """
 
 

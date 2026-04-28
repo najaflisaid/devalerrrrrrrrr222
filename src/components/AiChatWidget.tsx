@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
@@ -55,17 +55,142 @@ const renderInline = (text: string) => {
   });
 };
 
+interface ProductCardProps {
+  product: Product;
+  lang: 'az' | 'ru' | 'en';
+  onClick: () => void;
+}
+
+const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick }) => {
+  const name = product.name?.[lang] || product.name?.en || product.name?.az || '';
+  const price = product.salePrice || product.price;
+  const original = product.salePrice && product.price && product.salePrice < product.price ? product.price : null;
+  const img = product.images?.[0];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group my-2 w-full flex items-center gap-3 p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 hover:shadow-md transition-all text-left"
+      data-testid={`ai-product-card-${product.id}`}
+    >
+      <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 flex-shrink-0">
+        {img ? (
+          <img
+            src={img}
+            alt={name}
+            loading="lazy"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        {product.brand && (
+          <p className="text-[10px] uppercase tracking-wide text-amber-600 font-semibold truncate">
+            {product.brand}
+          </p>
+        )}
+        <p className="text-[13px] font-medium text-gray-900 leading-tight line-clamp-2">{name}</p>
+        <div className="flex items-baseline gap-1.5 mt-0.5">
+          {original ? (
+            <>
+              <span className="text-[11px] text-gray-400 line-through">{original.toFixed(2)} ₼</span>
+              <span className="text-sm font-bold text-red-500">{price.toFixed(2)} ₼</span>
+            </>
+          ) : (
+            <span className="text-sm font-bold text-gray-900">{price?.toFixed(2)} ₼</span>
+          )}
+        </div>
+      </div>
+      <div className="text-[10px] font-medium text-gray-400 group-hover:text-gray-900 transition-colors flex-shrink-0">
+        Bax →
+      </div>
+    </button>
+  );
+};
+
+const PRODUCT_MARKER_RE = /\[\[PRODUCT:([a-zA-Z0-9_-]+)\]\]/g;
+
+interface AssistantContentProps {
+  text: string;
+  productMap: Record<string, Product>;
+  lang: 'az' | 'ru' | 'en';
+  onProductClick: (id: string) => void;
+}
+
+const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, lang, onProductClick }) => {
+  // Split text on [[PRODUCT:id]] markers and render text + cards
+  const segments: Array<{ kind: 'text'; value: string } | { kind: 'product'; id: string }> = [];
+  let lastIndex = 0;
+  for (const match of text.matchAll(PRODUCT_MARKER_RE)) {
+    const idx = match.index ?? 0;
+    if (idx > lastIndex) {
+      segments.push({ kind: 'text', value: text.slice(lastIndex, idx) });
+    }
+    segments.push({ kind: 'product', id: match[1] });
+    lastIndex = idx + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    segments.push({ kind: 'text', value: text.slice(lastIndex) });
+  }
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.kind === 'text') {
+          if (!seg.value.trim()) return null;
+          return (
+            <div key={i} className="whitespace-pre-wrap break-words">
+              {renderInline(seg.value)}
+            </div>
+          );
+        }
+        const p = productMap[seg.id];
+        if (!p) {
+          // Fallback: simple link if product not in current map
+          return (
+            <button
+              key={i}
+              onClick={() => onProductClick(seg.id)}
+              className="my-2 inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700"
+            >
+              Məhsula bax →
+            </button>
+          );
+        }
+        return (
+          <ProductMiniCard
+            key={i}
+            product={p}
+            lang={lang}
+            onClick={() => onProductClick(seg.id)}
+          />
+        );
+      })}
+    </>
+  );
+};
+
 const AiChatWidget: React.FC = () => {
   const { i18n } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  const [productMap, setProductMap] = useState<Record<string, Product>>({});
   const productsRef = useRef<Product[]>([]);
   const sessionIdRef = useRef<string>('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+
+  const handleProductClick = (productId: string) => {
+    setOpen(false);
+    navigate(`/product/${productId}`);
+  };
 
   // Hide on admin / b2b-login / workers / payment routes
   const hidden = useMemo(() => {
@@ -117,6 +242,11 @@ const AiChatWidget: React.FC = () => {
         .getAll()
         .then((list) => {
           productsRef.current = list;
+          const m: Record<string, Product> = {};
+          list.forEach((p) => {
+            m[p.id] = p;
+          });
+          setProductMap(m);
           setProductsLoaded(true);
         })
         .catch(() => {
@@ -162,7 +292,6 @@ const AiChatWidget: React.FC = () => {
     }
 
     try {
-      const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
       const payload = {
         session_id: sessionIdRef.current,
         message: trimmed,
@@ -305,13 +434,22 @@ const AiChatWidget: React.FC = () => {
                 data-testid={`ai-chat-msg-${m.role}-${i}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                  className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
                     m.role === 'user'
-                      ? 'bg-gray-900 text-white rounded-br-md'
+                      ? 'bg-gray-900 text-white rounded-br-md whitespace-pre-wrap'
                       : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
                   }`}
                 >
-                  {m.role === 'assistant' ? renderInline(m.content) : m.content}
+                  {m.role === 'assistant' ? (
+                    <AssistantContent
+                      text={m.content}
+                      productMap={productMap}
+                      lang={lang}
+                      onProductClick={handleProductClick}
+                    />
+                  ) : (
+                    m.content
+                  )}
                 </div>
               </div>
             ))}
