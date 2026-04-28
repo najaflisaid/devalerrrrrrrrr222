@@ -72,6 +72,8 @@ const AdminPanel: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   // B2B sifariş bildirişi: pending sifarişlərin sayı (real-vaxt)
   const [pendingB2BOrdersCount, setPendingB2BOrdersCount] = useState(0);
+  // Müraciətlər bildirişi: yeni (oxunmamış) əlaqə mesajları sayı
+  const [newContactMessagesCount, setNewContactMessagesCount] = useState(0);
   // Yalnız bu vaxtdan SONRA yaradılmış pending sifarişlər badge-də sayılır.
   // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
   const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
@@ -100,6 +102,17 @@ const AdminPanel: React.FC = () => {
     });
     return () => unsub();
   }, [b2bLastSeen]);
+
+  // Yeni əlaqə mesajları (müraciətlər) — real-vaxt
+  useEffect(() => {
+    const q = query(collection(db, 'contact_messages'), where('status', '==', 'new'));
+    const unsub = onSnapshot(q, (snap) => {
+      setNewContactMessagesCount(snap.size);
+    }, (err) => {
+      console.error('Contact messages snapshot error:', err);
+    });
+    return () => unsub();
+  }, []);
 
   const acknowledgeB2bOrders = () => {
     const now = Date.now();

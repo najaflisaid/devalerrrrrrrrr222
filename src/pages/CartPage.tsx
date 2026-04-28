@@ -132,11 +132,11 @@ const CartPage: React.FC = () => {
         }
       }
 
-      // Daha qısa keçid (1.5s) ki, müştəri uğur bildirişini görüb məhsullara qayıtsın
+      // Müştəri uğur bildirişini görüb məhsullara qayıtsın deyə 2.5s gözlə
       setTimeout(() => {
         setShowSuccess(false);
         navigate('/products');
-      }, 1500);
+      }, 2500);
       return;
     } catch (error: any) {
       console.error('Order error:', error);
@@ -169,19 +169,36 @@ const CartPage: React.FC = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingBag className="h-24 w-24 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('cart.emptyCart')}</h2>
-          <p className="text-gray-600 mb-6">{t('cart.noProducts')}</p>
-          <button
-            onClick={() => navigate('/products')}
-            className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors"
-          >
-            {t('cart.viewProducts')}
-          </button>
+      <>
+        {showSuccess && (
+          <SuccessNotification
+            message={isB2BUser ? t('cart.b2bOrderSentSuccess') : t('cart.orderSentSuccess')}
+            onClose={() => setShowSuccess(false)}
+            duration={2500}
+          />
+        )}
+        {showError && (
+          <SuccessNotification
+            message={errorMessage}
+            type="error"
+            onClose={() => setShowError(false)}
+            duration={5000}
+          />
+        )}
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <ShoppingBag className="h-24 w-24 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('cart.emptyCart')}</h2>
+            <p className="text-gray-600 mb-6">{t('cart.noProducts')}</p>
+            <button
+              onClick={() => navigate('/products')}
+              className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors"
+            >
+              {t('cart.viewProducts')}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -191,6 +208,7 @@ const CartPage: React.FC = () => {
         <SuccessNotification
           message={isB2BUser ? t('cart.b2bOrderSentSuccess') : t('cart.orderSentSuccess')}
           onClose={() => setShowSuccess(false)}
+          duration={2500}
         />
       )}
 
