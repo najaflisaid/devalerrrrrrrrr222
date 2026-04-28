@@ -55,7 +55,7 @@ const Header: React.FC = () => {
             const newRole = userData.role || 'customer';
 
             if (previousRole && previousRole !== newRole) {
-              clearCart();
+              clearCart(true);
             }
 
             setIsLoggedIn(true);
@@ -73,7 +73,7 @@ const Header: React.FC = () => {
             }
           } else {
             if (previousRole && previousRole !== 'customer') {
-              clearCart();
+              clearCart(true);
             }
 
             setIsLoggedIn(true);
@@ -85,7 +85,7 @@ const Header: React.FC = () => {
           const storedRole = localStorage.getItem('userRole') || 'customer';
 
           if (previousRole && previousRole !== storedRole) {
-            clearCart();
+            clearCart(true);
           }
 
           setIsLoggedIn(true);
@@ -95,7 +95,7 @@ const Header: React.FC = () => {
       } else {
         const hadUser = localStorage.getItem('userRole') !== null;
         if (hadUser) {
-          clearCart();
+          clearCart(true);
         }
 
         setIsLoggedIn(false);
@@ -213,7 +213,7 @@ const Header: React.FC = () => {
       localStorage.removeItem('userDiscountType');
       localStorage.removeItem('userId');
       localStorage.removeItem('userData');
-      clearCart();
+      clearCart(true);
       setIsLoggedIn(false);
       navigate('/');
       setTimeout(() => {

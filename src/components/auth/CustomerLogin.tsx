@@ -42,7 +42,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
           const newRole = userData.role || 'customer';
 
           if (previousRole && previousRole !== newRole) {
-            clearCart();
+            clearCart(true);
           }
 
           let validDiscount = 0;
@@ -88,7 +88,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
       } else {
         const previousRole = localStorage.getItem('userRole');
         if (previousRole) {
-          clearCart();
+          clearCart(true);
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);

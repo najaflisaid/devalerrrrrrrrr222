@@ -34,7 +34,7 @@ const AdminLogin: React.FC = () => {
 
         if (userData.role === 'admin') {
           if (previousRole && previousRole !== 'admin') {
-            clearCart();
+            clearCart(true);
           }
 
           localStorage.setItem('userRole', 'admin');

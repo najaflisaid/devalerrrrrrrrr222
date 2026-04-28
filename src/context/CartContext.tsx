@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { productService } from '../services/productService';
 import type { Product } from '../types';
 
 interface CartItem {
@@ -18,7 +22,7 @@ interface CartContextType {
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
+  clearCart: (skipFirestoreMirror?: boolean) => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getDiscountAmount: () => number;
@@ -38,41 +42,101 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : [];
   });
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Skip the next auto-mirror to Firestore (used during logout / hydration to avoid
+  // accidentally overwriting the saved customer cart with an empty array).
+  const skipNextMirrorRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
-    // Mirror to Firestore so admin can see customer carts
+    if (skipNextMirrorRef.current) {
+      skipNextMirrorRef.current = false;
+      return;
+    }
+    // Mirror to Firestore so admin can see customer carts AND so cart persists across logins
     const userId = localStorage.getItem('userId');
     const userRole = localStorage.getItem('userRole');
     if (userId && userRole === 'customer') {
-      // Lazy import to avoid circular deps
-      import('../lib/firebase').then(({ db }) =>
-        import('firebase/firestore').then(({ doc, setDoc, Timestamp }) => {
-          const userName = localStorage.getItem('userName') || '';
-          const userEmail = localStorage.getItem('userEmail') || '';
-          const compactItems = items.map((it) => ({
-            productId: it.product.id,
-            productName: it.product.name?.az || it.product.name?.en || '',
-            image: it.product.images?.[0] || '',
-            quantity: it.quantity,
-            price: it.product.salePrice || it.product.price,
-          }));
-          setDoc(
-            doc(db, 'customer_carts', userId),
-            {
-              userId,
-              userName,
-              userEmail,
-              items: compactItems,
-              itemCount: items.reduce((s, it) => s + it.quantity, 0),
-              updatedAt: Timestamp.now(),
-            },
-            { merge: false }
-          ).catch((err) => console.warn('Cart mirror to Firestore failed:', err));
-        })
-      ).catch(() => undefined);
+      const userName = localStorage.getItem('userName') || '';
+      const userEmail = localStorage.getItem('userEmail') || '';
+      const compactItems = items.map((it) => ({
+        productId: it.product.id,
+        productName: it.product.name?.az || it.product.name?.en || '',
+        image: it.product.images?.[0] || '',
+        quantity: it.quantity,
+        price: it.product.salePrice || it.product.price,
+      }));
+      setDoc(
+        doc(db, 'customer_carts', userId),
+        {
+          userId,
+          userName,
+          userEmail,
+          items: compactItems,
+          itemCount: items.reduce((s, it) => s + it.quantity, 0),
+          updatedAt: Timestamp.now(),
+        },
+        { merge: false }
+      ).catch((err) => console.warn('Cart mirror to Firestore failed:', err));
     }
   }, [items]);
+
+  // Hydrate cart from Firestore whenever auth state changes (login/logout)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Logged out: do nothing here; logout flow already cleared items locally.
+        // Importantly: we must NOT mirror an empty array to Firestore here either,
+        // so that the saved cart waits for the same user to log back in.
+        return;
+      }
+      // Wait briefly for Header.tsx to write userRole to localStorage
+      const start = Date.now();
+      let role = localStorage.getItem('userRole');
+      while (!role && Date.now() - start < 1500) {
+        await new Promise((r) => setTimeout(r, 100));
+        role = localStorage.getItem('userRole');
+      }
+      if (role !== 'customer') return;
+      try {
+        const snap = await getDoc(doc(db, 'customer_carts', user.uid));
+        if (!snap.exists()) return;
+        const data = snap.data() as any;
+        const remoteItems: { productId: string; quantity: number }[] = (data.items || []).map(
+          (it: any) => ({ productId: it.productId, quantity: it.quantity })
+        );
+        if (remoteItems.length === 0) return;
+        // Fetch full product data for each remote item
+        const products = await Promise.all(
+          remoteItems.map((it) => productService.getById(it.productId).catch(() => null))
+        );
+        const remoteCart: CartItem[] = remoteItems
+          .map((it, idx) => {
+            const p = products[idx];
+            return p ? { product: p, quantity: it.quantity } : null;
+          })
+          .filter((x): x is CartItem => x !== null);
+        // Merge with current (guest) cart: sum quantities for shared products
+        setItems((prev) => {
+          const map = new Map<string, CartItem>();
+          [...remoteCart, ...prev].forEach((ci) => {
+            const existing = map.get(ci.product.id);
+            if (existing) {
+              map.set(ci.product.id, {
+                product: ci.product,
+                quantity: existing.quantity + ci.quantity,
+              });
+            } else {
+              map.set(ci.product.id, ci);
+            }
+          });
+          return Array.from(map.values());
+        });
+      } catch (err) {
+        console.warn('Cart hydrate failed:', err);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const addNotification = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now().toString() + Math.random().toString(36);
@@ -139,7 +203,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const clearCart = () => {
+  const clearCart = (skipFirestoreMirror = false) => {
+    if (skipFirestoreMirror) {
+      skipNextMirrorRef.current = true;
+    }
     setItems([]);
   };
 

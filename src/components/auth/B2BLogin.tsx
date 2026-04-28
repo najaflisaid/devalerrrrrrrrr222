@@ -44,7 +44,7 @@ const B2BLogin: React.FC = () => {
       localStorage.removeItem('userDiscountType');
       localStorage.removeItem('userId');
       localStorage.removeItem('userData');
-      clearCart();
+      clearCart(true);
       setIsLoggedIn(false);
       navigate('/');
       setTimeout(() => {
@@ -87,7 +87,7 @@ const B2BLogin: React.FC = () => {
         const userData = querySnapshot.docs[0].data();
         if (userData.role === 'b2b') {
           if (previousRole && previousRole !== 'b2b') {
-            clearCart();
+            clearCart(true);
           }
 
           let validDiscount = 0;
