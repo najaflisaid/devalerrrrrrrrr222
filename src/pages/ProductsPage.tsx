@@ -51,6 +51,11 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  // Scroll products list back to top when any filter changes
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Handler for category change - auto-resets incompatible brand/gender so products are always visible
   const handleCategoryChange = (category: string) => {
     clearSearchOnFilterChange();
@@ -88,6 +93,7 @@ const ProductsPage: React.FC = () => {
     }
 
     updateURLParams(updates);
+    scrollToTop();
   };
 
   // Handler for brand change - auto-resets incompatible category/gender so products are always visible
@@ -126,6 +132,7 @@ const ProductsPage: React.FC = () => {
     }
 
     updateURLParams(updates);
+    scrollToTop();
   };
 
   // Handler for gender change - auto-resets incompatible category/brand so products are always visible
@@ -164,6 +171,7 @@ const ProductsPage: React.FC = () => {
     }
 
     updateURLParams(updates);
+    scrollToTop();
   };
 
   // Handler for discount filter change - clears all filters and updates URL
@@ -191,6 +199,7 @@ const ProductsPage: React.FC = () => {
         search: null 
       });
     }
+    scrollToTop();
   };
 
   // Handler for coming soon filter change - clears search and updates URL
@@ -202,6 +211,7 @@ const ProductsPage: React.FC = () => {
       comingSoon: checked ? 'true' : null,
       search: null 
     });
+    scrollToTop();
   };
 
   // Handler for sort change - updates URL
@@ -494,7 +504,7 @@ const ProductsPage: React.FC = () => {
                         name="stock"
                         value="all"
                         checked={stockFilter === 'all'}
-                        onChange={() => setStockFilter('all')}
+                        onChange={() => { setStockFilter('all'); scrollToTop(); }}
                         className="mr-2"
                       />
                       <span className="text-sm">{t('common.all')}</span>
@@ -505,7 +515,7 @@ const ProductsPage: React.FC = () => {
                         name="stock"
                         value="inStock"
                         checked={stockFilter === 'inStock'}
-                        onChange={() => setStockFilter('inStock')}
+                        onChange={() => { setStockFilter('inStock'); scrollToTop(); }}
                         className="mr-2"
                       />
                       <span className="text-sm">Mövcud məhsullar</span>
@@ -630,6 +640,7 @@ const ProductsPage: React.FC = () => {
                   setSearchQuery('');
                   setSortBy('name-asc');
                   setSearchParams({}, { replace: true });
+                  scrollToTop();
                 }}
                 className="w-full py-2 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
               >
