@@ -442,7 +442,7 @@ const Header: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3 sm:gap-4 md:gap-5">
               <button
                 onClick={toggleLanguage}
                 className="hidden md:block text-sm font-medium text-gray-900 hover:text-gray-600 uppercase"
@@ -450,10 +450,14 @@ const Header: React.FC = () => {
                 {getLanguageLabel()}
               </button>
 
-              <Search
+              <button
                 onClick={() => setShowSearch(true)}
-                className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900"
-              />
+                className="p-1 -m-1"
+                aria-label="Search"
+                data-testid="header-search-btn"
+              >
+                <Search className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+              </button>
 
               {/* B2B Bildiriş İkonu */}
               {isLoggedIn && (userRole === 'b2b' || userRole === 'admin') && (
@@ -469,7 +473,7 @@ const Header: React.FC = () => {
                   >
                     <Bell className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
                     {b2bNotifications.length > 0 && !notificationsRead && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                         {b2bNotifications.length}
                       </span>
                     )}
@@ -539,10 +543,10 @@ const Header: React.FC = () => {
                 </div>
               )}
 
-              <button onClick={() => navigate('/cart')} className="relative">
+              <button onClick={() => navigate('/cart')} className="relative p-1 -m-1" aria-label="Cart">
                 <ShoppingCart className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
                 {getTotalItems() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                     {getTotalItems()}
                   </span>
                 )}
@@ -550,14 +554,14 @@ const Header: React.FC = () => {
 
               <button
                 onClick={() => navigate('/wishlist')}
-                className="relative"
+                className="relative p-1 -m-1"
                 title="Wishlist"
                 data-testid="header-wishlist-btn"
               >
-                <Heart className={`h-5 w-5 cursor-pointer transition-colors ${wishlistCount > 0 ? 'text-red-500 fill-red-500 hover:text-red-600' : 'text-gray-600 hover:text-gray-900'}`} />
+                <Heart className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
                 {wishlistCount > 0 && (
                   <span
-                    className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white"
                     data-testid="header-wishlist-count"
                   >
                     {wishlistCount}
