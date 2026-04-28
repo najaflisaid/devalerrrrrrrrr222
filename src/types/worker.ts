@@ -47,6 +47,8 @@ export interface BranchLeaderboardEntry {
   name: string;
   workerCount: number;
   totalSales: number;
+  /** Branch-in orta performans əmsalı (0–100) — bütün aktiv işçilərin orta reytinqi */
+  avgPerformance: number;
   rank: number;
 }
 

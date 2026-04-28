@@ -564,12 +564,12 @@ const LeaderboardSection: React.FC<{
         )}
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Bütün işçilərin aylıq satış sıralaması
+        Bütün işçilərin aylıq performans əmsalına görə sıralanması
       </p>
       <ul className="divide-y divide-gray-100">
         {items.map(i => {
           const isMe = i.workerId === currentId;
-          const isFirst = i.rank === 1 && i.hasTotal;
+          const isFirst = i.rank === 1 && i.performanceScore > 0;
           return (
             <li key={i.workerId}
               className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMe ? 'bg-[#FFF8E5]/60' : ''} ${isFirst ? 'bg-gradient-to-r from-[#FFF8E5]/80 to-transparent' : ''}`}
@@ -583,7 +583,7 @@ const LeaderboardSection: React.FC<{
                   <span>{i.name} {i.surname}</span>
                   {isFirst && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] text-white text-[9px] uppercase tracking-wider font-bold shadow-sm" data-testid="best-of-month-badge">
-                      <Sparkles className="h-2.5 w-2.5" /> Ayın ən yaxşısı
+                      <Sparkles className="h-2.5 w-2.5" /> Ən Yaxşı Nəticə
                     </span>
                   )}
                   {isMe && <span className="text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
@@ -600,6 +600,17 @@ const LeaderboardSection: React.FC<{
                     </>
                   )}
                 </p>
+              </div>
+              {/* Performans əmsalı (faiz) — hər işçi üçün ictimai */}
+              <div className="text-right shrink-0" data-testid={`leaderboard-score-${i.rank}`}>
+                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold tabular-nums ${
+                  i.performanceScore >= 80 ? 'bg-emerald-50 text-emerald-700' :
+                  i.performanceScore >= 60 ? 'bg-amber-50 text-amber-700' :
+                  i.performanceScore > 0 ? 'bg-orange-50 text-orange-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {i.performanceScore}%
+                </span>
               </div>
             </li>
           );
@@ -618,17 +629,19 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
     if (rank === 3) return <Medal className="h-4 w-4 text-amber-700" />;
     return <span className="text-xs font-mono text-gray-500 w-4 text-center">{rank}</span>;
   };
-  const totalAll = items.reduce((s, b) => s + b.totalSales, 0);
   return (
     <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="branch-leaderboard-section">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-1">
         <Building2 className="h-5 w-5 text-[#D4AF37]" />
         <h3 className="font-playfair text-xl text-black">Filiallar üzrə Komanda Reytinqi</h3>
       </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Filialın orta performans əmsalına görə sıralanma
+      </p>
       <ul className="divide-y divide-gray-100">
         {items.map(b => {
           const isMine = b.name === currentBranch;
-          const sharePct = totalAll > 0 ? Math.round((b.totalSales / totalAll) * 100) : 0;
+          const pct = b.avgPerformance || 0;
           return (
             <li key={b.name}
               className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMine ? 'bg-[#FFF8E5]/60' : ''}`}
@@ -644,12 +657,18 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
                   </span>
                 )}
                 <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5]" style={{ width: `${sharePct}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5]" style={{ width: `${pct}%` }} />
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs text-gray-500">{b.workerCount} işçi</p>
-                <p className="text-sm font-semibold text-[#8a6d10]">{sharePct}%</p>
+              <div className="text-right shrink-0" data-testid={`branch-perf-${b.rank}`}>
+                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold tabular-nums ${
+                  pct >= 80 ? 'bg-emerald-50 text-emerald-700' :
+                  pct >= 60 ? 'bg-amber-50 text-amber-700' :
+                  pct > 0 ? 'bg-orange-50 text-orange-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {pct}%
+                </span>
               </div>
             </li>
           );

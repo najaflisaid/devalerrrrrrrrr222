@@ -497,13 +497,17 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
   const target = worker.monthlyTarget || 0;
 
   // Sales score (ümumi reytinqin 85%-i)
+  // Düzgün hesablama:
+  //   • Hədəf təyin edilibsə: faktiki satışlar / hədəf %
+  //   • Hədəfsiz, satış var: 70% baza (heç bir hədəfə uyğunlaşa bilməz)
+  //   • Hədəfsiz, satış yox: 0% (heç bir məlumat yoxdur)
   let salesScore = 0;
   if (target > 0) {
     salesScore = Math.min(100, (evalSalesTotal / target) * 100);
   } else if (evalSalesTotal > 0) {
     salesScore = 70;
   } else {
-    salesScore = 60;
+    salesScore = 0;
   }
 
   const hitBonus = (target > 0 && evalSalesTotal >= target) ? 15 : 0;
@@ -559,6 +563,8 @@ export interface LeaderboardEntry {
   total: number;        // sales total used for ranking
   fromMonth: string;    // hansı aydan götürülüb
   hasTotal: boolean;
+  /** Performance əmsalı (0-100) — sales score, hədəf bonus, mükafat və cərimə əsasında hesablanır */
+  performanceScore: number;
 }
 
 // Helper: ən son mövcud satış total-ını və ayını qaytarır.
@@ -584,17 +590,22 @@ export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   const ym = monthYM();
   const workers = await listWorkers();
   const active = workers.filter(w => w.isActive);
-  const withTotals = active.map(w => {
+
+  const withTotals = await Promise.all(active.map(async (w) => {
     const { total, fromMonth, hasTotal } = lastTotalForWorker(w, ym);
-    return { worker: w, total, fromMonth, hasTotal };
-  });
-  // Sıralama: total-ı olanlar əvvəl total desc, sonra qalanlar əlifba sırası ilə
+    const breakdown = await computePerformance(w);
+    return { worker: w, total, fromMonth, hasTotal, performanceScore: breakdown.total };
+  }));
+
+  // Performance əmsalı üzrə sıralama (1. yer ən yüksək faiz)
   withTotals.sort((a, b) => {
+    if (b.performanceScore !== a.performanceScore) return b.performanceScore - a.performanceScore;
     if (a.hasTotal && !b.hasTotal) return -1;
     if (!a.hasTotal && b.hasTotal) return 1;
-    if (a.hasTotal && b.hasTotal) return b.total - a.total;
+    if (a.hasTotal && b.hasTotal && a.total !== b.total) return b.total - a.total;
     return `${a.worker.name} ${a.worker.surname}`.localeCompare(`${b.worker.name} ${b.worker.surname}`, 'az');
   });
+
   return withTotals.map((x, i) => ({
     workerId: x.worker.id,
     name: x.worker.name,
@@ -606,6 +617,7 @@ export const getMonthlyLeaderboard = async (): Promise<LeaderboardEntry[]> => {
     total: x.total,
     fromMonth: x.fromMonth,
     hasTotal: x.hasTotal,
+    performanceScore: x.performanceScore,
   }));
 };
 
@@ -614,25 +626,33 @@ export const getBranchLeaderboard = async (): Promise<BranchLeaderboardEntry[]> 
   const ym = monthYM();
   const workers = await listWorkers();
   const active = workers.filter(w => w.isActive);
-  const byBranch = new Map<string, { workerCount: number; totalSales: number }>();
+  const byBranch = new Map<string, { workerCount: number; totalSales: number; totalScore: number }>();
 
-  for (const w of active) {
+  // Hər aktiv işçi üçün performans əmsalını hesabla
+  await Promise.all(active.map(async (w) => {
     const branchName = (w.branch || '').trim();
-    if (!branchName) continue; // filialı təyin olunmayanları reytinqdə göstərmirik
+    if (!branchName) return; // filialı yoxsa nəzərə almırıq
     const { total } = lastTotalForWorker(w, ym);
-    const cur = byBranch.get(branchName) || { workerCount: 0, totalSales: 0 };
+    const breakdown = await computePerformance(w);
+    const cur = byBranch.get(branchName) || { workerCount: 0, totalSales: 0, totalScore: 0 };
     cur.workerCount += 1;
     cur.totalSales += total || 0;
+    cur.totalScore += breakdown.total || 0;
     byBranch.set(branchName, cur);
-  }
+  }));
 
   const list = Array.from(byBranch.entries()).map(([name, v]) => ({
     name,
     workerCount: v.workerCount,
     totalSales: v.totalSales,
+    avgPerformance: v.workerCount > 0 ? Math.round(v.totalScore / v.workerCount) : 0,
     rank: 0,
   }));
-  list.sort((a, b) => b.totalSales - a.totalSales);
+  // Filiallar orta performans əmsalına görə sıralanır (yüksəkdən aşağı)
+  list.sort((a, b) => {
+    if (b.avgPerformance !== a.avgPerformance) return b.avgPerformance - a.avgPerformance;
+    return b.totalSales - a.totalSales;
+  });
   list.forEach((x, i) => { x.rank = i + 1; });
   return list;
 };
