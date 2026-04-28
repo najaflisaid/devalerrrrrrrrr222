@@ -251,31 +251,31 @@ const WorkerDashboard: React.FC = () => {
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
 
                 {/* Profil cədvəli */}
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs text-left" data-testid="worker-profile-fields">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Filial:</span>
-                    <strong className="text-black truncate">{worker.branch || '—'}</strong>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 mt-4 text-xs text-left" data-testid="worker-profile-fields">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">Filial</span>
+                    <strong className="text-black break-words">{worker.branch || '—'}</strong>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Vəzifə:</span>
-                    <strong className="text-black truncate">{worker.position || '—'}</strong>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">Vəzifə</span>
+                    <strong className="text-black break-words">{worker.position || '—'}</strong>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Təcrübə müddəti:</span>
-                    <strong className="text-black">{experience.label}</strong>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">Təcrübə müddəti</span>
+                    <strong className="text-black break-words">{experience.label}</strong>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">İşə başlama:</span>
-                    <strong className="text-black">{fmtDate(worker.hireDate)}</strong>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">İşə başlama</span>
+                    <strong className="text-black break-words">{fmtDate(worker.hireDate)}</strong>
                   </div>
-                  <div className="flex items-center gap-2 sm:col-span-2">
-                    <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Müqavilə müddəti:</span>
-                    <strong className="text-black">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
+                  <div className="flex flex-col gap-0.5 min-w-0 sm:col-span-2">
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">Müqavilə müddəti</span>
+                    <strong className="text-black break-words">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
                   </div>
                   {worker.birthDate && (
-                    <div className="flex items-center gap-2 sm:col-span-2">
-                      <span className="text-gray-500 w-32 shrink-0 uppercase tracking-wider text-[10px]">Doğum tarixi:</span>
-                      <strong className="text-black">{fmtDate(worker.birthDate)}</strong>
+                    <div className="flex flex-col gap-0.5 min-w-0 sm:col-span-2">
+                      <span className="text-gray-500 uppercase tracking-wider text-[10px]">Doğum tarixi</span>
+                      <strong className="text-black break-words">{fmtDate(worker.birthDate)}</strong>
                     </div>
                   )}
                 </dl>
@@ -579,7 +579,7 @@ const LeaderboardSection: React.FC<{
                 {i.photo ? <img src={i.photo} alt="" className="w-full h-full object-cover" /> : `${i.name?.[0]}${i.surname?.[0]}`}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'} flex items-center gap-1.5 flex-wrap`}>
+                <p className={`text-sm break-words ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'} flex items-center gap-1.5 flex-wrap`}>
                   <span>{i.name} {i.surname}</span>
                   {isFirst && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] text-white text-[9px] uppercase tracking-wider font-bold shadow-sm" data-testid="best-of-month-badge">
@@ -588,7 +588,7 @@ const LeaderboardSection: React.FC<{
                   )}
                   {isMe && <span className="text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
                 </p>
-                <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+                <p className="text-[11px] text-gray-500 break-words flex items-center gap-1.5 flex-wrap mt-0.5">
                   <span>{i.position}</span>
                   {i.branch && (
                     <>
@@ -600,9 +600,6 @@ const LeaderboardSection: React.FC<{
                   )}
                 </p>
               </div>
-              {!i.hasTotal && (
-                <span className="text-[10px] uppercase tracking-wider text-gray-400">qeydiyyatda yoxdur</span>
-              )}
             </li>
           );
         })}
@@ -623,13 +620,10 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
   const totalAll = items.reduce((s, b) => s + b.totalSales, 0);
   return (
     <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="branch-leaderboard-section">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-4">
         <Building2 className="h-5 w-5 text-[#D4AF37]" />
         <h3 className="font-playfair text-xl text-black">Filiallar üzrə Komanda Reytinqi</h3>
       </div>
-      <p className="text-xs text-gray-500 mb-4">
-        Hansı filialın ümumi performansı qabaqdadır — komanda yarışı.
-      </p>
       <ul className="divide-y divide-gray-100">
         {items.map(b => {
           const isMine = b.name === currentBranch;
@@ -640,11 +634,15 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
               data-testid={`branch-rank-${b.rank}`}>
               <div className="w-8 flex items-center justify-center">{rankIcon(b.rank)}</div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${isMine ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
+                <p className={`text-sm break-words ${isMine ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
                   {b.name}
-                  {isMine && <span className="ml-2 text-[10px] uppercase tracking-wider text-[#8a6d10]">· Mənim filialım</span>}
                 </p>
-                <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                {isMine && (
+                  <span className="inline-block mt-0.5 text-[10px] uppercase tracking-wider text-[#8a6d10] font-semibold">
+                    Mənim filialım
+                  </span>
+                )}
+                <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5]" style={{ width: `${sharePct}%` }} />
                 </div>
               </div>
