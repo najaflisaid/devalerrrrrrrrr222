@@ -500,6 +500,87 @@ export const updateReturnPolicy = async (data: PrivacyPolicy) => {
 };
 
 // ============================================================
+// Delivery Policy
+// ============================================================
+export const DEFAULT_DELIVERY_POLICY: PrivacyPolicy = {
+  hero: {
+    eyebrow: 'Maison · De Valeur',
+    title: 'Çatdırılma',
+    titleAccent: 'Şərtləri',
+    intro:
+      'DE VALEUR sifarişlərinizi sürətli və təhlükəsiz şəkildə çatdırır. Bakı şəhəri daxilində eyni gün, regionlara isə 1-3 iş günü ərzində məhsul ünvanınıza təslim olunur.',
+    badgeLeft: 'Bakı daxili eyni gün çatdırılma',
+    badgeRight: '200 ₼-dən yuxarı sifarişlərə pulsuz',
+    lastUpdated: '28.04.2026',
+  },
+  signature: '— DE VALEUR MMC —',
+  sections: [
+    {
+      id: 'zones',
+      no: '01',
+      title: 'Çatdırılma zonaları',
+      body: 'DE VALEUR Azərbaycan Respublikasının bütün ərazisinə çatdırma xidməti təqdim edir:\n\n- Bakı şəhəri (bütün rayonlar)\n- Sumqayıt və Abşeron rayonu\n- Region şəhərləri və rayon mərkəzləri\n- Naxçıvan Muxtar Respublikası (xüsusi razılıq əsasında)',
+    },
+    {
+      id: 'time',
+      no: '02',
+      title: 'Çatdırılma müddəti',
+      body: '- Bakı daxili — eyni gün və ya növbəti iş günü\n- Sumqayıt və Abşeron rayonu — 1 iş günü\n- Regionlar — 1-3 iş günü\n- Naxçıvan — 3-5 iş günü\n\nSifariş saat 14:00-a qədər təsdiqlənərsə, Bakı daxilində eyni gün çatdırılır.',
+    },
+    {
+      id: 'fees',
+      no: '03',
+      title: 'Çatdırılma haqqı',
+      body: '- Bakı daxili — 5 ₼\n- Sumqayıt və Abşeron rayonu — 8 ₼\n- Regionlar — 10-15 ₼ (məsafədən asılı olaraq)\n- Naxçıvan — fərdi qiymətləndirilir\n\n200 ₼-dən yuxarı sifarişlər üçün Azərbaycan Respublikası ərazisində çatdırılma PULSUZDUR.',
+    },
+    {
+      id: 'process',
+      no: '04',
+      title: 'Sifariş prosesi',
+      body: '- 1. Saytdan və ya zəng vasitəsilə sifarişinizi verin\n- 2. Operatorumuz sifarişi təsdiqləmək üçün sizinlə əlaqə saxlayır\n- 3. Sifariş paketlənir və kuryer xidmətinə təhvil verilir\n- 4. Çatdırılmadan əvvəl kuryer sizinlə əlaqə saxlayır\n- 5. Sifarişi yoxlayıb təhvil alın və ödəniş edin (əgər çatdırılma anında ödəniş seçilibsə)',
+    },
+    {
+      id: 'payment',
+      no: '05',
+      title: 'Ödəniş üsulları',
+      body: 'Sifariş zamanı və ya çatdırılma anında ödəniş edə bilərsiniz:\n\n- Bank kartı ilə onlayn ödəniş (Visa, Mastercard)\n- Bank kartı ilə kuryerə (POS terminal)\n- Nağd ödəniş (yalnız Bakı daxili)\n- Bank köçürməsi (B2B sifarişlər üçün)',
+    },
+    {
+      id: 'packaging',
+      no: '06',
+      title: 'Qablaşdırma',
+      body: 'Bütün məhsullar:\n\n- Orijinal brend qutusunda\n- DE VALEUR firma kisəsində\n- Zədələnmədən qoruyan əlavə təbəqə ilə\n- Hədiyyə üçün xüsusi qablaşdırma (ödənişsiz seçim)\n\nşəkildə təhvil verilir.',
+    },
+    {
+      id: 'tracking',
+      no: '07',
+      title: 'Sifarişin izlənməsi',
+      body: 'Sifariş statusu hər addımda sizə bildirilir:\n\n- SMS bildirişləri (sifariş təsdiqi, kuryerə təhvil, çatdırma)\n- Email vasitəsilə qəbz və faktura\n- Telefonla operatorumuzla əlaqə imkanı: +994 77 757 72 77',
+    },
+    {
+      id: 'failed',
+      no: '08',
+      title: 'Çatdırılma uğursuz olduqda',
+      body: 'Əgər müştəri ünvanda olmazsa və ya əlaqə qurmaq mümkün olmazsa:\n\n- Kuryer 2 dəfə əlaqə saxlayır\n- Sifariş 3 iş günü ərzində anbarda saxlanılır\n- Müştəri ilə əlaqə qurulmazsa, sifariş ləğv olunur\n- Onlayn ödəniş edilmiş sifarişlər üçün vəsait geri qaytarılır',
+    },
+    {
+      id: 'contact',
+      no: '09',
+      title: 'Əlaqə',
+      body: 'Çatdırılma ilə bağlı suallarınız üçün:\n\n- Telefon: +994 77 757 72 77\n- Email: info@devaleur.az\n- İş saatları: Bazar ertəsi - Şənbə, 10:00 - 20:00',
+    },
+  ],
+};
+
+export const getDeliveryPolicy = async (): Promise<PrivacyPolicy> => {
+  return getLegalDoc('delivery_policy', DEFAULT_DELIVERY_POLICY);
+};
+
+export const updateDeliveryPolicy = async (data: PrivacyPolicy) => {
+  return updateLegalDoc('delivery_policy', data);
+};
+
+// ============================================================
 // Vacancies — admin-managed careers list
 // ============================================================
 export interface Vacancy {

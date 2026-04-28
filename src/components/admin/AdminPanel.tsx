@@ -13,6 +13,7 @@ import AboutManagementTab from './AboutManagementTab';
 import PrivacyPolicyTab from './PrivacyPolicyTab';
 import ReturnPolicyTab from './ReturnPolicyTab';
 import CareersTab from './CareersTab';
+import DeliveryPolicyTab from './DeliveryPolicyTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
@@ -1181,6 +1182,7 @@ const AdminPanel: React.FC = () => {
     { id: 'about', label: 'Haqqımızda', icon: Info },
     { id: 'privacy', label: 'Məxfilik Siyasəti', icon: ShieldCheck },
     { id: 'return', label: 'Qaytarılma', icon: FileText },
+    { id: 'delivery', label: 'Çatdırılma', icon: ShoppingBag },
     { id: 'careers', label: 'Karyera', icon: Briefcase },
     { id: 'brands', label: t('admin.brands'), icon: Tag },
     { id: 'categories', label: t('admin.categories'), icon: Tag },
@@ -2810,6 +2812,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'about' && <AboutManagementTab />}
         {activeTab === 'privacy' && <PrivacyPolicyTab />}
         {activeTab === 'return' && <ReturnPolicyTab />}
+        {activeTab === 'delivery' && <DeliveryPolicyTab />}
         {activeTab === 'careers' && <CareersTab />}
 
         {activeTab === 'contactMessages' && <ContactMessagesTab />}

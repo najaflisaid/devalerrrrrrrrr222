@@ -195,6 +195,11 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/delivery" className="text-gray-600 hover:text-gray-900 transition-colors text-sm" data-testid="footer-delivery-link">
+                  Çatdırılma
+                </Link>
+              </li>
+              <li>
                 <Link to="/careers" className="text-gray-600 hover:text-gray-900 transition-colors text-sm" data-testid="footer-careers-link">
                   Karyera
                 </Link>

@@ -26,6 +26,7 @@ import ContactPage from './pages/ContactPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import CareersPage from './pages/CareersPage';
+import DeliveryPolicyPage from './pages/DeliveryPolicyPage';
 import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import B2BOrdersPage from './pages/B2BOrdersPage';
@@ -87,6 +88,7 @@ const AppContent: React.FC = () => {
                   <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                   <Route path="/return-policy" element={<ReturnPolicyPage />} />
                   <Route path="/careers" element={<CareersPage />} />
+                  <Route path="/delivery" element={<DeliveryPolicyPage />} />
                   <Route path="/category/:category" element={<CategoryPage />} />
                   <Route path="/brand/:brand" element={<BrandPage />} />
                   <Route path="/b2b/orders" element={<B2BOrdersPage />} />
