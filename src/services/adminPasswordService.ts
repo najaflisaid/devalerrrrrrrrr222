@@ -94,12 +94,35 @@ export const passwordKeyForSection = (sectionName: string): keyof AdminPasswords
   return 'default';
 };
 
+// Bu bölmələr xüsusi konfiqurasiya yoxdursa AÇIQ qalır (şifrə tələb etmir).
+// Admin lazım bilsə, "Şifrələr" bölməsindən hər birinə şifrə təyin edə bilər.
+const DEFAULT_OPEN_SECTIONS = new Set([
+  'products',
+  'reviews',
+  'aiKnowledge',
+  'banners',
+  'productBanners',
+  'homeSections',
+  'about',
+  'privacy',
+  'return',
+  'delivery',
+  'careers',
+  'brands',
+  'categories',
+  'blogs',
+  'partners',
+  'contactMessages',
+  'siteSettings',
+]);
+
 export { DEFAULTS as DEFAULT_ADMIN_PASSWORDS };
 
 /**
  * Verify password for a given section.
  * - If section is configured with `noPassword: true` → always returns true (no auth needed)
  * - If section has a custom `password` → match against that
+ * - If section is in DEFAULT_OPEN_SECTIONS and no config → open (no password needed)
  * - Otherwise falls back to the global key (default / workers)
  */
 export const verifySectionPassword = async (
@@ -112,6 +135,8 @@ export const verifySectionPassword = async (
   if (cfg?.password && cfg.password.length > 0) {
     return cfg.password === candidate;
   }
+  // No explicit config: open-by-default sections allow access without password
+  if (DEFAULT_OPEN_SECTIONS.has(sectionName)) return true;
   // Fallback to global key
   const key = passwordKeyForSection(sectionName);
   const stored = all[key];
@@ -119,11 +144,17 @@ export const verifySectionPassword = async (
 };
 
 /**
- * Returns true if the section is unlocked without password (noPassword toggle).
+ * Returns true if the section is unlocked without password (noPassword toggle
+ * or in DEFAULT_OPEN_SECTIONS list with no admin-set password).
  */
 export const isSectionOpen = async (sectionName: string): Promise<boolean> => {
   const all = await getAdminPasswords();
-  return !!all.perSection?.[sectionName]?.noPassword;
+  const cfg = all.perSection?.[sectionName];
+  if (cfg?.noPassword) return true;
+  // If admin explicitly set a password, section is locked
+  if (cfg?.password && cfg.password.length > 0) return false;
+  // Otherwise: open if in default-open list
+  return DEFAULT_OPEN_SECTIONS.has(sectionName);
 };
 
 // Backwards-compat: legacy verifyPassword by global key

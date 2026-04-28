@@ -1304,6 +1304,7 @@ const AdminPanel: React.FC = () => {
         </div>
 
         {activeTab === 'products' && (
+          <PasswordProtectedSection sectionName="products">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">
@@ -1857,9 +1858,11 @@ const AdminPanel: React.FC = () => {
               })()}
             </div>
           </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'brands' && (
+          <PasswordProtectedSection sectionName="brands">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Markalar ({brands.length})</h2>
@@ -2018,9 +2021,11 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
           </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'categories' && (
+          <PasswordProtectedSection sectionName="categories">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Kateqoriyalar ({categories.length})</h2>
@@ -2177,9 +2182,11 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
           </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'blogs' && (
+          <PasswordProtectedSection sectionName="blogs">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Bloq Yazıları ({blogs.length})</h2>
@@ -2363,9 +2370,11 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
           </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'partners' && (
+          <PasswordProtectedSection sectionName="partners">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Tərəfdaşlar ({partners.length})</h2>
@@ -2460,6 +2469,7 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
           </div>
+          </PasswordProtectedSection>
         )}
 
         {false && activeTab === 'about' && (
@@ -2872,15 +2882,19 @@ const AdminPanel: React.FC = () => {
         )}
 
         {activeTab === 'reviews' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <ReviewsTab />
-          </div>
+          <PasswordProtectedSection sectionName="reviews">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <ReviewsTab />
+            </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'aiKnowledge' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <AiKnowledgeTab />
-          </div>
+          <PasswordProtectedSection sectionName="aiKnowledge">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <AiKnowledgeTab />
+            </div>
+          </PasswordProtectedSection>
         )}
 
         {activeTab === 'b2bOrders' && (
@@ -2892,26 +2906,66 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
 
-        {activeTab === 'banners' && <BannerManagementTab />}
+        {activeTab === 'banners' && (
+          <PasswordProtectedSection sectionName="banners">
+            <BannerManagementTab />
+          </PasswordProtectedSection>
+        )}
 
-        {activeTab === 'productBanners' && <ProductBannersTab />}
+        {activeTab === 'productBanners' && (
+          <PasswordProtectedSection sectionName="productBanners">
+            <ProductBannersTab />
+          </PasswordProtectedSection>
+        )}
 
-        {activeTab === 'homeSections' && <HomeSectionsTab />}
+        {activeTab === 'homeSections' && (
+          <PasswordProtectedSection sectionName="homeSections">
+            <HomeSectionsTab />
+          </PasswordProtectedSection>
+        )}
 
-        {activeTab === 'about' && <AboutManagementTab />}
-        {activeTab === 'privacy' && <PrivacyPolicyTab />}
-        {activeTab === 'return' && <ReturnPolicyTab />}
-        {activeTab === 'delivery' && <DeliveryPolicyTab />}
-        {activeTab === 'careers' && <CareersTab />}
+        {activeTab === 'about' && (
+          <PasswordProtectedSection sectionName="about">
+            <AboutManagementTab />
+          </PasswordProtectedSection>
+        )}
+        {activeTab === 'privacy' && (
+          <PasswordProtectedSection sectionName="privacy">
+            <PrivacyPolicyTab />
+          </PasswordProtectedSection>
+        )}
+        {activeTab === 'return' && (
+          <PasswordProtectedSection sectionName="return">
+            <ReturnPolicyTab />
+          </PasswordProtectedSection>
+        )}
+        {activeTab === 'delivery' && (
+          <PasswordProtectedSection sectionName="delivery">
+            <DeliveryPolicyTab />
+          </PasswordProtectedSection>
+        )}
+        {activeTab === 'careers' && (
+          <PasswordProtectedSection sectionName="careers">
+            <CareersTab />
+          </PasswordProtectedSection>
+        )}
 
-        {activeTab === 'contactMessages' && <ContactMessagesTab />}
+        {activeTab === 'contactMessages' && (
+          <PasswordProtectedSection sectionName="contactMessages">
+            <ContactMessagesTab />
+          </PasswordProtectedSection>
+        )}
         {activeTab === 'workers' && (
           <PasswordProtectedSection sectionName="workers">
             <WorkersTab />
           </PasswordProtectedSection>
         )}
 
-        {activeTab === 'siteSettings' && <SiteSettingsTab />}
+        {activeTab === 'siteSettings' && (
+          <PasswordProtectedSection sectionName="siteSettings">
+            <SiteSettingsTab />
+          </PasswordProtectedSection>
+        )}
 
         {activeTab === 'passwords' && (
           <PasswordProtectedSection sectionName="passwordsAdmin">
