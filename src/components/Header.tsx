@@ -16,6 +16,7 @@ const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getTotalItems, getUserDiscount, clearCart } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileMenuClosing, setIsMobileMenuClosing] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -543,6 +544,23 @@ const Header: React.FC = () => {
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                     {getTotalItems()}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => navigate('/wishlist')}
+                className="relative"
+                title="Wishlist"
+                data-testid="header-wishlist-btn"
+              >
+                <Heart className={`h-5 w-5 cursor-pointer transition-colors ${wishlistCount > 0 ? 'text-red-500 fill-red-500 hover:text-red-600' : 'text-gray-600 hover:text-gray-900'}`} />
+                {wishlistCount > 0 && (
+                  <span
+                    className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                    data-testid="header-wishlist-count"
+                  >
+                    {wishlistCount}
                   </span>
                 )}
               </button>

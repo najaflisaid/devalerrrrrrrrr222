@@ -7,6 +7,8 @@ import {
   Heart,
   Trash2,
   RefreshCw,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 import {
   collection,
@@ -21,6 +23,9 @@ import {
   type ProductViewStat,
   type SearchStat,
 } from '../../services/analyticsService';
+import { productService } from '../../services/productService';
+import type { Product } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface CustomerCart {
   id: string;
@@ -50,25 +55,38 @@ const formatDate = (raw: any) => {
 };
 
 const AnalyticsTab: React.FC = () => {
+  const { i18n } = useTranslation();
   const [tab, setTab] = useState<'overview' | 'carts' | 'wishlists'>('overview');
   const [topViews, setTopViews] = useState<ProductViewStat[]>([]);
   const [topSearches, setTopSearches] = useState<SearchStat[]>([]);
   const [carts, setCarts] = useState<CustomerCart[]>([]);
   const [wishlists, setWishlists] = useState<CustomerWishlist[]>([]);
+  const [productMap, setProductMap] = useState<Record<string, Product>>({});
+  const [openWishlist, setOpenWishlist] = useState<CustomerWishlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+  const getName = (p?: Product) =>
+    p ? p.name?.[lang] || p.name?.en || p.name?.az || '' : '';
 
   const load = async () => {
     setLoading(true);
     try {
-      const [v, s, cartsSnap, wlSnap] = await Promise.all([
+      const [v, s, cartsSnap, wlSnap, products] = await Promise.all([
         getTopViewedProducts(20),
         getTopSearches(30),
         getDocs(collection(db, 'customer_carts')),
         getDocs(collection(db, 'customer_wishlists')),
+        productService.getAll(true).catch(() => [] as Product[]),
       ]);
       setTopViews(v);
       setTopSearches(s);
+      const pm: Record<string, Product> = {};
+      products.forEach((p) => {
+        pm[p.id] = p;
+      });
+      setProductMap(pm);
       setCarts(
         cartsSnap.docs
           .map((d) => ({ id: d.id, ...(d.data() as any) } as CustomerCart))
@@ -300,22 +318,131 @@ const AnalyticsTab: React.FC = () => {
                     <p className="text-gray-900 font-medium">{w.count} məhsul</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-gray-100">
-                  {(w.productIds || []).map((pid) => (
-                    <a
-                      key={pid}
-                      href={`/product/${pid}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-xs text-gray-700 rounded font-mono"
-                    >
-                      {pid.slice(0, 10)}…
-                    </a>
-                  ))}
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                  {(w.productIds || []).map((pid) => {
+                    const p = productMap[pid];
+                    const img = p?.images?.[0];
+                    const name = getName(p) || pid;
+                    return (
+                      <button
+                        key={pid}
+                        onClick={() => setOpenWishlist(w)}
+                        title={name}
+                        className="group relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 border border-gray-200 hover:border-gray-900 hover:shadow-md transition-all"
+                        data-testid={`wishlist-thumb-${w.id}-${pid}`}
+                      >
+                        {img ? (
+                          <img
+                            src={img}
+                            alt={name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400 font-mono px-1 text-center">
+                            {pid.slice(0, 6)}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Wishlist details modal */}
+      {openWishlist && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          onClick={() => setOpenWishlist(null)}
+          data-testid="wishlist-modal"
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Heart className="h-4 w-4 fill-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-base truncate">
+                    {openWishlist.userName || 'Adsız müştəri'} — Wishlist
+                  </h3>
+                  <p className="text-xs text-white/70 truncate">
+                    {openWishlist.userEmail} · {openWishlist.count} məhsul
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOpenWishlist(null)}
+                className="hover:bg-white/20 p-1.5 rounded-full transition-colors flex-shrink-0"
+                data-testid="wishlist-modal-close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(openWishlist.productIds || []).map((pid) => {
+                const p = productMap[pid];
+                const img = p?.images?.[0];
+                const name = getName(p);
+                const price = p?.salePrice || p?.price;
+                const original = p?.salePrice ? p?.price : null;
+                return (
+                  <a
+                    key={pid}
+                    href={`/product/${pid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors group"
+                    data-testid={`wishlist-modal-item-${pid}`}
+                  >
+                    <div className="w-14 h-14 rounded-md overflow-hidden bg-white border border-gray-200 flex-shrink-0">
+                      {img ? (
+                        <img src={img} alt={name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-mono">
+                          N/A
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                        {name || <span className="font-mono text-xs text-gray-500">{pid}</span>}
+                      </p>
+                      {p?.brand && (
+                        <p className="text-[11px] text-gray-500 mt-0.5">{p.brand}</p>
+                      )}
+                      {price !== undefined && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {original ? (
+                            <>
+                              <span className="text-[11px] text-gray-400 line-through">
+                                {original.toFixed(2)} ₼
+                              </span>
+                              <span className="text-xs font-semibold text-red-500">
+                                {price.toFixed(2)} ₼
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-900">
+                              {price.toFixed(2)} ₼
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-900 transition-colors flex-shrink-0" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

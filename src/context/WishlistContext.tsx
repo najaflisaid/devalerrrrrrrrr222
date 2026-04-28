@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
 
 interface WishlistContextType {
   productIds: string[];
@@ -22,6 +23,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return [];
     }
   });
+  // Skip the first sync-to-Firestore right after we hydrate from Firestore (avoids overwriting)
+  const skipNextSyncRef = useRef(false);
 
   // Persist to localStorage + Firestore (for logged-in customers)
   useEffect(() => {
@@ -29,6 +32,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.setItem(LS_KEY, JSON.stringify(productIds));
     } catch {
       /* ignore */
+    }
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
     }
     const userId = localStorage.getItem('userId');
     const userRole = localStorage.getItem('userRole');
@@ -50,20 +57,43 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [productIds]);
 
-  // Hydrate from Firestore on login (when userId becomes available)
+  // Hydrate from Firestore whenever auth state changes (login/logout/page refresh)
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
-    const userRole = localStorage.getItem('userRole');
-    if (!userId || userRole !== 'customer') return;
-    getDoc(doc(db, 'customer_wishlists', userId))
-      .then((snap) => {
-        if (snap.exists()) {
-          const remote = (snap.data() as any).productIds || [];
-          // Merge remote + local (union)
-          setProductIds((prev) => Array.from(new Set([...prev, ...remote])));
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Logged out: clear local wishlist so next user starts fresh
+        skipNextSyncRef.current = true;
+        setProductIds([]);
+        try {
+          localStorage.removeItem(LS_KEY);
+        } catch {
+          /* ignore */
         }
-      })
-      .catch(() => undefined);
+        return;
+      }
+      // Wait briefly so Header.tsx can write userRole into localStorage
+      const role =
+        localStorage.getItem('userRole') ||
+        (await new Promise<string>((resolve) => {
+          const start = Date.now();
+          const tick = () => {
+            const r = localStorage.getItem('userRole');
+            if (r || Date.now() - start > 1500) resolve(r || '');
+            else setTimeout(tick, 100);
+          };
+          tick();
+        }));
+      if (role !== 'customer') return;
+      try {
+        const snap = await getDoc(doc(db, 'customer_wishlists', user.uid));
+        const remote: string[] = snap.exists() ? (snap.data() as any).productIds || [] : [];
+        // Merge remote + local guest selections (union) so nothing is lost
+        setProductIds((prev) => Array.from(new Set([...prev, ...remote])));
+      } catch (err) {
+        console.warn('Wishlist hydrate failed:', err);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const isFavorite = (id: string) => productIds.includes(id);
