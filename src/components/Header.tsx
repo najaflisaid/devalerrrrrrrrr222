@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import CustomerLogin from './auth/CustomerLogin';
 import { productService } from '../services/productService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';

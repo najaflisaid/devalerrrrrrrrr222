@@ -4,24 +4,31 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 // Bütün admin paneldəki qorunan bölmələrin və işçi redaktə kilidinin şifrələri.
 // Firestore-da `site_content/admin_passwords` sənədində saxlanılır.
 //
-//  - default      : qorunan bölmələrə (b2b, b2bOrders, b2bNotifications, b2bUsers, users) default şifrə
+//  - default      : qorunan bölmələrə default şifrə
 //  - workers      : "İşçilər" bölməsinə girmək üçün AYRI şifrə
 //  - workersEdit  : İşçilər bölməsində redaktə/silmə əməliyyatlarını açmaq üçün AYRI şifrə
+//  - perSection   : hər bölmə üçün xüsusi şifrə və/və ya şifrəsiz açıqlama
 //
-// Admin bunları admin panelin "Şifrələr" tab-ından dəyişə bilər.
 
 const REF = 'site_content/admin_passwords';
+
+export interface SectionPasswordConfig {
+  password?: string;       // Bu bölmə üçün xüsusi şifrə (boşdursa default-a düşür)
+  noPassword?: boolean;    // True olarsa şifrə tələb edilmir
+}
 
 export interface AdminPasswords {
   default: string;
   workers: string;
   workersEdit: string;
+  perSection?: Record<string, SectionPasswordConfig>;
 }
 
 const DEFAULTS: AdminPasswords = {
   default: '20202025',
   workers: '20202025',
   workersEdit: '20202025',
+  perSection: {},
 };
 
 const ref = () => doc(db, 'site_content', 'admin_passwords');
@@ -35,26 +42,50 @@ export const getAdminPasswords = async (): Promise<AdminPasswords> => {
         default: data.default || DEFAULTS.default,
         workers: data.workers || DEFAULTS.workers,
         workersEdit: data.workersEdit || DEFAULTS.workersEdit,
+        perSection: data.perSection || {},
       };
     }
   } catch (err) {
     console.error('getAdminPasswords:', err);
   }
-  return { ...DEFAULTS };
+  return { ...DEFAULTS, perSection: {} };
 };
 
 export const getAdminPassword = async (key: keyof AdminPasswords): Promise<string> => {
   const all = await getAdminPasswords();
-  return all[key] || DEFAULTS[key];
+  const v = all[key];
+  return typeof v === 'string' ? v : DEFAULTS[key as 'default'];
 };
 
 export const updateAdminPasswords = async (patch: Partial<AdminPasswords>) => {
   const trimmed: Partial<AdminPasswords> = {};
-  (Object.keys(patch) as (keyof AdminPasswords)[]).forEach(k => {
-    const v = (patch[k] || '').trim();
-    if (v) trimmed[k] = v;
-  });
+  if (typeof patch.default === 'string' && patch.default.trim()) trimmed.default = patch.default.trim();
+  if (typeof patch.workers === 'string' && patch.workers.trim()) trimmed.workers = patch.workers.trim();
+  if (typeof patch.workersEdit === 'string' && patch.workersEdit.trim()) trimmed.workersEdit = patch.workersEdit.trim();
+  if (patch.perSection !== undefined) trimmed.perSection = patch.perSection;
   await setDoc(ref(), { ...trimmed, updated_at: new Date().toISOString() }, { merge: true });
+};
+
+export const updateSectionConfig = async (
+  sectionName: string,
+  config: SectionPasswordConfig
+): Promise<void> => {
+  const current = await getAdminPasswords();
+  const perSection = { ...(current.perSection || {}) };
+  // Trim password
+  const cleanPassword = (config.password || '').trim();
+  perSection[sectionName] = {
+    password: cleanPassword,
+    noPassword: !!config.noPassword,
+  };
+  await setDoc(ref(), { perSection, updated_at: new Date().toISOString() }, { merge: true });
+};
+
+export const removeSectionConfig = async (sectionName: string): Promise<void> => {
+  const current = await getAdminPasswords();
+  const perSection = { ...(current.perSection || {}) };
+  delete perSection[sectionName];
+  await setDoc(ref(), { perSection, updated_at: new Date().toISOString() }, { merge: true });
 };
 
 // `sectionName` (PasswordProtectedSection) → şifrə açarına map
@@ -65,7 +96,37 @@ export const passwordKeyForSection = (sectionName: string): keyof AdminPasswords
 
 export { DEFAULTS as DEFAULT_ADMIN_PASSWORDS };
 
-// Sadə hash-əvəzinə əsas yoxlama: birbaşa müqayisə (admin paneli istifadə edir, sertifikat deyil).
+/**
+ * Verify password for a given section.
+ * - If section is configured with `noPassword: true` → always returns true (no auth needed)
+ * - If section has a custom `password` → match against that
+ * - Otherwise falls back to the global key (default / workers)
+ */
+export const verifySectionPassword = async (
+  sectionName: string,
+  candidate: string
+): Promise<boolean> => {
+  const all = await getAdminPasswords();
+  const cfg = all.perSection?.[sectionName];
+  if (cfg?.noPassword) return true;
+  if (cfg?.password && cfg.password.length > 0) {
+    return cfg.password === candidate;
+  }
+  // Fallback to global key
+  const key = passwordKeyForSection(sectionName);
+  const stored = all[key];
+  return typeof stored === 'string' && stored === candidate;
+};
+
+/**
+ * Returns true if the section is unlocked without password (noPassword toggle).
+ */
+export const isSectionOpen = async (sectionName: string): Promise<boolean> => {
+  const all = await getAdminPasswords();
+  return !!all.perSection?.[sectionName]?.noPassword;
+};
+
+// Backwards-compat: legacy verifyPassword by global key
 export const verifyPassword = async (key: keyof AdminPasswords, candidate: string): Promise<boolean> => {
   const stored = await getAdminPassword(key);
   return stored === candidate;

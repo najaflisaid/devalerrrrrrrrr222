@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, X, Loader2 } from 'lucide-react';
-import { passwordKeyForSection, verifyPassword } from '../../services/adminPasswordService';
+import { verifySectionPassword, isSectionOpen } from '../../services/adminPasswordService';
 
 interface PasswordProtectedSectionProps {
   children: React.ReactNode;
@@ -8,16 +8,40 @@ interface PasswordProtectedSectionProps {
   onUnlock?: () => void;
 }
 
-const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ children, sectionName, onUnlock }) => {
+const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({
+  children,
+  sectionName,
+  onUnlock,
+}) => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
 
+  // On mount / when section changes: check if section is open (noPassword toggle)
   useEffect(() => {
+    let cancelled = false;
+    setChecking(true);
     setIsAuthenticated(false);
     setPassword('');
     setError('');
+    isSectionOpen(sectionName)
+      .then((open) => {
+        if (cancelled) return;
+        if (open) {
+          setIsAuthenticated(true);
+          onUnlock?.();
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,8 +49,7 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
     setBusy(true);
     setError('');
     try {
-      const key = passwordKeyForSection(sectionName);
-      const ok = await verifyPassword(key, password);
+      const ok = await verifySectionPassword(sectionName, password);
       if (ok) {
         setIsAuthenticated(true);
         onUnlock?.();
@@ -41,6 +64,14 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
     }
   };
 
+  if (checking) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
   if (isAuthenticated) {
     return <>{children}</>;
   }
@@ -53,9 +84,7 @@ const PasswordProtectedSection: React.FC<PasswordProtectedSectionProps> = ({ chi
             <Lock className="h-8 w-8 text-white" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-          Qorunan Bölmə
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Qorunan Bölmə</h2>
         <p className="text-gray-600 text-center mb-6">
           Bu bölməyə daxil olmaq üçün şifrə daxil edin
         </p>
