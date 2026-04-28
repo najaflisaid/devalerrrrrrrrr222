@@ -41,6 +41,7 @@ import { WorkerAuthProvider } from './context/WorkerAuthContext';
 import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
+import AiChatWidget from './components/AiChatWidget';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import './i18n';
@@ -121,6 +122,8 @@ const AppContent: React.FC = () => {
           />
         ))}
       </div>
+
+      <AiChatWidget />
     </>
   );
 };
