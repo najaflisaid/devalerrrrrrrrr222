@@ -676,32 +676,37 @@ const CartPage: React.FC = () => {
                     {loggedInEmail && loggedInName && (
                       <p className="text-green-700 truncate">{loggedInEmail}</p>
                     )}
+                    {phoneDigits.length === 9 && (
+                      <p className="text-green-700 truncate">+994 {phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}</p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Phone with locked +994 prefix */}
-              <div>
-                <label className="block text-[11px] font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
-                <div className="flex items-stretch border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent overflow-hidden bg-white">
-                  <span className="px-3 flex items-center bg-gray-50 text-sm text-gray-700 font-medium border-r border-gray-200 select-none">
-                    +994
-                  </span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
-                    onChange={(e) => {
-                      const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 9);
-                      setPhoneDigits(onlyDigits);
-                    }}
-                    placeholder="50 123 45 67"
-                    maxLength={13}
-                    className="flex-1 px-3 py-2.5 text-sm focus:outline-none"
-                    data-testid="checkout-phone-input"
-                  />
+              {/* Phone with locked +994 prefix - hide if logged-in user has phone saved */}
+              {!(isLoggedIn && phoneDigits.length === 9) && (
+                <div>
+                  <label className="block text-[11px] font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
+                  <div className="flex items-stretch border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent overflow-hidden bg-white">
+                    <span className="px-3 flex items-center bg-gray-50 text-sm text-gray-700 font-medium border-r border-gray-200 select-none">
+                      +994
+                    </span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                      onChange={(e) => {
+                        const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 9);
+                        setPhoneDigits(onlyDigits);
+                      }}
+                      placeholder="50 123 45 67"
+                      maxLength={13}
+                      className="flex-1 px-3 py-2.5 text-sm focus:outline-none"
+                      data-testid="checkout-phone-input"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Address */}
               <div>

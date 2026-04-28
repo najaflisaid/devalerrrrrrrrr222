@@ -147,6 +147,53 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
         )}
       </div>
 
+      {/* Stats panel — total + average + star distribution */}
+      {reviews.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 pb-5 border-b border-gray-100">
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-6 h-6 rounded-md bg-gray-900 text-white flex items-center justify-center">
+                <Star className="h-3 w-3 fill-white" />
+              </div>
+              <span className="text-xs text-gray-500">Ümumi rəylər</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
+            <p className="text-[10px] text-gray-400">rəy</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-6 h-6 rounded-md bg-amber-400 text-white flex items-center justify-center">
+                <Star className="h-3 w-3 fill-white" />
+              </div>
+              <span className="text-xs text-gray-500">Orta reytinq</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{avg.toFixed(1)}</p>
+            <p className="text-[10px] text-gray-400">5 ulduzdan</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-4 sm:col-span-1 col-span-1">
+            <p className="text-xs text-gray-500 mb-2">Ulduz paylanması</p>
+            <div className="space-y-1">
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = reviews.filter((r) => r.rating === star).length;
+                const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                return (
+                  <div key={star} className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-medium text-gray-700 w-3">{star}</span>
+                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400 flex-shrink-0" strokeWidth={1.5} />
+                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[10px] text-gray-500 w-4 text-right tabular-nums">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isCustomer && !isAdmin && (
         <div className="mb-4 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
           Rəy yazmaq üçün müştəri kimi giriş edin.

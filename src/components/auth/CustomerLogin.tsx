@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
-import { Mail, Lock, User, X } from 'lucide-react';
+import { Mail, Lock, User, X, Phone } from 'lucide-react';
 import SuccessNotification from '../SuccessNotification';
 import { useCart } from '../../context/CartContext';
 
@@ -18,6 +18,8 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -66,11 +68,19 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
           localStorage.setItem('userName', userData.name || email);
           localStorage.setItem('userEmail', email);
           localStorage.setItem('userId', userId);
+          if (userData.phone) {
+            localStorage.setItem('userPhone', userData.phone);
+          }
+          if (userData.surname) {
+            localStorage.setItem('userSurname', userData.surname);
+          }
 
           localStorage.setItem('userData', JSON.stringify({
             id: userId,
             email: email,
             name: userData.name || email,
+            surname: userData.surname || '',
+            phone: userData.phone || '',
             role: newRole,
             discountPercentage: discountPercentage,
             discountUsageType: discountUsageType,
@@ -91,6 +101,19 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
           clearCart(true);
         }
 
+        // Validate phone (must be 9 digits after +994)
+        if (phoneDigits.length !== 9) {
+          setError('Telefon nömrəsi düzgün deyil (9 rəqəm olmalıdır)');
+          setLoading(false);
+          return;
+        }
+        if (!surname.trim()) {
+          setError('Soyad daxil edin');
+          setLoading(false);
+          return;
+        }
+
+        const fullPhone = `+994${phoneDigits}`;
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userId = userCredential.user.uid;
 
@@ -98,6 +121,8 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
           id: userId,
           email: email,
           name: name,
+          surname: surname,
+          phone: fullPhone,
           role: 'customer',
           discountPercentage: 0,
           discountUsageType: 'unlimited',
@@ -107,13 +132,17 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
 
         localStorage.setItem('userRole', 'customer');
         localStorage.setItem('userName', name);
+        localStorage.setItem('userSurname', surname);
         localStorage.setItem('userEmail', email);
+        localStorage.setItem('userPhone', fullPhone);
         localStorage.setItem('userId', userId);
 
         localStorage.setItem('userData', JSON.stringify({
           id: userId,
           email: email,
           name: name,
+          surname: surname,
+          phone: fullPhone,
           role: 'customer',
           discountPercentage: 0,
           discountUsageType: 'unlimited',
@@ -164,22 +193,41 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.fullName')}
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                  placeholder={t('auth.enterFullName')}
-                  required={!isLogin}
-                />
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ad
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                      placeholder="Adınız"
+                      required={!isLogin}
+                      data-testid="customer-register-name"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Soyad
+                  </label>
+                  <input
+                    type="text"
+                    value={surname}
+                    onChange={(e) => setSurname(e.target.value)}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                    placeholder="Soyadınız"
+                    required={!isLogin}
+                    data-testid="customer-register-surname"
+                  />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div>
@@ -198,6 +246,34 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
               />
             </div>
           </div>
+
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Əlaqə nömrəsi
+              </label>
+              <div className="flex items-stretch border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent overflow-hidden">
+                <span className="px-3 flex items-center bg-gray-50 text-sm text-gray-700 font-medium border-r border-gray-200 select-none gap-1.5">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  +994
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 9);
+                    setPhoneDigits(onlyDigits);
+                  }}
+                  placeholder="50 123 45 67"
+                  maxLength={13}
+                  required={!isLogin}
+                  className="flex-1 px-3 py-3 text-sm focus:outline-none"
+                  data-testid="customer-register-phone"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

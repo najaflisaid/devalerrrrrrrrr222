@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -54,6 +54,17 @@ const B2BOrdersPage: React.FC = () => {
   const [dismissedNotifications, setDismissedNotifications] = useState<string[]>([]);
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
+  // Sifarişlərin açılıb-bağlanma vəziyyəti — default bağlı (yığcam)
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (orderId: string) => {
+    setExpandedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadProducts();
@@ -368,37 +379,62 @@ const B2BOrdersPage: React.FC = () => {
             <p className="text-xl text-gray-600">{t('b2b.noOrders')}</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {orders.map((order) => {
               const statusInfo = getStatusInfo(order.status);
               const StatusIcon = statusInfo.icon;
+              const isExpanded = expandedOrders.has(order.id);
 
               const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+              const itemsCount = order.items?.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0) || 0;
+              const dateFormatted = (() => {
+                const d = orderDate;
+                const pad = (n: number) => n.toString().padStart(2, '0');
+                return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+              })();
 
               return (
-                <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <p className="text-sm text-gray-500">
-                          {t('b2b.orderNumber')} #{(order as any).orderNumber ?? order.id.slice(0, 8)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {(() => {
-                            const d = orderDate;
-                            const pad = (n: number) => n.toString().padStart(2, '0');
-                            return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                          })()}
+                <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all">
+                  {/* COMPACT HEADER — always visible */}
+                  <button
+                    onClick={() => toggleExpand(order.id)}
+                    className="w-full p-4 sm:p-5 hover:bg-gray-50 transition-colors text-left"
+                    data-testid={`b2b-order-toggle-${order.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusInfo.color} flex-shrink-0`}>
+                        <StatusIcon className="h-3.5 w-3.5" />
+                        <span className="text-xs font-medium hidden sm:inline">{statusInfo.label}</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <p className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                            #{(order as any).orderNumber ?? order.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{dateFormatted}</p>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {itemsCount} məhsul · {order.customerName} {order.customerLastname || ''}
                         </p>
                       </div>
-                      <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${statusInfo.color}`}>
-                        <StatusIcon className="h-4 w-4" />
-                        <span className="font-medium">{statusInfo.label}</span>
+
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-lg sm:text-xl font-bold text-blue-600 tabular-nums">{order.totalAmount?.toFixed(2)} ₼</p>
+                        <p className="text-[10px] text-gray-400 hidden sm:block">{statusInfo.label}</p>
+                      </div>
+
+                      <div className="text-gray-400 flex-shrink-0">
+                        {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                       </div>
                     </div>
+                  </button>
 
-                    <div className="border-t pt-4">
-                      <h3 className="font-semibold mb-3">{t('b2b.products')}</h3>
+                  {/* EXPANDED DETAILS */}
+                  {isExpanded && (
+                  <div className="p-4 sm:p-5 pt-0 border-t border-gray-100 bg-gray-50/30">
+                    <div className="pt-4">
+                      <h3 className="font-semibold mb-3 text-sm">{t('b2b.products')}</h3>
                       <div className="space-y-3">
                         {order.items?.map((item: any, index: number) => {
                           const product = products.find(p => p.id === item.productId);
@@ -409,20 +445,20 @@ const B2BOrdersPage: React.FC = () => {
                                 <img
                                   src={productImage}
                                   alt={item.productName?.az || item.productName}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0 border border-gray-200"
+                                  className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0 border border-gray-200"
                                 />
                               ) : (
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center border border-gray-200">
-                                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center border border-gray-200">
+                                  <Package className="h-5 w-5 text-gray-400" />
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm sm:text-base break-words line-clamp-2">{item.productName?.az || item.productName}</p>
+                                <p className="font-medium text-sm break-words line-clamp-2">{item.productName?.az || item.productName}</p>
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
-                                  <p className="text-xs sm:text-sm text-gray-600">
+                                  <p className="text-xs text-gray-600">
                                     <span className="font-semibold text-gray-900">{t('b2b.quantity')}:</span> {item.quantity} {t('b2b.unit')}
                                   </p>
-                                  <p className="text-xs sm:text-sm font-medium text-gray-900 break-words">{item.regularPrice?.toFixed(2)} ₼</p>
+                                  <p className="text-xs font-medium text-gray-900 break-words">{item.regularPrice?.toFixed(2)} ₼</p>
                                 </div>
                               </div>
                             </div>
@@ -431,34 +467,34 @@ const B2BOrdersPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="border-t mt-4 pt-4">
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-gray-600">
+                    <div className="border-t border-gray-200 mt-4 pt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="text-sm text-gray-600 space-y-0.5">
                           <p><span className="font-medium">{t('b2b.name')}:</span> {order.customerName} {order.customerLastname || ''}</p>
                           {order.companyName && !order.companyName.includes('@') && (
                             <p><span className="font-medium">{t('b2b.companyName')}:</span> {order.companyName}</p>
                           )}
-                          <p><span className="font-medium">{t('b2b.email')}:</span> {order.customerEmail}</p>
+                          <p className="break-all"><span className="font-medium">{t('b2b.email')}:</span> {order.customerEmail}</p>
                           {order.customerPhone && !order.customerPhone.includes(' ') && order.customerPhone.length < 20 && (
                             <p><span className="font-medium">{t('b2b.phone')}:</span> {order.customerPhone}</p>
                           )}
                         </div>
-                        <div className="text-right space-y-1">
+                        <div className="text-right space-y-1.5 sm:border-l sm:border-gray-200 sm:pl-3">
                           <div>
-                            <p className="text-xs text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
+                            <p className="text-[11px] text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
                             <p className="text-sm text-gray-400">
                               {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} ₼
                             </p>
                           </div>
                           {(order as any).discountAmount > 0 && (
                             <div>
-                              <p className="text-xs text-green-600">{t('b2b.discount') || 'Endirim'}</p>
+                              <p className="text-[11px] text-green-600">{t('b2b.discount') || 'Endirim'}</p>
                               <p className="text-sm font-medium text-green-600">-{(order as any).discountAmount?.toFixed(2)} ₼</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-xs text-gray-500">{t('b2b.totalAmount')}</p>
-                            <p className="text-2xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} ₼</p>
+                            <p className="text-[11px] text-gray-500">{t('b2b.totalAmount')}</p>
+                            <p className="text-xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} ₼</p>
                           </div>
                         </div>
                       </div>
@@ -466,22 +502,22 @@ const B2BOrdersPage: React.FC = () => {
 
                     {/* Ödəniş Məlumatları */}
                     {(order.totalDebt || order.paymentDeadline) && (
-                      <div className="border-t mt-4 pt-4">
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <p className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="border-t border-gray-200 mt-4 pt-4">
+                        <div className="bg-white border border-gray-200 rounded-lg p-3">
+                          <p className="font-semibold text-gray-900 mb-2 text-sm flex items-center gap-2">
                             {t('b2b.paymentInfo') || 'Ödəniş Məlumatları'}
                           </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div data-testid={`b2b-prev-debt-${order.id}`}>
-                                <p className="text-xs text-gray-600">Əvvəlki borc</p>
-                                <p className="text-2xl font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
+                                <p className="text-[11px] text-gray-600">Əvvəlki borc</p>
+                                <p className="text-lg font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
                               </div>
                             )}
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div data-testid={`b2b-total-debt-${order.id}`}>
-                                <p className="text-xs text-gray-600">Ümumi borc</p>
-                                <p className="text-2xl font-bold text-red-600">{(order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
+                                <p className="text-[11px] text-gray-600">Ümumi borc</p>
+                                <p className="text-lg font-bold text-red-600">{(order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
                                   ? order.totalDebtOverride
                                   : ((order.totalDebt || 0) + (order.totalAmount || 0))
                                 ).toFixed(2)} ₼</p>
@@ -489,9 +525,9 @@ const B2BOrdersPage: React.FC = () => {
                             )}
                             {order.paymentDeadline && (
                               <div data-testid={`b2b-payment-deadline-${order.id}`}>
-                                <p className="text-xs text-gray-600">Yeni qaimə üzrə ödənişin tamamlanma tarixi</p>
-                                <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
+                                <p className="text-[11px] text-gray-600">Yeni qaimə üzrə ödənişin tamamlanma tarixi</p>
+                                <p className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                                  <Calendar className="h-3.5 w-3.5" />
                                   {new Date(order.paymentDeadline).toLocaleDateString('az-AZ', {
                                     day: '2-digit',
                                     month: '2-digit',
@@ -506,13 +542,13 @@ const B2BOrdersPage: React.FC = () => {
                     )}
 
                     {order.adminNote && (
-                      <div className="border-t mt-4 pt-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="border-t border-gray-200 mt-4 pt-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                             <div>
-                              <p className="font-semibold text-blue-900 mb-1">{t('b2b.adminNote')}</p>
-                              <p className="text-sm text-blue-800">{order.adminNote}</p>
+                              <p className="font-semibold text-blue-900 mb-0.5 text-sm">{t('b2b.adminNote')}</p>
+                              <p className="text-xs text-blue-800">{order.adminNote}</p>
                             </div>
                           </div>
                         </div>
@@ -520,13 +556,13 @@ const B2BOrdersPage: React.FC = () => {
                     )}
 
                     {order.deliveredAt && (
-                      <div className="border-t mt-4 pt-4">
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div className="border-t border-gray-200 mt-4 pt-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
-                              <p className="font-semibold text-green-900 mb-1">{t('b2b.receivedTitle')}</p>
-                              <p className="text-sm text-green-800">
+                              <p className="font-semibold text-green-900 mb-0.5 text-sm">{t('b2b.receivedTitle')}</p>
+                              <p className="text-xs text-green-800">
                                 {order.deliveredAt?.toDate ?
                                   order.deliveredAt.toDate().toLocaleDateString(i18n.language === 'az' ? 'az-AZ' : i18n.language === 'ru' ? 'ru-RU' : 'en-US', {
                                     year: 'numeric',
@@ -545,12 +581,12 @@ const B2BOrdersPage: React.FC = () => {
                                 }
                               </p>
                               {order.signature && (
-                                <div className="mt-3">
-                                  <p className="text-sm font-semibold text-green-900 mb-2">{t('b2b.customerSignature')}</p>
+                                <div className="mt-2">
+                                  <p className="text-xs font-semibold text-green-900 mb-1">{t('b2b.customerSignature')}</p>
                                   <img
                                     src={order.signature}
                                     alt="Customer Signature"
-                                    className="border border-green-300 rounded-lg bg-white p-2 w-28 h-auto"
+                                    className="border border-green-300 rounded-lg bg-white p-2 w-24 h-auto"
                                   />
                                 </div>
                               )}
@@ -561,20 +597,21 @@ const B2BOrdersPage: React.FC = () => {
                     )}
 
                     {order.status === 'delivering' && !order.deliveredAt && (
-                      <div className="border-t mt-4 pt-4">
-                        <p className="text-sm font-bold text-red-600 mb-4 leading-relaxed">
+                      <div className="border-t border-gray-200 mt-4 pt-4">
+                        <p className="text-xs font-bold text-red-600 mb-3 leading-relaxed">
                           {t('b2b.receiveWarning')}
                         </p>
                         <button
-                          onClick={() => handleConfirmDelivery(order.id)}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          onClick={(e) => { e.stopPropagation(); handleConfirmDelivery(order.id); }}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
                         >
-                          <CheckCircle className="h-5 w-5" />
+                          <CheckCircle className="h-4 w-4" />
                           {t('b2b.receiveButton')}
                         </button>
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               );
             })}
