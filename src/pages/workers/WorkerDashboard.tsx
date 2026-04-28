@@ -337,8 +337,26 @@ const WorkerDashboard: React.FC = () => {
         {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi (hədəf göstərilmir, çünki hər ay fərqli olur) */}
         <SalesHistorySection salesHistory={worker.salesHistory} />
 
-        {/* Leaderboard — monthly sales ranking (NAMES ONLY, no amounts) */}
+        {/* Leaderboard — bütün işçilər üzrə performans reytinqi */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
+
+        {/* Mənim filialım üzrə işçi reytinqi — yalnız eyni filialda olan işçilər */}
+        {worker.branch && (() => {
+          const myBranch = (worker.branch || '').trim().toLowerCase();
+          const branchItems = leaderboard
+            .filter(i => (i.branch || '').trim().toLowerCase() === myBranch)
+            .map((i, idx) => ({ ...i, rank: idx + 1 }));
+          if (branchItems.length < 2) return null;
+          return (
+            <LeaderboardSection
+              items={branchItems}
+              currentId={worker.id}
+              title={`${worker.branch} — İşçi Reytinqi`}
+              subtitle="Filial daxilində aylıq performans əmsalına görə sıralanma"
+              testId="branch-workers-leaderboard"
+            />
+          );
+        })()}
 
         {/* Branch leaderboard — filial üzrə komanda reytinqi */}
         <BranchLeaderboardSection items={branchLeaderboard} currentBranch={worker.branch || ''} />
@@ -533,7 +551,10 @@ const PerfMini: React.FC<{ label: string; value: string }> = ({ label, value }) 
 const LeaderboardSection: React.FC<{
   items: Awaited<ReturnType<typeof getMonthlyLeaderboard>>;
   currentId: string;
-}> = ({ items, currentId }) => {
+  title?: string;
+  subtitle?: string;
+  testId?: string;
+}> = ({ items, currentId, title = 'Reytinq', subtitle = 'Bütün işçilərin aylıq performans əmsalına görə sıralanması', testId = 'leaderboard-section' }) => {
   if (items.length === 0) return null;
   const myRank = items.find(i => i.workerId === currentId);
 
@@ -547,15 +568,15 @@ const LeaderboardSection: React.FC<{
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="leaderboard-section">
+    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid={testId}>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-[#D4AF37]" />
-          <h3 className="font-playfair text-xl text-black">Reytinq</h3>
+          <h3 className="font-playfair text-xl text-black">{title}</h3>
         </div>
         {myRank && (
           <div
-            data-testid="my-rank-badge"
+            data-testid={`${testId}-my-rank`}
             className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border-2 border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] to-white shadow-sm"
           >
             <span className="text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">Sənin yerin</span>
@@ -564,7 +585,7 @@ const LeaderboardSection: React.FC<{
         )}
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Bütün işçilərin aylıq performans əmsalına görə sıralanması
+        {subtitle}
       </p>
       <ul className="divide-y divide-gray-100">
         {items.map(i => {
