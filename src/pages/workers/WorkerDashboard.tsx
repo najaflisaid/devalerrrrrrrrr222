@@ -251,31 +251,31 @@ const WorkerDashboard: React.FC = () => {
                 <h2 className="font-playfair text-2xl text-black">{worker.name} {worker.surname}</h2>
 
                 {/* Profil cədvəli */}
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 mt-4 text-xs text-left" data-testid="worker-profile-fields">
+                <dl className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-3 mt-4 text-xs text-left" data-testid="worker-profile-fields">
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-gray-500 uppercase tracking-wider text-[10px]">Filial</span>
-                    <strong className="text-black break-words">{worker.branch || '—'}</strong>
+                    <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{worker.branch || '—'}</strong>
                   </div>
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-gray-500 uppercase tracking-wider text-[10px]">Vəzifə</span>
-                    <strong className="text-black break-words">{worker.position || '—'}</strong>
+                    <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{worker.position || '—'}</strong>
                   </div>
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-gray-500 uppercase tracking-wider text-[10px]">Təcrübə müddəti</span>
-                    <strong className="text-black break-words">{experience.label}</strong>
+                    <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{experience.label}</strong>
                   </div>
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-gray-500 uppercase tracking-wider text-[10px]">İşə başlama</span>
-                    <strong className="text-black break-words">{fmtDate(worker.hireDate)}</strong>
+                    <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{fmtDate(worker.hireDate)}</strong>
                   </div>
-                  <div className="flex flex-col gap-0.5 min-w-0 sm:col-span-2">
+                  <div className="flex flex-col gap-0.5 min-w-0 lg:col-span-2">
                     <span className="text-gray-500 uppercase tracking-wider text-[10px]">Müqavilə müddəti</span>
-                    <strong className="text-black break-words">{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
+                    <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{fmtDate(worker.contractStart)} – {fmtDate(worker.contractEnd)}</strong>
                   </div>
                   {worker.birthDate && (
-                    <div className="flex flex-col gap-0.5 min-w-0 sm:col-span-2">
+                    <div className="flex flex-col gap-0.5 min-w-0 lg:col-span-2">
                       <span className="text-gray-500 uppercase tracking-wider text-[10px]">Doğum tarixi</span>
-                      <strong className="text-black break-words">{fmtDate(worker.birthDate)}</strong>
+                      <strong className="text-black" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{fmtDate(worker.birthDate)}</strong>
                     </div>
                   )}
                 </dl>
@@ -579,7 +579,7 @@ const LeaderboardSection: React.FC<{
                 {i.photo ? <img src={i.photo} alt="" className="w-full h-full object-cover" /> : `${i.name?.[0]}${i.surname?.[0]}`}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm break-words ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'} flex items-center gap-1.5 flex-wrap`}>
+                <p className={`text-sm ${isMe ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'} flex items-center gap-1.5 flex-wrap`} style={{ wordBreak: 'break-word' }}>
                   <span>{i.name} {i.surname}</span>
                   {isFirst && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] text-white text-[9px] uppercase tracking-wider font-bold shadow-sm" data-testid="best-of-month-badge">
@@ -588,13 +588,14 @@ const LeaderboardSection: React.FC<{
                   )}
                   {isMe && <span className="text-[10px] uppercase tracking-wider text-[#8a6d10]">· Sən</span>}
                 </p>
-                <p className="text-[11px] text-gray-500 break-words flex items-center gap-1.5 flex-wrap mt-0.5">
+                <p className="text-[11px] text-gray-500 flex flex-wrap items-center gap-1.5 mt-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   <span>{i.position}</span>
                   {i.branch && (
                     <>
                       <span className="text-gray-300">·</span>
-                      <span className="inline-flex items-center gap-0.5 text-gray-600">
-                        <Building2 className="h-2.5 w-2.5" /> {i.branch}
+                      <span className="inline-flex items-start gap-0.5 text-gray-600" style={{ wordBreak: 'break-word' }}>
+                        <Building2 className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                        <span>{i.branch}</span>
                       </span>
                     </>
                   )}
@@ -634,7 +635,7 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
               data-testid={`branch-rank-${b.rank}`}>
               <div className="w-8 flex items-center justify-center">{rankIcon(b.rank)}</div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm break-words ${isMine ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`}>
+                <p className={`text-sm ${isMine ? 'font-bold text-[#8a6d10]' : 'font-medium text-gray-900'}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   {b.name}
                 </p>
                 {isMine && (
