@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, ArrowLeft, Loader2, Share2, Clock } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Share2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -41,13 +41,6 @@ const BlogDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateReadTime = (text: string) => {
-    const wordsPerMinute = 200;
-    const wordCount = text.split(/\s+/).length;
-    const minutes = Math.ceil(wordCount / wordsPerMinute);
-    return minutes;
   };
 
   const handleShare = async () => {
@@ -103,7 +96,6 @@ const BlogDetailPage: React.FC = () => {
   }
 
   const lang = i18n.language as 'az' | 'ru';
-  const readTime = calculateReadTime(post.content[lang]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -146,16 +138,8 @@ const BlogDetailPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <time dateTime={post.createdAt.toISOString()} className="text-sm md:text-base">
-                  {post.createdAt.toLocaleDateString('az-AZ', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
+                  {`${String(post.createdAt.getDate()).padStart(2, '0')}.${String(post.createdAt.getMonth() + 1).padStart(2, '0')}.${post.createdAt.getFullYear()}`}
                 </time>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm md:text-base">{readTime} {t('blog.minRead') || 'dəq oxuma'}</span>
               </div>
             </div>
           </div>

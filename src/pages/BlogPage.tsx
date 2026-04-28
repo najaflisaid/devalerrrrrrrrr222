@@ -117,11 +117,7 @@ const BlogPage: React.FC = () => {
                         <div className="inline-flex items-center gap-2 text-sm text-slate-500 mb-4">
                           <Calendar className="w-4 h-4" />
                           <time dateTime={blogPosts[0].createdAt.toISOString()}>
-                            {blogPosts[0].createdAt.toLocaleDateString('az-AZ', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
+                            {`${String(blogPosts[0].createdAt.getDate()).padStart(2, '0')}.${String(blogPosts[0].createdAt.getMonth() + 1).padStart(2, '0')}.${blogPosts[0].createdAt.getFullYear()}`}
                           </time>
                         </div>
                         
@@ -168,11 +164,7 @@ const BlogPage: React.FC = () => {
                         <div className="flex items-center gap-2 text-sm text-slate-500 mb-3">
                           <Calendar className="w-4 h-4" />
                           <time dateTime={post.createdAt.toISOString()}>
-                            {post.createdAt.toLocaleDateString('az-AZ', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
+                            {`${String(post.createdAt.getDate()).padStart(2, '0')}.${String(post.createdAt.getMonth() + 1).padStart(2, '0')}.${post.createdAt.getFullYear()}`}
                           </time>
                         </div>
 
