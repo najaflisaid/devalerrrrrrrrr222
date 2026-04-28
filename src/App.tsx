@@ -33,6 +33,7 @@ import B2BOrdersPage from './pages/B2BOrdersPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentErrorPage from './pages/PaymentErrorPage';
+import PaymentResultPage from './pages/PaymentResultPage';
 import WorkerLogin from './pages/workers/WorkerLogin';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import { WorkerAuthProvider } from './context/WorkerAuthContext';
@@ -98,6 +99,7 @@ const AppContent: React.FC = () => {
                   <Route path="/my-orders" element={<MyOrdersPage />} />
                   <Route path="/payment/success" element={<PaymentSuccessPage />} />
                   <Route path="/payment/error" element={<PaymentErrorPage />} />
+                  <Route path="/payment/result" element={<PaymentResultPage />} />
                 </Routes>
               </main>
               <BrandSlider />

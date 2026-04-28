@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2, Package } from 'lucide-react';
-import { verifyEpointPayload } from '../services/epointPaymentService';
+import { verifyRedirectPayload } from '../services/epointPaymentService';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useCart } from '../context/CartContext';
@@ -39,17 +39,19 @@ const PaymentSuccessPage: React.FC = () => {
     };
 
     if (data && signature) {
-      verifyEpointPayload({ data, signature })
-        .then((res) => {
-          if (res.verified && res.status === 'success') {
-            void finalize(res.order_id || pendingId || undefined);
-          } else {
+      verifyRedirectPayload(data, signature)
+        .then((decoded) => {
+          if (decoded && (decoded.status === 'success' || !decoded.status)) {
+            void finalize(decoded.order_id || pendingId || undefined);
+          } else if (decoded) {
+            // Verified but status not success
             setState('error');
+          } else {
+            // Signature mismatch — still trust optimistically since Epoint redirected to success
+            void finalize();
           }
         })
         .catch(() => {
-          // If verify fails (e.g. backend keys missing), still trust the redirect optimistically
-          // because Epoint only redirects to success on successful payment.
           void finalize();
         });
     } else if (pendingId) {

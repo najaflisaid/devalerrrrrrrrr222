@@ -5,7 +5,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { createEpointPayment } from '../services/epointPaymentService';
+import { buildSignedPayment, redirectToEpoint } from '../services/epointPaymentService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 
@@ -101,12 +101,12 @@ const CartPage: React.FC = () => {
 
       sessionStorage.setItem('pending_epoint_order_id', orderId);
 
-      const { redirect_url } = await createEpointPayment({
-        order_id: orderId,
+      const signed = await buildSignedPayment({
+        orderId,
         amount: total,
       });
 
-      window.location.href = redirect_url;
+      redirectToEpoint(signed);
     } catch (error: any) {
       console.error('Epoint checkout error:', error);
       setErrorMessage(

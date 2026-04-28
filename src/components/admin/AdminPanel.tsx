@@ -8,6 +8,7 @@ import { productService } from '../../services/productService';
 import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
 import CustomerOrdersTab from './CustomerOrdersTab';
+import EpointSettingsTab from './EpointSettingsTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
@@ -1177,6 +1178,7 @@ const AdminPanel: React.FC = () => {
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
     { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag },
+    { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
     { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
@@ -2801,6 +2803,12 @@ const AdminPanel: React.FC = () => {
             sectionName="customerOrders"
           >
             <CustomerOrdersTab />
+          </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'epointSettings' && (
+          <PasswordProtectedSection sectionName="epointSettings">
+            <EpointSettingsTab />
           </PasswordProtectedSection>
         )}
 
