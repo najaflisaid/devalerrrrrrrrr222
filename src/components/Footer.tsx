@@ -203,8 +203,17 @@ const Footer: React.FC = () => {
               )
             ))}
           </div>
-          <div className="text-center text-gray-600 text-sm">
+          <div className="text-center text-gray-600 text-sm space-y-2">
             <p>{settings.copyrightText}</p>
+            <p>
+              <Link
+                to="/privacy-policy"
+                className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors underline-offset-4 hover:underline"
+                data-testid="footer-privacy-link"
+              >
+                Məxfilik Siyasəti
+              </Link>
+            </p>
           </div>
         </div>
       </div>
