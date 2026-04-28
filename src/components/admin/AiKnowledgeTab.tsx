@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2, MessageCircle } from 'lucide-react';
 import {
   getAiKnowledge,
   saveAiKnowledge,
@@ -16,6 +16,14 @@ interface FieldConfig {
 }
 
 const FIELDS: FieldConfig[] = [
+  {
+    key: 'aiInstructions',
+    label: '🎯 AI Davranış Komandaları',
+    hint: 'AI-yə müştərilərlə necə danışmasını izah edin: ton, sürət, satış strategiyası, qadağan sözlər və s. Bu sahə ən prioritetlidir — AI hər şeydən əvvəl bunu nəzərə alır.',
+    placeholder:
+      'Müştərilərə həmişə "siz" formasında müraciət et.\nCavablar maks 3 cümlə olsun, qısa və konkret.\nİlk mesajda dərhal "salam" + "nə axtarırsınız?" soruş.\nMüştəri 200 ₼-dən aşağı büdcə deyirsə, sərfəli variantları vurğula.\nƏn yüksək marja olan brendləri (məs. Festina) prioritet təklif et.\nMüştəri tərəddüd edirsə, "ən çox satılan" sözünü işlət.\nSon mesajda mütləq müştərini "İndi al" düyməsinə yönləndir.',
+    icon: <MessageCircle className="h-4 w-4" />,
+  },
   {
     key: 'companyInfo',
     label: 'Şirkət haqqında',

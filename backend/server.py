@@ -135,6 +135,7 @@ class ChatHistoryItem(BaseModel):
 
 
 class ChatKnowledge(BaseModel):
+    aiInstructions: Optional[str] = ""
     companyInfo: Optional[str] = ""
     brandsInfo: Optional[str] = ""
     policiesInfo: Optional[str] = ""
@@ -181,7 +182,7 @@ def _format_products(products: List[ChatProduct], limit: int = 80) -> str:
     return "\n".join(rows) + extra
 
 
-def _format_history(history: List[ChatHistoryItem], limit: int = 12) -> str:
+def _format_history(history: List[ChatHistoryItem], limit: int = 8) -> str:
     if not history:
         return "(yeni söhbətdir)"
     recent = history[-limit:]
@@ -196,6 +197,11 @@ def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
     if k is None:
         return ""
     sections: List[str] = []
+    if k.aiInstructions and k.aiInstructions.strip():
+        sections.append(
+            "⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI (hər şeydən üstündür, MÜTLƏQ ƏMƏL ET):\n"
+            + k.aiInstructions.strip()
+        )
     if k.companyInfo and k.companyInfo.strip():
         sections.append("🏢 ŞİRKƏT HAQQINDA:\n" + k.companyInfo.strip())
     if k.brandsInfo and k.brandsInfo.strip():

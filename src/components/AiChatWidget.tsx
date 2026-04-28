@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
 import { getAiKnowledge, type AiKnowledge } from '../services/aiKnowledgeService';
 import type { Product } from '../types';
@@ -29,8 +29,8 @@ const newSessionId = () => {
 };
 
 const compactProducts = (products: Product[]) => {
-  // Trim to most relevant fields & cap to keep prompt small.
-  return products.slice(0, 80).map((p) => ({
+  // Trim to most relevant fields & cap to keep prompt small (faster + cheaper).
+  return products.slice(0, 40).map((p) => ({
     id: p.id,
     name: p.name?.az || p.name?.en || p.name?.ru || '',
     brand: p.brand || '',
@@ -171,6 +171,8 @@ const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, l
     </>
   );
 };
+
+const DEVALEUR_LOGO = 'https://i.hizliresim.com/tmu65g6.png';
 
 const AiChatWidget: React.FC = () => {
   const { i18n } = useTranslation();
@@ -355,42 +357,76 @@ const AiChatWidget: React.FC = () => {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[9998] group bg-gradient-to-br from-gray-900 to-gray-700 text-white rounded-full shadow-2xl hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-300 hover:scale-105 active:scale-95"
-          style={{ width: 60, height: 60 }}
+          className="group fixed bottom-6 right-6 z-[9998] flex items-center gap-2 pl-2 pr-4 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/20"
           title="De Valeur AI ilə danış"
           data-testid="ai-chat-launcher"
         >
-          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400/40 to-amber-200/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
-          <MessageCircle className="h-7 w-7 mx-auto" />
+          {/* Logo bubble */}
+          <span className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 ring-2 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
+            <img
+              src={DEVALEUR_LOGO}
+              alt="De Valeur"
+              className="w-7 h-7 object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
+          </span>
+          <span className="text-sm font-semibold tracking-wide whitespace-nowrap">
+            De Valeur AI
+          </span>
+          <Sparkles className="h-3.5 w-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
         </button>
       )}
 
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-[9999] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in"
+          className="fixed bottom-6 right-6 z-[9999] bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.5)] border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in"
           style={{
-            width: 'min(420px, calc(100vw - 32px))',
-            height: 'min(620px, calc(100vh - 80px))',
+            width: 'min(440px, calc(100vw - 32px))',
+            height: 'min(640px, calc(100vh - 80px))',
           }}
           data-testid="ai-chat-panel"
         >
-          {/* Header */}
-          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-md ring-2 ring-white/20 flex-shrink-0">
-                <Sparkles className="h-4 w-4 text-white" />
+          {/* Header — premium with logo */}
+          <div
+            className="relative text-white px-5 py-4 flex items-center justify-between overflow-hidden"
+            style={{
+              background:
+                'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #0f0f0f 100%)',
+            }}
+          >
+            {/* Subtle gold shimmer */}
+            <div
+              className="absolute inset-0 opacity-30 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle at 30% 0%, rgba(251, 191, 36, 0.25), transparent 50%)',
+              }}
+            />
+            <div className="relative flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-full bg-white/5 ring-2 ring-amber-400/40 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+                <img
+                  src={DEVALEUR_LOGO}
+                  alt="De Valeur"
+                  className="w-7 h-7 object-contain"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-sm leading-tight">De Valeur AI</p>
-                <p className="text-[11px] text-white/60 leading-tight flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block" />
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-[15px] leading-tight tracking-wide">
+                    De Valeur AI
+                  </p>
+                  <Sparkles className="h-3 w-3 text-amber-400" />
+                </div>
+                <p className="text-[11px] text-white/60 leading-tight flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block animate-pulse" />
                   Onlayn satış konsultantı
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="relative flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={handleClear}
                 className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
@@ -413,15 +449,20 @@ const AiChatWidget: React.FC = () => {
           {/* Messages */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-3.5 py-3 bg-gradient-to-b from-gray-50/60 to-white"
+            className="flex-1 overflow-y-auto px-4 py-4 bg-gradient-to-b from-gray-50/80 to-white"
             data-testid="ai-chat-messages"
           >
             {messages.length === 0 && !busy && (
               <div className="text-center py-10">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center mx-auto mb-3 shadow-md">
-                  <Sparkles className="h-6 w-6 text-amber-400" />
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center mx-auto mb-3 shadow-xl ring-2 ring-amber-400/30">
+                  <img
+                    src={DEVALEUR_LOGO}
+                    alt="De Valeur"
+                    className="w-10 h-10 object-contain"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
                 </div>
-                <p className="text-sm font-semibold text-gray-900">De Valeur AI</p>
+                <p className="text-sm font-bold text-gray-900 tracking-wide">DE VALEUR AI</p>
                 <p className="text-xs text-gray-500 mt-1">
                   Sizə uyğun saat və aksesuar tapmaqda kömək edirəm
                 </p>
@@ -431,13 +472,24 @@ const AiChatWidget: React.FC = () => {
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`mb-2.5 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`mb-3 flex ${m.role === 'user' ? 'justify-end' : 'justify-start gap-2 items-end'}`}
                 data-testid={`ai-chat-msg-${m.role}-${i}`}
               >
+                {/* Assistant avatar */}
+                {m.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center flex-shrink-0 ring-1 ring-amber-400/30 mb-1">
+                    <img
+                      src={DEVALEUR_LOGO}
+                      alt=""
+                      className="w-4 h-4 object-contain"
+                      style={{ filter: 'brightness(0) invert(1)' }}
+                    />
+                  </div>
+                )}
                 <div
-                  className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
+                  className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
                     m.role === 'user'
-                      ? 'bg-gray-900 text-white rounded-br-md whitespace-pre-wrap'
+                      ? 'bg-gradient-to-br from-gray-900 to-black text-white rounded-br-md whitespace-pre-wrap shadow-md'
                       : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
                   }`}
                 >
@@ -456,7 +508,15 @@ const AiChatWidget: React.FC = () => {
             ))}
 
             {busy && (
-              <div className="flex justify-start mb-2.5">
+              <div className="flex justify-start gap-2 items-end mb-3">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center flex-shrink-0 ring-1 ring-amber-400/30 mb-1">
+                  <img
+                    src={DEVALEUR_LOGO}
+                    alt=""
+                    className="w-4 h-4 object-contain"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
+                </div>
                 <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
                   <div className="flex items-center gap-1.5">
                     <span
@@ -480,7 +540,7 @@ const AiChatWidget: React.FC = () => {
           {/* Input */}
           <form
             onSubmit={handleSubmit}
-            className="border-t border-gray-100 px-3 py-2.5 bg-white flex items-end gap-2"
+            className="border-t border-gray-100 px-3 py-3 bg-white flex items-end gap-2"
           >
             <textarea
               value={input}
@@ -495,14 +555,14 @@ const AiChatWidget: React.FC = () => {
               rows={1}
               maxLength={2000}
               disabled={busy}
-              className="flex-1 resize-none border border-gray-200 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 outline-none rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 max-h-28 disabled:bg-gray-50"
-              style={{ minHeight: 38 }}
+              className="flex-1 resize-none border border-gray-200 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 outline-none rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 max-h-28 disabled:bg-gray-50 transition-colors"
+              style={{ minHeight: 40 }}
               data-testid="ai-chat-input"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              className="bg-gray-900 text-white rounded-xl p-2.5 hover:bg-gray-800 disabled:bg-gray-300 transition-colors flex-shrink-0"
+              className="bg-gradient-to-br from-gray-900 to-black text-white rounded-xl p-2.5 hover:from-gray-800 hover:to-gray-900 disabled:from-gray-300 disabled:to-gray-300 transition-all flex-shrink-0 shadow-md hover:shadow-lg"
               data-testid="ai-chat-send"
             >
               {busy ? (
@@ -512,6 +572,15 @@ const AiChatWidget: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Footer brand strip */}
+          <div className="px-4 py-1.5 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-1.5">
+            <span className="text-[10px] text-gray-400">Powered by</span>
+            <span className="text-[10px] font-bold tracking-[0.15em] text-gray-700">
+              DE VALEUR
+            </span>
+            <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+          </div>
         </div>
       )}
     </>
