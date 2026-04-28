@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Award, Users, Globe, TrendingUp, Star, Shield, Crown, Gem } from 'lucide-react';
+import { Save, Plus, Trash2, Award, Users, Globe, TrendingUp, Star, Shield, Crown, Gem, ArrowUp, ArrowDown } from 'lucide-react';
 import { getAboutPage, updateAboutPage, type AboutPage, type AboutStat } from '../../services/contentService';
 
 const ICON_OPTIONS = [
@@ -31,6 +31,7 @@ const AboutManagementTab: React.FC = () => {
     mission_heading_az: '', mission_heading_ru: '', mission_heading_en: '',
     mission_az: '', mission_ru: '', mission_en: '',
     image_url: '',
+    story_images: [],
     stats: DEFAULT_STATS,
   });
 
@@ -63,6 +64,7 @@ const AboutManagementTab: React.FC = () => {
           mission_ru: data.mission_ru || '',
           mission_en: data.mission_en || '',
           image_url: data.image_url || '',
+          story_images: data.story_images || [],
           stats: (data.stats && data.stats.length > 0) ? data.stats : DEFAULT_STATS,
         });
       }
@@ -103,6 +105,31 @@ const AboutManagementTab: React.FC = () => {
   const removeStat = (index: number) => {
     const stats = (formData.stats || []).filter((_, i) => i !== index);
     setFormData({ ...formData, stats });
+  };
+
+  // Story slider images management
+  const addStoryImage = () => {
+    const images = [...(formData.story_images || []), ''];
+    setFormData({ ...formData, story_images: images });
+  };
+
+  const updateStoryImage = (index: number, value: string) => {
+    const images = [...(formData.story_images || [])];
+    images[index] = value;
+    setFormData({ ...formData, story_images: images });
+  };
+
+  const removeStoryImage = (index: number) => {
+    const images = (formData.story_images || []).filter((_, i) => i !== index);
+    setFormData({ ...formData, story_images: images });
+  };
+
+  const moveStoryImage = (index: number, direction: -1 | 1) => {
+    const images = [...(formData.story_images || [])];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= images.length) return;
+    [images[index], images[newIndex]] = [images[newIndex], images[index]];
+    setFormData({ ...formData, story_images: images });
   };
 
   if (loading) {
@@ -178,17 +205,108 @@ const AboutManagementTab: React.FC = () => {
         <TextField label="Məzmun (RU)" value={formData.content_ru} onChange={(v) => setFormData({ ...formData, content_ru: v })} rows={6} />
         <TextField label="Məzmun (EN)" value={formData.content_en} onChange={(v) => setFormData({ ...formData, content_en: v })} rows={6} />
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Şəkil URL</label>
-          <input
-            type="text"
-            value={formData.image_url || ''}
-            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-            placeholder="https://example.com/image.jpg"
-          />
-          {formData.image_url && (
-            <img src={formData.image_url} alt="Preview" className="mt-3 w-full max-w-md h-48 object-cover rounded-lg" />
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <label className="block text-sm font-semibold">Hekayə şəkilləri (slider)</label>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Bir və ya bir neçə şəkil əlavə edin — saytda ardıcıl slider şəklində göstəriləcək. Şəkillər URL kimi verilir.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addStoryImage}
+              data-testid="add-story-image-btn"
+              className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm"
+            >
+              <Plus className="h-4 w-4" /> Şəkil əlavə et
+            </button>
+          </div>
+
+          {(formData.story_images || []).length === 0 && (
+            <div className="text-sm text-gray-500 bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4">
+              Hələ şəkil əlavə edilməyib. "Şəkil əlavə et" düyməsinə basın.
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {(formData.story_images || []).map((url, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                data-testid={`story-image-row-${index}`}
+              >
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveStoryImage(index, -1)}
+                    disabled={index === 0}
+                    className="p-1 text-gray-500 hover:text-gray-900 disabled:opacity-30"
+                    aria-label="Yuxarı"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveStoryImage(index, 1)}
+                    disabled={index === (formData.story_images || []).length - 1}
+                    className="p-1 text-gray-500 hover:text-gray-900 disabled:opacity-30"
+                    aria-label="Aşağı"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-gray-200 border border-gray-300">
+                  {url ? (
+                    <img src={url} alt={`Slide ${index + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 text-center px-1">
+                      önizləmə
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Slayd #{index + 1} — şəkil URL</label>
+                  <input
+                    type="text"
+                    value={url}
+                    onChange={(e) => updateStoryImage(index, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black"
+                    placeholder="https://example.com/image.jpg"
+                    data-testid={`story-image-input-${index}`}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeStoryImage(index)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                  aria-label="Sil"
+                  data-testid={`remove-story-image-${index}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Legacy single image field - kept for backward compatibility, only shown if no story_images exist */}
+          {(!formData.story_images || formData.story_images.length === 0) && formData.image_url && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <label className="block text-sm font-medium mb-2 text-gray-600">
+                Köhnə tək şəkil (story_images boş olduqda istifadə olunur)
+              </label>
+              <input
+                type="text"
+                value={formData.image_url || ''}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black text-sm"
+                placeholder="https://example.com/image.jpg"
+              />
+              <img src={formData.image_url} alt="Preview" className="mt-3 w-full max-w-md h-32 object-cover rounded-lg" />
+            </div>
           )}
         </div>
       </div>

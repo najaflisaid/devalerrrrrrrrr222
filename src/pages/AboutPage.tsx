@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Users, Globe, TrendingUp, Star, Shield, Crown, Gem } from 'lucide-react';
+import { Award, Users, Globe, TrendingUp, Star, Shield, Crown, Gem, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getAboutPage, type AboutPage as AboutPageData, type AboutStat } from '../services/contentService';
 
@@ -13,6 +13,78 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   crown: Crown,
   gem: Gem,
 };
+
+// Auto-advancing image slider for the "Our Story" section
+const StorySlider: React.FC<{ images: string[]; interval?: number }> = ({ images, interval = 4500 }) => {
+  const [index, setIndex] = useState(0);
+  const total = images.length;
+
+  useEffect(() => {
+    if (total <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % total);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [total, interval]);
+
+  if (total === 0) return null;
+
+  const goTo = (i: number) => setIndex((i + total) % total);
+
+  return (
+    <div className="relative w-full h-[400px] rounded-lg shadow-xl overflow-hidden group" data-testid="about-story-slider">
+      {images.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt={`Our Story ${i + 1}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+            i === index ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}
+          loading={i === 0 ? 'eager' : 'lazy'}
+        />
+      ))}
+
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous"
+            onClick={() => goTo(index - 1)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-white/70 hover:bg-white text-gray-900 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            data-testid="about-slider-prev"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={() => goTo(index + 1)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/70 hover:bg-white text-gray-900 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            data-testid="about-slider-next"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Slide ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/90'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 
 const DEFAULT_STATS_BY_LANG = (t: (k: string) => string): AboutStat[] => ([
   { icon: 'award', value_az: '6+', value_ru: '6+', value_en: '6+', label_az: t('about.experience'), label_ru: t('about.experience'), label_en: t('about.experience') },
@@ -107,10 +179,12 @@ const AboutPage: React.FC = () => {
             )}
           </div>
           <div className="relative">
-            <img
-              src={aboutData?.image_url || 'https://images.pexels.com/photos/1454171/pexels-photo-1454171.jpeg?auto=compress&cs=tinysrgb&w=800'}
-              alt="Luxury Store"
-              className="w-full h-[400px] object-cover rounded-lg shadow-xl"
+            <StorySlider
+              images={
+                (aboutData?.story_images && aboutData.story_images.length > 0)
+                  ? aboutData.story_images
+                  : (aboutData?.image_url ? [aboutData.image_url] : ['https://images.pexels.com/photos/1454171/pexels-photo-1454171.jpeg?auto=compress&cs=tinysrgb&w=800'])
+              }
             />
           </div>
         </div>

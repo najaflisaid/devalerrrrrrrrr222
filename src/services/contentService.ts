@@ -46,6 +46,7 @@ export interface AboutPage {
   mission_ru: string;
   mission_en: string;
   image_url?: string;
+  story_images?: string[];
   stats?: AboutStat[];
 }
 
