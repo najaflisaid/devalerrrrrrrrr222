@@ -216,9 +216,9 @@ def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="LLM açarı konfiqurasiya edilməyib.")
+        raise HTTPException(status_code=500, detail="OpenAI açarı konfiqurasiya edilməyib.")
 
     lang_directive = {
         "az": "Cavab DİLİ: Azərbaycan dilində (sənin əsas dilin).",
