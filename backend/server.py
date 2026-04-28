@@ -134,11 +134,20 @@ class ChatHistoryItem(BaseModel):
     content: str
 
 
+class ChatKnowledge(BaseModel):
+    companyInfo: Optional[str] = ""
+    brandsInfo: Optional[str] = ""
+    policiesInfo: Optional[str] = ""
+    productsInfo: Optional[str] = ""
+    additionalNotes: Optional[str] = ""
+
+
 class ChatRequest(BaseModel):
     session_id: str = Field(..., min_length=4, max_length=128)
     message: str = Field(..., min_length=1, max_length=2000)
     history: List[ChatHistoryItem] = Field(default_factory=list)
     products: List[ChatProduct] = Field(default_factory=list)
+    knowledge: Optional[ChatKnowledge] = None
     language: str = "az"  # "az" | "ru" | "en"
 
 
@@ -183,6 +192,28 @@ def _format_history(history: List[ChatHistoryItem], limit: int = 12) -> str:
     return "\n".join(lines)
 
 
+def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
+    if k is None:
+        return ""
+    sections: List[str] = []
+    if k.companyInfo and k.companyInfo.strip():
+        sections.append("🏢 ŞİRKƏT HAQQINDA:\n" + k.companyInfo.strip())
+    if k.brandsInfo and k.brandsInfo.strip():
+        sections.append("🏷️ BRENDLƏR HAQQINDA:\n" + k.brandsInfo.strip())
+    if k.policiesInfo and k.policiesInfo.strip():
+        sections.append("🛡️ ZƏMANƏT/ÇATDIRILMA/QAYTARMA:\n" + k.policiesInfo.strip())
+    if k.productsInfo and k.productsInfo.strip():
+        sections.append("📦 MƏHSULLAR HAQQINDA ƏLAVƏ QEYDLƏR:\n" + k.productsInfo.strip())
+    if k.additionalNotes and k.additionalNotes.strip():
+        sections.append("📝 ƏLAVƏ KONTEKST/FAQ:\n" + k.additionalNotes.strip())
+    if not sections:
+        return ""
+    return (
+        "\n\n📚 ŞİRKƏT BİLİK BAZASI (admin tərəfindən təqdim olunmuş — DİQQƏTLƏ ƏMƏL ET):\n"
+        + "\n\n".join(sections)
+    )
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
     api_key = os.environ.get("EMERGENT_LLM_KEY")
@@ -199,6 +230,7 @@ async def chat_endpoint(req: ChatRequest):
         DEVALEUR_PERSONA
         + "\n\n"
         + lang_directive
+        + _format_knowledge(req.knowledge)
         + "\n\n📦 SAYTDAKI MƏHSUL KATALOQU (real məlumat):\n"
         + _format_products(req.products)
         + "\n\n📝 ƏVVƏLKİ SÖHBƏT:\n"

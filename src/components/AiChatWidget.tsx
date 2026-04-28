@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
+import { getAiKnowledge, type AiKnowledge } from '../services/aiKnowledgeService';
 import type { Product } from '../types';
 
 const BACKEND_URL =
@@ -182,6 +183,7 @@ const AiChatWidget: React.FC = () => {
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
   const productsRef = useRef<Product[]>([]);
+  const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -235,24 +237,22 @@ const AiChatWidget: React.FC = () => {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, open, busy]);
 
-  // Lazy load products on first open
+  // Lazy load products + AI knowledge on first open
   useEffect(() => {
     if (open && !productsLoaded) {
-      productService
-        .getAll()
-        .then((list) => {
-          productsRef.current = list;
-          const m: Record<string, Product> = {};
-          list.forEach((p) => {
-            m[p.id] = p;
-          });
-          setProductMap(m);
-          setProductsLoaded(true);
-        })
-        .catch(() => {
-          productsRef.current = [];
-          setProductsLoaded(true);
+      Promise.all([
+        productService.getAll().catch(() => [] as Product[]),
+        getAiKnowledge().catch(() => null),
+      ]).then(([list, knowledge]) => {
+        productsRef.current = list;
+        knowledgeRef.current = knowledge;
+        const m: Record<string, Product> = {};
+        list.forEach((p) => {
+          m[p.id] = p;
         });
+        setProductMap(m);
+        setProductsLoaded(true);
+      });
     }
   }, [open, productsLoaded]);
 
@@ -297,6 +297,7 @@ const AiChatWidget: React.FC = () => {
         message: trimmed,
         history: pendingHistory.map((m) => ({ role: m.role, content: m.content })),
         products: compactProducts(productsRef.current),
+        knowledge: knowledgeRef.current || undefined,
         language: lang,
       };
       const res = await fetch(`${BACKEND_URL}/api/chat`, {
