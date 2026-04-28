@@ -15,6 +15,8 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  updateDoc,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import {
@@ -140,6 +142,83 @@ const AnalyticsTab: React.FC = () => {
     }
   };
 
+  const handleDeleteView = async (productId: string, productName: string) => {
+    if (!confirm(`"${productName || productId}" baxış statistikasını silmək istəyirsiniz?`)) return;
+    try {
+      await deleteDoc(doc(db, 'product_view_counts', productId));
+      setTopViews((prev) => prev.filter((v) => v.productId !== productId));
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteCart = async (cartId: string, userName: string) => {
+    if (!confirm(`${userName || 'Bu müştəri'} üçün tüm səbəti silmək istəyirsiniz?`)) return;
+    try {
+      await deleteDoc(doc(db, 'customer_carts', cartId));
+      setCarts((prev) => prev.filter((c) => c.id !== cartId));
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteCartItem = async (cartId: string, productId: string, productName: string) => {
+    if (!confirm(`Səbətdən "${productName}" silinsin?`)) return;
+    const cart = carts.find((c) => c.id === cartId);
+    if (!cart) return;
+    const newItems = (cart.items || []).filter((it) => it.productId !== productId);
+    try {
+      if (newItems.length === 0) {
+        await deleteDoc(doc(db, 'customer_carts', cartId));
+        setCarts((prev) => prev.filter((c) => c.id !== cartId));
+      } else {
+        const itemCount = newItems.reduce((sum, it) => sum + (it.quantity || 0), 0);
+        await updateDoc(doc(db, 'customer_carts', cartId), {
+          items: newItems,
+          itemCount,
+        });
+        setCarts((prev) => prev.map((c) => (c.id === cartId ? { ...c, items: newItems, itemCount } : c)));
+      }
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteWishlist = async (wishlistId: string, userName: string) => {
+    if (!confirm(`${userName || 'Bu müştəri'} üçün bütün wishlist silinsin?`)) return;
+    try {
+      await deleteDoc(doc(db, 'customer_wishlists', wishlistId));
+      setWishlists((prev) => prev.filter((w) => w.id !== wishlistId));
+      if (openWishlist?.id === wishlistId) setOpenWishlist(null);
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteWishlistItem = async (wishlistId: string, productId: string) => {
+    if (!confirm(`Wishlist-dən bu məhsul silinsin?`)) return;
+    const wl = wishlists.find((w) => w.id === wishlistId);
+    if (!wl) return;
+    const newIds = (wl.productIds || []).filter((p) => p !== productId);
+    try {
+      if (newIds.length === 0) {
+        await deleteDoc(doc(db, 'customer_wishlists', wishlistId));
+        setWishlists((prev) => prev.filter((w) => w.id !== wishlistId));
+        if (openWishlist?.id === wishlistId) setOpenWishlist(null);
+      } else {
+        await updateDoc(doc(db, 'customer_wishlists', wishlistId), {
+          productIds: arrayRemove(productId),
+          count: newIds.length,
+        });
+        const updated = { ...wl, productIds: newIds, count: newIds.length };
+        setWishlists((prev) => prev.map((w) => (w.id === wishlistId ? updated : w)));
+        if (openWishlist?.id === wishlistId) setOpenWishlist(updated);
+      }
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -207,7 +286,7 @@ const AnalyticsTab: React.FC = () => {
             ) : (
               <ol className="space-y-2">
                 {topViews.map((v, i) => (
-                  <li key={v.productId} className="flex items-center gap-3 text-sm" data-testid={`top-view-${i}`}>
+                  <li key={v.productId} className="flex items-center gap-3 text-sm group" data-testid={`top-view-${i}`}>
                     <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
                     {v.image ? (
                       <img src={v.image} alt="" className="w-8 h-8 object-cover rounded" />
@@ -216,6 +295,14 @@ const AnalyticsTab: React.FC = () => {
                     )}
                     <span className="flex-1 truncate text-gray-900">{v.productName || v.productId}</span>
                     <span className="text-sm font-bold text-gray-900">{v.count}</span>
+                    <button
+                      onClick={() => handleDeleteView(v.productId, v.productName)}
+                      className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Sil"
+                      data-testid={`delete-view-${v.productId}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </li>
                 ))}
               </ol>
@@ -271,14 +358,24 @@ const AnalyticsTab: React.FC = () => {
                     <p className="font-semibold text-gray-900 text-sm">{c.userName || 'Adsız müştəri'}</p>
                     <p className="text-xs text-gray-500 truncate">{c.userEmail}</p>
                   </div>
-                  <div className="text-right text-xs">
-                    <p className="text-gray-500">Yenilənib: {formatDate(c.updatedAt)}</p>
-                    <p className="text-gray-900 font-medium">{c.itemCount} ədəd</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-xs">
+                      <p className="text-gray-500">Yenilənib: {formatDate(c.updatedAt)}</p>
+                      <p className="text-gray-900 font-medium">{c.itemCount} ədəd</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCart(c.id, c.userName)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Bütün səbəti sil"
+                      data-testid={`delete-cart-${c.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   {(c.items || []).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
+                    <div key={i} className="flex items-center gap-2 text-sm group">
                       {item.image ? (
                         <img src={item.image} alt="" className="w-9 h-9 object-cover rounded" />
                       ) : (
@@ -289,6 +386,14 @@ const AnalyticsTab: React.FC = () => {
                       <span className="font-semibold text-gray-900">
                         {(item.price * item.quantity).toFixed(2)} ₼
                       </span>
+                      <button
+                        onClick={() => handleDeleteCartItem(c.id, item.productId, item.productName)}
+                        className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Bu məhsulu sil"
+                        data-testid={`delete-cart-item-${c.id}-${item.productId}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -313,9 +418,19 @@ const AnalyticsTab: React.FC = () => {
                     <p className="font-semibold text-gray-900 text-sm">{w.userName || 'Adsız müştəri'}</p>
                     <p className="text-xs text-gray-500 truncate">{w.userEmail}</p>
                   </div>
-                  <div className="text-right text-xs">
-                    <p className="text-gray-500">Yenilənib: {formatDate(w.updatedAt)}</p>
-                    <p className="text-gray-900 font-medium">{w.count} məhsul</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-xs">
+                      <p className="text-gray-500">Yenilənib: {formatDate(w.updatedAt)}</p>
+                      <p className="text-gray-900 font-medium">{w.count} məhsul</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteWishlist(w.id, w.userName)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Bütün wishlist-i sil"
+                      data-testid={`delete-wishlist-${w.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
@@ -324,26 +439,38 @@ const AnalyticsTab: React.FC = () => {
                     const img = p?.images?.[0];
                     const name = getName(p) || pid;
                     return (
-                      <button
-                        key={pid}
-                        onClick={() => setOpenWishlist(w)}
-                        title={name}
-                        className="group relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 border border-gray-200 hover:border-gray-900 hover:shadow-md transition-all"
-                        data-testid={`wishlist-thumb-${w.id}-${pid}`}
-                      >
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400 font-mono px-1 text-center">
-                            {pid.slice(0, 6)}
-                          </div>
-                        )}
-                      </button>
+                      <div key={pid} className="relative group">
+                        <button
+                          onClick={() => setOpenWishlist(w)}
+                          title={name}
+                          className="block w-12 h-12 rounded-md overflow-hidden bg-gray-100 border border-gray-200 hover:border-gray-900 hover:shadow-md transition-all"
+                          data-testid={`wishlist-thumb-${w.id}-${pid}`}
+                        >
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400 font-mono px-1 text-center">
+                              {pid.slice(0, 6)}
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteWishlistItem(w.id, pid);
+                          }}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                          title="Bu məhsulu sil"
+                          data-testid={`delete-wishlist-item-${w.id}-${pid}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -394,51 +521,63 @@ const AnalyticsTab: React.FC = () => {
                 const price = p?.salePrice || p?.price;
                 const original = p?.salePrice ? p?.price : null;
                 return (
-                  <a
+                  <div
                     key={pid}
-                    href={`/product/${pid}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors group"
+                    className="flex items-center gap-3 p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors group relative"
                     data-testid={`wishlist-modal-item-${pid}`}
                   >
-                    <div className="w-14 h-14 rounded-md overflow-hidden bg-white border border-gray-200 flex-shrink-0">
-                      {img ? (
-                        <img src={img} alt={name} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-mono">
-                          N/A
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                        {name || <span className="font-mono text-xs text-gray-500">{pid}</span>}
-                      </p>
-                      {p?.brand && (
-                        <p className="text-[11px] text-gray-500 mt-0.5">{p.brand}</p>
-                      )}
-                      {price !== undefined && (
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {original ? (
-                            <>
-                              <span className="text-[11px] text-gray-400 line-through">
-                                {original.toFixed(2)} ₼
-                              </span>
-                              <span className="text-xs font-semibold text-red-500">
+                    <a
+                      href={`/product/${pid}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <div className="w-14 h-14 rounded-md overflow-hidden bg-white border border-gray-200 flex-shrink-0">
+                        {img ? (
+                          <img src={img} alt={name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-mono">
+                            N/A
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                          {name || <span className="font-mono text-xs text-gray-500">{pid}</span>}
+                        </p>
+                        {p?.brand && (
+                          <p className="text-[11px] text-gray-500 mt-0.5">{p.brand}</p>
+                        )}
+                        {price !== undefined && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {original ? (
+                              <>
+                                <span className="text-[11px] text-gray-400 line-through">
+                                  {original.toFixed(2)} ₼
+                                </span>
+                                <span className="text-xs font-semibold text-red-500">
+                                  {price.toFixed(2)} ₼
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-900">
                                 {price.toFixed(2)} ₼
                               </span>
-                            </>
-                          ) : (
-                            <span className="text-xs font-semibold text-gray-900">
-                              {price.toFixed(2)} ₼
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-900 transition-colors flex-shrink-0" />
-                  </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-900 transition-colors flex-shrink-0" />
+                    </a>
+                    <button
+                      onClick={() => handleDeleteWishlistItem(openWishlist.id, pid)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
+                      title="Sil"
+                      data-testid={`wishlist-modal-delete-${pid}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 );
               })}
             </div>

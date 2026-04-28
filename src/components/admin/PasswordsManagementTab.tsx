@@ -8,33 +8,20 @@ import {
   type SectionPasswordConfig,
 } from '../../services/adminPasswordService';
 
-// Bütün admin paneldəki bölmələrin siyahısı (ID → görünən ad)
+// Bütün admin paneldəki QORUNAN bölmələrin siyahısı (ID → görünən ad)
+// Hər bölmənin AYRI şifrəsi olur, default şifrə artıq istifadə edilmir.
 const SECTIONS: { id: string; label: string }[] = [
-  { id: 'products', label: 'Məhsullar' },
   { id: 'customerOrders', label: 'Müştəri Sifarişləri' },
-  { id: 'deliveryMethods', label: 'Çatdırılma Üsulları' },
+  { id: 'b2bOrders', label: 'B2B Sifarişləri' },
+  { id: 'b2b', label: 'B2B Müraciətləri' },
+  { id: 'b2bUsers', label: 'B2B İstifadəçilər' },
+  { id: 'b2bNotifications', label: 'B2B Bildirişləri' },
   { id: 'analytics', label: 'Analitika' },
   { id: 'epointSettings', label: 'Epoint Açarları' },
-  { id: 'b2bOrders', label: 'B2B Sifarişləri' },
-  { id: 'b2bUsers', label: 'B2B İstifadəçilər' },
-  { id: 'b2bRequests', label: 'B2B Müraciətləri' },
+  { id: 'deliveryMethods', label: 'Çatdırılma Üsulları' },
   { id: 'users', label: 'İstifadəçilər' },
-  { id: 'workers', label: 'İşçilər' },
-  { id: 'b2bNotifications', label: 'B2B Bildirişləri' },
-  { id: 'banners', label: 'Bannerlər' },
-  { id: 'productBanners', label: 'Məhsul Bannerləri' },
-  { id: 'homeSections', label: 'Ana Səhifə Bölmələri' },
-  { id: 'about', label: 'Haqqımızda' },
-  { id: 'privacy', label: 'Məxfilik Siyasəti' },
-  { id: 'return', label: 'Qaytarılma' },
-  { id: 'delivery', label: 'Çatdırılma Səhifəsi' },
-  { id: 'careers', label: 'Karyera' },
-  { id: 'brands', label: 'Brendlər' },
-  { id: 'categories', label: 'Kateqoriyalar' },
-  { id: 'blogs', label: 'Bloq' },
-  { id: 'partners', label: 'Tərəfdaşlar' },
-  { id: 'contactMessages', label: 'Əlaqə mesajları' },
-  { id: 'creditApplications', label: 'Kredit ərizələri' },
+  { id: 'workers', label: 'İşçilər bölməsi (giriş)' },
+  { id: 'passwordsAdmin', label: 'Şifrələr İdarəetməsi' },
 ];
 
 const PasswordsManagementTab: React.FC = () => {
@@ -172,7 +159,7 @@ const PasswordsManagementTab: React.FC = () => {
           </button>
         </div>
         <p className="text-sm text-gray-600 mb-5">
-          Admin panelinin qorunan bölmələri üçün şifrələr.
+          Hər bölmə üçün ayrıca şifrə təyin edə bilərsiniz. Aşağıdakı xüsusi açarlar İşçilər bölməsi üçündür.
         </p>
 
         {error && (
@@ -180,16 +167,6 @@ const PasswordsManagementTab: React.FC = () => {
         )}
 
         <div className="space-y-3">
-          <Row
-            k="default"
-            label="Ümumi qorunan bölmə şifrəsi"
-            hint="Default şifrə — bölmə üçün xüsusi şifrə təyin edilməyibsə bu istifadə olunur."
-          />
-          <Row
-            k="workers"
-            label="İşçilər bölməsi şifrəsi"
-            hint="“İşçilər” bölməsinə daxil olmaq üçün ayrı şifrə."
-          />
           <Row
             k="workersEdit"
             label="İşçi redaktə kilidi"

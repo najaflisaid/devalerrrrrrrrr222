@@ -1278,6 +1278,7 @@ const AdminPanel: React.FC = () => {
                     if (tab.id === 'contactMessages') acknowledgeContactMessages();
                     if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
                     if (tab.id === 'b2b') acknowledgeB2BRequests();
+                    if (tab.id === 'customerOrders') acknowledgeCustomerOrders();
                   }}
                   className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
