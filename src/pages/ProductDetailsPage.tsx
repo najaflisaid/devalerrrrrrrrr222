@@ -6,6 +6,7 @@ import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import ProductReviews from '../components/ProductReviews';
+import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
 
 const ProductDetailsPage: React.FC = () => {
@@ -32,6 +33,8 @@ const ProductDetailsPage: React.FC = () => {
       const found = allProducts.find(p => p.id === productId);
       if (found) {
         setProduct(found);
+        const name = found.name?.az || found.name?.en || '';
+        trackProductView(found.id, { name, image: found.images?.[0] }).catch(() => undefined);
       }
     } catch (error) {
       console.error('Error loading product:', error);

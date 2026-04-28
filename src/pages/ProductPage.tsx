@@ -6,6 +6,7 @@ import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import ProductReviews from '../components/ProductReviews';
+import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
 
 const ProductPage: React.FC = () => {
@@ -31,6 +32,10 @@ const ProductPage: React.FC = () => {
       const products = await productService.getAll();
       const foundProduct = products.find(p => p.id === productId);
       setProduct(foundProduct || null);
+      if (foundProduct) {
+        const name = foundProduct.name?.az || foundProduct.name?.en || '';
+        trackProductView(foundProduct.id, { name, image: foundProduct.images?.[0] }).catch(() => undefined);
+      }
     } catch (error) {
       console.error('Error loading product:', error);
     } finally {

@@ -35,7 +35,7 @@ const CartPage: React.FC = () => {
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const userDiscount = getUserDiscount();
-  const isLoggedIn = !!localStorage.getItem('userId') && localStorage.getItem('userRole') === 'customer';
+  const isLoggedIn = !!localStorage.getItem('userId');
 
   useEffect(() => {
     if (!isB2BUser) {

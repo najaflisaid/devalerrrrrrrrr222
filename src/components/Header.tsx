@@ -245,6 +245,10 @@ const Header: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      // Track search analytics
+      import('../services/analyticsService').then(({ trackSearch }) =>
+        trackSearch(searchQuery.trim()).catch(() => undefined)
+      );
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
       closeSearchModal();
     }

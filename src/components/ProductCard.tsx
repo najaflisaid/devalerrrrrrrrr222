@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import type { Product } from '../types';
 
 interface ProductCardProps {
@@ -14,7 +15,15 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false, compact = false }) => {
   const { t, i18n } = useTranslation();
   const { addToCart, addNotification } = useCart();
+  const { isFavorite, toggleFavorite } = useWishlist();
   const isB2BUser = localStorage.getItem('userRole') === 'b2b';
+  const fav = isFavorite(product.id);
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(product.id);
+    addNotification(fav ? 'Wishlist-dən çıxarıldı' : 'Wishlist-ə əlavə olundu', 'success');
+  };
 
   let displayPrice: number;
   let originalPrice: number | null = null;
@@ -82,6 +91,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           )}
 
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
+
+          {!compact && !isB2BUser && (
+            <button
+              onClick={handleToggleFavorite}
+              className={`absolute top-3 right-3 p-2 rounded-full shadow-md transition-all ${
+                fav ? 'bg-red-500 text-white' : 'bg-white/90 hover:bg-white text-gray-700'
+              }`}
+              title={fav ? 'Wishlist-dən çıxar' : 'Wishlist-ə əlavə et'}
+              data-testid={`wishlist-toggle-${product.id}`}
+            >
+              <Heart className={`h-4 w-4 ${fav ? 'fill-current' : ''}`} />
+            </button>
+          )}
 
           {!isOutOfStock && !compact && (
             <button

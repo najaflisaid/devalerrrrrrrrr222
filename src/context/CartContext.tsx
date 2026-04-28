@@ -41,6 +41,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
+    // Mirror to Firestore so admin can see customer carts
+    const userId = localStorage.getItem('userId');
+    const userRole = localStorage.getItem('userRole');
+    if (userId && userRole === 'customer') {
+      // Lazy import to avoid circular deps
+      import('../lib/firebase').then(({ db }) =>
+        import('firebase/firestore').then(({ doc, setDoc, Timestamp }) => {
+          const userName = localStorage.getItem('userName') || '';
+          const userEmail = localStorage.getItem('userEmail') || '';
+          const compactItems = items.map((it) => ({
+            productId: it.product.id,
+            productName: it.product.name?.az || it.product.name?.en || '',
+            image: it.product.images?.[0] || '',
+            quantity: it.quantity,
+            price: it.product.salePrice || it.product.price,
+          }));
+          setDoc(
+            doc(db, 'customer_carts', userId),
+            {
+              userId,
+              userName,
+              userEmail,
+              items: compactItems,
+              itemCount: items.reduce((s, it) => s + it.quantity, 0),
+              updatedAt: Timestamp.now(),
+            },
+            { merge: false }
+          ).catch((err) => console.warn('Cart mirror to Firestore failed:', err));
+        })
+      ).catch(() => undefined);
+    }
   }, [items]);
 
   const addNotification = (message: string, type: 'success' | 'error' = 'success') => {

@@ -85,7 +85,38 @@ export const getDeliveryMethods = async (activeOnly = false): Promise<DeliveryMe
   }
 
   if (activeOnly) list = list.filter((m) => m.isActive);
+
+  // Deduplicate by name (clean up stale duplicates from older buggy seeding)
+  const seen = new Map<string, DeliveryMethod>();
+  const duplicateIds: string[] = [];
+  for (const m of list) {
+    const key = (m.name || '').trim().toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) {
+      // Keep the deterministic-ID one (pickup/courier/post) over arbitrary IDs
+      const existing = seen.get(key)!;
+      const existingDeterministic = ['pickup', 'courier', 'post'].includes(existing.id || '');
+      const currentDeterministic = ['pickup', 'courier', 'post'].includes(m.id || '');
+      if (currentDeterministic && !existingDeterministic) {
+        duplicateIds.push(existing.id!);
+        seen.set(key, m);
+      } else {
+        duplicateIds.push(m.id!);
+      }
+    } else {
+      seen.set(key, m);
+    }
+  }
+  list = Array.from(seen.values());
   list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+  // Background cleanup: delete duplicate docs (fire-and-forget)
+  if (duplicateIds.length > 0) {
+    Promise.all(duplicateIds.map((id) => deleteDoc(doc(db, COLLECTION, id)))).catch(
+      (err) => console.warn('Failed to clean duplicate delivery methods:', err)
+    );
+  }
+
   return list;
 };
 

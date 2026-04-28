@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3 } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -10,6 +10,7 @@ import B2BOrdersTab from './B2BOrdersTab';
 import CustomerOrdersTab from './CustomerOrdersTab';
 import EpointSettingsTab from './EpointSettingsTab';
 import DeliveryMethodsTab from './DeliveryMethodsTab';
+import AnalyticsTab from './AnalyticsTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
@@ -1216,6 +1217,8 @@ const AdminPanel: React.FC = () => {
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
     { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
+    { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
+    { id: 'analytics', label: 'Analitika', icon: BarChart3 },
     { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
     { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
     { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
@@ -2854,6 +2857,12 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'deliveryMethods' && (
           <PasswordProtectedSection sectionName="deliveryMethods">
             <DeliveryMethodsTab />
+          </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'analytics' && (
+          <PasswordProtectedSection sectionName="analytics">
+            <AnalyticsTab />
           </PasswordProtectedSection>
         )}
 
