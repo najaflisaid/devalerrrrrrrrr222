@@ -23,8 +23,9 @@ import { db } from '../lib/firebase';
 const VIEWS_COL = 'product_view_counts';
 const SEARCHES_COL = 'search_query_counts';
 
-// Throttle: prevent counting the same product view for 30 minutes from the same browser
-const VIEW_TTL_MS = 30 * 60 * 1000;
+// Throttle: prevent duplicate counting within a short window (per query/product, per browser)
+const VIEW_TTL_MS = 60 * 1000; // 1 min: same product view within 60s only counts once
+const SEARCH_TTL_MS = 5 * 1000; // 5 sec: prevents accidental double-fires (debounce)
 
 const lsKey = (kind: 'view' | 'search', id: string) => `__dv_track_${kind}_${id}`;
 
@@ -70,10 +71,10 @@ export const trackSearch = async (rawQuery: string): Promise<void> => {
   const q = (rawQuery || '').trim();
   if (q.length < 2) return;
   const id = slugify(q);
-  // Throttle: don't count the same query > once per 5 min from same browser
+  // Light throttle: prevent double-fire within 5 sec from same browser
   try {
     const last = Number(localStorage.getItem(lsKey('search', id)) || '0');
-    if (Date.now() - last < 5 * 60 * 1000) return;
+    if (Date.now() - last < SEARCH_TTL_MS) return;
     localStorage.setItem(lsKey('search', id), String(Date.now()));
   } catch {
     /* ignore */

@@ -294,6 +294,12 @@ const Header: React.FC = () => {
   }, [searchQuery, allProducts, i18n.language]);
 
   const goToProduct = (p: Product) => {
+    // Track the search query that led to this product click
+    if (searchQuery.trim().length >= 2) {
+      import('../services/analyticsService').then(({ trackSearch }) =>
+        trackSearch(searchQuery.trim()).catch(() => undefined)
+      );
+    }
     navigate(`/products/${p.id}`);
     closeSearchModal();
   };
@@ -317,19 +323,24 @@ const Header: React.FC = () => {
       {/* Main Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center h-16 gap-3">
 
             {/* Mobile Menu Button */}
-            <button className="md:hidden" onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); }}>
+            <button
+              className="md:hidden flex-shrink-0 p-1 -ml-1"
+              onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); }}
+              aria-label="Menu"
+            >
               <Menu className="h-6 w-6" />
             </button>
 
-            {/* Logo - Center on Desktop */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 md:static md:transform-none">
-              <Link to="/">
-                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
-              </Link>
-            </div>
+            {/* Logo - sits right after hamburger on mobile (no overlap), normal flex on desktop */}
+            <Link to="/" className="flex-shrink-0">
+              <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-8 sm:h-9 md:h-10" />
+            </Link>
+
+            {/* Mobile-only spacer pushes icons to the right edge */}
+            <div className="flex-1 md:hidden" />
 
             {/* Desktop Navigation - Left */}
             <nav className="hidden md:flex items-center space-x-6">
@@ -442,7 +453,7 @@ const Header: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-3 sm:gap-4 md:gap-5">
+            <div className="flex items-center gap-3 sm:gap-4 md:gap-5 md:ml-auto">
               <button
                 onClick={toggleLanguage}
                 className="hidden md:block text-sm font-medium text-gray-900 hover:text-gray-600 uppercase"

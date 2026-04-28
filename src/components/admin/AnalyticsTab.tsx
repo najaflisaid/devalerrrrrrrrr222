@@ -56,6 +56,21 @@ const formatDate = (raw: any) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const relativeTime = (raw: any): string => {
+  if (!raw) return '';
+  const d = raw?.toDate ? raw.toDate() : new Date(raw);
+  const diffMs = Date.now() - d.getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return `${sec}sn əvvəl`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}dq əvvəl`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `${hrs}s əvvəl`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}g əvvəl`;
+  return formatDate(raw);
+};
+
 const AnalyticsTab: React.FC = () => {
   const { i18n } = useTranslation();
   const [tab, setTab] = useState<'overview' | 'carts' | 'wishlists'>('overview');
@@ -246,10 +261,30 @@ const AnalyticsTab: React.FC = () => {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Eye />} label="Ən çox baxılan" value={topViews.length} unit="məhsul" />
-        <StatCard icon={<Search />} label="Axtarış sorğuları" value={topSearches.length} unit="unikal" />
-        <StatCard icon={<ShoppingCart />} label="Aktiv səbətlər" value={carts.length} unit="müştəri" />
-        <StatCard icon={<Heart />} label="Wishlist-lər" value={wishlists.length} unit="müştəri" />
+        <StatCard
+          icon={<Eye />}
+          label="Ümumi məhsul baxışları"
+          value={topViews.reduce((sum, v) => sum + (v.count || 0), 0)}
+          unit={`${topViews.length} unikal məhsul`}
+        />
+        <StatCard
+          icon={<Search />}
+          label="Ümumi axtarışlar"
+          value={topSearches.reduce((sum, s) => sum + (s.count || 0), 0)}
+          unit={`${topSearches.length} unikal sorğu`}
+        />
+        <StatCard
+          icon={<ShoppingCart />}
+          label="Aktiv səbətlər"
+          value={carts.length}
+          unit={`${carts.reduce((sum, c) => sum + (c.itemCount || 0), 0)} ümumi məhsul`}
+        />
+        <StatCard
+          icon={<Heart />}
+          label="Wishlist-lər"
+          value={wishlists.length}
+          unit={`${wishlists.reduce((sum, w) => sum + (w.count || 0), 0)} ümumi məhsul`}
+        />
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">
@@ -293,8 +328,13 @@ const AnalyticsTab: React.FC = () => {
                     ) : (
                       <div className="w-8 h-8 bg-gray-200 rounded" />
                     )}
-                    <span className="flex-1 truncate text-gray-900">{v.productName || v.productId}</span>
-                    <span className="text-sm font-bold text-gray-900">{v.count}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-gray-900">{v.productName || v.productId}</p>
+                      {v.lastViewed && (
+                        <p className="text-[10px] text-gray-400 truncate">son: {relativeTime(v.lastViewed)}</p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-gray-900 tabular-nums">{v.count}</span>
                     <button
                       onClick={() => handleDeleteView(v.productId, v.productName)}
                       className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -322,15 +362,20 @@ const AnalyticsTab: React.FC = () => {
                 {topSearches.map((s, i) => (
                   <li
                     key={s.query}
-                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded-lg text-sm"
+                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded-lg text-sm group"
                     data-testid={`top-search-${i}`}
                   >
                     <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
-                    <span className="flex-1 truncate text-gray-900">"{s.query}"</span>
-                    <span className="text-sm font-bold text-gray-900">{s.count}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-gray-900">"{s.query}"</p>
+                      {s.lastSearched && (
+                        <p className="text-[10px] text-gray-400">son: {relativeTime(s.lastSearched)}</p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-gray-900 tabular-nums">{s.count}</span>
                     <button
                       onClick={() => handleDeleteSearch(s.query)}
-                      className="text-gray-300 hover:text-red-600 p-1"
+                      className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Sil"
                     >
                       <Trash2 className="h-3 w-3" />
