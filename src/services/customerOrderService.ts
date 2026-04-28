@@ -41,6 +41,9 @@ export interface CustomerOrder {
   subtotal: number;
   discountAmount: number;
   totalAmount: number;
+  deliveryMethodId?: string;
+  deliveryMethodName?: string;
+  deliveryFee?: number;
   status: CustomerOrderStatus;
   paymentMethod: 'epoint';
   paymentStatus?: 'success' | 'failed' | 'unknown';

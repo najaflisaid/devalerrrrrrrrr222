@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft, Truck, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
 import { buildSignedPayment, redirectToEpoint } from '../services/epointPaymentService';
+import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 
@@ -23,7 +24,24 @@ const CartPage: React.FC = () => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhoneInput, setCustomerPhoneInput] = useState(() => localStorage.getItem('userPhone') || '');
   const [showCheckout, setShowCheckout] = useState(false);
+  const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
   const userDiscount = getUserDiscount();
+
+  useEffect(() => {
+    if (!isB2BUser) {
+      getDeliveryMethods(true).then((methods) => {
+        setDeliveryMethods(methods);
+        if (methods.length > 0 && !selectedDeliveryId) {
+          setSelectedDeliveryId(methods[0].id!);
+        }
+      }).catch(console.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isB2BUser]);
+
+  const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId);
+  const deliveryFee = selectedDelivery?.price || 0;
 
   const handleWhatsAppOrder = async () => {
     if (items.length === 0) return;
@@ -33,8 +51,14 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    // Customers must use Epoint payment - show checkout form
-    setShowCheckout(true);
+    // Toggle inline checkout panel
+    setShowCheckout((v) => !v);
+    if (!showCheckout) {
+      // scroll into view smoothly
+      setTimeout(() => {
+        document.getElementById('inline-checkout')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
   };
 
   const handleEpointCheckout = async () => {
@@ -64,6 +88,13 @@ const CartPage: React.FC = () => {
       return;
     }
 
+    if (deliveryMethods.length > 0 && !selectedDeliveryId) {
+      setErrorMessage('Zəhmət olmasa çatdırılma üsulunu seçin.');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      return;
+    }
+
     setLoading(true);
     try {
       const orderItems = items.map((item) => {
@@ -83,7 +114,8 @@ const CartPage: React.FC = () => {
 
       const subtotal = getTotalPrice();
       const discount = getDiscountAmount();
-      const total = userDiscount > 0 ? getDiscountedTotal() : subtotal;
+      const itemsTotal = userDiscount > 0 ? getDiscountedTotal() : subtotal;
+      const total = itemsTotal + deliveryFee;
 
       const { id: orderId } = await createCustomerOrder({
         userId,
@@ -96,6 +128,9 @@ const CartPage: React.FC = () => {
         subtotal,
         discountAmount: discount,
         totalAmount: total,
+        deliveryMethodId: selectedDelivery?.id || '',
+        deliveryMethodName: selectedDelivery?.name || '',
+        deliveryFee,
         paymentMethod: 'epoint',
       } as any);
 
@@ -454,7 +489,9 @@ const CartPage: React.FC = () => {
                   ? t('cart.sending')
                   : isB2BUser
                   ? t('cart.completeOrder')
-                  : 'Epoint ilə ödə'}
+                  : showCheckout
+                  ? 'Bağla'
+                  : 'Ödəniş et'}
               </button>
 
               <button
@@ -491,81 +528,155 @@ const CartPage: React.FC = () => {
       )}
 
       {showCheckout && !isB2BUser && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => !loading && setShowCheckout(false)}>
-          <div
-            className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="cart-checkout-modal"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 mb-1">Çatdırılma məlumatları</h2>
-            <p className="text-sm text-gray-500 mb-5">Sifarişi tamamlamaq üçün məlumatları doldurun.</p>
+        <div
+          id="inline-checkout"
+          className="fixed inset-x-0 bottom-0 sm:relative sm:inset-auto z-40 sm:z-auto"
+          data-testid="inline-checkout-panel"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:pb-10">
+            <div className="bg-white sm:bg-gray-50 border-t sm:border border-gray-200 sm:rounded-2xl shadow-xl sm:shadow-sm p-5 sm:p-7 max-h-[85vh] sm:max-h-none overflow-y-auto">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Sifarişi tamamla</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Çatdırılma və ödəniş üçün məlumatları doldurun</p>
+                </div>
+                <button
+                  onClick={() => setShowCheckout(false)}
+                  className="text-gray-400 hover:text-gray-700 text-sm"
+                  data-testid="inline-checkout-close"
+                >
+                  ✕
+                </button>
+              </div>
 
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
-                <input
-                  type="tel"
-                  value={customerPhoneInput}
-                  onChange={(e) => setCustomerPhoneInput(e.target.value)}
-                  placeholder="+994 XX XXX XX XX"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                  data-testid="checkout-phone-input"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
-                <textarea
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  placeholder="Şəhər, küçə, ev/mənzil"
-                  rows={2}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none"
-                  data-testid="checkout-address-input"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Qeyd (istəyə bağlı)</label>
-                <textarea
-                  value={customerNote}
-                  onChange={(e) => setCustomerNote(e.target.value)}
-                  placeholder="Əlavə qeyd..."
-                  rows={2}
-                  maxLength={500}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none"
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* LEFT: contact + address */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
+                    <input
+                      type="tel"
+                      value={customerPhoneInput}
+                      onChange={(e) => setCustomerPhoneInput(e.target.value)}
+                      placeholder="+994 XX XXX XX XX"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white"
+                      data-testid="checkout-phone-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
+                    <textarea
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      placeholder="Şəhər, küçə, ev/mənzil"
+                      rows={3}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none bg-white"
+                      data-testid="checkout-address-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Qeyd (istəyə bağlı)</label>
+                    <textarea
+                      value={customerNote}
+                      onChange={(e) => setCustomerNote(e.target.value)}
+                      placeholder="Əlavə qeyd..."
+                      rows={2}
+                      maxLength={500}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* RIGHT: delivery + total */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5" />
+                      Çatdırılma üsulu *
+                    </label>
+                    {deliveryMethods.length === 0 ? (
+                      <div className="px-3 py-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                        Hələ çatdırılma üsulu əlavə edilməyib. Admin paneldən "Çatdırılma Üsulları" hissəsindən əlavə edə bilərsiniz.
+                      </div>
+                    ) : (
+                      <div className="space-y-2" data-testid="delivery-method-list">
+                        {deliveryMethods.map((m) => {
+                          const selected = m.id === selectedDeliveryId;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setSelectedDeliveryId(m.id!)}
+                              className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                                selected
+                                  ? 'border-gray-900 bg-white ring-2 ring-gray-900/10'
+                                  : 'border-gray-200 bg-white hover:border-gray-400'
+                              }`}
+                              data-testid={`delivery-method-option-${m.id}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                        selected ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
+                                      }`}
+                                    >
+                                      {selected && <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />}
+                                    </div>
+                                    <span className="font-medium text-gray-900 text-sm">{m.name}</span>
+                                  </div>
+                                  {m.description && (
+                                    <p className="text-xs text-gray-500 mt-1 ml-6">{m.description}</p>
+                                  )}
+                                  {m.estimatedDays && (
+                                    <p className="text-[11px] text-gray-400 mt-0.5 ml-6">{m.estimatedDays}</p>
+                                  )}
+                                </div>
+                                <span className="text-sm font-semibold text-gray-900 flex-shrink-0">
+                                  {m.price > 0 ? `${m.price.toFixed(2)} ₼` : 'Pulsuz'}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-1.5 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Məhsullar</span>
+                      <span>{(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} ₼</span>
+                    </div>
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Çatdırılma</span>
+                        <span>{deliveryFee.toFixed(2)} ₼</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-1.5 border-t border-gray-100">
+                      <span className="font-semibold">Ödəniləcək məbləğ</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {((userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()) + deliveryFee).toFixed(2)} ₼
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleEpointCheckout}
+                    disabled={loading}
+                    className="w-full px-4 py-3.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                    data-testid="checkout-pay-btn"
+                  >
+                    {loading ? 'Yönləndirilir...' : 'Ödəniş et'}
+                  </button>
+                  <p className="text-[11px] text-gray-400 text-center">
+                    Ödəniş təhlükəsiz şəkildə həyata keçirilir.
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="bg-gray-50 rounded-lg p-3 mb-5 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Ödəniləcək məbləğ:</span>
-                <span className="font-bold text-gray-900 text-lg">
-                  {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} ₼
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowCheckout(false)}
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-60"
-              >
-                Ləğv et
-              </button>
-              <button
-                onClick={handleEpointCheckout}
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                data-testid="checkout-pay-btn"
-              >
-                {loading ? 'Yönləndirilir...' : 'Epoint-ə keç'}
-              </button>
-            </div>
-
-            <p className="text-[11px] text-gray-400 mt-4 text-center">
-              Ödəniş Epoint vasitəsilə təhlükəsiz şəkildə həyata keçirilir.
-            </p>
           </div>
         </div>
       )}

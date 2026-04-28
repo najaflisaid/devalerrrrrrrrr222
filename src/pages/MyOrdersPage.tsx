@@ -258,6 +258,15 @@ const MyOrdersPage: React.FC = () => {
                       {order.customerAddress}
                     </div>
                   )}
+                  {order.deliveryMethodName && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">Çatdırılma üsulu: </span>
+                      {order.deliveryMethodName}
+                      {order.deliveryFee !== undefined && order.deliveryFee > 0 && (
+                        <span className="text-gray-400"> · {order.deliveryFee.toFixed(2)} ₼</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

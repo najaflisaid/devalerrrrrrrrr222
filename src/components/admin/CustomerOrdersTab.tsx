@@ -187,6 +187,14 @@ const CustomerOrdersTab: React.FC = () => {
                 <div>
                   <p className="text-xs text-gray-400 uppercase">Çatdırılma ünvanı</p>
                   <p className="text-gray-700">{order.customerAddress}</p>
+                  {order.deliveryMethodName && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      <span className="font-medium">Üsul:</span> {order.deliveryMethodName}
+                      {order.deliveryFee !== undefined && order.deliveryFee > 0 && (
+                        <span> · {order.deliveryFee.toFixed(2)} ₼</span>
+                      )}
+                    </p>
+                  )}
                   {order.notes && (
                     <p className="text-xs text-amber-700 mt-1">Qeyd: {order.notes}</p>
                   )}

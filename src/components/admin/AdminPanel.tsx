@@ -9,6 +9,7 @@ import { userService } from '../../services/userService';
 import B2BOrdersTab from './B2BOrdersTab';
 import CustomerOrdersTab from './CustomerOrdersTab';
 import EpointSettingsTab from './EpointSettingsTab';
+import DeliveryMethodsTab from './DeliveryMethodsTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
@@ -2812,6 +2813,12 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
 
+        {activeTab === 'deliveryMethods' && (
+          <PasswordProtectedSection sectionName="deliveryMethods">
+            <DeliveryMethodsTab />
+          </PasswordProtectedSection>
+        )}
+
         {activeTab === 'b2bOrders' && (
           <PasswordProtectedSection
             sectionName="b2bOrders"
@@ -3067,5 +3074,7 @@ const AdminPanel: React.FC = () => {
     </div>
   );
 };
+
+export default AdminPanel;
 
 export default AdminPanel;
