@@ -178,6 +178,15 @@ const Footer: React.FC = () => {
                   {t('footer.emailAddress')}
                 </a>
               </li>
+              <li className="pt-2 mt-2 border-t border-gray-100">
+                <Link
+                  to="/privacy-policy"
+                  className="inline-flex items-center text-gray-600 text-sm hover:text-gray-900 transition-colors"
+                  data-testid="footer-privacy-link"
+                >
+                  Məxfilik Siyasəti
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
@@ -203,17 +212,8 @@ const Footer: React.FC = () => {
               )
             ))}
           </div>
-          <div className="text-center text-gray-600 text-sm space-y-2">
+          <div className="text-center text-gray-600 text-sm">
             <p>{settings.copyrightText}</p>
-            <p>
-              <Link
-                to="/privacy-policy"
-                className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors underline-offset-4 hover:underline"
-                data-testid="footer-privacy-link"
-              >
-                Məxfilik Siyasəti
-              </Link>
-            </p>
           </div>
         </div>
       </div>

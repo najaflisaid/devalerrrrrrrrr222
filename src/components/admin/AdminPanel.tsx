@@ -10,6 +10,7 @@ import B2BOrdersTab from './B2BOrdersTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
+import PrivacyPolicyTab from './PrivacyPolicyTab';
 import ProductBannersTab from './ProductBannersTab';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
@@ -1176,6 +1177,7 @@ const AdminPanel: React.FC = () => {
     { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
     { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
     { id: 'about', label: 'Haqqımızda', icon: Info },
+    { id: 'privacy', label: 'Məxfilik Siyasəti', icon: ShieldCheck },
     { id: 'brands', label: t('admin.brands'), icon: Tag },
     { id: 'categories', label: t('admin.categories'), icon: Tag },
     { id: 'blogs', label: t('admin.blog'), icon: FileText },
@@ -2802,6 +2804,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'homeSections' && <HomeSectionsTab />}
 
         {activeTab === 'about' && <AboutManagementTab />}
+        {activeTab === 'privacy' && <PrivacyPolicyTab />}
 
         {activeTab === 'contactMessages' && <ContactMessagesTab />}
         {activeTab === 'workers' && (
