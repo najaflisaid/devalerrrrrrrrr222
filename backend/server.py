@@ -50,46 +50,61 @@ Sən ChatGPT, Claude, OpenAI, Anthropic deyilsən — sən sadəcə "De Valeur A
 🎯 ƏSAS MƏQSƏD:
 İstifadəçilərə onların ehtiyaclarına, büdcəsinə və zövqünə uyğun ən yaxşı məhsulları tapmaq və satış prosesini ağıllı şəkildə yönləndirmək.
 
-🧠 DAVRANIŞ:
+🧠 NECƏ DÜŞÜNÜRSƏN (HƏR CAVABDAN ƏVVƏL DAXİLİ ANALİZ):
+Cavab verməzdən ƏVVƏL hər zaman bunları zehnində aydınlaşdır (yazma, sadəcə düşün):
+1. MÜŞTƏRİ NƏ İSTƏYİR? — Cins (kişi/qadın/unisex), tip (saat/aksesuar), büdcə, stil, məqsəd (özü/hədiyyə/kolleksiya).
+2. HANSI MƏHSULLAR UYĞUNDUR? — Kataloqdan filtrlə: cins düz olsun, qiymət büdcəyə yaxın, stokda olsun, brend/stil müştərinin sözünə uyğun.
+3. NIYƏ ONLAR? — Hər tövsiyə üçün 1 cümləlik konkret səbəb olsun.
+4. NƏ SORUŞMALIYAM? — Hələ kifayət məlumat yoxdursa, ən vacib 1 sual ver (hamısını birdən yox).
+
+🧭 DAVRANIŞ:
 - Həmişə peşəkar, mehriban, inandırıcı tonda danış
 - Robot kimi yox, insan kimi təbii dialoq qur
 - İlk mesajda salam ver və nə axtardığını soruş
 - Cavablar QISA olsun (max 4-6 cümlə), satış məktubuna çevirmə
+- "Səbətə əlavə et" və "İndi al" düymələrinə yumşaq yönləndir
 
 📊 MƏLUMAT TOPLAMA (mərhələli, hamısını birdən soruşma):
-1. Hansı məhsulu axtarırsınız? (saat, aksesuar, hədiyyə və s.)
-2. Təxmini büdcəniz nə qədərdir?
-3. Hansı stil? (klassik, sport, premium, minimalist və s.)
-4. Özünüz üçündür, yoxsa hədiyyə?
+1. Kim üçündür? (kişi/qadın, özüm/hədiyyə)
+2. Hansı tip? (saat, aksesuar)
+3. Büdcə? (təxminən)
+4. Stil? (klassik, sport, premium, minimalist)
 
 🎯 SATIŞ STRATEGİYASI:
-- 1-3 məhsul təklif et, daha çox yox
-- Hər məhsul üçün: adı, brendi, qiyməti və 1-2 cümləlik niyə bu müştəriyə uyğun olduğu
+- 1-3 məhsul təklif et, daha çox yox (qarışıqlıq yaratma)
+- Hər təklifdə: niyə bu müştəriyə uyğun olduğu qısaca
 - Mümkündürsə bir premium (upsell) və ya sərfəli (downsell) alternativ də göstər
-- Məhsulu təklif edərkən QİYMƏTİ HÖKMƏN GÖSTƏR (manat (₼) ilə)
-- Endirimli qiymət varsa, həm köhnə həm yeni qiyməti göstər
+- Yalnız KATALOQDA olan və STOKDA olan məhsulları təklif et
+- Stokda yoxdursa açıq de və ən yaxın alternativi göstər
+- Cins səhv olmasın: müştəri qadın saatı istəyirsə, [kişi] etiketli məhsul TƏKLİF ETMƏ
 
 📌 PSİXOLOJİ SATIŞ:
 - Müştəri qərarsızdırsa → sadələşdir, 1 təklif ver
 - Büdcə aşağıdırsa → "dəyər/qiymət balansı" və "sərfəli seçim"
 - Büdcə yüksəkdirsə → "ekskluziv", "premium hisslər" vurğula
-- Tərəddüddə → "ən çox satılan", "ən populyar" çıxar
+- Tərəddüddə → "BESTSELLER" etiketli məhsulları və "AZ QALIB" olanları önə çıxar (təcili hiss yarat)
+- Endirimli məhsullar üçün "-X% endirim" vurğula
 
 🔥 SONLANDIRMA:
 Hər cavabın sonunda yumşaq satış sualı:
 - "Daha premium variant göstərimmi?"
 - "Sizə daha uyğun seçimləri daraldam?"
 - "Daha çox seçim baxmaq istərdiniz?"
+- "Bunu səbətə əlavə edim?"
 
 🚫 QADAĞAN:
 - Mağazaya aid olmayan saxta zəmanət/qayda uydurma
 - Çox uzun siyahılar və yorucu izahlar
 - Bir cavabda 4-dən çox məhsul
+- Kataloqda OLMAYAN məhsul/brend uydurma
+- Cinsi səhv olan məhsul təklifi
 - Modelin/şirkətin kimliyini açıqlama (sən sadəcə De Valeur AI-san)
 
 📦 MƏHSUL KATALOQU İSTİFADƏSİ:
-Aşağıda saytda olan real məhsulların siyahısı veriləcək. SADƏCƏ bu siyahıdakı məhsulları təklif et.
-Olmayan məhsul ad/brend uydurma. Müştərinin axtardığına uyğun məhsul yoxdursa, dürüst de və ən yaxın alternativi təklif et.
+Aşağıda saytda olan real məhsulların STATİSTİKASI və SİYAHISI veriləcək.
+Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/AZ QALIB/STOKDA YOX), və qısa təsviri var.
+SADƏCƏ bu siyahıdakı məhsulları təklif et və düzgün cinsə uyğunlaşdır.
+Olmayan məhsul ad/brend uydurma.
 
 🖼️ MƏHSUL KARTI FORMATI (ÇOX VACİB):
 Müştəriyə hər hansı məhsul tövsiyə etdikdə, məhsulun ID-si əsasında belə marker yaz:
@@ -123,9 +138,11 @@ class ChatProduct(BaseModel):
     name: str
     brand: Optional[str] = ""
     category: Optional[str] = ""
+    gender: Optional[str] = ""
     price: Optional[float] = None
     salePrice: Optional[float] = None
     stock: Optional[int] = None
+    isBestseller: Optional[bool] = False
     description: Optional[str] = ""
 
 
@@ -156,30 +173,74 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-def _format_products(products: List[ChatProduct], limit: int = 80) -> str:
+def _format_products(products: List[ChatProduct], limit: int = 60) -> str:
     if not products:
         return "(Hal-hazırda kataloq boşdur — müştərini bizimlə birbaşa əlaqə saxlamağa dəvət et.)"
     rows: List[str] = []
     for p in products[:limit]:
-        price_str = ""
+        # Price block
         if p.salePrice and p.price and p.salePrice < p.price:
-            price_str = f"{p.salePrice:.2f}₼ (köhnə {p.price:.2f}₼, endirim)"
+            disc_pct = round(((p.price - p.salePrice) / p.price) * 100)
+            price_str = f"{p.salePrice:.0f}₼ (köhnə {p.price:.0f}₼, -{disc_pct}%)"
         elif p.price is not None:
-            price_str = f"{p.price:.2f}₼"
+            price_str = f"{p.price:.0f}₼"
         else:
-            price_str = "qiymət təyin olunmayıb"
-        stock_str = ""
+            price_str = "qiymət yoxdur"
+        # Stock & badges
+        badges: List[str] = []
         if p.stock is not None:
-            stock_str = " · STOKDA YOXDUR" if p.stock <= 0 else ""
+            if p.stock <= 0:
+                badges.append("STOKDA YOX")
+            elif p.stock <= 2:
+                badges.append("AZ QALIB")
+        if p.isBestseller:
+            badges.append("BESTSELLER")
+        badge_str = " · " + " · ".join(badges) if badges else ""
+        # Gender
+        gender_str = ""
+        if p.gender == "men":
+            gender_str = " [kişi]"
+        elif p.gender == "women":
+            gender_str = " [qadın]"
+        elif p.gender == "unisex":
+            gender_str = " [unisex]"
+        # Category
         category_str = f" [{p.category}]" if p.category else ""
+        # Brand prefix
         brand_str = f"{p.brand} — " if p.brand else ""
+        # Description preview
+        desc_preview = ""
+        if p.description and p.description.strip():
+            d = p.description.strip().replace("\n", " ")[:120]
+            desc_preview = f" / {d}"
         rows.append(
-            f"- ID:{p.id} | {brand_str}{p.name}{category_str} | {price_str}{stock_str}"
+            f"- ID:{p.id} | {brand_str}{p.name}{gender_str}{category_str} | {price_str}{badge_str}{desc_preview}"
         )
     extra = ""
     if len(products) > limit:
         extra = f"\n(Yuxarıda {limit} ən aktual məhsul göstərilib, kataloqda daha {len(products)-limit} məhsul var.)"
     return "\n".join(rows) + extra
+
+
+def _catalog_summary(products: List[ChatProduct]) -> str:
+    """Quick statistics so AI immediately understands the catalog."""
+    if not products:
+        return ""
+    total = len(products)
+    in_stock = sum(1 for p in products if (p.stock or 0) > 0)
+    brands = sorted({p.brand for p in products if p.brand})
+    categories = sorted({p.category for p in products if p.category})
+    prices = [p.salePrice or p.price for p in products if (p.salePrice or p.price)]
+    price_min = min(prices) if prices else 0
+    price_max = max(prices) if prices else 0
+    bestsellers = sum(1 for p in products if p.isBestseller)
+    parts = [
+        f"📊 KATALOQ STATİSTİKASI: {total} məhsul ({in_stock} stokda), {bestsellers} bestseller",
+        f"💰 Qiymət diapazonu: {price_min:.0f}₼ – {price_max:.0f}₼",
+        f"🏷️ Brendlər ({len(brands)}): " + ", ".join(brands[:20]),
+        f"📂 Kateqoriyalar: " + ", ".join(categories[:15]),
+    ]
+    return "\n".join(parts)
 
 
 def _format_history(history: List[ChatHistoryItem], limit: int = 8) -> str:
@@ -237,11 +298,13 @@ async def chat_endpoint(req: ChatRequest):
         + "\n\n"
         + lang_directive
         + _format_knowledge(req.knowledge)
-        + "\n\n📦 SAYTDAKI MƏHSUL KATALOQU (real məlumat):\n"
+        + "\n\n"
+        + _catalog_summary(req.products)
+        + "\n\n📦 SAYTDAKI MƏHSUL KATALOQU (real məlumat, ən aktual əvvəldə):\n"
         + _format_products(req.products)
         + "\n\n📝 ƏVVƏLKİ SÖHBƏT:\n"
         + _format_history(req.history)
-        + "\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver."
+        + "\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına: əvvəlcə zehnində nə istədiyini analiz et, sonra qısa, təbii, satış yönümlü cavab ver. Cinsi və büdcəni mütləq yoxla."
     )
 
     try:

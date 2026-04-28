@@ -29,16 +29,30 @@ const newSessionId = () => {
 };
 
 const compactProducts = (products: Product[]) => {
-  // Trim to most relevant fields & cap to keep prompt small (faster + cheaper).
-  return products.slice(0, 40).map((p) => ({
-    id: p.id,
-    name: p.name?.az || p.name?.en || p.name?.ru || '',
-    brand: p.brand || '',
-    category: p.category || '',
-    price: typeof p.price === 'number' ? p.price : null,
-    salePrice: typeof p.salePrice === 'number' ? p.salePrice : null,
-    stock: typeof p.stock === 'number' ? p.stock : null,
-  }));
+  // Filter out coming-soon / disabled, then rank for AI:
+  // 1) in-stock + bestseller, 2) in-stock, 3) out-of-stock
+  const visible = products.filter((p) => p.isEnabled !== false && !p.comingSoon);
+  const score = (p: Product) => {
+    const inStock = (p.stock ?? 0) > 0 ? 2 : 0;
+    const bs = p.isBestseller ? 1 : 0;
+    return inStock + bs;
+  };
+  const ranked = [...visible].sort((a, b) => score(b) - score(a));
+  return ranked.slice(0, 60).map((p) => {
+    const desc = p.description?.az || p.description?.en || p.description?.ru || '';
+    return {
+      id: p.id,
+      name: p.name?.az || p.name?.en || p.name?.ru || '',
+      brand: p.brand || '',
+      category: p.category || '',
+      gender: p.gender || '',
+      price: typeof p.price === 'number' ? p.price : null,
+      salePrice: typeof p.salePrice === 'number' ? p.salePrice : null,
+      stock: typeof p.stock === 'number' ? p.stock : null,
+      isBestseller: !!p.isBestseller,
+      description: desc.slice(0, 220),  // Trim to keep prompt small
+    };
+  });
 };
 
 const renderInline = (text: string) => {
