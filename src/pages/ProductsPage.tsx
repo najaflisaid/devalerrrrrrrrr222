@@ -52,8 +52,23 @@ const ProductsPage: React.FC = () => {
   };
 
   // Scroll products list back to top when any filter changes
+  // Also close filter drawer on mobile so user immediately sees the filtered products
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Close mobile filter panel after selection
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsFilterOpen(false);
+    }
+    // Scroll window to top — use requestAnimationFrame to ensure DOM update first
+    requestAnimationFrame(() => {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+      // Fallback for some mobile browsers
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   };
 
   // Handler for category change - auto-resets incompatible brand/gender so products are always visible
@@ -429,6 +444,25 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Floating filter button (mobile only) — always visible, follows the user */}
+      <button
+        onClick={() => {
+          setIsFilterOpen((open) => !open);
+          if (!isFilterOpen) {
+            // When opening, scroll to top so filters are immediately visible
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        aria-label={isFilterOpen ? t('common.closeFilters') : t('common.filter')}
+        data-testid="mobile-floating-filter-btn"
+        className="lg:hidden fixed bottom-5 left-5 z-[9997] flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-amber-400/20 active:scale-95 transition-all"
+      >
+        <Filter className="h-4 w-4" />
+        <span className="text-[11px] font-semibold tracking-wide">
+          {isFilterOpen ? t('common.closeFilters') : t('common.filter')}
+        </span>
+      </button>
+
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:hidden mb-6">
           <button

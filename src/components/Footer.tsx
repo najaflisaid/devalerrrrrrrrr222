@@ -47,8 +47,8 @@ const Footer: React.FC = () => {
   const loadCategoriesAndBrands = async () => {
     try {
       const products = await productService.getAll();
-      const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean).slice(0, 6);
-      const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean).slice(0, 6);
+      const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+      const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
       setCategories(uniqueCategories);
       setBrands(uniqueBrands);
     } catch (error) {
@@ -122,7 +122,7 @@ const Footer: React.FC = () => {
 
           <div>
             <h4 className="font-semibold mb-4">{t('header.categories')}</h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-72 overflow-y-auto pr-2">
               {categories.map((category) => (
                 <li key={category}>
                   <button
@@ -138,7 +138,7 @@ const Footer: React.FC = () => {
 
           <div>
             <h4 className="font-semibold mb-4">{t('header.brands')}</h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-72 overflow-y-auto pr-2">
               {brands.map((brand) => (
                 <li key={brand}>
                   <button

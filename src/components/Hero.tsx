@@ -68,7 +68,7 @@ const Hero: React.FC = () => {
   return (
     <section
       ref={heroRef}
-      className="relative w-full bg-white overflow-hidden"
+      className="group relative w-full bg-white overflow-hidden"
       data-testid="dv-hero"
     >
       {/* Ambient gold orbs */}
@@ -127,25 +127,25 @@ const Hero: React.FC = () => {
           aria-hidden="true"
         />
 
-        {/* Nav arrows */}
+        {/* Nav arrows — appear on hover (desktop) */}
         {slides.length > 1 && (
           <>
             <button
               onClick={prevSlide}
-              className="hidden sm:flex absolute left-5 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center border border-white/30 hover:border-[#D4AF37] text-white hover:text-[#D4AF37] transition-all duration-300 z-20 rounded-full backdrop-blur-sm bg-black/20"
+              className="hidden sm:flex absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center border border-white/30 hover:border-[#D4AF37] text-white hover:text-[#D4AF37] transition-all duration-300 z-20 rounded-full backdrop-blur-sm bg-black/30 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
               aria-label="Previous slide"
               data-testid="dv-hero-prev"
             >
-              <ChevronLeft className="h-5 w-5" strokeWidth={1.3} />
+              <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
             </button>
 
             <button
               onClick={nextSlide}
-              className="hidden sm:flex absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center border border-white/30 hover:border-[#D4AF37] text-white hover:text-[#D4AF37] transition-all duration-300 z-20 rounded-full backdrop-blur-sm bg-black/20"
+              className="hidden sm:flex absolute right-5 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center border border-white/30 hover:border-[#D4AF37] text-white hover:text-[#D4AF37] transition-all duration-300 z-20 rounded-full backdrop-blur-sm bg-black/30 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
               aria-label="Next slide"
               data-testid="dv-hero-next"
             >
-              <ChevronRight className="h-5 w-5" strokeWidth={1.3} />
+              <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
             </button>
           </>
         )}

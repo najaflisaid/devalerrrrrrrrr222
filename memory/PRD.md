@@ -71,6 +71,15 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
 8. **"Sifarişlərim" linki Header-də** (desktop + mobil)
 9. **Admin Panel — `Müştəri Sifarişləri` tabı** (`CustomerOrdersTab.tsx`): bütün sifarişlər, status idarəetməsi, axtarış
 
+### 2026-01-29 — Mobile UX iteration
+1. **Sticky/floating mobil filter düyməsi** (`ProductsPage.tsx`): bottom-left fixed `Filtr` düyməsi (lg:hidden) — istifadəçi harada olursa olsun bir tıklamayla filterə çatır. Açanda avtomatik yuxarıya scroll edir.
+2. **Mobil filter scroll-to-top fix** (`ProductsPage.tsx` `scrollToTop`): seçimdən sonra mobildə panel bağlanır + `requestAnimationFrame` + `documentElement.scrollTop = 0` fallback (Safari/Chrome mobile).
+3. **Gold-line sticky-hover düzəlişi** (`index.css` `.dv-menu-item`): `@media (hover: hover) and (pointer: fine)` ilə wrap edildi — mobilde tap-dan sonra qızılı sol-xətt artıq yapışmır.
+4. **Footer tam brendlər/kateqoriyalar** (`Footer.tsx`): `slice(0, 6)` limit silindi, `max-h-72 overflow-y-auto` əlavə edildi.
+5. **AI chat launcher kiçildildi** (`AiChatWidget.tsx`): logo bubble 40→28px, padding və font ölçüsü azaldıldı.
+6. **Banner hover arrows** (`Hero.tsx`): `<section>`-a `group` əlavə, ox düymələri `opacity-0 group-hover:opacity-100` + slide animasiyası ilə yalnız hover-da görünür.
+7. **Best sellers mobil swipe** (`index.css`): `@media (max-width: 767px)` altında marquee animasiyası disable, `overflow-x: auto` + `scroll-snap-type: x mandatory` + `-webkit-overflow-scrolling: touch` — barmaqla rahat swipe.
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi
