@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
-import { getAiKnowledge, type AiKnowledge } from '../services/aiKnowledgeService';
+import { getAiKnowledge, subscribeChatEnabled, type AiKnowledge } from '../services/aiKnowledgeService';
 import { sendChatMessage } from '../services/aiChatService';
 import type { Product } from '../types';
 
@@ -284,6 +284,7 @@ const AiChatWidget: React.FC = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(true);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
@@ -300,9 +301,11 @@ const AiChatWidget: React.FC = () => {
     navigate(`/product/${productId}`);
   };
 
-  // Hide on admin / b2b-login / workers / payment routes
+  // Hide on admin / b2b-login / workers / payment routes,
+  // OR when admin has globally disabled the chat from the AI Knowledge tab.
   const hidden = useMemo(() => {
     const p = location.pathname;
+    if (!chatEnabled) return true;
     return (
       p.startsWith('/admin') ||
       p.startsWith('/workers') ||
@@ -310,7 +313,17 @@ const AiChatWidget: React.FC = () => {
       p.startsWith('/admin-login') ||
       p.startsWith('/b2b-request')
     );
-  }, [location.pathname]);
+  }, [location.pathname, chatEnabled]);
+
+  // Live-subscribe to the chat-visibility flag. When admin toggles it
+  // off, every customer sees the widget disappear within ~1s.
+  useEffect(() => {
+    const unsub = subscribeChatEnabled((flag) => {
+      setChatEnabled(flag);
+      if (!flag) setOpen(false);
+    });
+    return () => unsub();
+  }, []);
 
   // Init: load session id + history from localStorage
   useEffect(() => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2, MessageCircle, Power } from 'lucide-react';
 import {
   getAiKnowledge,
   saveAiKnowledge,
@@ -102,6 +102,24 @@ const AiKnowledgeTab: React.FC = () => {
   const update = (key: keyof AiKnowledge, value: string) =>
     setData((prev) => ({ ...prev, [key]: value }));
 
+  const toggleEnabled = async () => {
+    const next = !data.enabled;
+    const optimistic: AiKnowledge = { ...data, enabled: next };
+    setData(optimistic);
+    setSaving(true);
+    try {
+      await saveAiKnowledge(optimistic);
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 3500);
+    } catch (e) {
+      // revert on error
+      setData((prev) => ({ ...prev, enabled: !next }));
+      alert('Vəziyyət dəyişdirilə bilmədi: ' + (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const totalChars = Object.values(data)
     .filter((v): v is string => typeof v === 'string')
     .reduce((sum, v) => sum + v.length, 0);
@@ -149,6 +167,52 @@ const AiKnowledgeTab: React.FC = () => {
             Yadda saxla
           </button>
         </div>
+      </div>
+
+      <div
+        className={`rounded-xl p-4 border flex items-center justify-between gap-4 transition-colors ${
+          data.enabled
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-rose-50 border-rose-200'
+        }`}
+        data-testid="ai-chat-visibility-card"
+      >
+        <div className="flex items-start gap-3 min-w-0">
+          <div
+            className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              data.enabled ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+            }`}
+          >
+            <Power className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 text-sm">
+              Sayt-da AI Chat görünüşü
+            </p>
+            <p className="text-xs text-gray-600 leading-relaxed mt-0.5">
+              {data.enabled
+                ? 'Hal-hazırda AÇIQDIR — müştərilər saytın sağ-aşağı küncündə chat düyməsini görür.'
+                : 'Hal-hazırda BAĞLIDIR — müştərilər heç bir chat düyməsi görmür.'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleEnabled}
+          disabled={saving}
+          role="switch"
+          aria-checked={data.enabled}
+          className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-60 ${
+            data.enabled ? 'bg-emerald-500' : 'bg-gray-300'
+          }`}
+          data-testid="ai-chat-visibility-toggle"
+        >
+          <span
+            className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              data.enabled ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-3">

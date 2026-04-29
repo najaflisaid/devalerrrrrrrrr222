@@ -1,7 +1,8 @@
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface AiKnowledge {
+  enabled: boolean;          // Chat widget visible on the site
   aiInstructions: string;    // AI davranış komandaları (admin-in xüsusi göstərişləri)
   companyInfo: string;       // Şirkət, missiya, tarix
   brandsInfo: string;        // Brendlər haqqında (hansı ölkə, tarix)
@@ -14,6 +15,7 @@ export interface AiKnowledge {
 const DOC_REF = doc(db, 'ai_knowledge', 'main');
 
 export const EMPTY_KNOWLEDGE: AiKnowledge = {
+  enabled: true,
   aiInstructions: '',
   companyInfo: '',
   brandsInfo: '',
@@ -28,6 +30,8 @@ export const getAiKnowledge = async (): Promise<AiKnowledge> => {
     if (!snap.exists()) return { ...EMPTY_KNOWLEDGE };
     const d = snap.data() as any;
     return {
+      // default to true if the field is missing (backward compat)
+      enabled: d.enabled === false ? false : true,
       aiInstructions: d.aiInstructions || '',
       companyInfo: d.companyInfo || '',
       brandsInfo: d.brandsInfo || '',
@@ -49,5 +53,30 @@ export const saveAiKnowledge = async (data: AiKnowledge): Promise<void> => {
       updatedAt: Timestamp.now(),
     },
     { merge: false }
+  );
+};
+
+/**
+ * Live subscription to the chat-enabled flag.
+ * Used by the public chat widget to hide / show itself in real time
+ * when the admin toggles it.
+ */
+export const subscribeChatEnabled = (
+  cb: (enabled: boolean) => void
+): (() => void) => {
+  return onSnapshot(
+    DOC_REF,
+    (snap) => {
+      if (!snap.exists()) {
+        cb(true);
+        return;
+      }
+      const d = snap.data() as any;
+      cb(d.enabled === false ? false : true);
+    },
+    (err) => {
+      console.warn('subscribeChatEnabled failed:', err);
+      cb(true);
+    }
   );
 };
