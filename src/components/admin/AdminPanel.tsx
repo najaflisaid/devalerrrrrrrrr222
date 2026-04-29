@@ -96,6 +96,11 @@ const AdminPanel: React.FC = () => {
   // Modern browsers block audio until first user gesture — once any tab is
   // clicked, audioUnlockedRef will already be true via the listener below.
   const playOrderSound = () => {
+    // Respect admin preference (sound toggle in CustomerOrdersTab)
+    try {
+      const pref = localStorage.getItem('admin_sound_notifications_enabled');
+      if (pref === 'false') return;
+    } catch { /* ignore */ }
     try {
       const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!Ctx) return;

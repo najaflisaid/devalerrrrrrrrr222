@@ -947,25 +947,22 @@ body.dv-home-active select {
 .dv-bs-track-right { animation: dv-marquee-right 75s linear infinite; }
 .dv-bs-row:hover .dv-bs-track { animation-play-state: paused; }
 
-/* Mobile: disable marquee animation, allow finger swipe (horizontal scroll with snap) */
+/* Mobile: keep auto marquee animation AND allow user to swipe left/right.
+   Both work together — the animation translates the inner track while the
+   container is also scrollable horizontally. Touch interaction takes
+   precedence (animation visually continues underneath). */
 @media (max-width: 767px) {
   .dv-bs-row {
     overflow-x: auto;
     overflow-y: hidden;
-    scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   .dv-bs-row::-webkit-scrollbar { display: none; }
-  .dv-bs-track,
-  .dv-bs-track-left,
-  .dv-bs-track-right {
-    animation: none !important;
-    transform: none !important;
-    width: max-content;
-  }
-  .dv-bs-track > * {
-    scroll-snap-align: start;
+  /* Pause marquee while the user is actively interacting (touch-active state) */
+  .dv-bs-row:active .dv-bs-track,
+  .dv-bs-row:focus-within .dv-bs-track {
+    animation-play-state: paused;
   }
 }
 

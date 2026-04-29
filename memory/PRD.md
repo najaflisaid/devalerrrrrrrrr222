@@ -106,6 +106,31 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
 4. **Mobil header → ProductsPage navigation scroll-to-top** (`Header.tsx`): mobil burger-menyudan brend/kateqoriya seçilərkən `closeMobileMenu()` sonrası `window.scrollTo(0,0)` əlavə edildi — istifadəçi yeni filterin nəticələrini başdan görür.
 5. **Floating filter button — scroll-aware** (`ProductsPage.tsx`): `showFloatingFilter` state + scroll listener. `scrollY > 240px` olanda göstərilir, üst inline "Filtr" düyməsi görünəndə gizlənir (opacity-0 + pointer-events-none + transform-3px slide animasiyası).
 
+### 2026-01-30 (Part 3) — Status revert, profile minimisation, marquee+swipe combo
+1. **Yeni status `accepted`** (`customerOrderService.ts`):
+   - `pending_payment / accepted / cancelled / payment_failed` (Ödənişlə bağlı)
+   - `preparing / courier_handover (Hazırdır) / on_the_way (Çatdırılma xidmətində) / delivered` (Məhsulla bağlı)
+   - Etiketlər: `Ödəniş gözləyir / Qəbul olundu / Hazırlanır / Hazırdır / Çatdırılma xidmətində / Təhvil verildi / Ləğv olundu`
+2. **Admin CustomerOrdersTab — köhnə tək-status üslubu bərpa edildi** (`CustomerOrdersTab.tsx`):
+   - Tək status badge + tək dropdown
+   - Dropdown `<optgroup>` ilə qruplandırılıb: "Ödənişlə bağlı" və "Məhsulla bağlı"
+   - **Səs aç/bağla toggle** (Volume2/VolumeX) əlavə edildi, `localStorage.admin_sound_notifications_enabled` ilə persistent.
+   - `playOrderSound` (AdminPanel.tsx) preference-i oxuyur — `false` olanda səs çalmır.
+3. **MyOrdersPage minimalist redesign** (`MyOrdersPage.tsx`):
+   - Statistika kartı **silindi**
+   - "MAISON · DE VALEUR" hero **silindi**
+   - Trust kartı ("100% etibarlı çatdırılma") **silindi**
+   - Sidebar yalnız: avatar + Ad + Email + Telefon (ünvan **göstərilmir**)
+   - **Şəxsi endirim kartı**: admin paneldən təyin edilən `discountPercentage` aktiv (etibarlı + istifadə olunmayıb) olduqda gold-frame kartında %-lə göstərilir.
+   - **Sifariş siyahısı kompakt**: tək sətir kart (#, tarix, məhsul sayı, cəmi). Üzərinə basanda açılır — timeline, məhsullar, çatdırılma üsulu, imza, təhvil bildirişi.
+4. **Mobile bestsellers — marquee + swipe combo** (`index.css`):
+   - Mobildə `dv-marquee-left/right` animasiyası **bərpa edildi**.
+   - `overflow-x: auto` + `-webkit-overflow-scrolling: touch` saxlanıldı.
+   - `:active` / `:focus-within` zamanı animation-play-state paused — istifadəçi swipe etdikdə hərəkət dayanır.
+5. **Mobile filter button — aktiv filter sayğacı** (`ProductsPage.tsx`):
+   - `activeFilterCount` 8 fərqli filtri sayır (kateqoriya, brend, cinsiyyət, endirim, comingSoon, stok, qiymət range, axtarış).
+   - `> 0` olanda gold badge `Filtr • N` görünür (yalnız panel bağlı vəziyyətdə).
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi

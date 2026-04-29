@@ -15,6 +15,7 @@ import { db } from '../lib/firebase';
 export type CustomerOrderStatus =
   | 'pending_payment'
   | 'payment_failed'
+  | 'accepted'
   | 'preparing'
   | 'courier_handover'
   | 'on_the_way'
@@ -151,9 +152,10 @@ export const deleteCustomerOrder = async (orderId: string): Promise<void> => {
 export const STATUS_LABELS_AZ: Record<CustomerOrderStatus, string> = {
   pending_payment: 'Ödəniş gözləyir',
   payment_failed: 'Ödəniş uğursuz',
+  accepted: 'Qəbul olundu',
   preparing: 'Hazırlanır',
-  courier_handover: 'Kuryerə verildi',
-  on_the_way: 'Yoldadır',
+  courier_handover: 'Hazırdır',
+  on_the_way: 'Çatdırılma xidmətində',
   delivered: 'Təhvil verildi',
-  cancelled: 'Ləğv edildi',
+  cancelled: 'Ləğv olundu',
 };

@@ -447,6 +447,17 @@ const ProductsPage: React.FC = () => {
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
   const brands = ['all', ...Array.from(new Set(products.map(p => p.brand)))];
 
+  // Count of currently-active filters (anything that narrows results from "all")
+  const activeFilterCount =
+    (selectedCategory !== 'all' ? 1 : 0) +
+    (selectedBrand !== 'all' ? 1 : 0) +
+    (selectedGender !== 'all' ? 1 : 0) +
+    (discountFilter === 'discounted' ? 1 : 0) +
+    (comingSoonFilter === 'comingSoon' ? 1 : 0) +
+    (stockFilter === 'inStock' ? 1 : 0) +
+    (priceInitialized && (currentMinPrice !== minPrice || currentMaxPrice !== maxPrice) ? 1 : 0) +
+    (searchQuery ? 1 : 0);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -478,6 +489,14 @@ const ProductsPage: React.FC = () => {
         <span className="text-[11px] font-semibold tracking-wide">
           {isFilterOpen ? t('common.closeFilters') : t('common.filter')}
         </span>
+        {activeFilterCount > 0 && !isFilterOpen && (
+          <span
+            className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#D4AF37] text-gray-900 text-[10px] font-bold rounded-full"
+            data-testid="mobile-floating-filter-count"
+          >
+            {activeFilterCount}
+          </span>
+        )}
       </button>
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
