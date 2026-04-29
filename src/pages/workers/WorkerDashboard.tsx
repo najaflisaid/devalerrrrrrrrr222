@@ -351,7 +351,7 @@ const WorkerDashboard: React.FC = () => {
             <LeaderboardSection
               items={branchItems}
               currentId={worker.id}
-              title={`Filialda reytinqlər ( ${worker.branch} )`}
+              title={`Filialda reytinqlər - ${worker.branch}`}
               subtitle="Filial daxilində aylıq performans əmsalına görə sıralanma"
               testId="branch-workers-leaderboard"
               hideMyRank

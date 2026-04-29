@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -28,6 +28,7 @@ import { siteConfirm } from '../ui/NotificationProvider';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import PasswordsManagementTab from './PasswordsManagementTab';
+import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import type { Product, User, B2BRequest, Brand } from '../../types';
@@ -1221,6 +1222,7 @@ const AdminPanel: React.FC = () => {
     { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
     { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
     { id: 'analytics', label: 'Analitika', icon: BarChart3 },
+    { id: 'promoCodes', label: 'Promo Kodlar', icon: Ticket },
     { id: 'reviews', label: 'Müştəri Rəyləri', icon: MessageSquare },
     { id: 'aiKnowledge', label: 'AI Bilik Bazası', icon: Sparkles },
     { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
