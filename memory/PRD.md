@@ -153,6 +153,17 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
    - **"Səsi sınaqdan keçir" düyməsi**: tək kliklə səsi yoxlamaq üçün; preference-dən asılı olmadan səs çalır.
    - Bu həm WebAudio-nu unlock edir (gesture-da çağırılır), həm də səs sınağı verir.
 
+### 2026-01-30 (Part 6) — Worker UX text + analytics phone
+1. **WorkerLogin layout** (`WorkerLogin.tsx`): "Giriş edin" mətni logo altından çıxarıldı, email field-in **üstünə** köçürüldü. Logo təmiz qalır.
+2. **Sales graph titles** — il referansı silindi:
+   - `WorkerDashboard.tsx`: "{year} ili üzrə aylıq satış qrafikim" → **"Satış qrafikiniz"**
+   - `MonthlySalesChart.tsx`: "{year} - Yanvar — Dekabr" → **"Yanvar — Dekabr"**
+3. **ConfidentialityNotice — istifadəçi mətni** (`WorkerDashboard.tsx`): istifadəçinin verdiyi rəsmi mətnlə tam əvəzləndi:
+   - "Hörmətli əməkdaş," başlanğıcı, "kommersiya sirri ... məxfilik rejiminə tabedir", "Diqqət!", "qəti surətdə qadağandır", "intizam tənbehi, maddi və qanunvericiliklə nəzərdə tutulmuş hüquqi məsuliyyətlər", "Anladım və qəbul edirəm" təsdiq mətni — bütün cümlələr orijinal mətnə uyğun.
+4. **Müştəri telefonu analitikada** (`AnalyticsTab.tsx` + `CartContext.tsx` + `WishlistContext.tsx` + `types`):
+   - `customer_carts` və `customer_wishlists` Firestore mirror-larında **`userPhone`** field əlavə edildi (`localStorage.userPhone`-dan oxunur)
+   - AnalyticsTab "Müştəri Səbətləri" və "Wishlist" kartlarında ad+email-in **altında telefon** göstərilir.
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi

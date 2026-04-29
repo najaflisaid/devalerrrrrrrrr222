@@ -58,6 +58,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userId && userRole === 'customer') {
       const userName = localStorage.getItem('userName') || '';
       const userEmail = localStorage.getItem('userEmail') || '';
+      const userPhone = localStorage.getItem('userPhone') || '';
       const compactItems = items.map((it) => ({
         productId: it.product.id,
         productName: it.product.name?.az || it.product.name?.en || '',
@@ -71,6 +72,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userId,
           userName,
           userEmail,
+          userPhone,
           items: compactItems,
           itemCount: items.reduce((s, it) => s + it.quantity, 0),
           updatedAt: Timestamp.now(),

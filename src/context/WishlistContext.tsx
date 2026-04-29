@@ -42,12 +42,14 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (userId && userRole === 'customer') {
       const userName = localStorage.getItem('userName') || '';
       const userEmail = localStorage.getItem('userEmail') || '';
+      const userPhone = localStorage.getItem('userPhone') || '';
       setDoc(
         doc(db, 'customer_wishlists', userId),
         {
           userId,
           userName,
           userEmail,
+          userPhone,
           productIds,
           count: productIds.length,
           updatedAt: Timestamp.now(),

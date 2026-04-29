@@ -881,7 +881,7 @@ const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | und
           <div className="text-left">
             <h3 className="font-playfair text-xl text-black">Satışlarım</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              {new Date().getFullYear()} ili üzrə aylıq satış qrafikim
+              Satış qrafikiniz
             </p>
           </div>
         </div>
@@ -925,23 +925,25 @@ const ConfidentialityNotice: React.FC<{ workerId: string }> = ({ workerId }) => 
         </div>
 
         <div className="p-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+          <p>Hörmətli əməkdaş,</p>
           <p>
-            Hörmətli əməkdaş, sizin şəxsi panelinizdə əks olunan bütün məlumatlar — o cümlədən
+            Sizin şəxsi panelinizdə əks olunan bütün məlumatlar — o cümlədən
             <strong> aylıq satış göstəriciləri, hədəflər, performans reytinqi, mükafat və cərimə tarixçəsi, müraciətlər və daxili bildirişlər </strong>
-            — şirkətin <strong>kommersiya sirri</strong> və <strong>konfidensial məlumat</strong> kimi qiymətləndirilir.
+            — şirkətin <strong>kommersiya sirri</strong> hesab olunur və <strong>məxfilik rejiminə</strong> ciddi şəkildə tabedir.
           </p>
           <div className="bg-amber-50/60 border border-[#D4AF37]/30 rounded-lg p-4 space-y-2">
             <p className="font-semibold text-[#8a6d10] flex items-center gap-1.5">
-              <AlertOctagon className="h-4 w-4" /> Diqqət
+              <AlertOctagon className="h-4 w-4" /> Diqqət!
             </p>
-            <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-700">
-              <li>Bu məlumatları üçüncü şəxslərə (digər əməkdaşlar daxil olmaqla) göstərmək, paylaşmaq, ekran şəkli çıxarıb yaymaq və ya hər hansı formada açıqlamaq <strong>qadağandır</strong>.</li>
-              <li>Bu öhdəliyin pozulması imzaladığınız <strong>əmək müqaviləsinə</strong> və konfidensiallıq haqqında daxili qaydalara əsasən <strong>intizam, maddi və qanunvericiliklə nəzərdə tutulan digər məsuliyyət</strong> doğurur.</li>
-              <li>Profilinizə yalnız şəxsən daxil olmalısınız; giriş məlumatlarınızı heç kimlə paylaşmayın.</li>
-            </ul>
+            <p className="text-[13px] text-gray-700">
+              Bu məlumatların <strong>üçüncü şəxsə təqdim edilməsi</strong>, paylaşılması, ekran görüntülərinin çıxarılaraq yayılması və ya istənilən formada açıqlanması <strong>qəti surətdə qadağandır</strong>. Göstərilən tələblərin pozulması imzaladığınız <strong>əmək müqaviləsinə</strong> və qüvvədə olan daxili konfidensiallıq qaydalarına əsasən <strong>intizam tənbehi, maddi və qanunvericiliklə nəzərdə tutulmuş digər hüquqi məsuliyyətlərə</strong> səbəb olacaqdır.
+            </p>
           </div>
+          <p className="text-[13px] text-gray-700">
+            Hesabınıza <strong>yalnız şəxsən daxil olmalı</strong>, giriş məlumatlarınızı hər hansı şəxsə ötürməməli və onların təhlükəsizliyini təmin etməlisiniz.
+          </p>
           <p className="text-[12px] text-gray-500">
-            "Anladım və qəbul edirəm" düyməsinə basmaqla yuxarıda göstərilən şərtlərlə tanış olduğunuzu və onlara əməl etməyi öhdəyə götürdüyünüzü təsdiq edirsiniz.
+            <strong>"Anladım və qəbul edirəm"</strong> düyməsini klikləməklə yuxarıda qeyd olunan şərtlərlə tanış olduğunuzu, onları tam şəkildə anladığınızı və şərtsiz əməl etməyi öhdənizə götürdüyünüzü təsdiq etmiş olursunuz.
           </p>
         </div>
 

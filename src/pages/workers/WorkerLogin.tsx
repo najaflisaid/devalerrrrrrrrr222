@@ -39,12 +39,9 @@ const WorkerLogin: React.FC = () => {
           <img
             src="https://i.hizliresim.com/tmu65g6.png"
             alt="De Valeur"
-            className="h-12 sm:h-14 mx-auto mb-3 object-contain"
+            className="h-12 sm:h-14 mx-auto object-contain"
             data-testid="worker-login-logo"
           />
-          <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 font-medium">
-            Giriş edin
-          </p>
         </div>
 
         {error && (
@@ -55,6 +52,12 @@ const WorkerLogin: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="text-center mb-1">
+            <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 font-medium">
+              Giriş edin
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1.5">Email</label>
             <div className="relative">

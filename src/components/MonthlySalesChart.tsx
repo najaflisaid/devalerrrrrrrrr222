@@ -115,7 +115,7 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
         <div>
           <h3 className="font-playfair text-lg sm:text-xl text-black">{title}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            {mode === 'currentYear' ? `${new Date().getFullYear()} - Yanvar — Dekabr` : `Son ${monthsCount} ayın satış göstəriciləri`}
+            {mode === 'currentYear' ? 'Yanvar — Dekabr' : `Son ${monthsCount} ayın satış göstəriciləri`}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs">

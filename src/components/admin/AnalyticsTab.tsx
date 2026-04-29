@@ -36,6 +36,7 @@ interface CustomerCart {
   userId: string;
   userName: string;
   userEmail: string;
+  userPhone?: string;
   items: { productId: string; productName: string; image: string; quantity: number; price: number }[];
   itemCount: number;
   updatedAt?: any;
@@ -46,6 +47,7 @@ interface CustomerWishlist {
   userId: string;
   userName: string;
   userEmail: string;
+  userPhone?: string;
   productIds: string[];
   count: number;
   updatedAt?: any;
@@ -440,6 +442,9 @@ const AnalyticsTab: React.FC = () => {
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">{c.userName || 'Adsız müştəri'}</p>
                     <p className="text-xs text-gray-500 truncate">{c.userEmail}</p>
+                    {c.userPhone && (
+                      <p className="text-xs text-gray-500" data-testid={`cart-phone-${c.id}`}>{c.userPhone}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right text-xs">
@@ -515,6 +520,9 @@ const AnalyticsTab: React.FC = () => {
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">{w.userName || 'Adsız müştəri'}</p>
                     <p className="text-xs text-gray-500 truncate">{w.userEmail}</p>
+                    {w.userPhone && (
+                      <p className="text-xs text-gray-500" data-testid={`wishlist-phone-${w.id}`}>{w.userPhone}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right text-xs">
