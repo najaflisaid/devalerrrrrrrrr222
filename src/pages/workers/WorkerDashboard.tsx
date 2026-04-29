@@ -581,10 +581,29 @@ const LeaderboardSection: React.FC<{
         {myRank && !hideMyRank && (
           <div
             data-testid={`${testId}-my-rank`}
-            className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border-2 border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] to-white shadow-sm"
+            className="relative inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] via-white to-[#FFF8E5] shadow-[0_4px_20px_-4px_rgba(212,175,55,0.45)] overflow-hidden"
           >
-            <span className="text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">Sənin yerin</span>
-            <span className="font-playfair text-3xl font-bold text-[#8a6d10] leading-none">{myRank.rank}</span>
+            {/* Subtle gold shimmer underlay */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-50"
+              style={{
+                background:
+                  'radial-gradient(circle at 30% 20%, rgba(212,175,55,0.18), transparent 60%)',
+              }}
+            />
+            {/* Corner gold tick — minimal flourish */}
+            <span
+              aria-hidden="true"
+              className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
+            />
+            <Sparkles className="relative h-3.5 w-3.5 text-[#D4AF37]" />
+            <span className="relative text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">
+              Sənin yerin
+            </span>
+            <span className="relative font-playfair text-3xl font-bold text-[#8a6d10] leading-none">
+              {myRank.rank}
+            </span>
           </div>
         )}
       </div>
@@ -703,32 +722,48 @@ const BranchLeaderboardSection: React.FC<{ items: BranchLeaderboardEntry[]; curr
   );
 };
 
-// ─── Trainings section
+// ─── Trainings section (collapsible — header click expands)
 const TrainingsSection: React.FC<{ items: Training[] }> = ({ items }) => {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm" data-testid="trainings-section">
-      <div className="flex items-center gap-2 mb-3">
-        <GraduationCap className="h-5 w-5 text-[#D4AF37]" />
-        <h3 className="font-playfair text-xl text-black">Təlim Materialları</h3>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-sm text-gray-400">Hələ təlim materialı əlavə olunmayıb.</p>
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {items.map(t => (
-            <li key={t.id} className="border border-gray-200 rounded-xl p-4 hover:border-[#D4AF37]/60 hover:bg-[#FFF8E5]/30 transition-colors" data-testid={`training-${t.id}`}>
-              <a href={t.url} target="_blank" rel="noopener noreferrer" className="block">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-black truncate">{t.title}</p>
-                    {t.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{t.description}</p>}
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-[#D4AF37] shrink-0 mt-0.5" />
-                </div>
-              </a>
-            </li>
-          ))}
-        </ul>
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid="trainings-section">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 p-6 text-left hover:bg-gray-50/60 transition-colors"
+        data-testid="trainings-toggle"
+      >
+        <div className="flex items-center gap-2">
+          <GraduationCap className="h-5 w-5 text-[#D4AF37]" />
+          <h3 className="font-playfair text-xl text-black">Təlim Materialları</h3>
+          <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold ml-1">
+            {items.length}
+          </span>
+        </div>
+        {open ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
+      </button>
+      {open && (
+        <div className="px-6 pb-6 -mt-1">
+          {items.length === 0 ? (
+            <p className="text-sm text-gray-400">Hələ təlim materialı əlavə olunmayıb.</p>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {items.map(t => (
+                <li key={t.id} className="border border-gray-200 rounded-xl p-4 hover:border-[#D4AF37]/60 hover:bg-[#FFF8E5]/30 transition-colors" data-testid={`training-${t.id}`}>
+                  <a href={t.url} target="_blank" rel="noopener noreferrer" className="block">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-black truncate">{t.title}</p>
+                        {t.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{t.description}</p>}
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-[#D4AF37] shrink-0 mt-0.5" />
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </section>
   );

@@ -131,6 +131,16 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
    - `activeFilterCount` 8 fərqli filtri sayır (kateqoriya, brend, cinsiyyət, endirim, comingSoon, stok, qiymət range, axtarış).
    - `> 0` olanda gold badge `Filtr • N` görünür (yalnız panel bağlı vəziyyətdə).
 
+### 2026-01-30 (Part 4) — Worker login minimal & dashboard polish
+1. **WorkerLogin.tsx**: "De Valeur · İşçi Paneli" eyebrow + "Xoş gəldiniz" + "Hesabınızla daxil olun" silindi. Yerinə **De Valeur logosu** (h-12/h-14) + altında kiçik `uppercase tracking-[0.35em] "Giriş edin"` mətni.
+2. **WorkerDashboard TrainingsSection — collapsible**: 6-padding kartdan başlığa kliklənən tam toggle button. Sayğac (material sayı) və ChevronUp/Down ilə. Default bağlı — istifadəçi açanda materiallar görünür → uzun sıra səhifəni uzatmır.
+3. **"Sənin yerin" badge — gosterişli minimal**: 
+   - Sparkles ikonu əlavə edildi
+   - Gold radial-gradient shimmer underlay (opacity 50)
+   - Top-right kiçik gold nöqtə (corner flourish)
+   - Soft gold shadow `0_4px_20px_-4px_rgba(212,175,55,0.45)`
+   - Border ikiqat → tək (təmizlənmiş)
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi

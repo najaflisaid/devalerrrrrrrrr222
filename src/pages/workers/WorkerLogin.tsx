@@ -36,15 +36,15 @@ const WorkerLogin: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
         <div className="text-center mb-7">
-          <div className="inline-flex items-center mb-3">
-            <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
-            <span className="mx-3 text-[10px] uppercase tracking-[0.4em] text-[#D4AF37] font-semibold">
-              De Valeur · İşçi Paneli
-            </span>
-            <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
-          </div>
-          <h1 className="font-playfair text-3xl font-light text-black">Xoş gəldiniz</h1>
-          <p className="text-sm text-gray-500 mt-1">Hesabınızla daxil olun</p>
+          <img
+            src="https://i.hizliresim.com/tmu65g6.png"
+            alt="De Valeur"
+            className="h-12 sm:h-14 mx-auto mb-3 object-contain"
+            data-testid="worker-login-logo"
+          />
+          <p className="text-[11px] uppercase tracking-[0.35em] text-gray-400 font-medium">
+            Giriş edin
+          </p>
         </div>
 
         {error && (
