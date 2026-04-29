@@ -32,7 +32,7 @@ const Features: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="text-center mb-14 md:mb-20 dv-reveal is-in">
+        <div className="text-center mb-8 md:mb-20 dv-reveal is-in">
           <div className="inline-flex items-center">
             <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold" data-testid="dv-features-subtitle">
@@ -42,13 +42,13 @@ const Features: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div
                 key={index}
-                className={`relative text-center px-6 md:px-10 py-8 dv-reveal is-in dv-reveal-delay-${index + 1} group`}
+                className={`relative text-center px-4 sm:px-6 md:px-10 py-4 sm:py-6 md:py-8 dv-reveal is-in dv-reveal-delay-${index + 1} group`}
                 data-testid={`dv-feature-${index}`}
               >
                 {/* Vertical gold separator (desktop, not on last) */}
@@ -59,9 +59,17 @@ const Features: React.FC = () => {
                     aria-hidden="true"
                   />
                 )}
+                {/* Horizontal gold separator (mobile, between items) */}
+                {index < features.length - 1 && (
+                  <span
+                    className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 h-[1px] w-32"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.35), transparent)' }}
+                    aria-hidden="true"
+                  />
+                )}
 
                 {/* Icon */}
-                <div className="relative inline-flex items-center justify-center w-20 h-20 mb-7">
+                <div className="relative inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 mb-3 sm:mb-5 md:mb-7">
                   {/* Rotating gold ring */}
                   <span
                     className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-all duration-700 group-hover:scale-110 group-hover:border-[#D4AF37]"
@@ -72,13 +80,13 @@ const Features: React.FC = () => {
                     className="absolute inset-2 rounded-full border border-[#D4AF37]/25 transition-transform duration-700 group-hover:rotate-45"
                     aria-hidden="true"
                   />
-                  <Icon className="h-7 w-7 text-[#D4AF37] relative z-10 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.2} />
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-[#D4AF37] relative z-10 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.2} />
                 </div>
 
-                <h3 className="font-playfair text-xl md:text-2xl font-light text-black mb-3 tracking-tight">
+                <h3 className="font-playfair text-base sm:text-lg md:text-2xl font-light text-black mb-2 sm:mb-3 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-black/55 text-sm leading-relaxed max-w-xs mx-auto font-light">
+                <p className="text-black/55 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto font-light">
                   {feature.description}
                 </p>
               </div>

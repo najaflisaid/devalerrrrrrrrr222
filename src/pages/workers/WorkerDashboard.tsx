@@ -581,29 +581,10 @@ const LeaderboardSection: React.FC<{
         {myRank && !hideMyRank && (
           <div
             data-testid={`${testId}-my-rank`}
-            className="relative inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] via-white to-[#FFF8E5] shadow-[0_4px_20px_-4px_rgba(212,175,55,0.45)] overflow-hidden"
+            className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border-2 border-[#D4AF37] bg-gradient-to-br from-[#FFF8E5] to-white shadow-sm"
           >
-            {/* Subtle gold shimmer underlay */}
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-50"
-              style={{
-                background:
-                  'radial-gradient(circle at 30% 20%, rgba(212,175,55,0.18), transparent 60%)',
-              }}
-            />
-            {/* Corner gold tick — minimal flourish */}
-            <span
-              aria-hidden="true"
-              className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
-            />
-            <Sparkles className="relative h-3.5 w-3.5 text-[#D4AF37]" />
-            <span className="relative text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">
-              Sənin yerin
-            </span>
-            <span className="relative font-playfair text-3xl font-bold text-[#8a6d10] leading-none">
-              {myRank.rank}
-            </span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-[#8a6d10] font-semibold">Sənin yerin</span>
+            <span className="font-playfair text-3xl font-bold text-[#8a6d10] leading-none">{myRank.rank}</span>
           </div>
         )}
       </div>

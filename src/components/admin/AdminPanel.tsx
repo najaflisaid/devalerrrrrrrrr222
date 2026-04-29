@@ -92,10 +92,9 @@ const AdminPanel: React.FC = () => {
   const prevB2BOrdersCountRef = useRef<number>(0);
   const audioUnlockedRef = useRef<boolean>(false);
 
-  // Beep helper using WebAudio (no external file needed). Plays a two-tone
-  // "ding-dong". WebAudio requires a prior user gesture; we still call this
-  // even when audioUnlockedRef is false because some browsers will allow it
-  // after navigation interactions on the page.
+  // Beep helper using WebAudio. "Two-chime" notification sound similar to
+  // common modern notification cues: a clean two-tone ding, repeated TWICE
+  // with a short gap so it's easy to notice. Volume is intentionally loud.
   const playOrderSound = () => {
     // Respect admin preference (sound toggle in CustomerOrdersTab)
     try {
@@ -106,27 +105,34 @@ const AdminPanel: React.FC = () => {
       const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!Ctx) return;
       const ctx: AudioContext = new Ctx();
-      // Ensure context is running (not suspended due to autoplay policy).
       const playTones = () => {
-        const tones: { f: number; t: number }[] = [
-          { f: 880, t: 0 },
-          { f: 660, t: 0.18 },
+        // Two notes per chime: high → mid (modern notification feel).
+        // Chime #1 at t=0, Chime #2 at t=0.55s — two clear signals.
+        const tones: { f: number; t: number; d: number }[] = [
+          // Chime 1
+          { f: 1175, t: 0.00, d: 0.16 },  // D6
+          { f: 880,  t: 0.16, d: 0.28 },  // A5
+          // Chime 2
+          { f: 1175, t: 0.55, d: 0.16 },
+          { f: 880,  t: 0.71, d: 0.28 },
         ];
-        tones.forEach(({ f, t }) => {
+        tones.forEach(({ f, t, d }) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.frequency.value = f;
           osc.type = 'sine';
+          // Mild low-pass coloration via slight detune for a warmer chime
+          osc.detune.value = -3;
           osc.connect(gain);
           gain.connect(ctx.destination);
           const start = ctx.currentTime + t;
           gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.22, start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+          gain.gain.linearRampToValueAtTime(0.45, start + 0.015);  // louder peak
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + d);
           osc.start(start);
-          osc.stop(start + 0.36);
+          osc.stop(start + d + 0.02);
         });
-        setTimeout(() => ctx.close(), 1200);
+        setTimeout(() => ctx.close(), 1500);
       };
       if (ctx.state === 'suspended') {
         ctx.resume().then(playTones).catch(() => playTones());

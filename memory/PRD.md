@@ -173,6 +173,30 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
   - **5-ci element (İl beynəlxalq zəmanət)**: mobildə `col-span-2` → tam enli ortalanır, `md` desktopda yenə `col-span-1`
   - **Vertikal divider line**: hər mobil cüt arasında zərif `bg-black/5` xətti (yalnız mobile)
 
+### 2026-01-30 (Part 8) — Home page mobile polish, badge revert, sound v2
+1. **`Features.tsx` — mobile spacing & typography**:
+   - Heading margin-bottom: `mb-14` → `mb-8` mobil
+   - Grid gap: `gap-10` → `gap-4` mobil
+   - Card padding: `px-6 py-8` → `px-4 py-4` mobil
+   - Icon size: 80px → 56px mobil; içəri ikonu 28→20px
+   - Title: `text-xl` → `text-base` mobil
+   - Description: `text-sm` → `text-xs` mobil
+   - **Horizontal gold separator** (32×1px gradient) hər mobil card arasında əlavə edildi
+2. **`HomeProductBanners.tsx` — mobile compact**:
+   - Section padding: `pt-20 pb-10` → `pt-10 pb-8` mobil
+   - Heading mb: `mb-12` → `mb-6` mobil
+   - H2 size: `text-3xl` → `text-xl` mobil + `leading-[1.15]`
+   - Banner gap: `gap-5 mb-14` → `gap-4 mb-8` mobil
+   - Banner inner content padding: `p-6` → `p-4` mobil
+   - Banner title: `text-2xl` → `text-lg` mobil
+   - Sub heading: `text-xl` → `text-base` mobil
+3. **"Sənin yerin" badge bərpa edildi** (`WorkerDashboard.tsx`): istifadəçi sadə görünüşü istəyirdi → əvvəlki sadə pill-ə qaytarıldı (border-2 + gradient gold pill, Sparkles-siz, shimmer-siz).
+4. **Səs bildirişi v2 — Emergent-stil iki-siqnal**:
+   - Hər siqnal **iki notdan** ibarət (D6 1175Hz → A5 880Hz, sine, detune −3) — modern notification feel
+   - **2 dəfə siqnal**: t=0 və t=0.55s (iki ayrı chime)
+   - **Ucalıq artırıldı**: peak gain 0.22 → **0.45**
+   - `AdminPanel.playOrderSound` və `CustomerOrdersTab.previewOrderSound` eyni tonları çalır → "Səs aç" və "Səsi sınaqdan keçir" düymələri canlı bildirişlə eyni səs verir.
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi

@@ -46,32 +46,42 @@ const formatDate = (raw: any) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// Reusable beep helper for the toggle preview (same WebAudio "ding-dong" tones
-// used by AdminPanel.playOrderSound — keeps a single source of truth audible).
+// Reusable beep helper for the toggle preview — must mirror AdminPanel.playOrderSound
+// so the admin hears EXACTLY what the live notification will sound like.
 const previewOrderSound = () => {
   try {
     const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!Ctx) return;
     const ctx: AudioContext = new Ctx();
-    const tones: { f: number; t: number }[] = [
-      { f: 880, t: 0 },
-      { f: 660, t: 0.18 },
-    ];
-    tones.forEach(({ f, t }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = f;
-      osc.type = 'sine';
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      const start = ctx.currentTime + t;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
-      osc.start(start);
-      osc.stop(start + 0.34);
-    });
-    setTimeout(() => ctx.close(), 1000);
+    const playTones = () => {
+      const tones: { f: number; t: number; d: number }[] = [
+        { f: 1175, t: 0.00, d: 0.16 },
+        { f: 880,  t: 0.16, d: 0.28 },
+        { f: 1175, t: 0.55, d: 0.16 },
+        { f: 880,  t: 0.71, d: 0.28 },
+      ];
+      tones.forEach(({ f, t, d }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = f;
+        osc.type = 'sine';
+        osc.detune.value = -3;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const start = ctx.currentTime + t;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.45, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + d);
+        osc.start(start);
+        osc.stop(start + d + 0.02);
+      });
+      setTimeout(() => ctx.close(), 1500);
+    };
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(playTones).catch(() => playTones());
+    } else {
+      playTones();
+    }
   } catch {
     /* ignore */
   }

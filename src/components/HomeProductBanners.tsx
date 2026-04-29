@@ -47,7 +47,7 @@ const HomeProductBanners: React.FC = () => {
       <MiddleBanner />
 
       <section
-        className="relative pt-20 md:pt-28 pb-10 md:pb-14 bg-white overflow-hidden"
+        className="relative pt-10 md:pt-28 pb-8 md:pb-14 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
         {/* Ambient gold orb */}
@@ -59,15 +59,15 @@ const HomeProductBanners: React.FC = () => {
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Heading */}
-          <div className="text-center mb-12 md:mb-16 dv-reveal is-in">
-            <div className="inline-flex items-center mb-5">
+          <div className="text-center mb-6 md:mb-16 dv-reveal is-in">
+            <div className="inline-flex items-center mb-3 md:mb-5">
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
               <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
                 {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
               </span>
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             </div>
-            <h2 className="font-playfair text-3xl md:text-5xl lg:text-6xl font-light text-black leading-[1.05] max-w-4xl mx-auto">
+            <h2 className="font-playfair text-xl sm:text-3xl md:text-5xl lg:text-6xl font-light text-black leading-[1.15] sm:leading-[1.05] max-w-4xl mx-auto px-2">
               {heading}
             </h2>
           </div>
@@ -75,7 +75,7 @@ const HomeProductBanners: React.FC = () => {
           {/* Banner grid */}
           {banners.length > 0 && (
             <div
-              className={`grid gap-5 md:gap-7 mb-14 md:mb-20 ${
+              className={`grid gap-4 md:gap-7 mb-8 md:mb-20 ${
                 banners.length === 1
                   ? 'grid-cols-1 max-w-[760px] mx-auto'
                   : banners.length === 2
@@ -134,13 +134,13 @@ const HomeProductBanners: React.FC = () => {
                           />
 
                           {/* Content */}
-                          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-                            <h3 className="text-white font-playfair text-2xl md:text-4xl font-light tracking-tight mb-4 max-w-lg">
+                          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-10">
+                            <h3 className="text-white font-playfair text-lg sm:text-2xl md:text-4xl font-light tracking-tight mb-2 sm:mb-3 md:mb-4 max-w-lg leading-tight">
                               {getTitle(banner)}
                             </h3>
-                            <span className="inline-flex items-center text-xs uppercase tracking-[0.3em] text-white/90 group-hover:text-[#D4AF37] transition-colors duration-300">
+                            <span className="inline-flex items-center text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[0.3em] text-white/90 group-hover:text-[#D4AF37] transition-colors duration-300">
                               <span className="dv-gold-line">Kəşf et</span>
-                              <span className="ml-3 transition-transform duration-500 group-hover:translate-x-2">
+                              <span className="ml-2 sm:ml-3 transition-transform duration-500 group-hover:translate-x-2">
                                 →
                               </span>
                             </span>
@@ -156,7 +156,7 @@ const HomeProductBanners: React.FC = () => {
 
           {/* Sub heading */}
           <div className="text-center dv-reveal is-in dv-reveal-delay-3">
-            <p className="font-playfair text-xl md:text-3xl text-black/75 font-light italic max-w-3xl mx-auto leading-snug">
+            <p className="font-playfair text-base sm:text-xl md:text-3xl text-black/75 font-light italic max-w-3xl mx-auto leading-snug px-2">
               {subheading}
             </p>
           </div>
