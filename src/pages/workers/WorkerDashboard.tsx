@@ -355,6 +355,7 @@ const WorkerDashboard: React.FC = () => {
               subtitle="Filial daxilində aylıq performans əmsalına görə sıralanma"
               testId="branch-workers-leaderboard"
               hideMyRank
+              hideBestBadge
             />
           );
         })()}
@@ -556,7 +557,8 @@ const LeaderboardSection: React.FC<{
   subtitle?: string;
   testId?: string;
   hideMyRank?: boolean;
-}> = ({ items, currentId, title = 'Ümumi Reytinqlər', subtitle = 'Bütün işçilərin aylıq performans əmsalına görə sıralanması', testId = 'leaderboard-section', hideMyRank = false }) => {
+  hideBestBadge?: boolean;
+}> = ({ items, currentId, title = 'Ümumi Reytinqlər', subtitle = 'Bütün işçilərin aylıq performans əmsalına görə sıralanması', testId = 'leaderboard-section', hideMyRank = false, hideBestBadge = false }) => {
   if (items.length === 0) return null;
   const myRank = items.find(i => i.workerId === currentId);
 
@@ -592,7 +594,7 @@ const LeaderboardSection: React.FC<{
       <ul className="divide-y divide-gray-100">
         {items.map(i => {
           const isMe = i.workerId === currentId;
-          const isFirst = i.rank === 1 && i.performanceScore > 0;
+          const isFirst = i.rank === 1 && i.performanceScore > 0 && !hideBestBadge;
           return (
             <li key={i.workerId}
               className={`flex items-center gap-3 py-3 px-2 rounded-lg ${isMe ? 'bg-[#FFF8E5]/60' : ''} ${isFirst ? 'bg-gradient-to-r from-[#FFF8E5]/80 to-transparent' : ''}`}
