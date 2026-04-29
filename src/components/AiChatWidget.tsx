@@ -4,12 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { productService } from '../services/productService';
 import { getAiKnowledge, type AiKnowledge } from '../services/aiKnowledgeService';
+import { sendChatMessage } from '../services/aiChatService';
 import type { Product } from '../types';
-
-const BACKEND_URL =
-  (import.meta as any).env?.VITE_BACKEND_URL ||
-  (import.meta as any).env?.REACT_APP_BACKEND_URL ||
-  '';
 
 const SESSION_KEY = 'devaleur_ai_session';
 const HISTORY_KEY = 'devaleur_ai_history';
@@ -380,17 +376,6 @@ const AiChatWidget: React.FC = () => {
   ): Promise<void> => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
-    if (!BACKEND_URL) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Texniki problem: server ünvanı tapılmadı.',
-          ts: Date.now(),
-        },
-      ]);
-      return;
-    }
 
     setBusy(true);
     let pendingHistory: ChatMessage[] = [];
@@ -402,25 +387,13 @@ const AiChatWidget: React.FC = () => {
     }
 
     try {
-      const payload = {
-        session_id: sessionIdRef.current,
+      const reply = await sendChatMessage({
         message: trimmed,
         history: pendingHistory.map((m) => ({ role: m.role, content: m.content })),
         products: compactProducts(productsRef.current),
         knowledge: knowledgeRef.current || undefined,
         language: lang,
-      };
-      const res = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'AI cavab vermədi');
-      }
-      const data = await res.json();
-      const reply: string = (data?.reply || '').toString();
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: reply, ts: Date.now() },
