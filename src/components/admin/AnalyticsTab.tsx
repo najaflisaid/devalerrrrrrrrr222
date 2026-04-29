@@ -9,6 +9,8 @@ import {
   RefreshCw,
   X,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   collection,
@@ -82,6 +84,11 @@ const AnalyticsTab: React.FC = () => {
   const [openWishlist, setOpenWishlist] = useState<CustomerWishlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // "Daha çox" toggles per list to avoid endlessly stretching pages
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) =>
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  const VISIBLE_LIMIT = 5;
 
   const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
   const getName = (p?: Product) =>
@@ -319,33 +326,48 @@ const AnalyticsTab: React.FC = () => {
             {topViews.length === 0 ? (
               <p className="text-sm text-gray-500 py-6 text-center">Hələ baxış statistikası yoxdur</p>
             ) : (
-              <ol className="space-y-2">
-                {topViews.map((v, i) => (
-                  <li key={v.productId} className="flex items-center gap-3 text-sm group" data-testid={`top-view-${i}`}>
-                    <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
-                    {v.image ? (
-                      <img src={v.image} alt="" className="w-8 h-8 object-cover rounded" />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-200 rounded" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-gray-900">{v.productName || v.productId}</p>
-                      {v.lastViewed && (
-                        <p className="text-[10px] text-gray-400 truncate">son: {relativeTime(v.lastViewed)}</p>
+              <>
+                <ol className="space-y-2">
+                  {(expanded['topViews'] ? topViews : topViews.slice(0, VISIBLE_LIMIT)).map((v, i) => (
+                    <li key={v.productId} className="flex items-center gap-3 text-sm group" data-testid={`top-view-${i}`}>
+                      <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
+                      {v.image ? (
+                        <img src={v.image} alt="" className="w-8 h-8 object-cover rounded" />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-200 rounded" />
                       )}
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 tabular-nums">{v.count}</span>
-                    <button
-                      onClick={() => handleDeleteView(v.productId, v.productName)}
-                      className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Sil"
-                      data-testid={`delete-view-${v.productId}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ol>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-gray-900">{v.productName || v.productId}</p>
+                        {v.lastViewed && (
+                          <p className="text-[10px] text-gray-400 truncate">son: {relativeTime(v.lastViewed)}</p>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 tabular-nums">{v.count}</span>
+                      <button
+                        onClick={() => handleDeleteView(v.productId, v.productName)}
+                        className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Sil"
+                        data-testid={`delete-view-${v.productId}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                {topViews.length > VISIBLE_LIMIT && (
+                  <button
+                    onClick={() => toggle('topViews')}
+                    className="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2 border border-dashed border-gray-200 transition-colors"
+                    data-testid="toggle-top-views"
+                  >
+                    {expanded['topViews'] ? (
+                      <><ChevronUp className="h-3.5 w-3.5" /> Daha az göstər</>
+                    ) : (
+                      <><ChevronDown className="h-3.5 w-3.5" /> Daha çox göstər ({topViews.length - VISIBLE_LIMIT})</>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -358,31 +380,46 @@ const AnalyticsTab: React.FC = () => {
             {topSearches.length === 0 ? (
               <p className="text-sm text-gray-500 py-6 text-center">Hələ axtarış statistikası yoxdur</p>
             ) : (
-              <ol className="space-y-1.5">
-                {topSearches.map((s, i) => (
-                  <li
-                    key={s.query}
-                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded-lg text-sm group"
-                    data-testid={`top-search-${i}`}
-                  >
-                    <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-gray-900">"{s.query}"</p>
-                      {s.lastSearched && (
-                        <p className="text-[10px] text-gray-400">son: {relativeTime(s.lastSearched)}</p>
-                      )}
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 tabular-nums">{s.count}</span>
-                    <button
-                      onClick={() => handleDeleteSearch(s.query)}
-                      className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Sil"
+              <>
+                <ol className="space-y-1.5">
+                  {(expanded['topSearches'] ? topSearches : topSearches.slice(0, VISIBLE_LIMIT)).map((s, i) => (
+                    <li
+                      key={s.query}
+                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded-lg text-sm group"
+                      data-testid={`top-search-${i}`}
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </li>
-                ))}
-              </ol>
+                      <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-gray-900">"{s.query}"</p>
+                        {s.lastSearched && (
+                          <p className="text-[10px] text-gray-400">son: {relativeTime(s.lastSearched)}</p>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 tabular-nums">{s.count}</span>
+                      <button
+                        onClick={() => handleDeleteSearch(s.query)}
+                        className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Sil"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                {topSearches.length > VISIBLE_LIMIT && (
+                  <button
+                    onClick={() => toggle('topSearches')}
+                    className="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2 border border-dashed border-gray-200 transition-colors"
+                    data-testid="toggle-top-searches"
+                  >
+                    {expanded['topSearches'] ? (
+                      <><ChevronUp className="h-3.5 w-3.5" /> Daha az göstər</>
+                    ) : (
+                      <><ChevronDown className="h-3.5 w-3.5" /> Daha çox göstər ({topSearches.length - VISIBLE_LIMIT})</>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -396,7 +433,8 @@ const AnalyticsTab: React.FC = () => {
               <p className="text-sm text-gray-500">Heç bir müştərinin səbətində məhsul yoxdur</p>
             </div>
           ) : (
-            carts.map((c) => (
+            <>
+              {(expanded['carts'] ? carts : carts.slice(0, VISIBLE_LIMIT)).map((c) => (
               <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4" data-testid={`cart-${c.id}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                   <div className="min-w-0">
@@ -443,7 +481,21 @@ const AnalyticsTab: React.FC = () => {
                   ))}
                 </div>
               </div>
-            ))
+            ))}
+            {carts.length > VISIBLE_LIMIT && (
+              <button
+                onClick={() => toggle('carts')}
+                className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2.5 border border-dashed border-gray-200 transition-colors"
+                data-testid="toggle-carts"
+              >
+                {expanded['carts'] ? (
+                  <><ChevronUp className="h-4 w-4" /> Daha az göstər</>
+                ) : (
+                  <><ChevronDown className="h-4 w-4" /> Daha çox göstər ({carts.length - VISIBLE_LIMIT})</>
+                )}
+              </button>
+            )}
+            </>
           )}
         </div>
       )}
@@ -456,7 +508,8 @@ const AnalyticsTab: React.FC = () => {
               <p className="text-sm text-gray-500">Heç bir müştərinin wishlist-ində məhsul yoxdur</p>
             </div>
           ) : (
-            wishlists.map((w) => (
+            <>
+              {(expanded['wishlists'] ? wishlists : wishlists.slice(0, VISIBLE_LIMIT)).map((w) => (
               <div key={w.id} className="bg-white border border-gray-200 rounded-xl p-4" data-testid={`wishlist-${w.id}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                   <div className="min-w-0">
@@ -520,7 +573,21 @@ const AnalyticsTab: React.FC = () => {
                   })}
                 </div>
               </div>
-            ))
+            ))}
+            {wishlists.length > VISIBLE_LIMIT && (
+              <button
+                onClick={() => toggle('wishlists')}
+                className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2.5 border border-dashed border-gray-200 transition-colors"
+                data-testid="toggle-wishlists"
+              >
+                {expanded['wishlists'] ? (
+                  <><ChevronUp className="h-4 w-4" /> Daha az göstər</>
+                ) : (
+                  <><ChevronDown className="h-4 w-4" /> Daha çox göstər ({wishlists.length - VISIBLE_LIMIT})</>
+                )}
+              </button>
+            )}
+            </>
           )}
         </div>
       )}

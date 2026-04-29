@@ -80,6 +80,21 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
 6. **Banner hover arrows** (`Hero.tsx`): `<section>`-a `group` əlavə, ox düymələri `opacity-0 group-hover:opacity-100` + slide animasiyası ilə yalnız hover-da görünür.
 7. **Best sellers mobil swipe** (`index.css`): `@media (max-width: 767px)` altında marquee animasiyası disable, `overflow-x: auto` + `scroll-snap-type: x mandatory` + `-webkit-overflow-scrolling: touch` — barmaqla rahat swipe.
 
+### 2026-01-30 — Analytics collapse & Order phase separation
+1. **Analitika tab — "Daha çox göstər" toggle** (`AnalyticsTab.tsx`): `topViews`, `topSearches`, `carts`, `wishlists` siyahıları default olaraq yalnız 5 element göstərir. Kart sonunda `Daha çox göstər (N)` / `Daha az göstər` toggle düyməsi ilə açılır. Səhifə artıq sonsuza qədər uzanmır.
+2. **Müştəri Sifarişləri — 3 ayrı status bölgəsi** (`CustomerOrdersTab.tsx`):
+   - **Ödəniş** kartı (CreditCard ikonu): Ödənildi / Gözləyir / Uğursuz + "Manual təsdiq et" düyməsi
+   - **Hazırlanma** kartı (Package ikonu): Gözləyir / Hazırlanır / Hazırlandı / Ləğv edildi + "Hazırlanmağa başla" və "Hazırdır" düymələri
+   - **Çatdırılma** kartı (Truck ikonu): Gözləmədə / Kuryerə verildi / Yoldadır / Təhvil verildi — dropdown ilə keçid
+   - Tone'a uyğun rənglər: emerald/amber/blue/indigo/purple/red.
+   - Ümumi `status` field-i hələ də unified — admin hər sahəni dəyişdikdə müvafiq mərhələyə keçirir.
+3. **MyOrdersPage redesign** (`MyOrdersPage.tsx`):
+   - **Couture-stil hero**: gold lines + "MAISON · DE VALEUR" eyebrow + Playfair düzgün başlıq
+   - **Sol sidebar (320px sticky)**: gold corner brackets + müştəri profili (avatar+ad+email+telefon+ünvan), Statistika kartı (4 metrika: Sifariş/Tamamlandı/Çatdırılır/Cəmi xərc), gold accent şüar kartı "100% etibarlı çatdırılma"
+   - **Sağ tərəf**: Sifariş kartları daha böyük (Playfair sifariş №, gradient progress bar gold accent ilə)
+   - **İmza axını**: status `courier_handover` VƏ `on_the_way` zamanı imza düyməsi göstərilir (əvvəlcədən yalnız on_the_way idi)
+   - **Çatdırılma bildirişi**: imzanın altında emerald-gold gradient ilə "Sifariş uğurla təhvil verildi. De Valeur-i seçdiyiniz üçün təşəkkür edirik." mətni və təsdiq vaxtı.
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi
