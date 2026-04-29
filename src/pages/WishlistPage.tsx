@@ -9,9 +9,9 @@ import type { Product } from '../types';
 
 const WishlistPage: React.FC = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { productIds, toggleFavorite } = useWishlist();
-  const { addToCart, addNotification } = useCart();
+  const { addToCart } = useCart();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -38,8 +38,9 @@ const WishlistPage: React.FC = () => {
   };
 
   const handleAddToCart = (p: Product) => {
+    // CartContext.addToCart already triggers a success notification internally,
+    // so we should NOT call addNotification again — that caused duplicates.
     addToCart(p, 1);
-    addNotification(t('product.addedToCart') || 'Səbətə əlavə olundu', 'success');
   };
 
   const handleRemove = (id: string) => {

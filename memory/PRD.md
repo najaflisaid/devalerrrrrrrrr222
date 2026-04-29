@@ -95,6 +95,17 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
    - **İmza axını**: status `courier_handover` VƏ `on_the_way` zamanı imza düyməsi göstərilir (əvvəlcədən yalnız on_the_way idi)
    - **Çatdırılma bildirişi**: imzanın altında emerald-gold gradient ilə "Sifariş uğurla təhvil verildi. De Valeur-i seçdiyiniz üçün təşəkkür edirik." mətni və təsdiq vaxtı.
 
+### 2026-01-30 (Part 2) — Notifications, sound, double-toast & mobile filter polish
+1. **Müştəri sifariş səs bildirişi** (`AdminPanel.tsx`):
+   - `playOrderSound()` WebAudio API ilə "ding-dong" iki tonlu (A5 → E5) sintezator (xarici fayl yox).
+   - `prevCustomerOrdersCountRef` və `prevB2BOrdersCountRef` — count artanda (yeni sifariş gəldikdə) səsini çal.
+   - `audioUnlockedRef` ilk istifadəçi gesture-undən sonra səsin işləməsinə icazə verir (browser autoplay policy üçün).
+   - İlk snapshot zamanı səs çalmır (initial mount-da prev=-1).
+2. **Wishlist double-toast bug** (`WishlistPage.tsx`): `addToCart()` daxilində artıq notification əlavə edilir; `WishlistPage.handleAddToCart` da əlavə `addNotification` çağırırdı → ikiqat. Düzəldildi.
+3. **AI Chat launcher minimallaşdırma** (`AiChatWidget.tsx`): "De Valeur AI" mətni və `Sparkles` ikonası söndürüldü. İndi 48×48 dairəvi düymə yalnız logo və online status nöqtəsi göstərir.
+4. **Mobil header → ProductsPage navigation scroll-to-top** (`Header.tsx`): mobil burger-menyudan brend/kateqoriya seçilərkən `closeMobileMenu()` sonrası `window.scrollTo(0,0)` əlavə edildi — istifadəçi yeni filterin nəticələrini başdan görür.
+5. **Floating filter button — scroll-aware** (`ProductsPage.tsx`): `showFloatingFilter` state + scroll listener. `scrollY > 240px` olanda göstərilir, üst inline "Filtr" düyməsi görünəndə gizlənir (opacity-0 + pointer-events-none + transform-3px slide animasiyası).
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi

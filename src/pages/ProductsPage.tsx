@@ -28,6 +28,19 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
+  // Show the bottom-left floating filter button only when the inline top
+  // filter button is scrolled out of view (mobile only).
+  const [showFloatingFilter, setShowFloatingFilter] = useState(false);
+
+  useEffect(() => {
+    const handle = () => {
+      // Top inline filter button sits roughly within first ~200px of the page
+      setShowFloatingFilter(window.scrollY > 240);
+    };
+    handle();
+    window.addEventListener('scroll', handle, { passive: true });
+    return () => window.removeEventListener('scroll', handle);
+  }, []);
 
   // Function to update URL with all current filters
   const updateURLParams = (updates: Record<string, string | null>) => {
@@ -444,7 +457,7 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Floating filter button (mobile only) — always visible, follows the user */}
+      {/* Floating filter button (mobile only) — appears when scrolled past top inline button */}
       <button
         onClick={() => {
           setIsFilterOpen((open) => !open);
@@ -455,7 +468,11 @@ const ProductsPage: React.FC = () => {
         }}
         aria-label={isFilterOpen ? t('common.closeFilters') : t('common.filter')}
         data-testid="mobile-floating-filter-btn"
-        className="lg:hidden fixed bottom-5 left-5 z-[9997] flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-amber-400/20 active:scale-95 transition-all"
+        className={`lg:hidden fixed bottom-5 left-5 z-[9997] flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-amber-400/20 active:scale-95 transition-all duration-300 ${
+          showFloatingFilter
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-3 pointer-events-none'
+        }`}
       >
         <Filter className="h-4 w-4" />
         <span className="text-[11px] font-semibold tracking-wide">

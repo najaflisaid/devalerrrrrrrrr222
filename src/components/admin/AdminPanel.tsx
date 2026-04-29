@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket } from 'lucide-react';
@@ -87,6 +87,63 @@ const AdminPanel: React.FC = () => {
   const [pendingCustomerOrdersCount, setPendingCustomerOrdersCount] = useState(0);
   // Müraciətlər bildirişi: yeni (oxunmamış) əlaqə mesajları sayı
   const [newContactMessagesCount, setNewContactMessagesCount] = useState(0);
+  // Track previous counts to play sound only on increase (new order arrives)
+  const prevCustomerOrdersCountRef = useRef<number>(0);
+  const prevB2BOrdersCountRef = useRef<number>(0);
+  const audioUnlockedRef = useRef<boolean>(false);
+
+  // Beep helper using WebAudio (no external file needed).
+  // Modern browsers block audio until first user gesture — once any tab is
+  // clicked, audioUnlockedRef will already be true via the listener below.
+  const playOrderSound = () => {
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx: AudioContext = new Ctx();
+      // Two-tone "ding-dong" (frequencies A5 → E5)
+      const tones: { f: number; t: number }[] = [
+        { f: 880, t: 0 },
+        { f: 660, t: 0.18 },
+      ];
+      tones.forEach(({ f, t }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = f;
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const start = ctx.currentTime + t;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
+        osc.start(start);
+        osc.stop(start + 0.34);
+      });
+      // Auto-close ctx after 1s
+      setTimeout(() => ctx.close(), 1000);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Mark audio as unlocked on first user gesture so subsequent beeps
+  // can play without triggering autoplay-policy warnings.
+  useEffect(() => {
+    const unlock = () => {
+      audioUnlockedRef.current = true;
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+    window.addEventListener('click', unlock);
+    window.addEventListener('keydown', unlock);
+    window.addEventListener('touchstart', unlock, { passive: true });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
   // Yalnız bu vaxtdan SONRA yaradılmış pending sifarişlər badge-də sayılır.
   // Admin şifrə ilə bölməyə girəndə bu vaxt yenilənir və localStorage-də saxlanır.
   const B2B_ACK_KEY = 'admin_b2b_orders_last_seen_ms';
@@ -131,10 +188,16 @@ const AdminPanel: React.FC = () => {
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
         if (ms > b2bLastSeen) count += 1;
       });
+      // Play sound only if count increased AND not initial mount
+      if (count > prevB2BOrdersCountRef.current && audioUnlockedRef.current && prevB2BOrdersCountRef.current !== -1) {
+        playOrderSound();
+      }
+      prevB2BOrdersCountRef.current = count;
       setPendingB2BOrdersCount(count);
     }, (err) => {
       console.error('B2B orders snapshot error:', err);
     });
+    prevB2BOrdersCountRef.current = -1;
     return () => unsub();
   }, [b2bLastSeen]);
 
@@ -152,10 +215,20 @@ const AdminPanel: React.FC = () => {
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
         if (ms > customerOrdersLastSeen) count += 1;
       });
+      // Play sound only if count increased (a NEW order arrived) AND audio is unlocked
+      if (count > prevCustomerOrdersCountRef.current && audioUnlockedRef.current && prevCustomerOrdersCountRef.current >= 0) {
+        // Skip the very first set (initial mount snapshot)
+        if (prevCustomerOrdersCountRef.current !== -1) {
+          playOrderSound();
+        }
+      }
+      prevCustomerOrdersCountRef.current = count;
       setPendingCustomerOrdersCount(count);
     }, (err) => {
       console.error('Customer orders snapshot error:', err);
     });
+    // Initialize ref to -1 so the first snapshot does not trigger the sound
+    prevCustomerOrdersCountRef.current = -1;
     return () => unsub();
   }, [customerOrdersLastSeen]);
 

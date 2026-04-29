@@ -461,28 +461,24 @@ const AiChatWidget: React.FC = () => {
 
   return (
     <>
-      {/* Floating launcher button */}
+      {/* Floating launcher button — circle only */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="group fixed bottom-5 right-5 z-[9998] flex items-center gap-1.5 pl-1.5 pr-3 py-1.5 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/20"
+          className="group fixed bottom-5 right-5 z-[9998] flex items-center justify-center w-12 h-12 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/30"
           title="De Valeur AI ilə danış"
+          aria-label="De Valeur AI ilə danış"
           data-testid="ai-chat-launcher"
         >
-          {/* Logo bubble */}
-          <span className="relative flex items-center justify-center w-7 h-7 rounded-full bg-white/10 ring-1 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
+          <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/5 ring-1 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
             <img
               src={DEVALEUR_LOGO}
-              alt="De Valeur"
-              className="w-5 h-5 object-contain"
+              alt=""
+              className="w-6 h-6 object-contain"
               style={{ filter: 'brightness(0) invert(1)' }}
             />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
           </span>
-          <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap">
-            De Valeur AI
-          </span>
-          <Sparkles className="h-3 w-3 text-amber-400 group-hover:rotate-12 transition-transform" />
         </button>
       )}
 
