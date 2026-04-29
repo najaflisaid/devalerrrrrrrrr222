@@ -42,16 +42,16 @@ const StatItem: React.FC<{ stat: Stat; active: boolean; lang: 'az' | 'ru' | 'en'
   const value = useCountUp(stat.value, 0, 2000, active);
   const displayValue = stat.format === 'plain' ? String(value) : value.toLocaleString();
   return (
-    <div className="text-center px-2" data-testid="dv-stat-item">
-      <div className="font-playfair text-3xl sm:text-5xl md:text-6xl font-light text-black tracking-tight leading-none">
+    <div className="text-center px-1 sm:px-2" data-testid="dv-stat-item">
+      <div className="font-playfair text-[28px] leading-none sm:text-5xl md:text-6xl font-light text-black tracking-tight">
         {stat.prefix || ''}
         {displayValue}
         {stat.suffix || ''}
       </div>
       <div className="mt-2 flex items-center justify-center">
-        <span className="inline-block w-5 h-[1px] bg-[#D4AF37]" />
+        <span className="inline-block w-4 sm:w-5 h-[1px] bg-[#D4AF37]" />
       </div>
-      <p className="mt-3 text-[11px] sm:text-xs uppercase tracking-[0.3em] text-black/60 font-medium">
+      <p className="mt-2 sm:mt-3 text-[9px] leading-tight sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.3em] text-black/60 font-medium break-words">
         {stat.label[lang] || stat.label.en}
       </p>
     </div>
@@ -90,15 +90,28 @@ const StatsBand: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-6">
-          {STATS.map((stat, i) => (
-            <div
-              key={i}
-              className={`dv-reveal is-in dv-reveal-delay-${i + 1}`}
-            >
-              <StatItem stat={stat} active={true} lang={lang} />
-            </div>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-y-6 gap-x-3 sm:gap-6">
+          {STATS.map((stat, i) => {
+            // 5 items in 2 columns: last one spans full width on mobile to keep it centered.
+            const isOdd5th = i === STATS.length - 1 && STATS.length % 2 === 1;
+            return (
+              <div
+                key={i}
+                className={`dv-reveal is-in dv-reveal-delay-${i + 1} relative ${
+                  isOdd5th ? 'col-span-2 md:col-span-1' : ''
+                }`}
+              >
+                {/* Subtle vertical divider between mobile pairs (left col only) */}
+                {!isOdd5th && i % 2 === 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="md:hidden absolute left-0 top-2 bottom-2 w-px bg-black/5"
+                  />
+                )}
+                <StatItem stat={stat} active={true} lang={lang} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -164,6 +164,15 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
    - `customer_carts` və `customer_wishlists` Firestore mirror-larında **`userPhone`** field əlavə edildi (`localStorage.userPhone`-dan oxunur)
    - AnalyticsTab "Müştəri Səbətləri" və "Wishlist" kartlarında ad+email-in **altında telefon** göstərilir.
 
+### 2026-01-30 (Part 7) — StatsBand mobile responsive
+- **`StatsBand.tsx` mobil səliqəyə salındı**:
+  - Big number font: `text-3xl` → **`text-[28px]`** mobildə (xırda ekrana sığır)
+  - Eyebrow tracking: `0.3em` → **`0.18em`** mobildə (uzun sözlər kəsilmir)
+  - Eyebrow font: `text-[11px]` → **`text-[9px]`** mobildə + `leading-tight` + `break-words`
+  - Grid gap: `gap-8` → **`gap-y-6 gap-x-3`** mobildə
+  - **5-ci element (İl beynəlxalq zəmanət)**: mobildə `col-span-2` → tam enli ortalanır, `md` desktopda yenə `col-span-1`
+  - **Vertikal divider line**: hər mobil cüt arasında zərif `bg-black/5` xətti (yalnız mobile)
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi
