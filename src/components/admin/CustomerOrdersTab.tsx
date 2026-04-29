@@ -46,6 +46,37 @@ const formatDate = (raw: any) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+// Reusable beep helper for the toggle preview (same WebAudio "ding-dong" tones
+// used by AdminPanel.playOrderSound — keeps a single source of truth audible).
+const previewOrderSound = () => {
+  try {
+    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx: AudioContext = new Ctx();
+    const tones: { f: number; t: number }[] = [
+      { f: 880, t: 0 },
+      { f: 660, t: 0.18 },
+    ];
+    tones.forEach(({ f, t }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = f;
+      osc.type = 'sine';
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const start = ctx.currentTime + t;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
+      osc.start(start);
+      osc.stop(start + 0.34);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch {
+    /* ignore */
+  }
+};
+
 const CustomerOrdersTab: React.FC = () => {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +93,16 @@ const CustomerOrdersTab: React.FC = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     try { localStorage.setItem(SOUND_PREF_KEY, String(next)); } catch { /* ignore */ }
+    // When turning ON, play a preview so the admin can hear what the
+    // notification will sound like (and unlocks WebAudio in the same gesture).
+    if (next) {
+      previewOrderSound();
+    }
+  };
+
+  // Manual test button — always plays the sound regardless of preference.
+  const handleTestSound = () => {
+    previewOrderSound();
   };
 
   useEffect(() => {
@@ -145,6 +186,17 @@ const CustomerOrdersTab: React.FC = () => {
           >
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             {soundEnabled ? 'Səs aç' : 'Səssiz'}
+          </button>
+          {/* Manual sound test button — useful for verifying audio works */}
+          <button
+            type="button"
+            onClick={handleTestSound}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Bildiriş səsini sınaqdan keçir"
+            data-testid="admin-sound-test"
+          >
+            <Volume2 className="h-4 w-4 text-amber-500" />
+            Səsi sınaqdan keçir
           </button>
           <input
             type="text"

@@ -80,15 +80,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items]);
 
-  // Hydrate cart from Firestore whenever auth state changes (login/logout)
+  // Hydrate cart from Firestore exactly ONCE per session (after first auth state change).
+  // Prevents the bug where every page reload doubled quantities by re-summing
+  // local + remote (which were the same).
+  const hasHydratedRef = useRef(false);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // Logged out: do nothing here; logout flow already cleared items locally.
-        // Importantly: we must NOT mirror an empty array to Firestore here either,
-        // so that the saved cart waits for the same user to log back in.
-        return;
-      }
+      if (!user) return;
+      // Only hydrate once per session — auth state can fire multiple times
+      // (token refresh, reconnect) and re-running the merge keeps multiplying.
+      if (hasHydratedRef.current) return;
       // Wait briefly for Header.tsx to write userRole to localStorage
       const start = Date.now();
       let role = localStorage.getItem('userRole');
@@ -97,6 +98,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role = localStorage.getItem('userRole');
       }
       if (role !== 'customer') return;
+      hasHydratedRef.current = true;
       try {
         const snap = await getDoc(doc(db, 'customer_carts', user.uid));
         if (!snap.exists()) return;
@@ -115,7 +117,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return p ? { product: p, quantity: it.quantity } : null;
           })
           .filter((x): x is CartItem => x !== null);
-        // Merge with current (guest) cart: sum quantities for shared products
+        // Merge with current (guest) cart using MAX of quantities (not sum) so
+        // page refreshes never double the existing quantity. This still allows a
+        // guest who added items before login to keep them merged with their
+        // previously-saved remote cart.
         setItems((prev) => {
           const map = new Map<string, CartItem>();
           [...remoteCart, ...prev].forEach((ci) => {
@@ -123,7 +128,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (existing) {
               map.set(ci.product.id, {
                 product: ci.product,
-                quantity: existing.quantity + ci.quantity,
+                quantity: Math.max(existing.quantity, ci.quantity),
               });
             } else {
               map.set(ci.product.id, ci);

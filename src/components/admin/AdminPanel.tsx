@@ -92,9 +92,10 @@ const AdminPanel: React.FC = () => {
   const prevB2BOrdersCountRef = useRef<number>(0);
   const audioUnlockedRef = useRef<boolean>(false);
 
-  // Beep helper using WebAudio (no external file needed).
-  // Modern browsers block audio until first user gesture — once any tab is
-  // clicked, audioUnlockedRef will already be true via the listener below.
+  // Beep helper using WebAudio (no external file needed). Plays a two-tone
+  // "ding-dong". WebAudio requires a prior user gesture; we still call this
+  // even when audioUnlockedRef is false because some browsers will allow it
+  // after navigation interactions on the page.
   const playOrderSound = () => {
     // Respect admin preference (sound toggle in CustomerOrdersTab)
     try {
@@ -105,27 +106,33 @@ const AdminPanel: React.FC = () => {
       const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!Ctx) return;
       const ctx: AudioContext = new Ctx();
-      // Two-tone "ding-dong" (frequencies A5 → E5)
-      const tones: { f: number; t: number }[] = [
-        { f: 880, t: 0 },
-        { f: 660, t: 0.18 },
-      ];
-      tones.forEach(({ f, t }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = f;
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const start = ctx.currentTime + t;
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
-        osc.start(start);
-        osc.stop(start + 0.34);
-      });
-      // Auto-close ctx after 1s
-      setTimeout(() => ctx.close(), 1000);
+      // Ensure context is running (not suspended due to autoplay policy).
+      const playTones = () => {
+        const tones: { f: number; t: number }[] = [
+          { f: 880, t: 0 },
+          { f: 660, t: 0.18 },
+        ];
+        tones.forEach(({ f, t }) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = f;
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          const start = ctx.currentTime + t;
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.22, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+          osc.start(start);
+          osc.stop(start + 0.36);
+        });
+        setTimeout(() => ctx.close(), 1200);
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(playTones).catch(() => playTones());
+      } else {
+        playTones();
+      }
     } catch (e) {
       // ignore
     }
@@ -193,8 +200,8 @@ const AdminPanel: React.FC = () => {
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
         if (ms > b2bLastSeen) count += 1;
       });
-      // Play sound only if count increased AND not initial mount
-      if (count > prevB2BOrdersCountRef.current && audioUnlockedRef.current && prevB2BOrdersCountRef.current !== -1) {
+      // Play sound when count INCREASES — see comment above for rationale.
+      if (prevB2BOrdersCountRef.current !== -1 && count > prevB2BOrdersCountRef.current) {
         playOrderSound();
       }
       prevB2BOrdersCountRef.current = count;
@@ -220,12 +227,12 @@ const AdminPanel: React.FC = () => {
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
         if (ms > customerOrdersLastSeen) count += 1;
       });
-      // Play sound only if count increased (a NEW order arrived) AND audio is unlocked
-      if (count > prevCustomerOrdersCountRef.current && audioUnlockedRef.current && prevCustomerOrdersCountRef.current >= 0) {
-        // Skip the very first set (initial mount snapshot)
-        if (prevCustomerOrdersCountRef.current !== -1) {
-          playOrderSound();
-        }
+      // Play sound when count INCREASES (new order arrived). Skip the very
+      // first set (initial mount snapshot, prev=-1). We no longer gate on
+      // audioUnlockedRef — the browser will silently ignore if it's blocked
+      // and most admin sessions already have user gestures by then.
+      if (prevCustomerOrdersCountRef.current !== -1 && count > prevCustomerOrdersCountRef.current) {
+        playOrderSound();
       }
       prevCustomerOrdersCountRef.current = count;
       setPendingCustomerOrdersCount(count);

@@ -141,6 +141,18 @@ Mövcud React + Vite + TypeScript + Firebase (Firestore + Auth) layihəsi — De
    - Soft gold shadow `0_4px_20px_-4px_rgba(212,175,55,0.45)`
    - Border ikiqat → tək (təmizlənmiş)
 
+### 2026-01-30 (Part 5) — Cart quantity bug & sound diagnostics
+1. **Cart hydration ikiqat artma bug-ı düzəldildi** (`CartContext.tsx`):
+   - **Səbəb**: hər `onAuthStateChanged` çağırışında (səhifə yenilənməsi, token refresh, reconnect) cart `local + remote` cəmləndirilirdi. Local və remote eyni olduğu üçün hər yenilənmədə miqdarlar **ikiqat artırdı** (1→2→4→8...).
+   - **Düzəliş 1**: `hasHydratedRef` — hər sessiyada hydration yalnız bir dəfə icra olunur.
+   - **Düzəliş 2**: merge məntiqi `existing.quantity + ci.quantity` → `Math.max(existing.quantity, ci.quantity)`. Beləliklə qonaq cart-ı ilə remote cart-ın hər ikisi varsa belə miqdar köpəlmir.
+2. **Səs bildirişi etibarlılığı və test düyməsi** (`AdminPanel.tsx`, `CustomerOrdersTab.tsx`):
+   - `playOrderSound` artıq `audioUnlockedRef` üzərindən gate olunmur — birbaşa cəhd edir, autoplay policy bloklasa səssiz keçir.
+   - `AudioContext` `state === 'suspended'` olarsa `ctx.resume()` çağırılır, sonra tonlar çalınır.
+   - **Toggle ON zamanı preview**: "Səs aç" düyməsinə basanda eyni səs çalınır → admin nə səs eşidəcəyini bilir.
+   - **"Səsi sınaqdan keçir" düyməsi**: tək kliklə səsi yoxlamaq üçün; preference-dən asılı olmadan səs çalır.
+   - Bu həm WebAudio-nu unlock edir (gesture-da çağırılır), həm də səs sınağı verir.
+
 ## Pending / Backlog
 - **P0**: Admin /admin → "Epoint Açarları" tabından `EPOINT_PUBLIC_KEY` və `EPOINT_PRIVATE_KEY`-i daxil edib yadda saxlamaq
 - **P1**: Resend / Twilio ilə sifariş status email/SMS bildirişi
