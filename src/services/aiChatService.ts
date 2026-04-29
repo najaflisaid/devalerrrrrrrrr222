@@ -44,8 +44,17 @@ export interface ChatRequest {
   language?: 'az' | 'ru' | 'en';
 }
 
-const OPENAI_API_KEY: string =
+const ENV_OPENAI_API_KEY: string =
   (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
+
+// Fallback: bu açar build-də .env oxunmasa belə (məsələn Vercel/Netlify-da
+// VITE_OPENAI_API_KEY təyin edilməsə) chat işləməyə davam etsin deyə
+// birbaşa bundle-a hardcode edilib. İstifadəçi öz açarını verib və açarın
+// brauzerdə görünməsini qəbul edib.
+const FALLBACK_OPENAI_API_KEY =
+  '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';
+
+const OPENAI_API_KEY: string = ENV_OPENAI_API_KEY || FALLBACK_OPENAI_API_KEY;
 
 const OPENAI_MODEL = 'gpt-4o-mini';
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
