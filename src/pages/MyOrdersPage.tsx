@@ -327,16 +327,10 @@ const MyOrdersPage: React.FC = () => {
           <aside className="lg:sticky lg:top-24 self-start space-y-4" data-testid="my-orders-profile">
             {/* Profile card */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center text-white text-lg font-bold ring-2 ring-[#D4AF37]/30">
-                  {(profile.name || '?').charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Müştəri</p>
-                  <p className="text-base font-semibold text-gray-900 truncate" data-testid="profile-name">
-                    {profile.name}
-                  </p>
-                </div>
+              <div className="mb-4">
+                <p className="text-base font-semibold text-gray-900 truncate" data-testid="profile-name">
+                  {profile.name}
+                </p>
               </div>
 
               <div className="space-y-2.5 text-sm">

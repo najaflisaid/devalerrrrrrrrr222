@@ -808,20 +808,8 @@ const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> 
 // Ay seçici yalnız admin saxla zamanı istifadə üçün gizli düyməcik kimi xidmət edir.
 const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
   const currentYM = monthYM();
-  // Son 12 ay (yaxın gələcək də daxil — növbəti 2 ay üçün hədəf qoyma seçimi)
-  const monthOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [];
-    const now = new Date();
-    for (let offset = 2; offset >= -11; offset--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('az-AZ', { year: 'numeric', month: 'long' });
-      opts.push({ value: ym, label });
-    }
-    return opts;
-  }, []);
-
-  const [selectedYM, setSelectedYM] = useState<string>(currentYM);
+  // Ay seçimi silindi — həmişə cari ay istifadə olunur
+  const selectedYM = currentYM;
   const isCurrent = worker.monthlyTotalMonth === selectedYM;
   const history = worker.salesHistory || {};
   const targetsHistory = (worker as any).targetsHistory as Record<string, number> | undefined;
@@ -903,23 +891,9 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
       </div>
       <p className="text-xs text-gray-600">
         İşçinin <strong>aylıq satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin.
-        Ay seçimi yalnız admin tərəfindən redaktə üçündür — işçi panelində və ümumi cədvəldə ay etiketi göstərilmir, sadəcə "Aylıq hədəf" yazılır.
+        İşçi panelində və ümumi cədvəldə ay etiketi göstərilmir, sadəcə "Aylıq hədəf" yazılır.
       </p>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Ay seçici — yalnız admin redaktə zamanı görür, başqa heç bir yerdə görünmür */}
-        <div className="md:col-span-2">
-          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Hansı ay üçün (yalnız admin görür)</label>
-          <select
-            value={selectedYM}
-            onChange={(e) => setSelectedYM(e.target.value)}
-            className={inp}
-            data-testid="monthly-target-month-select"
-          >
-            {monthOptions.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-        </div>
         <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi (₼)</label>
           <input type="number" min={0} value={target} onChange={(e) => setTarget(e.target.value)} className={inp} placeholder="0" data-testid="monthly-target-input" />
