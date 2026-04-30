@@ -67,7 +67,7 @@ const HomeProductBanners: React.FC = () => {
               </span>
               <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
             </div>
-            <h2 className="font-playfair text-xl sm:text-3xl md:text-5xl lg:text-6xl font-light text-black leading-[1.15] sm:leading-[1.05] max-w-4xl mx-auto px-2">
+            <h2 className="font-playfair text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black leading-[1.15] sm:leading-[1.05] max-w-4xl mx-auto px-2">
               {heading}
             </h2>
           </div>

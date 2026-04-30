@@ -577,7 +577,7 @@ const Header: React.FC = () => {
                 aria-label="Search"
                 data-testid="header-search-btn"
               >
-                <Search className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
               </button>
 
               {/* B2B Bildiriş İkonu */}
@@ -665,7 +665,7 @@ const Header: React.FC = () => {
               )}
 
               <button onClick={() => navigate('/cart')} className="relative p-1 -m-1" aria-label="Cart">
-                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <ShoppingCart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                     {getTotalItems()}
@@ -679,7 +679,7 @@ const Header: React.FC = () => {
                 title="Wishlist"
                 data-testid="header-wishlist-btn"
               >
-                <Heart className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
+                <Heart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
                 {wishlistCount > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white"
