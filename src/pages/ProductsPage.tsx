@@ -600,7 +600,7 @@ const ProductsPage: React.FC = () => {
               <div className="border-t border-gray-200 pt-4">
                 <h3 className="font-medium mb-3">{t('product.category')}</h3>
                 <div className="space-y-2">
-                  {categories.map((category) => (
+                  {categories.filter(c => c !== 'all').map((category) => (
                     <label key={category} className="flex items-center cursor-pointer">
                       <input
                         type="radio"
@@ -609,10 +609,9 @@ const ProductsPage: React.FC = () => {
                         checked={selectedCategory === category}
                         onChange={(e) => handleCategoryChange(e.target.value)}
                         className="mr-2"
+                        data-testid={`filter-category-${category}`}
                       />
-                      <span className="text-sm capitalize">
-                        {category === 'all' ? t('common.all') : category}
-                      </span>
+                      <span className="text-sm capitalize">{category}</span>
                     </label>
                   ))}
                 </div>

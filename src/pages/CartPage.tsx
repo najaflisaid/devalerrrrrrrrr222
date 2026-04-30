@@ -407,6 +407,37 @@ const CartPage: React.FC = () => {
         />
       )}
 
+      {/* Tam ekran "Ödəniş hazırlanır" overlay — ödəniş zamanı donmuş hissini aradan qaldırır */}
+      {loading && !isB2BUser && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          data-testid="payment-loading-overlay"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-7 max-w-sm mx-4 flex flex-col items-center text-center">
+            <div className="relative w-16 h-16 mb-4">
+              <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-gray-900 animate-spin"></div>
+              <div className="absolute inset-3 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="font-semibold text-gray-900 text-lg mb-1">Ödəniş hazırlanır...</h3>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Sizi təhlükəsiz ödəniş səhifəsinə yönləndiririk.<br />
+              Zəhmət olmasa gözləyin və səhifəni bağlamayın.
+            </p>
+            <div className="flex items-center gap-1.5 mt-4">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button

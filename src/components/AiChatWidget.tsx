@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Send, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Trash2, ShoppingBag, Check } from 'lucide-react';
 import { productService } from '../services/productService';
 import { getAiKnowledge, subscribeChatEnabled, type AiKnowledge } from '../services/aiKnowledgeService';
 import { sendChatMessage } from '../services/aiChatService';
+import { useCart } from '../context/CartContext';
 import type { Product } from '../types';
 
 const SESSION_KEY = 'devaleur_ai_session';
@@ -73,54 +74,100 @@ interface ProductCardProps {
   product: Product;
   lang: 'az' | 'ru' | 'en';
   onClick: () => void;
+  onAddToCart?: (product: Product) => void;
 }
 
-const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick }) => {
+const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick, onAddToCart }) => {
+  const [added, setAdded] = useState(false);
   const name = product.name?.[lang] || product.name?.en || product.name?.az || '';
   const price = product.salePrice || product.price;
   const original = product.salePrice && product.price && product.salePrice < product.price ? product.price : null;
   const img = product.images?.[0];
+  const inStock = (product.stock ?? 0) > 0 && product.isEnabled !== false && !product.comingSoon;
+
+  const handleAdd = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAddToCart || !inStock || added) return;
+    onAddToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group my-2 w-full flex items-center gap-3 p-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-900 hover:shadow-md transition-all text-left"
-      data-testid={`ai-product-card-${product.id}`}
-    >
-      <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 flex-shrink-0">
-        {img ? (
-          <img
-            src={img}
-            alt={name}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        {product.brand && (
-          <p className="text-[10px] uppercase tracking-wide text-amber-600 font-semibold truncate">
-            {product.brand}
-          </p>
-        )}
-        <p className="text-[13px] font-medium text-gray-900 leading-tight line-clamp-2">{name}</p>
-        <div className="flex items-baseline gap-1.5 mt-0.5">
-          {original ? (
-            <>
-              <span className="text-[11px] text-gray-400 line-through">{original.toFixed(2)} ₼</span>
-              <span className="text-sm font-bold text-red-500">{price.toFixed(2)} ₼</span>
-            </>
+    <div className="my-2 w-full bg-white border border-gray-200 rounded-xl hover:border-gray-900 hover:shadow-md transition-all overflow-hidden" data-testid={`ai-product-card-${product.id}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className="group w-full flex items-center gap-3 p-2.5 text-left"
+      >
+        <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 flex-shrink-0">
+          {img ? (
+            <img
+              src={img}
+              alt={name}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            />
           ) : (
-            <span className="text-sm font-bold text-gray-900">{price?.toFixed(2)} ₼</span>
+            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
           )}
         </div>
+        <div className="flex-1 min-w-0">
+          {product.brand && (
+            <p className="text-[10px] uppercase tracking-wide text-amber-600 font-semibold truncate">
+              {product.brand}
+            </p>
+          )}
+          <p className="text-[13px] font-medium text-gray-900 leading-tight line-clamp-2">{name}</p>
+          <div className="flex items-baseline gap-1.5 mt-0.5">
+            {original ? (
+              <>
+                <span className="text-[11px] text-gray-400 line-through">{original.toFixed(2)} ₼</span>
+                <span className="text-sm font-bold text-red-500">{price.toFixed(2)} ₼</span>
+              </>
+            ) : (
+              <span className="text-sm font-bold text-gray-900">{price?.toFixed(2)} ₼</span>
+            )}
+          </div>
+        </div>
+      </button>
+      {/* Səbətə əlavə et və Bax düymələri */}
+      <div className="flex items-stretch border-t border-gray-100">
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!inStock || added}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+            added
+              ? 'bg-emerald-50 text-emerald-700'
+              : inStock
+              ? 'bg-gray-900 text-white hover:bg-black'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+          data-testid={`ai-product-add-cart-${product.id}`}
+        >
+          {added ? (
+            <>
+              <Check className="h-3.5 w-3.5" /> Əlavə olundu
+            </>
+          ) : inStock ? (
+            <>
+              <ShoppingBag className="h-3.5 w-3.5" /> Səbətə əlavə et
+            </>
+          ) : (
+            <>Stokda yoxdur</>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onClick}
+          className="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-l border-gray-100"
+          data-testid={`ai-product-view-${product.id}`}
+        >
+          Bax →
+        </button>
       </div>
-      <div className="text-[10px] font-medium text-gray-400 group-hover:text-gray-900 transition-colors flex-shrink-0">
-        Bax →
-      </div>
-    </button>
+    </div>
   );
 };
 
@@ -132,6 +179,7 @@ interface AssistantContentProps {
   setProductMap: React.Dispatch<React.SetStateAction<Record<string, Product>>>;
   lang: 'az' | 'ru' | 'en';
   onProductClick: (id: string) => void;
+  onAddToCart: (product: Product) => void;
 }
 
 // Resolve a marker id to an actual product. Tries:
@@ -178,7 +226,8 @@ const LazyProductCard: React.FC<{
   setProductMap: React.Dispatch<React.SetStateAction<Record<string, Product>>>;
   lang: 'az' | 'ru' | 'en';
   onClick: () => void;
-}> = ({ productId, setProductMap, lang, onClick }) => {
+  onAddToCart: (product: Product) => void;
+}> = ({ productId, setProductMap, lang, onClick, onAddToCart }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -221,10 +270,10 @@ const LazyProductCard: React.FC<{
       </div>
     );
   }
-  return <ProductMiniCard product={product} lang={lang} onClick={onClick} />;
+  return <ProductMiniCard product={product} lang={lang} onClick={onClick} onAddToCart={onAddToCart} />;
 };
 
-const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, setProductMap, lang, onProductClick }) => {
+const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, setProductMap, lang, onProductClick, onAddToCart }) => {
   // Split text on [[PRODUCT:id]] markers and render text + cards
   const segments: Array<{ kind: 'text'; value: string } | { kind: 'product'; id: string }> = [];
   let lastIndex = 0;
@@ -258,6 +307,7 @@ const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, s
               product={p}
               lang={lang}
               onClick={() => onProductClick(p.id)}
+              onAddToCart={onAddToCart}
             />
           );
         }
@@ -269,6 +319,7 @@ const AssistantContent: React.FC<AssistantContentProps> = ({ text, productMap, s
             setProductMap={setProductMap}
             lang={lang}
             onClick={() => onProductClick(seg.id)}
+            onAddToCart={onAddToCart}
           />
         );
       })}
@@ -282,6 +333,7 @@ const AiChatWidget: React.FC = () => {
   const { i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(true);
@@ -299,6 +351,11 @@ const AiChatWidget: React.FC = () => {
   const handleProductClick = (productId: string) => {
     setOpen(false);
     navigate(`/product/${productId}`);
+  };
+
+  // Bot mesajından məhsul kartından səbətə əlavə etmə (bot-un öz-özünə əlavə edə bilməsi)
+  const handleAddToCart = (product: Product) => {
+    addToCart(product, 1);
   };
 
   // Hide on admin / b2b-login / workers / payment routes,
@@ -590,6 +647,7 @@ const AiChatWidget: React.FC = () => {
                       setProductMap={setProductMap}
                       lang={lang}
                       onProductClick={handleProductClick}
+                      onAddToCart={handleAddToCart}
                     />
                   ) : (
                     m.content

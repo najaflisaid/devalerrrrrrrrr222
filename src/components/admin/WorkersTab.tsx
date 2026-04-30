@@ -10,7 +10,7 @@ import { verifyPassword } from '../../services/adminPasswordService';
 import {
   createWorker, listWorkers, updateWorker, deleteWorker,
   changeWorkerPassword,
-  addFine, listFines, deleteFine,
+  addFine, listFines, deleteFine, updateFine,
   addReward, listRewards, deleteReward, updateReward,
   addSale, listSales,
   listRequests, updateRequestStatus, deleteRequest,
@@ -91,6 +91,8 @@ const WorkersTab: React.FC = () => {
     try {
       const [w, r, p, b] = await Promise.all([listWorkers(), listRequests(), listPositions(), listBranches()]);
       setWorkers(w); setAllRequests(r); setPositions(p); setBranches(b);
+      // Düzəliş: refresh-dən sonra editing state-i yenilə ki, dəyişikliklər dərhal görünsün
+      setEditing(prev => prev ? (w.find(x => x.id === prev.id) || prev) : prev);
     } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); }, []);
@@ -801,30 +803,58 @@ const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> 
 );
 
 // ─── Monthly Total panel (admin enters worker's monthly total sales for leaderboard + monthly target)
+// User tələbi: Admin konkret ay üçün (məs. April / May) hədəf və ümumi satış qeyd edə bilər.
+// Lakin admin/işçi UI-də konkret ay etiketi GÖRÜNMƏMƏLİDİR — sadəcə "Aylıq hədəf" görünür.
+// Ay seçici yalnız admin saxla zamanı istifadə üçün gizli düyməcik kimi xidmət edir.
 const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void> }> = ({ worker, onSaved }) => {
-  const ym = monthYM();
-  const isCurrent = worker.monthlyTotalMonth === ym;
-  const initialTotal = isCurrent ? String(worker.monthlyTotalSales || '') : '';
-  const initialTarget = String(worker.monthlyTarget || '');
+  const currentYM = monthYM();
+  // Son 12 ay (yaxın gələcək də daxil — növbəti 2 ay üçün hədəf qoyma seçimi)
+  const monthOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let offset = 2; offset >= -11; offset--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('az-AZ', { year: 'numeric', month: 'long' });
+      opts.push({ value: ym, label });
+    }
+    return opts;
+  }, []);
+
+  const [selectedYM, setSelectedYM] = useState<string>(currentYM);
+  const isCurrent = worker.monthlyTotalMonth === selectedYM;
+  const history = worker.salesHistory || {};
+  const targetsHistory = (worker as any).targetsHistory as Record<string, number> | undefined;
+
+  const initialTotal = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalSales === 'number')
+    ? String(worker.monthlyTotalSales)
+    : (typeof history[selectedYM] === 'number' ? String(history[selectedYM]) : '');
+  const initialTarget = targetsHistory && typeof targetsHistory[selectedYM] === 'number'
+    ? String(targetsHistory[selectedYM])
+    : (selectedYM === currentYM ? String(worker.monthlyTarget || '') : '');
+
   const [total, setTotal] = useState<string>(initialTotal);
   const [target, setTarget] = useState<string>(initialTarget);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
-  // Initial dəyərləri saxla — yalnız dəyişən sahələri update edək
   const initialTotalRef = useRef<string>(initialTotal);
   const initialTargetRef = useRef<string>(initialTarget);
 
-  // worker dəyişəndə (məs. başqa işçi seçiləndə) state-i yenilə
+  // worker / selectedYM dəyişəndə state-i yenilə
   useEffect(() => {
-    const newInitTotal = worker.monthlyTotalMonth === ym ? String(worker.monthlyTotalSales || '') : '';
-    const newInitTarget = String(worker.monthlyTarget || '');
+    const newInitTotal = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalSales === 'number')
+      ? String(worker.monthlyTotalSales)
+      : (typeof history[selectedYM] === 'number' ? String(history[selectedYM]) : '');
+    const newInitTarget = targetsHistory && typeof targetsHistory[selectedYM] === 'number'
+      ? String(targetsHistory[selectedYM])
+      : (selectedYM === currentYM ? String(worker.monthlyTarget || '') : '');
     setTotal(newInitTotal);
     setTarget(newInitTarget);
     initialTotalRef.current = newInitTotal;
     initialTargetRef.current = newInitTarget;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worker.id, worker.monthlyTotalSales, worker.monthlyTotalMonth, worker.monthlyTarget]);
+  }, [worker.id, worker.monthlyTotalSales, worker.monthlyTotalMonth, worker.monthlyTarget, selectedYM]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -839,12 +869,16 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
         return;
       }
 
-      // Yalnız dəyişən sahələri yenilə — boş qalmış sahə təsadüfən 0-a yazılmasın
+      // Hədəf seçilmiş aya yazılır — eyni zamanda cari ay üçündürsə monthlyTarget də yenilənir
       if (targetChanged) {
-        await updateWorker(worker.id, { monthlyTarget: Number(target) || 0 });
+        const tNum = Number(target) || 0;
+        const patch: any = { [`targetsHistory.${selectedYM}`]: tNum };
+        if (selectedYM === currentYM) patch.monthlyTarget = tNum;
+        await updateWorker(worker.id, patch);
       }
+      // Ümumi satış seçilmiş aya yazılır
       if (totalChanged) {
-        await setMonthlyTotal(worker.id, Number(total) || 0, ym);
+        await setMonthlySalesHistory(worker.id, selectedYM, Number(total) || 0);
       }
 
       initialTotalRef.current = total;
@@ -865,13 +899,27 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
     <div className="bg-gray-50/60 rounded-lg p-5 border border-gray-100 space-y-4">
       <div className="flex items-center gap-2">
         <Trophy className="h-4 w-4 text-[#D4AF37]" />
-        <h3 className="font-semibold text-gray-900">Aylıq satış ({ym})</h3>
+        <h3 className="font-semibold text-gray-900">Aylıq satış</h3>
       </div>
       <p className="text-xs text-gray-600">
-        Bu işçinin bu ay üzrə <strong>satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin.
-        İşçinin öz panelində də eyni məbləğ göstəriləcək. Yalnız dəyişdirdiyiniz xanaya yazıb saxlayın — boş qoyduğunuz xana toxunulmadan qalır.
+        İşçinin <strong>aylıq satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin.
+        Ay seçimi yalnız admin tərəfindən redaktə üçündür — işçi panelində və ümumi cədvəldə ay etiketi göstərilmir, sadəcə "Aylıq hədəf" yazılır.
       </p>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Ay seçici — yalnız admin redaktə zamanı görür, başqa heç bir yerdə görünmür */}
+        <div className="md:col-span-2">
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Hansı ay üçün (yalnız admin görür)</label>
+          <select
+            value={selectedYM}
+            onChange={(e) => setSelectedYM(e.target.value)}
+            className={inp}
+            data-testid="monthly-target-month-select"
+          >
+            {monthOptions.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi (₼)</label>
           <input type="number" min={0} value={target} onChange={(e) => setTarget(e.target.value)} className={inp} placeholder="0" data-testid="monthly-target-input" />
@@ -901,12 +949,6 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
           {errorMsg && <span className="text-xs text-red-600">{errorMsg}</span>}
         </div>
       </form>
-
-      {isCurrent && (
-        <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-          Cari saxlanmış məbləğ: <strong>{(worker.monthlyTotalSales || 0).toLocaleString()} ₼</strong> · Hədəf: <strong>{(worker.monthlyTarget || 0).toLocaleString()} ₼</strong>
-        </p>
-      )}
     </div>
   );
 };

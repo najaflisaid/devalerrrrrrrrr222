@@ -32,6 +32,9 @@ const Header: React.FC = () => {
   const [isDropdownClosing, setIsDropdownClosing] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  // Hər kategoriyaya aid məhsul siyahısı — mega menyuda kategoriyaya hover edəndə həmin kateqoriyanın brendləri görünür
+  const [productsByCategory, setProductsByCategory] = useState<Record<string, string[]>>({});
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
   const [mobileMenuCloseTimeout, setMobileMenuCloseTimeout] = useState<NodeJS.Timeout | null>(null);
   const userDiscount = getUserDiscount();
@@ -125,8 +128,17 @@ const Header: React.FC = () => {
       const products = await productService.getAll();
       const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
       const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
+      // Hər kategoriya üçün o kategoriyaya aid brendləri qruplaşdır
+      const byCat: Record<string, string[]> = {};
+      products.forEach(p => {
+        if (!p.category || !p.brand) return;
+        if (!byCat[p.category]) byCat[p.category] = [];
+        if (!byCat[p.category].includes(p.brand)) byCat[p.category].push(p.brand);
+      });
+      Object.keys(byCat).forEach(k => byCat[k].sort((a, b) => a.localeCompare(b, 'az')));
       setCategories(uniqueCategories);
       setBrands(uniqueBrands);
+      setProductsByCategory(byCat);
     } catch (error) {
       console.error('Error loading categories and brands:', error);
     }
@@ -369,42 +381,66 @@ const Header: React.FC = () => {
                     <div className="h-2 -mt-2" aria-hidden="true" />
                     <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)]">
                       <div className="max-w-[1200px] mx-auto px-10 py-12">
-                        <div className="grid grid-cols-2 gap-16">
-                          {/* Categories Section */}
-                          <div className="dv-mega-section dv-mega-section-1">
+                        <div className="grid grid-cols-12 gap-10">
+                          {/* Categories Section — sol tərəf, hover edəndə həmin kategoriyanın brendləri sağda görünür */}
+                          <div className="dv-mega-section dv-mega-section-1 col-span-5">
                             <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold">
                               {t('header.categories')}
                             </h3>
-                            <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                              {categories.map((category, idx) => (
-                                <li key={category}>
-                                  <button
-                                    onClick={() => {
-                                      navigate(`/products?category=${encodeURIComponent(category)}`);
-                                      setShowDropdown(false);
-                                    }}
-                                    style={{ ['--dv-i' as any]: idx }}
-                                    className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 capitalize transition-colors"
-                                    data-testid={`menu-category-${category}`}
-                                  >
-                                    <span className="dv-mega-text">{getCategoryTranslation(category)}</span>
-                                  </button>
-                                </li>
-                              ))}
+                            <ul className="space-y-1">
+                              {categories.map((category, idx) => {
+                                const isHovered = hoveredCategory === category;
+                                return (
+                                  <li key={category}>
+                                    <button
+                                      onMouseEnter={() => setHoveredCategory(category)}
+                                      onClick={() => {
+                                        navigate(`/products?category=${encodeURIComponent(category)}`);
+                                        setShowDropdown(false);
+                                      }}
+                                      style={{ ['--dv-i' as any]: idx }}
+                                      className={`dv-mega-link group flex w-full text-left items-center justify-between gap-2 text-sm py-2 capitalize transition-colors ${
+                                        isHovered ? 'text-black font-medium' : 'text-gray-700 hover:text-black'
+                                      }`}
+                                      data-testid={`menu-category-${category}`}
+                                    >
+                                      <span className="dv-mega-text">{getCategoryTranslation(category)}</span>
+                                      <span className={`text-xs transition-transform ${isHovered ? 'translate-x-1 text-amber-500' : 'text-gray-300'}`}>›</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
 
-                          {/* Brands Section */}
-                          <div className="dv-mega-section dv-mega-section-2">
-                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold">
-                              {t('header.brands')}
+                          {/* Brands Section — kategoriyaya hover edildikdə həmin kategoriyanın brendləri, hover yoxdursa hamısı */}
+                          <div
+                            className="dv-mega-section dv-mega-section-2 col-span-7 border-l border-gray-100 pl-10"
+                            onMouseLeave={() => setHoveredCategory(null)}
+                          >
+                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold flex items-center gap-2">
+                              {hoveredCategory ? (
+                                <>
+                                  <span className="capitalize text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
+                                  <span className="text-gray-400">/ {t('header.brands')}</span>
+                                </>
+                              ) : (
+                                <span>{t('header.brands')}</span>
+                              )}
                             </h3>
                             <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                              {brands.map((brand, idx) => (
-                                <li key={brand}>
+                              {(hoveredCategory && productsByCategory[hoveredCategory]?.length
+                                ? productsByCategory[hoveredCategory]
+                                : brands
+                              ).map((brand, idx) => (
+                                <li key={`${hoveredCategory || 'all'}-${brand}`}>
                                   <button
                                     onClick={() => {
-                                      navigate(`/products?brand=${encodeURIComponent(brand)}`);
+                                      // Brendi seçərkən, əgər kategoriya hover olunubsa, həm brand həm category filter qoy
+                                      const params = new URLSearchParams();
+                                      params.set('brand', brand);
+                                      if (hoveredCategory) params.set('category', hoveredCategory);
+                                      navigate(`/products?${params.toString()}`);
                                       setShowDropdown(false);
                                     }}
                                     style={{ ['--dv-i' as any]: idx }}
@@ -416,6 +452,9 @@ const Header: React.FC = () => {
                                 </li>
                               ))}
                             </ul>
+                            {hoveredCategory && (!productsByCategory[hoveredCategory] || productsByCategory[hoveredCategory].length === 0) && (
+                              <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada brend yoxdur.</p>
+                            )}
                           </div>
                         </div>
                       </div>
