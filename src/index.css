@@ -470,6 +470,30 @@ html.dark .dv-orb { opacity: 0.28; }
   }
 }
 
+/* Mobile menu accordion smooth open animation */
+@keyframes dv-accordion-slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1500px;
+  }
+}
+.dv-accordion-open {
+  animation: dv-accordion-slide-down 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+  transform-origin: top;
+}
+.dv-accordion-open > * {
+  animation: dv-menu-item-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--dv-i, 0) * 30ms + 60ms);
+}
+
+
 /* Golden left accent rail on hover, minimal — desktop pointer only (no sticky hover on mobile) */
 .dv-menu-item > a,
 .dv-menu-item > button,

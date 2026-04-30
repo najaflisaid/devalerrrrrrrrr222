@@ -735,7 +735,7 @@ const Header: React.FC = () => {
                       <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {mobileProductsOpen && (
-                      <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5">
+                      <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
                         {/* Top-level kategoriyalar (parent) — əgər categoryTree boşdursa fallback olaraq düz categories siyahısı */}
                         {(categoryTree.length > 0
                           ? categoryTree.map(node => ({ key: node.id, name: node.name, displayName: node.name, lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean), children: node.children }))
@@ -759,19 +759,7 @@ const Header: React.FC = () => {
                                 <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                               </button>
                               {isOpen && (
-                                <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5">
-                                  {/* "Hamısı" linki — bütün bu kategorinin məhsulları */}
-                                  <button
-                                    onClick={() => {
-                                      navigate(`/products?category=${encodeURIComponent(cat.lookupNames[0] || cat.name)}`);
-                                      closeMobileMenu();
-                                      window.scrollTo({ top: 0, behavior: 'auto' });
-                                    }}
-                                    className="block w-full text-left px-3 py-1.5 text-xs text-amber-700 font-semibold hover:bg-amber-50 rounded uppercase tracking-wide"
-                                  >
-                                    Bütün {cat.displayName}
-                                  </button>
-
+                                <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
                                   {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
                                   {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
                                     const subOpen = mobileSubCategoryOpen === sub.id;
@@ -789,17 +777,7 @@ const Header: React.FC = () => {
                                           <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} />
                                         </button>
                                         {subOpen && (
-                                          <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1">
-                                            <button
-                                              onClick={() => {
-                                                navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
-                                                closeMobileMenu();
-                                                window.scrollTo({ top: 0, behavior: 'auto' });
-                                              }}
-                                              className="block w-full text-left px-3 py-1.5 text-[11px] text-gray-500 hover:bg-gray-50 rounded font-medium uppercase tracking-wide"
-                                            >
-                                              Hamısına bax
-                                            </button>
+                                          <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
                                             {subBrands.length > 0 ? subBrands.map(b => (
                                               <button
                                                 key={`${sub.id}-${b}`}
