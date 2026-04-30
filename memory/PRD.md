@@ -11,7 +11,24 @@
 - **Payments**: Epoint (Azərbaycan ödəniş gateway).
 - **AI Chat**: OpenAI gpt-4o-mini, frontend-dən direkt çağırılır (`src/services/aiChatService.ts`).
 
-## What was done — Apr 30, 2026 iteration
+## What was done — Apr 30, 2026 iteration #2
+
+### 1. "Ən çox satılanlar" 3 sıra
+- `src/components/BestSellersSection.tsx`: 24 məhsul → 36 məhsul yüklənir, 3 sıra (sol↔sağ↔sol marquee).
+
+### 2. SEO — Google sitelinks üçün strukturlaşdırılmış məlumat
+- `index.html`: zəngin meta tags (azərbaycanca title/description/keywords), hreflang (az/ru/en), Open Graph + Twitter cards.
+- 5 ayrı JSON-LD schema: Organization, Store, WebSite (SearchAction), ItemList (SiteNavigationElement — sitelinks üçün), BreadcrumbList.
+- `public/sitemap.xml`: bütün vacib səhifələr + brendlər siyahısı.
+- `public/robots.txt`: index/follow + admin/private route disallow + sitemap referansı.
+
+### 3. Admin paneldə "Sürətli qiymət yeniləmə" paneli
+- `src/components/admin/DeliveryMethodsTab.tsx`: yuxarıda yeni inline panel.
+- Hər çatdırılma üsulu üçün cari qiymət göstərilir + yeni qiymət inputu + ✓ saxla düyməsi.
+- Enter ilə dərhal saxlayır, Escape ilə imtina, dəyişdirildikdə amber highlight.
+- Cart-da `deliveryFee` dəyişdikdə total avtomatik yenilənir (artıq belə işləyirdi).
+
+## What was done — Apr 30, 2026 iteration #1
 
 ### 1. Məhsul filtrindən "Hamısı" kateqoriya seçimi silindi
 - `src/pages/ProductsPage.tsx`: `categories.filter(c => c !== 'all')` ilə yalnız real kateqoriyalar göstərilir.

@@ -21,7 +21,8 @@ const BestSellersSection: React.FC = () => {
 
   const loadBestSellers = async () => {
     try {
-      const data = await productService.getBestSellers(24);
+      // 3 sıra üçün daha çox məhsul yüklə (hər sıra üçün ən az ~12 məhsul)
+      const data = await productService.getBestSellers(36);
       setProducts(data);
     } catch (error) {
       console.error('Error loading best sellers:', error);
@@ -32,12 +33,15 @@ const BestSellersSection: React.FC = () => {
 
   if (loading || products.length === 0) return null;
 
-  // Split into two rows that scroll in opposite directions
-  const half = Math.ceil(products.length / 2);
-  const rowA = products.slice(0, half);
-  const rowB = products.slice(half);
-  const safeRowA = rowA.length >= 6 ? rowA : [...rowA, ...products].slice(0, Math.max(6, rowA.length));
-  const safeRowB = rowB.length >= 6 ? rowB : [...rowB, ...products].slice(0, Math.max(6, rowB.length));
+  // Split into THREE rows that scroll in alternating directions (left, right, left)
+  const third = Math.ceil(products.length / 3);
+  const rowA = products.slice(0, third);
+  const rowB = products.slice(third, third * 2);
+  const rowC = products.slice(third * 2);
+  const ensureMin = (arr: Product[]) => arr.length >= 6 ? arr : [...arr, ...products].slice(0, Math.max(6, arr.length));
+  const safeRowA = ensureMin(rowA);
+  const safeRowB = ensureMin(rowB);
+  const safeRowC = ensureMin(rowC);
 
   const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
     <div className="shrink-0 w-[calc(33.333vw-12px)] sm:w-[230px] md:w-[260px] lg:w-[290px]">
@@ -123,10 +127,11 @@ const BestSellersSection: React.FC = () => {
           </h2>
         </div>
 
-        {/* Two opposite-direction marquee rows */}
+        {/* Three opposite-direction marquee rows */}
         <div className="space-y-3 sm:space-y-5">
           <Row items={safeRowA} direction="left" />
           <Row items={safeRowB} direction="right" />
+          <Row items={safeRowC} direction="left" />
         </div>
       </div>
 

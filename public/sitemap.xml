@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://devaleur.az/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="az" href="https://devaleur.az/" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://devaleur.az/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://devaleur.az/?lang=en" />
+  </url>
+  <url>
+    <loc>https://devaleur.az/products</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/partners</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/delivery</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/careers</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/return-policy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/privacy-policy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://devaleur.az/b2b-login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <!-- Brendlər -->
+  <url><loc>https://devaleur.az/brand/CASIO</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/FESTINA</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/PIERRE%20LANNIER</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/JACQUES%20LEMANS</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/DUCATI</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/ZIPPO</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/ROCHE%20MONTRE</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/SILVER%20%26%20POLO</loc><priority>0.7</priority></url>
+  <url><loc>https://devaleur.az/brand/U.S.%20Polo%20ASSN.</loc><priority>0.7</priority></url>
+</urlset>

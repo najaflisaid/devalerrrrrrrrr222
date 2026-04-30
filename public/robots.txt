@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Disallow private/admin routes
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /workers
+Disallow: /b2b/orders
+Disallow: /my-orders
+Disallow: /payment/
+
+Sitemap: https://devaleur.az/sitemap.xml
