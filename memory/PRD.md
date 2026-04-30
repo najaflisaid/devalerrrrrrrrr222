@@ -11,6 +11,32 @@
 - **Payments**: Epoint (Azərbaycan ödəniş gateway).
 - **AI Chat**: OpenAI gpt-4o-mini, frontend-dən direkt çağırılır (`src/services/aiChatService.ts`).
 
+## What was done — Apr 30, 2026 iteration #3 — Mobil menyu + alt-kateqoriya
+
+### 1. Mobil menyu tamamən yenidən quruldu (akardeon hierarxiyası)
+- `src/components/Header.tsx`: əvvəlki "Məhsullar" linki + ayrıca "Kategoriyalar" + ayrıca "Brendlər" sxemi **tamamilə dəyişdirildi**.
+- İndi yalnız bir "Məhsullar" akardeonu var:
+  - Açıldıqda yalnız **kategoriyalar** görünür (ox aşağı)
+  - Hər kategoriyaya basıldıqda akardeon açılır → **brendlər** + (varsa) **alt-kateqoriyalar** görünür
+  - Hər alt-kategori də öz akardeonuna malikdir → açıldıqda həmin alt-kategorinin brendləri görünür
+  - Ayrıca "Brendlər" menyusu silindi (artıq kategoriya altında qruplaşır)
+- "Bütün [kateqoriya adı]" düyməsi əlavə edildi — kategorinin bütün məhsullarını birbaşa açır.
+
+### 2. Alt-kateqoriya (subcategory) tam dəstəyi
+- Yeni service: `src/services/categoryService.ts` — `getCategoryTree(lang)` Firestore-dan parent → children hierarxiyasını qurur.
+- `categories` Firestore koleksiyasına yeni field: **`parentId: string | null`**.
+- AdminPanel "Yeni Kategori" və "Redaktə" formlarına **"Ana kateqoriya seç"** dropdown əlavə edildi.
+- AdminPanel kateqoriya siyahısında alt-kategoriyalarda "↳ [Parent ad] altında" badge görünür.
+- ProductsPage filterində: **parent kategori seçildikdə alt-larındakı məhsullar da göstərilir** (məs: "Dəri Aksesuarlar" → "Çantalar" + "Pul qabıları" məhsulları daxil olur).
+- Desktop mega menyu: kategoriyaya hover edəndə alt-kateqoriyalar (varsa) yuxarıda + brendlər aşağıda göstərilir. Parent kategori brendləri = onun alt-larının brendlərinin birləşməsi.
+
+### Necə istifadə olunmalıdır
+1. AdminPanel → Kategoriyalar → "Dəri Aksesuarlar" yarat (Ana kateqoriya boş qoy).
+2. "Yeni kateqoriya əlavə et" → ad: "Çantalar", **Ana kateqoriya: Dəri Aksesuarlar**.
+3. Eyni şəkildə "Pul qabıları" → Ana kateqoriya: "Dəri Aksesuarlar".
+4. Məhsul yaradılarkən, çantalı məhsullara `category = "Çantalar"`, pul qabısına `category = "Pul qabıları"` ver.
+5. Mobil/desktop menyuda və filtrdə "Dəri Aksesuarlar"-a bassanız → Çantalar + Pul qabıları + brendlər görünəcək.
+
 ## What was done — Apr 30, 2026 iteration #2
 
 ### 1. "Ən çox satılanlar" 3 sıra

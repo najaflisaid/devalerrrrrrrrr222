@@ -4,6 +4,7 @@ import { Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
+import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import type { Product } from '../types';
 
 const ProductsPage: React.FC = () => {
@@ -28,6 +29,8 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
+  // Kategori hierarxiyası — parent seçildikdə alt-kategoriyalardakı məhsulları da göstərmək üçün
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   // Show the bottom-left floating filter button only when the inline top
   // filter button is scrolled out of view (mobile only).
   const [showFloatingFilter, setShowFloatingFilter] = useState(false);
@@ -338,7 +341,11 @@ const ProductsPage: React.FC = () => {
 
   const loadProducts = async () => {
     try {
-      const data = await productService.getAll();
+      const [data, tree] = await Promise.all([
+        productService.getAll(),
+        getCategoryTree('az'),
+      ]);
+      setCategoryTree(tree);
       setProducts(data);
       setFilteredProducts(data);
     } catch (error) {
@@ -373,7 +380,17 @@ const ProductsPage: React.FC = () => {
     }
 
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
+      // Əgər seçilmiş kategori parent-dirsə, onun bütün alt-kateqoriyalarındakı məhsulları da daxil et
+      const parentNode = categoryTree.find(n => n.nameAz === selectedCategory || n.nameRu === selectedCategory || n.nameEn === selectedCategory || n.name === selectedCategory);
+      if (parentNode && parentNode.children.length > 0) {
+        const validNames = new Set<string>([selectedCategory]);
+        parentNode.children.forEach(c => {
+          [c.nameAz, c.nameRu, c.nameEn, c.name].filter(Boolean).forEach(n => validNames.add(n));
+        });
+        filtered = filtered.filter(p => validNames.has(p.category));
+      } else {
+        filtered = filtered.filter(p => p.category === selectedCategory);
+      }
     }
 
     if (selectedBrand !== 'all') {

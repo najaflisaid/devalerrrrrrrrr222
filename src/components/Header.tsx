@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import CustomerLogin from './auth/CustomerLogin';
 import { productService } from '../services/productService';
+import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
 import type { Product } from '../types';
 
@@ -32,9 +33,15 @@ const Header: React.FC = () => {
   const [isDropdownClosing, setIsDropdownClosing] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   // Hər kategoriyaya aid məhsul siyahısı — mega menyuda kategoriyaya hover edəndə həmin kateqoriyanın brendləri görünür
   const [productsByCategory, setProductsByCategory] = useState<Record<string, string[]>>({});
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  // Mobil menyu üçün açıq/qapalı state-lər
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
+  const [mobileCategoryOpen, setMobileCategoryOpen] = useState<string | null>(null);
+  const [mobileSubCategoryOpen, setMobileSubCategoryOpen] = useState<string | null>(null);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
   const [mobileMenuCloseTimeout, setMobileMenuCloseTimeout] = useState<NodeJS.Timeout | null>(null);
   const userDiscount = getUserDiscount();
@@ -125,10 +132,14 @@ const Header: React.FC = () => {
 
   const loadCategoriesAndBrands = async () => {
     try {
-      const products = await productService.getAll();
+      const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+      const [products, tree] = await Promise.all([
+        productService.getAll(),
+        getCategoryTree(lang),
+      ]);
       const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
       const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
-      // Hər kategoriya üçün o kategoriyaya aid brendləri qruplaşdır
+      // Hər kategoriya üçün o kategoriyaya aid brendləri qruplaşdır (kategori adı ilə index)
       const byCat: Record<string, string[]> = {};
       products.forEach(p => {
         if (!p.category || !p.brand) return;
@@ -136,9 +147,28 @@ const Header: React.FC = () => {
         if (!byCat[p.category].includes(p.brand)) byCat[p.category].push(p.brand);
       });
       Object.keys(byCat).forEach(k => byCat[k].sort((a, b) => a.localeCompare(b, 'az')));
+      // Parent kategori üçün — onun bütün alt-kategoriyalarındakı brendlər də daxil olur
+      const enrichBrandsForParents = (node: CategoryNode) => {
+        const allNames = [node.nameAz, node.nameRu, node.nameEn].filter(Boolean);
+        const collected = new Set<string>();
+        allNames.forEach(n => (byCat[n] || []).forEach(b => collected.add(b)));
+        node.children.forEach(child => {
+          enrichBrandsForParents(child);
+          [child.nameAz, child.nameRu, child.nameEn].filter(Boolean).forEach(n => {
+            (byCat[n] || []).forEach(b => collected.add(b));
+          });
+        });
+        if (collected.size > 0) {
+          allNames.forEach(n => {
+            byCat[n] = Array.from(collected).sort((a, b) => a.localeCompare(b, 'az'));
+          });
+        }
+      };
+      tree.forEach(enrichBrandsForParents);
       setCategories(uniqueCategories);
       setBrands(uniqueBrands);
       setProductsByCategory(byCat);
+      setCategoryTree(tree);
     } catch (error) {
       console.error('Error loading categories and brands:', error);
     }
@@ -388,23 +418,26 @@ const Header: React.FC = () => {
                               {t('header.categories')}
                             </h3>
                             <ul className="space-y-1">
-                              {categories.map((category, idx) => {
-                                const isHovered = hoveredCategory === category;
+                              {(categoryTree.length > 0
+                                ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name }))
+                                : categories.map(c => ({ key: c, displayName: getCategoryTranslation(c), lookupName: c }))
+                              ).map((cat, idx) => {
+                                const isHovered = hoveredCategory === cat.lookupName;
                                 return (
-                                  <li key={category}>
+                                  <li key={cat.key}>
                                     <button
-                                      onMouseEnter={() => setHoveredCategory(category)}
+                                      onMouseEnter={() => setHoveredCategory(cat.lookupName)}
                                       onClick={() => {
-                                        navigate(`/products?category=${encodeURIComponent(category)}`);
+                                        navigate(`/products?category=${encodeURIComponent(cat.lookupName)}`);
                                         setShowDropdown(false);
                                       }}
                                       style={{ ['--dv-i' as any]: idx }}
                                       className={`dv-mega-link group flex w-full text-left items-center justify-between gap-2 text-sm py-2 capitalize transition-colors ${
                                         isHovered ? 'text-black font-medium' : 'text-gray-700 hover:text-black'
                                       }`}
-                                      data-testid={`menu-category-${category}`}
+                                      data-testid={`menu-category-${cat.lookupName}`}
                                     >
-                                      <span className="dv-mega-text">{getCategoryTranslation(category)}</span>
+                                      <span className="dv-mega-text">{cat.displayName}</span>
                                       <span className={`text-xs transition-transform ${isHovered ? 'translate-x-1 text-amber-500' : 'text-gray-300'}`}>›</span>
                                     </button>
                                   </li>
@@ -413,48 +446,85 @@ const Header: React.FC = () => {
                             </ul>
                           </div>
 
-                          {/* Brands Section — kategoriyaya hover edildikdə həmin kategoriyanın brendləri, hover yoxdursa hamısı */}
+                          {/* Brands Section — kategoriyaya hover edildikdə həmin kategoriyanın alt-kateqoriyaları + brendləri, hover yoxdursa hamısı */}
                           <div
                             className="dv-mega-section dv-mega-section-2 col-span-7 border-l border-gray-100 pl-10"
                             onMouseLeave={() => setHoveredCategory(null)}
                           >
-                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold flex items-center gap-2">
-                              {hoveredCategory ? (
-                                <>
-                                  <span className="capitalize text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
-                                  <span className="text-gray-400">/ {t('header.brands')}</span>
-                                </>
-                              ) : (
-                                <span>{t('header.brands')}</span>
-                              )}
-                            </h3>
-                            <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                              {(hoveredCategory && productsByCategory[hoveredCategory]?.length
+                            {(() => {
+                              // Hover edilən kategorinin tree-də node-unu tap
+                              const hoveredNode = hoveredCategory
+                                ? categoryTree.find(n => n.nameAz === hoveredCategory || n.nameRu === hoveredCategory || n.nameEn === hoveredCategory || n.name === hoveredCategory)
+                                : null;
+                              const subcats = hoveredNode?.children || [];
+                              const brandsForHover = hoveredCategory && productsByCategory[hoveredCategory]?.length
                                 ? productsByCategory[hoveredCategory]
-                                : brands
-                              ).map((brand, idx) => (
-                                <li key={`${hoveredCategory || 'all'}-${brand}`}>
-                                  <button
-                                    onClick={() => {
-                                      // Brendi seçərkən, əgər kategoriya hover olunubsa, həm brand həm category filter qoy
-                                      const params = new URLSearchParams();
-                                      params.set('brand', brand);
-                                      if (hoveredCategory) params.set('category', hoveredCategory);
-                                      navigate(`/products?${params.toString()}`);
-                                      setShowDropdown(false);
-                                    }}
-                                    style={{ ['--dv-i' as any]: idx }}
-                                    className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 transition-colors"
-                                    data-testid={`menu-brand-${brand}`}
-                                  >
-                                    <span className="dv-mega-text">{brand}</span>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                            {hoveredCategory && (!productsByCategory[hoveredCategory] || productsByCategory[hoveredCategory].length === 0) && (
-                              <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada brend yoxdur.</p>
-                            )}
+                                : brands;
+                              return (
+                                <>
+                                  {/* Sub-categories (varsa) */}
+                                  {subcats.length > 0 && (
+                                    <div className="mb-6">
+                                      <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-3 font-semibold">
+                                        Alt kateqoriyalar
+                                      </h3>
+                                      <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
+                                        {subcats.map((sub, idx) => (
+                                          <li key={sub.id}>
+                                            <button
+                                              onClick={() => {
+                                                navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
+                                                setShowDropdown(false);
+                                              }}
+                                              style={{ ['--dv-i' as any]: idx }}
+                                              className="dv-mega-link group block w-full text-left text-sm text-gray-800 hover:text-amber-700 py-1.5 transition-colors capitalize font-medium"
+                                              data-testid={`menu-subcategory-${sub.name}`}
+                                            >
+                                              <span className="dv-mega-text">› {sub.name}</span>
+                                            </button>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Brands */}
+                                  <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-4 font-semibold flex items-center gap-2">
+                                    {hoveredCategory ? (
+                                      <>
+                                        <span className="capitalize text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
+                                        <span className="text-gray-400">/ {t('header.brands')}</span>
+                                      </>
+                                    ) : (
+                                      <span>{t('header.brands')}</span>
+                                    )}
+                                  </h3>
+                                  <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
+                                    {brandsForHover.map((brand, idx) => (
+                                      <li key={`${hoveredCategory || 'all'}-${brand}`}>
+                                        <button
+                                          onClick={() => {
+                                            const params = new URLSearchParams();
+                                            params.set('brand', brand);
+                                            if (hoveredCategory) params.set('category', hoveredCategory);
+                                            navigate(`/products?${params.toString()}`);
+                                            setShowDropdown(false);
+                                          }}
+                                          style={{ ['--dv-i' as any]: idx }}
+                                          className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 transition-colors"
+                                          data-testid={`menu-brand-${brand}`}
+                                        >
+                                          <span className="dv-mega-text">{brand}</span>
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {hoveredCategory && brandsForHover.length === 0 && subcats.length === 0 && (
+                                    <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada məhsul yoxdur.</p>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -653,64 +723,135 @@ const Header: React.FC = () => {
                     {t('header.home')}
                   </Link>
                   </div>
+
+                  {/* Mobile "Məhsullar" akardeonu — yalnız kateqoriyalar görünür, hər kateqoriyanın altında brendlər (və varsa alt-kateqoriyalar) genişlənir */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
-                  <Link
-                    to="/products"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    {t('header.products')}
-                  </Link>
-                  </div>
+                    <button
+                      onClick={() => setMobileProductsOpen(v => !v)}
+                      className="w-full flex items-center justify-between px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors text-left"
+                      data-testid="mobile-products-toggle"
+                    >
+                      <span>{t('header.products')}</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {mobileProductsOpen && (
+                      <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5">
+                        {/* Top-level kategoriyalar (parent) — əgər categoryTree boşdursa fallback olaraq düz categories siyahısı */}
+                        {(categoryTree.length > 0
+                          ? categoryTree.map(node => ({ key: node.id, name: node.name, displayName: node.name, lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean), children: node.children }))
+                          : categories.map(c => ({ key: c, name: c, displayName: getCategoryTranslation(c), lookupNames: [c], children: [] as CategoryNode[] }))
+                        ).map((cat) => {
+                          const isOpen = mobileCategoryOpen === cat.key;
+                          // Bu kategoriyaya aid brendlər (parent isə alt-larından da daxil)
+                          const catBrands = Array.from(new Set(cat.lookupNames.flatMap(n => productsByCategory[n] || [])))
+                            .sort((a, b) => a.localeCompare(b, 'az'));
+                          return (
+                            <div key={cat.key} className="border-b border-gray-50 last:border-0">
+                              <button
+                                onClick={() => {
+                                  setMobileCategoryOpen(isOpen ? null : cat.key);
+                                  setMobileSubCategoryOpen(null);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded transition-colors text-left"
+                                data-testid={`mobile-category-toggle-${cat.name}`}
+                              >
+                                <span className="capitalize">{cat.displayName}</span>
+                                <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              {isOpen && (
+                                <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5">
+                                  {/* "Hamısı" linki — bütün bu kategorinin məhsulları */}
+                                  <button
+                                    onClick={() => {
+                                      navigate(`/products?category=${encodeURIComponent(cat.lookupNames[0] || cat.name)}`);
+                                      closeMobileMenu();
+                                      window.scrollTo({ top: 0, behavior: 'auto' });
+                                    }}
+                                    className="block w-full text-left px-3 py-1.5 text-xs text-amber-700 font-semibold hover:bg-amber-50 rounded uppercase tracking-wide"
+                                  >
+                                    Bütün {cat.displayName}
+                                  </button>
 
-                  {/* Mobile Categories Dropdown */}
-                  <div className="dv-menu-item px-4 py-2" style={{ ['--dv-i' as any]: 2 }}>
-                    <details className="group">
-                      <summary className="py-2 font-medium cursor-pointer list-none flex items-center justify-between">
-                        <span>{t('header.categories')}</span>
-                        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                      </summary>
-                      <div className="mt-2 ml-4 space-y-2">
-                        {categories.map((category) => (
-                          <button
-                            key={category}
-                            onClick={() => {
-                              navigate(`/products?category=${encodeURIComponent(category)}`);
-                              closeMobileMenu();
-                              window.scrollTo({ top: 0, behavior: 'auto' });
-                            }}
-                            className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded capitalize"
-                          >
-                            {getCategoryTranslation(category)}
-                          </button>
-                        ))}
-                      </div>
-                    </details>
-                  </div>
+                                  {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
+                                  {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
+                                    const subOpen = mobileSubCategoryOpen === sub.id;
+                                    const subLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
+                                    const subBrands = Array.from(new Set(subLookups.flatMap(n => productsByCategory[n] || [])))
+                                      .sort((a, b) => a.localeCompare(b, 'az'));
+                                    return (
+                                      <div key={sub.id}>
+                                        <button
+                                          onClick={() => setMobileSubCategoryOpen(subOpen ? null : sub.id)}
+                                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded text-left"
+                                          data-testid={`mobile-subcategory-toggle-${sub.name}`}
+                                        >
+                                          <span className="capitalize">{sub.name}</span>
+                                          <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        {subOpen && (
+                                          <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1">
+                                            <button
+                                              onClick={() => {
+                                                navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
+                                                closeMobileMenu();
+                                                window.scrollTo({ top: 0, behavior: 'auto' });
+                                              }}
+                                              className="block w-full text-left px-3 py-1.5 text-[11px] text-gray-500 hover:bg-gray-50 rounded font-medium uppercase tracking-wide"
+                                            >
+                                              Hamısına bax
+                                            </button>
+                                            {subBrands.length > 0 ? subBrands.map(b => (
+                                              <button
+                                                key={`${sub.id}-${b}`}
+                                                onClick={() => {
+                                                  const params = new URLSearchParams();
+                                                  params.set('brand', b);
+                                                  params.set('category', sub.nameAz || sub.name);
+                                                  navigate(`/products?${params.toString()}`);
+                                                  closeMobileMenu();
+                                                  window.scrollTo({ top: 0, behavior: 'auto' });
+                                                }}
+                                                className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
+                                              >
+                                                {b}
+                                              </button>
+                                            )) : (
+                                              <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
 
-                  {/* Mobile Brands Dropdown */}
-                  <div className="dv-menu-item px-4 py-2" style={{ ['--dv-i' as any]: 3 }}>
-                    <details className="group">
-                      <summary className="py-2 font-medium cursor-pointer list-none flex items-center justify-between">
-                        <span>{t('header.brands')}</span>
-                        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                      </summary>
-                      <div className="mt-2 ml-4 space-y-2">
-                        {brands.map((brand) => (
-                          <button
-                            key={brand}
-                            onClick={() => {
-                              navigate(`/products?brand=${encodeURIComponent(brand)}`);
-                              closeMobileMenu();
-                              window.scrollTo({ top: 0, behavior: 'auto' });
-                            }}
-                            className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
-                          >
-                            {brand}
-                          </button>
-                        ))}
+                                  {/* Birbaşa brendlər (alt-kategoriyaya aid olmayan, və ya alt-kategoriyalı parent üçün toplam brendlər) */}
+                                  {(!cat.children || cat.children.length === 0) && (
+                                    catBrands.length > 0 ? catBrands.map(b => (
+                                      <button
+                                        key={`${cat.key}-${b}`}
+                                        onClick={() => {
+                                          const params = new URLSearchParams();
+                                          params.set('brand', b);
+                                          params.set('category', cat.lookupNames[0] || cat.name);
+                                          navigate(`/products?${params.toString()}`);
+                                          closeMobileMenu();
+                                          window.scrollTo({ top: 0, behavior: 'auto' });
+                                        }}
+                                        className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
+                                      >
+                                        {b}
+                                      </button>
+                                    )) : (
+                                      <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
+                                    )
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </details>
+                    )}
                   </div>
 
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 4 }}>

@@ -73,7 +73,7 @@ const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [b2bRequests, setB2bRequests] = useState<B2BRequest[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; nameAz?: string; nameRu?: string; nameEn?: string; parentId?: string | null }[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [productBanners, setProductBanners] = useState<any[]>([]);
@@ -409,7 +409,7 @@ const AdminPanel: React.FC = () => {
   });
 
   const [newBrand, setNewBrand] = useState({ name: '', logo: '' });
-  const [newCategory, setNewCategory] = useState({ nameAz: '', nameRu: '', nameEn: '' });
+  const [newCategory, setNewCategory] = useState({ nameAz: '', nameRu: '', nameEn: '', parentId: '' });
   const [showEditCategory, setShowEditCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
 
@@ -494,6 +494,7 @@ const AdminPanel: React.FC = () => {
       const querySnapshot = await getDocs(collection(db, 'categories'));
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
+        const parentId = data.parentId || null;
         if (typeof data.name === 'object') {
           return {
             id: doc.id,
@@ -501,7 +502,8 @@ const AdminPanel: React.FC = () => {
             nameAz: data.name.az || '',
             nameRu: data.name.ru || '',
             nameEn: data.name.en || '',
-            nameObj: data.name
+            nameObj: data.name,
+            parentId,
           };
         } else {
           return {
@@ -510,7 +512,8 @@ const AdminPanel: React.FC = () => {
             nameAz: data.name,
             nameRu: data.name,
             nameEn: data.name,
-            nameObj: { az: data.name, ru: data.name, en: data.name }
+            nameObj: { az: data.name, ru: data.name, en: data.name },
+            parentId,
           };
         }
       });
@@ -875,11 +878,12 @@ const AdminPanel: React.FC = () => {
           ru: newCategory.nameRu.trim() || newCategory.nameAz.trim(),
           en: newCategory.nameEn.trim() || newCategory.nameAz.trim()
         },
+        parentId: newCategory.parentId || null,
         createdAt: new Date()
       });
 
       await loadData();
-      setNewCategory({ nameAz: '', nameRu: '', nameEn: '' });
+      setNewCategory({ nameAz: '', nameRu: '', nameEn: '', parentId: '' });
       setShowAddCategory(false);
       alert('Kateqoriya uğurla əlavə edildi!');
     } catch (error) {
@@ -1031,7 +1035,8 @@ const AdminPanel: React.FC = () => {
           az: editingCategory.nameAz.trim(),
           ru: editingCategory.nameRu.trim() || editingCategory.nameAz.trim(),
           en: editingCategory.nameEn.trim() || editingCategory.nameAz.trim()
-        }
+        },
+        parentId: editingCategory.parentId || null
       });
 
       await loadData();
@@ -2171,6 +2176,25 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ana kateqoriya <span className="text-gray-400 font-normal">(seçim — alt-kateqoriya yaratmaq üçün)</span>
+                    </label>
+                    <select
+                      value={newCategory.parentId}
+                      onChange={(e) => setNewCategory({ ...newCategory, parentId: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      data-testid="new-category-parent-select"
+                    >
+                      <option value="">— Yoxdur (ana kateqoriya kimi yaradılsın) —</option>
+                      {categories.filter(c => !c.parentId).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      Məsələn: "Çantalar"-ı "Dəri Aksesuarlar" altında saxlamaq üçün burada "Dəri Aksesuarlar"-ı seçin.
+                    </p>
+                  </div>
                 </div>
 
                 <button
@@ -2225,6 +2249,22 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ana kateqoriya <span className="text-gray-400 font-normal">(seçim — alt-kateqoriya yaratmaq üçün)</span>
+                    </label>
+                    <select
+                      value={editingCategory.parentId || ''}
+                      onChange={(e) => setEditingCategory({ ...editingCategory, parentId: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      data-testid="edit-category-parent-select"
+                    >
+                      <option value="">— Yoxdur (ana kateqoriya) —</option>
+                      {categories.filter(c => !c.parentId && c.id !== editingCategory.id).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <button
@@ -2243,9 +2283,18 @@ const AdminPanel: React.FC = () => {
                   <p>Kateqoriya yoxdur</p>
                 </div>
               ) : (
-                categories.map((category) => (
+                categories.map((category) => {
+                  const parent = (category as any).parentId
+                    ? categories.find(c => c.id === (category as any).parentId)
+                    : null;
+                  return (
                   <div key={category.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
                     <div className="flex-1">
+                      {parent && (
+                        <span className="inline-block text-[10px] uppercase tracking-wider text-amber-700 font-semibold mb-1">
+                          ↳ {parent.name} altında
+                        </span>
+                      )}
                       <span className="font-medium text-gray-900 block">{category.name}</span>
                       {category.nameAz && category.nameRu && (
                         <span className="text-xs text-gray-500 mt-1 block">
@@ -2271,7 +2320,8 @@ const AdminPanel: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
