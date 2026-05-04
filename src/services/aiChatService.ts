@@ -45,9 +45,13 @@ export interface ChatRequest {
   sessionId?: string;
 }
 
-// OpenAI artıq birbaşa brauzerdən çağırılmır — backend /api/chat proxy-dən
-// istifadə olunur (açarın ifşa olmaması və CORS/Failed-to-fetch xətasının
-// qarşısının alınması üçün).
+// Backend proxy (preview/dev) → OpenAI direct fallback (production/netlify).
+// Bu sxem həm Emergent preview-da (backend var), həm də Netlify/Vercel deploy-da
+// (backend yox) chat-ın işləməsini təmin edir.
+const ENV_OPENAI_KEY: string =
+  (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
+const OPENAI_MODEL = 'gpt-4o-mini';
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
@@ -287,17 +291,10 @@ const buildSystemMessage = (req: ChatRequest): string => {
 };
 
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
-  // Chat artıq backend /api/chat endpoint üzərindən işləyir.
-  // Bu, OpenAI açarının frauzerdə ifşa olunmasının və CORS/"Failed to fetch"
-  // xətalarının qarşısını alır.
   const BACKEND_URL: string =
     (import.meta as any).env?.VITE_BACKEND_URL ||
     (import.meta as any).env?.REACT_APP_BACKEND_URL ||
     '';
-
-  if (!BACKEND_URL) {
-    throw new Error('Backend URL konfiqurasiya edilməyib.');
-  }
 
   const sessionId =
     req.sessionId ||
@@ -305,37 +302,69 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
       ? (crypto as any).randomUUID()
       : `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
-  const payload = {
-    session_id: sessionId,
-    message: req.message.trim(),
-    history: (req.history || []).slice(-8).map((h) => ({
-      role: h.role,
-      content: h.content,
-    })),
-    products: req.products || [],
-    knowledge: req.knowledge || null,
-    language: req.language || 'az',
-  };
+  // 1) İlk cəhd: backend proxy (emergent preview-da işləyir, açar gizli qalır)
+  if (BACKEND_URL) {
+    const payload = {
+      session_id: sessionId,
+      message: req.message.trim(),
+      history: (req.history || []).slice(-8).map((h) => ({
+        role: h.role,
+        content: h.content,
+      })),
+      products: req.products || [],
+      knowledge: req.knowledge || null,
+      language: req.language || 'az',
+    };
 
-  let res: Response;
-  try {
-    res = await fetch(`${BACKEND_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    // Şəbəkə xətası — istifadəçiyə qısa, mehriban mesaj
-    throw new Error('Şəbəkə bağlantısı yoxdur. Bir az sonra yenidən cəhd edin.');
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply: string = (data?.reply || '').trim();
+        if (reply) return reply;
+      }
+      // Backend cavab verdi, amma xəta / boş → OpenAI-a keç
+    } catch {
+      // Şəbəkə xətası / backend çatmır → OpenAI-a keç
+    }
   }
+
+  // 2) Fallback: birbaşa OpenAI (netlify kimi backend-siz deploy-larda)
+  if (!ENV_OPENAI_KEY) {
+    throw new Error('AI xidməti hazırda əlçatan deyil.');
+  }
+
+  const systemMessage = buildSystemMessage(req);
+  const recentTurns = (req.history || []).slice(-8).map((h) => ({
+    role: h.role,
+    content: h.content,
+  }));
+  const messages = [
+    { role: 'system', content: systemMessage },
+    ...recentTurns,
+    { role: 'user', content: req.message.trim() },
+  ];
+
+  const res = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${ENV_OPENAI_KEY}`,
+    },
+    body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.7 }),
+  });
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`AI xidməti cavab vermədi (${res.status}). ${errText.slice(0, 120)}`);
+    throw new Error(`AI xidməti (${res.status}): ${errText.slice(0, 120)}`);
   }
 
   const data = await res.json();
-  const reply: string = data?.reply || '';
-  const trimmed = reply.trim();
-  return trimmed || 'Bağışlayın, cavab yarana bilmədi.';
+  const reply: string = data?.choices?.[0]?.message?.content || '';
+  return reply.trim() || 'Bağışlayın, cavab yarana bilmədi.';
 };
