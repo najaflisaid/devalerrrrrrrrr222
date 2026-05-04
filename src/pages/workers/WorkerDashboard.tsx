@@ -324,7 +324,7 @@ const WorkerDashboard: React.FC = () => {
             <div className="flex items-end justify-between mb-2">
               <div>
                 <span className="font-playfair text-3xl text-black">{totalSales.toFixed(0)}</span>
-                <span className="text-sm text-gray-500"> / {worker.monthlyTarget?.toFixed(0) || '—'} ₼</span>
+                <span className="text-sm text-gray-500"> / {worker.monthlyTarget?.toFixed(0) || '—'} AZN</span>
               </div>
               <span className={`text-2xl font-light ${targetPercentDisplay >= 100 ? 'text-emerald-600' : 'text-[#D4AF37]'}`}>{targetPercentDisplay}%</span>
             </div>
@@ -383,13 +383,13 @@ const WorkerDashboard: React.FC = () => {
                         <p className="font-medium text-black">{f.reason}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{fmtDate(f.date)}</p>
                       </div>
-                      <span className="text-red-600 font-medium">−{f.amount} ₼</span>
+                      <span className="text-red-600 font-medium">−{f.amount} AZN</span>
                     </li>
                   ))}
                 </ul>
                 <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between" data-testid="fines-total">
                   <span className="text-xs uppercase tracking-wider text-gray-600 font-semibold">Ümumi cərimə</span>
-                  <span className="text-red-600 font-bold text-base">−{fines.reduce((s, f) => s + (f.amount || 0), 0).toFixed(2)} ₼</span>
+                  <span className="text-red-600 font-bold text-base">−{fines.reduce((s, f) => s + (f.amount || 0), 0).toFixed(2)} AZN</span>
                 </div>
               </>
             )}
@@ -410,13 +410,13 @@ const WorkerDashboard: React.FC = () => {
                         <p className="font-medium text-black">{r.reason}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{fmtDate(r.date)} · {r.type}</p>
                       </div>
-                      {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount} {r.type === 'raise' ? '%' : '₼'}</span> : null}
+                      {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount} {r.type === 'raise' ? '%' : ' AZN'}</span> : null}
                     </li>
                   ))}
                 </ul>
                 <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between" data-testid="rewards-total">
-                  <span className="text-xs uppercase tracking-wider text-gray-600 font-semibold">Ümumi mükafat (₼)</span>
-                  <span className="text-emerald-600 font-bold text-base">+{rewards.filter(r => r.type !== 'raise').reduce((s, r) => s + (r.amount || 0), 0).toFixed(2)} ₼</span>
+                  <span className="text-xs uppercase tracking-wider text-gray-600 font-semibold">Ümumi mükafat ( AZN)</span>
+                  <span className="text-emerald-600 font-bold text-base">+{rewards.filter(r => r.type !== 'raise').reduce((s, r) => s + (r.amount || 0), 0).toFixed(2)} AZN</span>
                 </div>
               </>
             )}

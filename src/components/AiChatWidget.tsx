@@ -122,11 +122,11 @@ const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick, o
           <div className="flex items-baseline gap-1.5 mt-0.5">
             {original ? (
               <>
-                <span className="text-[11px] text-gray-400 line-through">{original.toFixed(2)} ₼</span>
-                <span className="text-sm font-bold text-red-500">{price.toFixed(2)} ₼</span>
+                <span className="text-[11px] text-gray-400 line-through">{original.toFixed(2)} AZN</span>
+                <span className="text-sm font-bold text-red-500">{price.toFixed(2)} AZN</span>
               </>
             ) : (
-              <span className="text-sm font-bold text-gray-900">{price?.toFixed(2)} ₼</span>
+              <span className="text-sm font-bold text-gray-900">{price?.toFixed(2)} AZN</span>
             )}
           </div>
         </div>

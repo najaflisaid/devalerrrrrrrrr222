@@ -125,15 +125,15 @@ const WishlistPage: React.FC = () => {
                       {original ? (
                         <>
                           <span className="text-xs text-gray-400 line-through">
-                            {original.toFixed(2)} ₼
+                            {original.toFixed(2)} AZN
                           </span>
                           <span className="text-sm font-semibold text-red-500">
-                            {price.toFixed(2)} ₼
+                            {price.toFixed(2)} AZN
                           </span>
                         </>
                       ) : (
                         <span className="text-sm font-semibold text-gray-900">
-                          {price.toFixed(2)} ₼
+                          {price.toFixed(2)} AZN
                         </span>
                       )}
                     </div>

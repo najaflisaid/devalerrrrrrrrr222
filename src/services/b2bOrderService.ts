@@ -86,8 +86,8 @@ export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string, orderN
         <td style="padding: 12px; border-bottom: 1px solid #eee;">${index + 1}</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.productName.az}</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${item.regularPrice.toFixed(2)}₼</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">${(item.regularPrice * item.quantity).toFixed(2)}₼</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${item.regularPrice.toFixed(2)} AZN</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">${(item.regularPrice * item.quantity).toFixed(2)} AZN</td>
       </tr>
     `).join('');
 
@@ -126,11 +126,11 @@ export const sendB2BOrderEmail = async (order: B2BOrder, orderId: string, orderN
           <div style="background-color: #f9fafb; padding: 20px; border-radius: 6px; margin-top: 24px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
               <span style="font-size: 16px;"><strong>Ümumi Endirim:</strong></span>
-              <span style="font-size: 16px; color: #16a34a; font-weight: bold;">${order.discountAmount.toFixed(2)}₼</span>
+              <span style="font-size: 16px; color: #16a34a; font-weight: bold;">${order.discountAmount.toFixed(2)} AZN</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 2px solid #e5e7eb;">
               <span style="font-size: 20px; font-weight: bold;">Ümumi Məbləğ:</span>
-              <span style="font-size: 24px; color: #3b82f6; font-weight: bold;">${order.totalAmount.toFixed(2)}₼</span>
+              <span style="font-size: 24px; color: #3b82f6; font-weight: bold;">${order.totalAmount.toFixed(2)} AZN</span>
             </div>
           </div>
 

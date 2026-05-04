@@ -576,9 +576,9 @@ const ProductsPage: React.FC = () => {
                     />
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="font-semibold text-gray-900">{currentMinPrice}₼</span>
+                    <span className="font-semibold text-gray-900">{currentMinPrice} AZN</span>
                     <span className="text-gray-400">-</span>
-                    <span className="font-semibold text-gray-900">{currentMaxPrice}₼</span>
+                    <span className="font-semibold text-gray-900">{currentMaxPrice} AZN</span>
                   </div>
                 </div>
               </div>

@@ -83,7 +83,7 @@ const BestSellersSection: React.FC = () => {
             </h3>
             <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-light tracking-wide">
               <span className="text-black font-medium">{product.price?.toFixed(2)}</span>{' '}
-              ₼
+              AZN
             </p>
           </div>
         </div>

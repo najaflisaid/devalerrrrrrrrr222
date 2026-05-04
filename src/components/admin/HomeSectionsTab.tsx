@@ -234,7 +234,7 @@ const HomeSectionsTab: React.FC = () => {
                     const name = typeof p.name === 'string' ? p.name : (p.name?.az || p.name?.en || p.id);
                     return (
                       <option key={p.id} value={p.id}>
-                        {name} · {p.price?.toFixed(2)} ₼
+                        {name} · {p.price?.toFixed(2)} AZN
                       </option>
                     );
                   })}

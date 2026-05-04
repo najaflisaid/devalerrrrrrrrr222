@@ -445,7 +445,7 @@ const MyOrdersPage: React.FC = () => {
                               </p>
                             </div>
                             <p className="text-xs text-gray-500 truncate">
-                              {order.items.length} məhsul · {order.totalAmount.toFixed(2)} ₼
+                              {order.items.length} məhsul · {order.totalAmount.toFixed(2)} AZN
                             </p>
                           </div>
                         </div>
@@ -562,11 +562,11 @@ const MyOrdersPage: React.FC = () => {
                                     {item.productName}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {item.quantity} × {item.price.toFixed(2)} ₼
+                                    {item.quantity} × {item.price.toFixed(2)} AZN
                                   </p>
                                 </div>
                                 <p className="text-sm font-semibold text-gray-900">
-                                  {(item.price * item.quantity).toFixed(2)} ₼
+                                  {(item.price * item.quantity).toFixed(2)} AZN
                                 </p>
                               </div>
                             ))}
@@ -576,7 +576,7 @@ const MyOrdersPage: React.FC = () => {
                             <div className="text-sm">
                               <span className="text-gray-500">Cəmi: </span>
                               <span className="text-lg font-bold text-gray-900">
-                                {order.totalAmount.toFixed(2)} ₼
+                                {order.totalAmount.toFixed(2)} AZN
                               </span>
                             </div>
                             {inDelivery && (
@@ -597,7 +597,7 @@ const MyOrdersPage: React.FC = () => {
                               <span className="font-medium text-gray-700">Çatdırılma üsulu: </span>
                               {order.deliveryMethodName}
                               {order.deliveryFee !== undefined && order.deliveryFee > 0 && (
-                                <span className="text-gray-400"> · {order.deliveryFee.toFixed(2)} ₼</span>
+                                <span className="text-gray-400"> · {order.deliveryFee.toFixed(2)} AZN</span>
                               )}
                             </div>
                           )}

@@ -285,7 +285,7 @@ const CustomerOrdersTab: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">
                       <span className="font-medium">Üsul:</span> {order.deliveryMethodName}
                       {order.deliveryFee !== undefined && order.deliveryFee > 0 && (
-                        <span> · {order.deliveryFee.toFixed(2)} ₼</span>
+                        <span> · {order.deliveryFee.toFixed(2)} AZN</span>
                       )}
                     </p>
                   )}
@@ -306,10 +306,10 @@ const CustomerOrdersTab: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 line-clamp-1">{item.productName}</p>
                       <p className="text-xs text-gray-500">
-                        {item.quantity} × {item.price.toFixed(2)} ₼
+                        {item.quantity} × {item.price.toFixed(2)} AZN
                       </p>
                     </div>
-                    <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} ₼</p>
+                    <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} AZN</p>
                   </div>
                 ))}
               </div>
@@ -317,7 +317,7 @@ const CustomerOrdersTab: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
                 <div className="text-sm">
                   <span className="text-gray-500">Cəmi: </span>
-                  <span className="text-lg font-bold text-gray-900">{order.totalAmount.toFixed(2)} ₼</span>
+                  <span className="text-lg font-bold text-gray-900">{order.totalAmount.toFixed(2)} AZN</span>
                 </div>
                 <div className="flex gap-2">
                   <select

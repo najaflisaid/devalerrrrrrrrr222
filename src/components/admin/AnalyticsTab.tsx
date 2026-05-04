@@ -627,7 +627,7 @@ const AnalyticsTab: React.FC = () => {
                       <span className="flex-1 truncate">{item.productName}</span>
                       <span className="text-gray-500 text-xs">×{item.quantity}</span>
                       <span className="font-semibold text-gray-900">
-                        {(item.price * item.quantity).toFixed(2)} ₼
+                        {(item.price * item.quantity).toFixed(2)} AZN
                       </span>
                       <button
                         onClick={() => handleDeleteCartItem(c.id, item.productId, item.productName)}
@@ -828,15 +828,15 @@ const AnalyticsTab: React.FC = () => {
                             {original ? (
                               <>
                                 <span className="text-[11px] text-gray-400 line-through">
-                                  {original.toFixed(2)} ₼
+                                  {original.toFixed(2)} AZN
                                 </span>
                                 <span className="text-xs font-semibold text-red-500">
-                                  {price.toFixed(2)} ₼
+                                  {price.toFixed(2)} AZN
                                 </span>
                               </>
                             ) : (
                               <span className="text-xs font-semibold text-gray-900">
-                                {price.toFixed(2)} ₼
+                                {price.toFixed(2)} AZN
                               </span>
                             )}
                           </div>

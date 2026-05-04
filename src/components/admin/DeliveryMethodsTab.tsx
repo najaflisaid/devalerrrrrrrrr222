@@ -198,7 +198,7 @@ const DeliveryMethodsTab: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Qiymət (₼)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Qiymət ( AZN)</label>
               <input
                 type="number"
                 step="0.01"
@@ -292,7 +292,7 @@ const DeliveryMethodsTab: React.FC = () => {
                     <Truck className={`h-4 w-4 ${m.isActive ? 'text-gray-700' : 'text-gray-300'} flex-shrink-0`} />
                     <span className={`text-sm font-medium flex-1 truncate ${m.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{m.name}</span>
                     <span className="text-[11px] text-gray-400 hidden sm:inline">cari:</span>
-                    <span className="text-sm font-mono text-gray-700 tabular-nums w-20 text-right hidden sm:inline">{m.price.toFixed(2)} ₼</span>
+                    <span className="text-sm font-mono text-gray-700 tabular-nums w-20 text-right hidden sm:inline">{m.price.toFixed(2)} AZN</span>
                     <span className="text-gray-300 hidden sm:inline">→</span>
                     <div className="relative">
                       <input
@@ -311,7 +311,7 @@ const DeliveryMethodsTab: React.FC = () => {
                         }`}
                         data-testid={`delivery-quick-price-input-${m.id}`}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">₼</span>
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none"> AZN</span>
                     </div>
                     <button
                       onClick={() => saveQuickPrice(m)}
@@ -353,7 +353,7 @@ const DeliveryMethodsTab: React.FC = () => {
                 {m.description && <p className="text-sm text-gray-600">{m.description}</p>}
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
                   <span className="font-semibold text-gray-900">
-                    {m.price > 0 ? `${m.price.toFixed(2)} ₼` : 'Pulsuz'}
+                    {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Pulsuz'}
                   </span>
                   {m.estimatedDays && <span>· {m.estimatedDays}</span>}
                   <span>· Sıra: {m.order ?? 0}</span>

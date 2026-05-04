@@ -119,7 +119,7 @@ const SignaturePiece3D: React.FC = () => {
               </h3>
               <p className="text-black text-lg font-light mb-6">
                 <span className="font-medium">{product.price?.toFixed(2)}</span>
-                <span className="ml-1 text-black/60">₼</span>
+                <span className="ml-1 text-black/60"> AZN</span>
               </p>
 
               <button

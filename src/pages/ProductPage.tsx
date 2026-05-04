@@ -194,15 +194,15 @@ const ProductPage: React.FC = () => {
                 {product.salePrice ? (
                   <>
                     <span className="text-2xl font-medium text-red-500">
-                      {product.salePrice.toFixed(2)}₼
+                      {product.salePrice.toFixed(2)} AZN
                     </span>
                     <span className="text-xl text-gray-500 line-through">
-                      {product.price.toFixed(2)}₼
+                      {product.price.toFixed(2)} AZN
                     </span>
                   </>
                 ) : (
                   <span className="text-2xl font-medium text-gray-900">
-                    {product.price.toFixed(2)}₼
+                    {product.price.toFixed(2)} AZN
                   </span>
                 )}
               </div>

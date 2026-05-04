@@ -168,9 +168,9 @@ const formatProducts = (products: ChatProductLite[], limit = 500): string => {
     let priceStr: string;
     if (p.salePrice && p.price && p.salePrice < p.price) {
       const discPct = Math.round(((p.price - p.salePrice) / p.price) * 100);
-      priceStr = `${p.salePrice.toFixed(0)}₼ (köhnə ${p.price.toFixed(0)}₼, -${discPct}%)`;
+      priceStr = `${p.salePrice.toFixed(0)} AZN (köhnə ${p.price.toFixed(0)} AZN, -${discPct}%)`;
     } else if (p.price != null) {
-      priceStr = `${p.price.toFixed(0)}₼`;
+      priceStr = `${p.price.toFixed(0)} AZN`;
     } else {
       priceStr = 'qiymət yoxdur';
     }
@@ -225,7 +225,7 @@ const catalogSummary = (products: ChatProductLite[]): string => {
   const bestsellers = products.filter((p) => p.isBestseller).length;
   return [
     `📊 KATALOQ STATİSTİKASI: ${total} məhsul (${inStock} stokda), ${bestsellers} bestseller`,
-    `💰 Qiymət diapazonu: ${priceMin.toFixed(0)}₼ – ${priceMax.toFixed(0)}₼`,
+    `💰 Qiymət diapazonu: ${priceMin.toFixed(0)} AZN – ${priceMax.toFixed(0)} AZN`,
     `🏷️ Brendlər (${brands.length}): ${brands.slice(0, 20).join(', ')}`,
     `📂 Kateqoriyalar: ${categories.slice(0, 15).join(', ')}`,
   ].join('\n');

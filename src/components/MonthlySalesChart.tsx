@@ -10,7 +10,7 @@ const AZ_MONTHS_LONG = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İ
 
 export interface MonthlySalesChartProps {
   salesHistory: Record<string, number> | undefined;
-  target?: number; // hədəf xətti (₼)
+  target?: number; // hədəf xətti ( AZN)
   monthsCount?: number; // default 12
   height?: number; // default 180
   className?: string;
@@ -130,7 +130,7 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
           </span>
           {showAverage && (
             <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-[#8a6d10] rounded-full">
-              Orta: <strong>{fmt(avg)} ₼</strong>
+              Orta: <strong>{fmt(avg)} AZN</strong>
             </span>
           )}
         </div>
@@ -145,7 +145,7 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
             style={{ bottom: `${(target / maxVal) * 100}%` }}
           >
             <span className="absolute -top-2 right-0 text-[9px] bg-[#FFF8E5] text-[#8a6d10] px-1.5 py-0.5 rounded border border-[#D4AF37]/40">
-              Hədəf: {fmt(target)} ₼
+              Hədəf: {fmt(target)} AZN
             </span>
           </div>
         )}
@@ -186,7 +186,7 @@ export const MonthlySalesChart: React.FC<MonthlySalesChartProps> = ({
                 {isHover && c.value > 0 && (
                   <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded-md shadow-lg whitespace-nowrap z-20">
                     <div className="font-medium">{c.longLabel}</div>
-                    <div className="text-amber-200">{fmt(c.value)} ₼</div>
+                    <div className="text-amber-200">{fmt(c.value)} AZN</div>
                   </div>
                 )}
 

@@ -21,7 +21,7 @@ const FIELDS: FieldConfig[] = [
     label: '🎯 AI Davranış Komandaları',
     hint: 'AI-yə müştərilərlə necə danışmasını izah edin: ton, sürət, satış strategiyası, qadağan sözlər və s. Bu sahə ən prioritetlidir — AI hər şeydən əvvəl bunu nəzərə alır.',
     placeholder:
-      'Müştərilərə həmişə "siz" formasında müraciət et.\nCavablar maks 3 cümlə olsun, qısa və konkret.\nİlk mesajda dərhal "salam" + "nə axtarırsınız?" soruş.\nMüştəri 200 ₼-dən aşağı büdcə deyirsə, sərfəli variantları vurğula.\nƏn yüksək marja olan brendləri (məs. Festina) prioritet təklif et.\nMüştəri tərəddüd edirsə, "ən çox satılan" sözünü işlət.\nSon mesajda mütləq müştərini "İndi al" düyməsinə yönləndir.',
+      'Müştərilərə həmişə "siz" formasında müraciət et.\nCavablar maks 3 cümlə olsun, qısa və konkret.\nİlk mesajda dərhal "salam" + "nə axtarırsınız?" soruş.\nMüştəri 200 AZN-dən aşağı büdcə deyirsə, sərfəli variantları vurğula.\nƏn yüksək marja olan brendləri (məs. Festina) prioritet təklif et.\nMüştəri tərəddüd edirsə, "ən çox satılan" sözünü işlət.\nSon mesajda mütləq müştərini "İndi al" düyməsinə yönləndir.',
     icon: <MessageCircle className="h-4 w-4" />,
   },
   {
@@ -45,7 +45,7 @@ const FIELDS: FieldConfig[] = [
     label: 'Zəmanət, çatdırılma və qaytarma',
     hint: 'Müştərilərin tez-tez soruşduğu siyasətlər. AI cavablarında bu məlumatları istifadə edəcək.',
     placeholder:
-      'Zəmanət: Bütün saatlara 2 il rəsmi zəmanət verilir.\nÇatdırılma: Bakı daxili pulsuz, regionlar — 1-3 iş günü, 8 ₼.\nQaytarma: 14 gün ərzində toxunulmamış məhsulu geri qaytarmaq mümkündür.',
+      'Zəmanət: Bütün saatlara 2 il rəsmi zəmanət verilir.\nÇatdırılma: Bakı daxili pulsuz, regionlar — 1-3 iş günü, 8 AZN.\nQaytarma: 14 gün ərzində toxunulmamış məhsulu geri qaytarmaq mümkündür.',
     icon: <Shield className="h-4 w-4" />,
   },
   {

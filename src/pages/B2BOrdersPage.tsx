@@ -437,7 +437,7 @@ const B2BOrdersPage: React.FC = () => {
                   <div className="px-4 pb-4 sm:px-5 sm:pb-5 border-t border-gray-100 bg-gray-50/30">
                     <div className="pt-4 flex items-center justify-between mb-3 text-xs text-gray-500">
                       <span>{dateFormatted}</span>
-                      <span className="font-bold text-blue-600 text-lg">{order.totalAmount?.toFixed(2)} ₼</span>
+                      <span className="font-bold text-blue-600 text-lg">{order.totalAmount?.toFixed(2)} AZN</span>
                     </div>
                       <h3 className="font-semibold mb-3 text-sm">{t('b2b.products')}</h3>
                       <div className="space-y-3">
@@ -463,7 +463,7 @@ const B2BOrdersPage: React.FC = () => {
                                   <p className="text-xs text-gray-600">
                                     <span className="font-semibold text-gray-900">{t('b2b.quantity')}:</span> {item.quantity} {t('b2b.unit')}
                                   </p>
-                                  <p className="text-xs font-medium text-gray-900 break-words">{item.regularPrice?.toFixed(2)} ₼</p>
+                                  <p className="text-xs font-medium text-gray-900 break-words">{item.regularPrice?.toFixed(2)} AZN</p>
                                 </div>
                               </div>
                             </div>
@@ -487,18 +487,18 @@ const B2BOrdersPage: React.FC = () => {
                           <div>
                             <p className="text-[11px] text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
                             <p className="text-sm text-gray-400">
-                              {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} ₼
+                              {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} AZN
                             </p>
                           </div>
                           {(order as any).discountAmount > 0 && (
                             <div>
                               <p className="text-[11px] text-green-600">{t('b2b.discount') || 'Endirim'}</p>
-                              <p className="text-sm font-medium text-green-600">-{(order as any).discountAmount?.toFixed(2)} ₼</p>
+                              <p className="text-sm font-medium text-green-600">-{(order as any).discountAmount?.toFixed(2)} AZN</p>
                             </div>
                           )}
                           <div>
                             <p className="text-[11px] text-gray-500">{t('b2b.totalAmount')}</p>
-                            <p className="text-xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} ₼</p>
+                            <p className="text-xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} AZN</p>
                           </div>
                         </div>
                       </div>
@@ -515,7 +515,7 @@ const B2BOrdersPage: React.FC = () => {
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
                               <div data-testid={`b2b-prev-debt-${order.id}`}>
                                 <p className="text-[11px] text-gray-600">Əvvəlki borc</p>
-                                <p className="text-lg font-bold text-gray-900">{order.totalDebt.toFixed(2)} ₼</p>
+                                <p className="text-lg font-bold text-gray-900">{order.totalDebt.toFixed(2)} AZN</p>
                               </div>
                             )}
                             {order.totalDebt !== undefined && order.totalDebt !== null && (
@@ -524,7 +524,7 @@ const B2BOrdersPage: React.FC = () => {
                                 <p className="text-lg font-bold text-red-600">{(order.totalDebtOverride !== undefined && order.totalDebtOverride !== null
                                   ? order.totalDebtOverride
                                   : ((order.totalDebt || 0) + (order.totalAmount || 0))
-                                ).toFixed(2)} ₼</p>
+                                ).toFixed(2)} AZN</p>
                               </div>
                             )}
                             {order.paymentDeadline && (

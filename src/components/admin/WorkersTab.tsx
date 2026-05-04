@@ -151,8 +151,8 @@ const WorkersTab: React.FC = () => {
                 <th className="py-3 pr-4">Filial</th>
                 <th className="py-3 pr-4">Email</th>
                 <th className="py-3 pr-4">İşə başlama</th>
-                <th className="py-3 pr-4">Hədəf (₼)</th>
-                <th className="py-3 pr-4">Aylıq cəmi (₼)</th>
+                <th className="py-3 pr-4">Hədəf ( AZN)</th>
+                <th className="py-3 pr-4">Aylıq cəmi ( AZN)</th>
                 <th className="py-3 pr-4">Status</th>
                 <th className="py-3"></th>
               </tr></thead>
@@ -911,11 +911,11 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
       </p>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi (₼)</label>
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi ( AZN)</label>
           <input type="number" min={0} value={target} onChange={(e) => setTarget(e.target.value)} className={inp} placeholder="0" data-testid="monthly-target-input" />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Ümumi satış (₼)</label>
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Ümumi satış ( AZN)</label>
           <input type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} className={inp} placeholder="0" data-testid="monthly-total-input" />
         </div>
 
@@ -981,7 +981,7 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
       {ok && <div className="mb-3 p-2 bg-emerald-50 text-emerald-700 text-xs rounded-lg inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Cərimə əlavə olundu</div>}
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">
         <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Səbəb (məs: Gec gəlmə)" className={inp + ' sm:col-span-6'} data-testid="fine-reason" />
-        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ ₼" className={inp + ' sm:col-span-3'} data-testid="fine-amount" />
+        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ AZN" className={inp + ' sm:col-span-3'} data-testid="fine-amount" />
         <button type="submit" disabled={busy} className="sm:col-span-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5" data-testid="fine-submit">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Cərimə əlavə et
         </button>
@@ -1006,7 +1006,7 @@ const FinesPanel: React.FC<{ workerId: string; items: Fine[]; reload: () => Prom
                     <p className="text-xs text-gray-500">{fmt(f.date)}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-red-600 font-medium">−{f.amount} ₼</span>
+                    <span className="text-red-600 font-medium">−{f.amount} AZN</span>
                     <button onClick={() => { setEditId(f.id); setEditData({ reason: f.reason, amount: String(f.amount) }); }} title="Redaktə"><Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" /></button>
                     <button onClick={async () => { if (!await askEditPassword()) return; await deleteFine(f.id); await reload(); }} title="Sil"><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
                   </div>
@@ -1064,7 +1064,7 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
       {ok && <div className="mb-3 p-2 bg-emerald-50 text-emerald-700 text-xs rounded-lg inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Mükafat əlavə olundu</div>}
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">
         <select value={type} onChange={(e) => setType(e.target.value as any)} className={inp + ' sm:col-span-3'} data-testid="reward-type">
-          <option value="bonus">Bonus (₼)</option>
+          <option value="bonus">Bonus ( AZN)</option>
           <option value="thanks">Təşəkkür</option>
           <option value="raise">Maaş artımı (%)</option>
         </select>
@@ -1101,7 +1101,7 @@ const RewardsPanel: React.FC<{ workerId: string; items: Reward[]; reload: () => 
                     <p className="text-xs text-gray-500">{fmt(r.date)} · {r.type}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount}{r.type === 'raise' ? '%' : ' ₼'}</span> : null}
+                    {r.amount ? <span className="text-emerald-600 font-medium">+{r.amount}{r.type === 'raise' ? '%' : ' AZN'}</span> : null}
                     <button onClick={() => { setEditId(r.id); setEditData({ reason: r.reason, amount: String(r.amount || ''), type: r.type }); }} title="Redaktə"><Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" /></button>
                     <button onClick={async () => { if (!await askEditPassword()) return; await deleteReward(r.id); await reload(); }} title="Sil"><Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" /></button>
                   </div>
@@ -1132,14 +1132,14 @@ const SalesPanel: React.FC<{ workerId: string; target: number; items: SalesEntry
       <div className="bg-gray-50 rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs uppercase tracking-wider text-gray-500 flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Bu ay</span>
-          <span className="text-sm">{monthSales.toFixed(0)} / {target?.toLocaleString() || '—'} ₼ · <strong>{pct}%</strong></span>
+          <span className="text-sm">{monthSales.toFixed(0)} / {target?.toLocaleString() || '—'} AZN · <strong>{pct}%</strong></span>
         </div>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div className="h-full bg-[#D4AF37]" style={{ width: `${pct}%` }} />
         </div>
       </div>
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ ₼" className={inp} data-testid="sale-amount" />
+        <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Məbləğ AZN" className={inp} data-testid="sale-amount" />
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Qeyd (istəyə görə)" className={inp + ' sm:col-span-1'} />
         <button className="px-4 bg-black text-white rounded-lg text-sm flex items-center justify-center gap-1.5"><Plus className="h-4 w-4" /> Satış əlavə et</button>
       </form>
@@ -1148,7 +1148,7 @@ const SalesPanel: React.FC<{ workerId: string; target: number; items: SalesEntry
           {items.slice(0, 50).map(s => (
             <li key={s.id} className="flex justify-between text-sm border-b border-gray-50 pb-1.5 last:border-0">
               <span className="text-gray-700">{fmt(s.date + 'T00:00:00')}{s.note ? ` · ${s.note}` : ''}</span>
-              <span className="text-black font-medium">+{s.amount} ₼</span>
+              <span className="text-black font-medium">+{s.amount} AZN</span>
             </li>
           ))}
         </ul>
@@ -1409,7 +1409,7 @@ const MonthlyHistoryPanel: React.FC<{ worker: Worker; onSaved: () => Promise<voi
             <Activity className="h-4 w-4 text-[#D4AF37]" /> 12 Aylıq Satış Tarixçəsi
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            Hər ayın ümumi satışını ₼ ilə daxil edin. İşçi öz panelində eyni rəqəmləri qrafik kimi görəcək.
+            Hər ayın ümumi satışını AZN ilə daxil edin. İşçi öz panelində eyni rəqəmləri qrafik kimi görəcək.
           </p>
         </div>
         <button
@@ -1451,7 +1451,7 @@ const MonthlyHistoryPanel: React.FC<{ worker: Worker; onSaved: () => Promise<voi
                   placeholder="0"
                   data-testid={`history-input-${ym}`}
                 />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">₼</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400"> AZN</span>
               </div>
             </div>
           );

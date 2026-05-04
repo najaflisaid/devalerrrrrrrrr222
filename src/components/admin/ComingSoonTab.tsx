@@ -169,7 +169,7 @@ const ComingSoonTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="font-semibold text-lg">{product.price}₼</p>
+                <p className="font-semibold text-lg">{product.price} AZN</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -255,7 +255,7 @@ const ComingSoonTab: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Normal Qiymət (₼) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Normal Qiymət ( AZN) *</label>
                   <input
                     type="number"
                     step="0.01"

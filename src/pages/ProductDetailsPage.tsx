@@ -174,11 +174,11 @@ const ProductDetailsPage: React.FC = () => {
               <div className="space-y-2">
                 {product.salePrice ? (
                   <>
-                    <p className="text-sm text-gray-400">{product.price.toFixed(2)}₼</p>
-                    <p className="text-4xl font-bold text-gray-900">{product.salePrice.toFixed(2)}₼</p>
+                    <p className="text-sm text-gray-400">{product.price.toFixed(2)} AZN</p>
+                    <p className="text-4xl font-bold text-gray-900">{product.salePrice.toFixed(2)} AZN</p>
                   </>
                 ) : (
-                  <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)}₼</p>
+                  <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)} AZN</p>
                 )}
                 {isOutOfStock && (
                   <p className="text-sm text-red-600 font-medium">Mövcud deyil</p>
@@ -245,7 +245,7 @@ const ProductDetailsPage: React.FC = () => {
 
                 <div className="pt-4">
                   <p className="text-lg font-semibold text-gray-900">
-                    {t('product.totalPrice')}: {(displayPrice * quantity).toFixed(2)}₼
+                    {t('product.totalPrice')}: {(displayPrice * quantity).toFixed(2)} AZN
                   </p>
                 </div>
               </div>

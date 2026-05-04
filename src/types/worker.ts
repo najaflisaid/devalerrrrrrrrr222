@@ -14,7 +14,7 @@ export interface Worker {
   vacationResetAt?: string;  // ISO — məzuniyyət sayğacı bu tarixdən hesablanır (admin sıfırlaya bilər)
   rating: number;            // 0-100 — auto-computed performance score (%)
   isActive: boolean;
-  monthlyTarget: number;     // current month's sales target ₼
+  monthlyTarget: number;     // current month's sales target AZN
   monthlyTotalSales?: number;
   monthlyTotalMonth?: string;
   salesHistory?: Record<string, number>;
@@ -83,7 +83,7 @@ export interface Reward {
 export interface SalesEntry {
   id: string;
   workerId: string;
-  amount: number;        // ₼ sale amount
+  amount: number;        // AZN sale amount
   date: string;          // YYYY-MM-DD
   note?: string;
 }

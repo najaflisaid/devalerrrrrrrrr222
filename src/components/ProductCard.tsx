@@ -124,15 +124,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
             {originalPrice ? (
               <>
                 <span className={`${compact ? 'text-xs' : 'text-sm'} text-gray-400`}>
-                  {originalPrice.toFixed(2)}₼
+                  {originalPrice.toFixed(2)} AZN
                 </span>
                 <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-red-500`}>
-                  {displayPrice.toFixed(2)}₼
+                  {displayPrice.toFixed(2)} AZN
                 </span>
               </>
             ) : (
               <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900`}>
-                {displayPrice.toFixed(2)}₼
+                {displayPrice.toFixed(2)} AZN
               </span>
             )}
           </div>

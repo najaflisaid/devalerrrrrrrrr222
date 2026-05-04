@@ -55,9 +55,6 @@ const downloadTemplate = () => {
     COL.gender,
   ];
   const sampleRows = [
-    { [COL.category]: 'Saatlar', [COL.brand]: 'Casio', [COL.name]: 'Casio LTP-1094E-7ARDF', [COL.price]: 155, [COL.stock]: 4, [COL.gender]: 'women' },
-    { [COL.category]: 'Saatlar', [COL.brand]: 'U.S. Polo Assn.', [COL.name]: 'U.S. Polo Assn. USPA 1111-02', [COL.price]: 280, [COL.stock]: 10, [COL.gender]: 'men' },
-    { [COL.category]: 'Çantalar', [COL.brand]: 'Silver & Polo', [COL.name]: 'Silver & Polo Qadın dəri çanta SP-CNT-2024-01', [COL.price]: 320, [COL.stock]: 6, [COL.gender]: 'women' },
     { [COL.category]: '', [COL.brand]: '', [COL.name]: '', [COL.price]: '', [COL.stock]: '', [COL.gender]: '' },
   ];
   const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });

@@ -322,6 +322,7 @@ const AdminPanel: React.FC = () => {
   const customerBadgeCount = pendingCustomerOrdersCount;
 
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showMigration, setShowMigration] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddBrand, setShowAddBrand] = useState(false);
@@ -1430,21 +1431,39 @@ const AdminPanel: React.FC = () => {
                   }).length;
                 })()})
               </h2>
-              <button
-                onClick={() => setShowAddProduct(!showAddProduct)}
-                className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
-              >
-                <Plus className="h-5 w-5" />
-                Məhsul əlavə et
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddProduct(!showAddProduct)}
+                  className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
+                  data-testid="admin-add-product-btn"
+                >
+                  <Plus className="h-5 w-5" />
+                  Məhsul əlavə et
+                </button>
+                <button
+                  onClick={() => setShowMigration(!showMigration)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all ${
+                    showMigration
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                      : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+                  }`}
+                  data-testid="admin-migration-toggle"
+                  title="Excel ilə məhsul miqrasiyası"
+                >
+                  <FileText className="h-4 w-4" />
+                  Miqrasiya et
+                </button>
+              </div>
             </div>
 
-            {/* Excel/CSV ilə stok migrasiyası — lazy-loaded (xlsx ~440KB) */}
-            <div className="mb-6">
-              <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Miqrasiya paneli yüklənir...</div>}>
-                <ProductExcelImport products={products} onDone={loadData} />
-              </React.Suspense>
-            </div>
+            {/* Excel ilə stok miqrasiyası — yalnız düymə basıldıqda göstərilir */}
+            {showMigration && (
+              <div className="mb-6">
+                <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Miqrasiya paneli yüklənir...</div>}>
+                  <ProductExcelImport products={products} onDone={loadData} />
+                </React.Suspense>
+              </div>
+            )}
 
             <div className="mb-6 space-y-4">
               <div className="relative">
@@ -1460,7 +1479,7 @@ const AdminPanel: React.FC = () => {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Qiymət aralığı: {priceRange[0]}₼ - {priceRange[1]}₼
+                  Qiymət aralığı: {priceRange[0]} AZN - {priceRange[1]} AZN
                 </label>
                 <div className="flex items-center gap-4">
                   <input
@@ -1619,7 +1638,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət (₼) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət ( AZN) *</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1633,7 +1652,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət (₼)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət ( AZN)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1647,7 +1666,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət (₼)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət ( AZN)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1661,7 +1680,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət (₼)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət ( AZN)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1837,10 +1856,10 @@ const AdminPanel: React.FC = () => {
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun təsviri" /></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Ru)</label><textarea value={editProduct.descRu} onChange={(e) => setEditProduct({ ...editProduct, descRu: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Описание продукта" /></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (En)</label><textarea value={editProduct.descEn} onChange={(e) => setEditProduct({ ...editProduct, descEn: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Description" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət (₼) *</label><input type="number" step="0.01" min="0" value={editProduct.price} onChange={(e) => setEditProduct({ ...editProduct, price: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət (₼)</label><input type="number" step="0.01" min="0" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət ( AZN) *</label><input type="number" step="0.01" min="0" value={editProduct.price} onChange={(e) => setEditProduct({ ...editProduct, price: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Brend * <button type="button" onClick={() => setShowAddBrand(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.brand} onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Brend seçin</option>{brands.map(brand => (<option key={brand.id} value={brand.name}>{brand.name}</option>))}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Kateqoriya * <button type="button" onClick={() => setShowAddCategory(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.category} onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Kateqoriya seçin</option>{categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div>
@@ -1934,7 +1953,7 @@ const AdminPanel: React.FC = () => {
                       <h3 className="font-semibold text-gray-900">{product.name.az}</h3>
                       <p className="text-sm text-gray-600">{product.brand} · {product.category}</p>
                       <div className="flex items-center gap-3">
-                        <p className="text-sm font-medium text-gray-900">{product.price}₼</p>
+                        <p className="text-sm font-medium text-gray-900">{product.price} AZN</p>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${product.stock === 0 ? 'bg-red-100 text-red-700' : product.stock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                           {product.stock === 0 ? 'Bitdi' : `Mövcud: ${product.stock}`}
                         </span>

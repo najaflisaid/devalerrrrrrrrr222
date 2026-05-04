@@ -405,7 +405,7 @@ const Header: React.FC = () => {
 
               {/* Products Dropdown with Categories & Brands */}
               <div
-                className="relative"
+                className="relative py-3 -my-3 px-2 -mx-2"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
@@ -1045,7 +1045,7 @@ const Header: React.FC = () => {
                             <div className="text-xs text-gray-500 truncate">{p.brand}</div>
                           </div>
                           <div className="text-sm font-semibold text-gray-900 flex-shrink-0">
-                            {(p.salePrice ?? p.price)} ₼
+                            {(p.salePrice ?? p.price)} AZN
                           </div>
                         </button>
                       </li>

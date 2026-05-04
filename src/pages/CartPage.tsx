@@ -518,10 +518,10 @@ const CartPage: React.FC = () => {
 
                         <div className="text-right">
                           <p className="text-lg font-bold text-gray-900">
-                            {(price * item.quantity).toFixed(2)}₼
+                            {(price * item.quantity).toFixed(2)} AZN
                           </p>
                           <p className="text-xs text-gray-500">
-                            {price.toFixed(2)}₼ x {item.quantity}
+                            {price.toFixed(2)} AZN x {item.quantity}
                           </p>
                         </div>
                       </div>
@@ -557,21 +557,21 @@ const CartPage: React.FC = () => {
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between text-gray-600">
                     <span>{t('cart.totalAmount')}</span>
-                    <span>{getTotalPrice().toFixed(2)}₼</span>
+                    <span>{getTotalPrice().toFixed(2)} AZN</span>
                   </div>
                 </div>
 
                 {userDiscount > 0 && (
                   <div className="flex justify-between text-green-600 font-bold">
                     <span>{t('cart.discount')} ({userDiscount}%)</span>
-                    <span>-{getDiscountAmount().toFixed(2)}₼</span>
+                    <span>-{getDiscountAmount().toFixed(2)} AZN</span>
                   </div>
                 )}
 
                 <div className="border-t-2 border-gray-300 pt-3">
                   <div className="flex justify-between text-xl font-bold text-gray-900">
                     <span>{t('cart.finalTotal')}</span>
-                    <span>{(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)}₼</span>
+                    <span>{(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN</span>
                   </div>
 
                 </div>
@@ -820,11 +820,11 @@ const CartPage: React.FC = () => {
             <div className="border-t border-gray-100 px-5 py-3.5 bg-gray-50 sticky bottom-0">
               <div className="flex items-center justify-between mb-2.5">
                 <div className="text-[11px] text-gray-500">
-                  {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} ₼
-                  {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} ₼</span>}
+                  {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN
+                  {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} AZN</span>}
                 </div>
                 <div className="text-base font-bold text-gray-900">
-                  {((userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()) + deliveryFee).toFixed(2)} ₼
+                  {((userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()) + deliveryFee).toFixed(2)} AZN
                 </div>
               </div>
               <button

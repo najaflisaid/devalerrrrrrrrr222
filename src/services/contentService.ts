@@ -510,7 +510,7 @@ export const DEFAULT_DELIVERY_POLICY: PrivacyPolicy = {
     intro:
       'DE VALEUR sifarişlərinizi sürətli və təhlükəsiz şəkildə çatdırır. Bakı şəhəri daxilində eyni gün, regionlara isə 1-3 iş günü ərzində məhsul ünvanınıza təslim olunur.',
     badgeLeft: 'Bakı daxili eyni gün çatdırılma',
-    badgeRight: '200 ₼-dən yuxarı sifarişlərə pulsuz',
+    badgeRight: '200 AZN-dən yuxarı sifarişlərə pulsuz',
     lastUpdated: '28.04.2026',
   },
   signature: '— DE VALEUR MMC —',
@@ -531,7 +531,7 @@ export const DEFAULT_DELIVERY_POLICY: PrivacyPolicy = {
       id: 'fees',
       no: '03',
       title: 'Çatdırılma haqqı',
-      body: '- Bakı daxili — 5 ₼\n- Sumqayıt və Abşeron rayonu — 8 ₼\n- Regionlar — 10-15 ₼ (məsafədən asılı olaraq)\n- Naxçıvan — fərdi qiymətləndirilir\n\n200 ₼-dən yuxarı sifarişlər üçün Azərbaycan Respublikası ərazisində çatdırılma PULSUZDUR.',
+      body: '- Bakı daxili — 5 AZN\n- Sumqayıt və Abşeron rayonu — 8 AZN\n- Regionlar — 10-15 AZN (məsafədən asılı olaraq)\n- Naxçıvan — fərdi qiymətləndirilir\n\n200 AZN-dən yuxarı sifarişlər üçün Azərbaycan Respublikası ərazisində çatdırılma PULSUZDUR.',
     },
     {
       id: 'process',
