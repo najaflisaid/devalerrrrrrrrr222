@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,9 +43,10 @@ const Header: React.FC = () => {
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState<string | null>(null);
   const [mobileSubCategoryOpen, setMobileSubCategoryOpen] = useState<string | null>(null);
-  const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null); // legacy, unused – retained only to avoid cascading changes
   const [mobileMenuCloseTimeout, setMobileMenuCloseTimeout] = useState<NodeJS.Timeout | null>(null);
   const userDiscount = getUserDiscount();
+  void dropdownTimeout; void setDropdownTimeout;
   
   // B2B Bildiriş state-ləri
   const [b2bNotifications, setB2bNotifications] = useState<B2BNotification[]>([]);
@@ -125,13 +126,14 @@ const Header: React.FC = () => {
     loadCategoriesAndBrands();
   }, []);
 
+  const dropdownTimersRef = useRef<{ outer: ReturnType<typeof setTimeout> | null; inner: ReturnType<typeof setTimeout> | null }>({ outer: null, inner: null });
+
   useEffect(() => {
     return () => {
-      if (dropdownTimeout) {
-        clearTimeout(dropdownTimeout);
-      }
+      if (dropdownTimersRef.current.outer) clearTimeout(dropdownTimersRef.current.outer);
+      if (dropdownTimersRef.current.inner) clearTimeout(dropdownTimersRef.current.inner);
     };
-  }, [dropdownTimeout]);
+  }, []);
 
   const loadCategoriesAndBrands = async () => {
     try {
@@ -210,23 +212,32 @@ const Header: React.FC = () => {
   };
 
   const handleDropdownEnter = () => {
-    if (dropdownTimeout) {
-      clearTimeout(dropdownTimeout);
-      setDropdownTimeout(null);
+    // Clear BOTH outer closing-animation timer AND inner unmount timer
+    if (dropdownTimersRef.current.outer) {
+      clearTimeout(dropdownTimersRef.current.outer);
+      dropdownTimersRef.current.outer = null;
+    }
+    if (dropdownTimersRef.current.inner) {
+      clearTimeout(dropdownTimersRef.current.inner);
+      dropdownTimersRef.current.inner = null;
     }
     setIsDropdownClosing(false);
     setShowDropdown(true);
   };
 
   const handleDropdownLeave = () => {
-    const timeout = setTimeout(() => {
+    // Clear any in-flight timers first
+    if (dropdownTimersRef.current.outer) clearTimeout(dropdownTimersRef.current.outer);
+    if (dropdownTimersRef.current.inner) clearTimeout(dropdownTimersRef.current.inner);
+    dropdownTimersRef.current.outer = setTimeout(() => {
       setIsDropdownClosing(true);
-      setTimeout(() => {
+      dropdownTimersRef.current.inner = setTimeout(() => {
         setShowDropdown(false);
         setIsDropdownClosing(false);
+        dropdownTimersRef.current.inner = null;
       }, 320);
-    }, 120);
-    setDropdownTimeout(timeout);
+      dropdownTimersRef.current.outer = null;
+    }, 160);
   };
 
   const closeMobileMenu = () => {
@@ -403,9 +414,9 @@ const Header: React.FC = () => {
                 {t('header.home')}
               </Link>
 
-              {/* Products Dropdown with Categories & Brands */}
+              {/* Products Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
               <div
-                className="relative py-3 -my-3 px-2 -mx-2"
+                className="relative py-[22px] -my-[22px] px-3 -mx-3"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
@@ -415,12 +426,12 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <div
-                    className={`fixed left-0 right-0 top-[64px] z-50 dv-megamenu ${isDropdownClosing ? 'is-closing' : ''}`}
+                    className={`fixed left-0 right-0 top-[64px] z-50 dv-megamenu${isDropdownClosing ? ' is-closing' : ''}`}
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
                   >
                     {/* invisible bridge to prevent hover gap between trigger and panel */}
-                    <div className="h-2 -mt-2" aria-hidden="true" />
+                    <div className="h-3 -mt-3" aria-hidden="true" />
                     <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)]">
                       <div className="max-w-[1200px] mx-auto px-10 py-12">
                         <div className="grid grid-cols-12 gap-10">
