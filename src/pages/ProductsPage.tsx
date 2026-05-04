@@ -475,13 +475,9 @@ const ProductsPage: React.FC = () => {
     (priceInitialized && (currentMinPrice !== minPrice || currentMaxPrice !== maxPrice) ? 1 : 0) +
     (searchQuery ? 1 : 0);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
-      </div>
-    );
-  }
+  // Loading state no longer blocks the whole page — filter sidebar is shown immediately
+  // and only the product grid area shows a loading spinner while data is fetching.
+  void loading;
 
   return (
     <div className="min-h-screen bg-white">
@@ -806,6 +802,10 @@ const ProductsPage: React.FC = () => {
                     <ProductCard product={product} showB2BPrice={isB2BUser} />
                   </Link>
                 ))}
+              </div>
+            ) : loading ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black" data-testid="products-loading-spinner"></div>
               </div>
             ) : (
               <div className="text-center py-16">
