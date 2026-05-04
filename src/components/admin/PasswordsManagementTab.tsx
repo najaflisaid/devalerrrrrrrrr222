@@ -24,6 +24,7 @@ const SECTIONS: { id: string; label: string; group: string }[] = [
   { id: 'users', label: 'İstifadəçilər', group: 'sales' },
   { id: 'workers', label: 'İşçilər bölməsi (giriş)', group: 'sales' },
   { id: 'passwordsAdmin', label: 'Şifrələr İdarəetməsi', group: 'sales' },
+  { id: 'promoCodes', label: 'Promo Kodlar', group: 'sales' },
 
   // Məzmun bölmələri (default açıq, lazım olarsa şifrə təyin edə bilərsiniz)
   { id: 'products', label: 'Məhsullar', group: 'content' },

@@ -12,6 +12,7 @@ import { buildSignedPayment, redirectToEpoint } from '../services/epointPaymentS
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
+import { validatePromoCode, redeemPromoCode } from '../services/promoCodeService';
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +35,11 @@ const CartPage: React.FC = () => {
   // Guest registration fields (only used when no userId)
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  // Promo kod state-ləri (yalnız müştəri Epoint checkout-da istifadə olunur)
+  const [promoInput, setPromoInput] = useState('');
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
   const userDiscount = getUserDiscount();
   // Reactive login state (refreshes when localStorage changes or on each render)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('userId'));
@@ -68,6 +74,49 @@ const CartPage: React.FC = () => {
 
   const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId);
   const deliveryFee = selectedDelivery?.price || 0;
+
+  // Promo endirimdən sonra məhsulların dəyəri (userDiscount + promo tətbiq olunur)
+  const getItemsAfterAllDiscounts = (): number => {
+    const baseItems = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
+    if (!promoApplied) return baseItems;
+    return +(baseItems * (1 - promoApplied.discount / 100)).toFixed(2);
+  };
+
+  const getPromoDiscountAmount = (): number => {
+    if (!promoApplied) return 0;
+    const baseItems = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
+    return +(baseItems * (promoApplied.discount / 100)).toFixed(2);
+  };
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim();
+    setPromoError('');
+    if (!/^\d{6}$/.test(code)) {
+      setPromoError('Promo kod 6 rəqəmli olmalıdır');
+      return;
+    }
+    setPromoLoading(true);
+    try {
+      const res = await validatePromoCode(code);
+      if (res.valid) {
+        setPromoApplied({ code, discount: res.discount });
+        setPromoError('');
+      } else {
+        setPromoApplied(null);
+        setPromoError(res.reason);
+      }
+    } catch (e: any) {
+      setPromoError('Yoxlama alınmadı: ' + (e?.message || ''));
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoApplied(null);
+    setPromoInput('');
+    setPromoError('');
+  };
 
   const handleWhatsAppOrder = async () => {
     if (items.length === 0) return;
@@ -200,8 +249,10 @@ const CartPage: React.FC = () => {
       });
 
       const subtotal = getTotalPrice();
-      const discount = getDiscountAmount();
-      const itemsTotal = userDiscount > 0 ? getDiscountedTotal() : subtotal;
+      const userDiscountAmt = getDiscountAmount();
+      const promoDiscountAmt = getPromoDiscountAmount();
+      const discount = userDiscountAmt + promoDiscountAmt;
+      const itemsTotal = getItemsAfterAllDiscounts();
       const total = itemsTotal + deliveryFee;
 
       const { id: orderId } = await createCustomerOrder({
@@ -219,9 +270,23 @@ const CartPage: React.FC = () => {
         deliveryMethodName: selectedDelivery?.name || '',
         deliveryFee,
         paymentMethod: 'epoint',
+        promoCode: promoApplied?.code || '',
+        promoDiscountPercent: promoApplied?.discount || 0,
+        promoDiscountAmount: promoDiscountAmt,
       } as any);
 
       sessionStorage.setItem('pending_epoint_order_id', orderId);
+
+      // Promo kodu istifadə olunmuş kimi qeyd et (birdəfəlik istifadə qaydası).
+      // Ödəniş uğursuz olsa belə, kod təkrar istifadəyə buraxılmır — admin istəsə
+      // silib yenisini yarada bilər.
+      if (promoApplied) {
+        redeemPromoCode(promoApplied.code, {
+          userId,
+          userEmail,
+          orderId,
+        }).catch((e) => console.warn('Promo kod redeem xətası:', e));
+      }
 
       const signed = await buildSignedPayment({
         orderId,
@@ -814,19 +879,90 @@ const CartPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white"
                 />
               </div>
+
+              {/* Promo kod */}
+              <div>
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                  Endirim kodu (istəyə bağlı)
+                </label>
+                {promoApplied ? (
+                  <div
+                    className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200"
+                    data-testid="promo-applied-box"
+                  >
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Check className="h-4 w-4 text-emerald-700 flex-shrink-0" />
+                      <span className="font-mono font-semibold text-emerald-900 truncate">
+                        {promoApplied.code}
+                      </span>
+                      <span className="text-xs font-bold text-emerald-700 whitespace-nowrap">
+                        -{promoApplied.discount}%
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="text-xs font-medium text-emerald-700 hover:text-emerald-900 underline"
+                      data-testid="promo-remove-btn"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-stretch gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={promoInput}
+                        onChange={(e) => {
+                          setPromoInput(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          if (promoError) setPromoError('');
+                        }}
+                        placeholder="6 rəqəmli kod"
+                        maxLength={6}
+                        className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white tabular-nums tracking-widest"
+                        data-testid="promo-code-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={promoLoading || promoInput.length !== 6}
+                        className="px-4 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        data-testid="promo-apply-btn"
+                      >
+                        {promoLoading ? '...' : 'Tətbiq et'}
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-[11px] text-red-600 mt-1" data-testid="promo-error">
+                        {promoError}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Footer with summary + CTA */}
             <div className="border-t border-gray-100 px-5 py-3.5 bg-gray-50 sticky bottom-0">
-              <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center justify-between mb-1">
                 <div className="text-[11px] text-gray-500">
                   {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN
+                  {promoApplied && (
+                    <span className="text-emerald-600 font-medium"> −{getPromoDiscountAmount().toFixed(2)} AZN</span>
+                  )}
                   {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} AZN</span>}
                 </div>
                 <div className="text-base font-bold text-gray-900">
-                  {((userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()) + deliveryFee).toFixed(2)} AZN
+                  {(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)} AZN
                 </div>
               </div>
+              {promoApplied && (
+                <div className="text-[10px] text-emerald-700 font-medium mb-1.5">
+                  Promo {promoApplied.code} · {promoApplied.discount}% endirim tətbiq edildi
+                </div>
+              )}
               <button
                 onClick={handleEpointCheckout}
                 disabled={loading}

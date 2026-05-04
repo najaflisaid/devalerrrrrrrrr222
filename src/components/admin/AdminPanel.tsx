@@ -3076,6 +3076,12 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
 
+        {activeTab === 'promoCodes' && (
+          <PasswordProtectedSection sectionName="promoCodes">
+            <PromoCodesTab />
+          </PasswordProtectedSection>
+        )}
+
         {activeTab === 'banners' && (
           <PasswordProtectedSection sectionName="banners">
             <BannerManagementTab />
