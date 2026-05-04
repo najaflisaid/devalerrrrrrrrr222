@@ -1,7 +1,67 @@
 # De Valeur — Premium Saatlar və Aksesuarlar Saytı
 
-## Original problem statement (May 2026 iteration — Group A: təhlükəsiz fixes)
-"Rəy/ulduz vermək istəyəndə avtomatik qeydiyyat açılsın. Filterdən 'Hamısı' seçimini bütün filtrdən yığışdır. US Polo Assn linki yuxarıda /USPA olsun. Google-da yazıda DE VALEUR (kiçik hərflərledir indi) düzəlt. Stok 0 olanda müştəri görsün amma səbətə əlavə edə bilməsin, 'mövcud deyil' yazsın."
+## Original problem statement (May 2026 iteration — Group A+B+C)
+"Rəy/ulduz vermək istəyəndə avtomatik qeydiyyat. Filterdən 'Hamısı' silinsin. USPA URL. Google-da DE VALEUR caps. Stok 0 olanda müştəri əlavə edə bilməsin. Login/logout zamanı səbət təmizlənsin. Safari/B2B düymə donma problemi. AI köməkçi salamlama. Real-time search analitika. Daily visitors qrafiki. Anonim user tracking. Excel məhsul miqrasiyası. Worker bölməsi default tab Satış planı."
+
+## What was done — May 4, 2026 iteration #5 — Group B + C
+
+### Group B (cart/auth flow)
+
+#### #2 Safari donma + B2B login düyməsi düzəldi
+- **Root cause**: `B2BLogin.tsx` Hooks Rules pozulmuşdu — `useState` çağırışları `if (isLoggedIn) return null` early return-dan sonra idi. Bu Safari və bəzi React versiyalarında "Rendered more hooks than..." xətası verirdi.
+- **Fix**: Bütün hooks komponent başında, redirect `useEffect`-də edilir. Login submit düyməsinə `disabled` + spinner əlavə edildi (ikiqat klikləməyin qarşısı).
+
+#### #3 Login/logout zamanı səbət təmizlənməsi
+- `Header.tsx`: `previousRole !== newRole` yoxlanışı (əvvəl `previousRole && ...` idi) — guest → login keçidində də səbəti təmizləyir.
+- `B2BLogin.tsx`: B2B login zamanı `previousRole !== 'b2b'` olduqda səbət təmizlənir.
+
+#### #10 AI köməkçi salamlama
+- `AiChatWidget.tsx`: yeni "salamlama bubble" — sayta giriş edəndən 4.5 saniyə sonra avtomatik açılır, "Salam! 👋 Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm" mesajı göstərir.
+- Sessiya başına 1 dəfə (sessionStorage flag), 12 saniyədən sonra avtomatik gizlənir, X düyməsi ilə bağlanır, klik açır chat panelini.
+
+### Group C (analytics / admin features)
+
+#### #4 Real-time search analytics
+- `Header.tsx`: axtarış input-da 1.2 saniyə yazma debounce-undan sonra `trackSearch()` çağırılır. İstifadəçi Enter basmadan da hər yazılan söz analitikaya düşür (5 saniyə throttle ilə eyni sözün təkrarlanması bloklanır).
+
+#### #5 Günlük ziyarətçi qrafiki
+- `analyticsService.ts`: yeni `daily_visits` Firestore koleksiyası — sessiya başına 1 dəfə artırılır.
+- `App.tsx`: ilk render-də `trackDailyVisit()` çağırışı.
+- `AnalyticsTab.tsx`: yeni "Günlük ziyarətçilər" tab-ı — son 30 günün SVG bar chart-ı + son 7 gün vs əvvəlki 7 gün artma/azalma %-i + son 10 günün card view-i.
+
+#### #6 Qeydiyyatsız user cart/wishlist tracking
+- `analyticsService.ts`: yeni `anon_product_interest` Firestore koleksiyası — `productId_kind` formasında ID, count + lastEvent.
+- `CartContext.addToCart`: qeydiyyatsız user üçün `trackAnonProductInterest(productId, 'cart', meta)` (5 dəq throttle).
+- `WishlistContext.toggleFavorite`: qeydiyyatsız user üçün eyni — wishlist-ə əlavə zamanı.
+- `AnalyticsTab.tsx`: yeni "Qeydiyyatsız maraq" tab-ı — hansı məhsullara maraq var, brand/şəkil/ad ilə.
+
+#### #7 Excel/CSV ilə məhsul miqrasiyası + auto stock update
+- Yeni komponent: `src/components/admin/ProductExcelImport.tsx`.
+- Format: `ad,kateqoriya,brend,stok,qiymət` (comma və ya semicolon, header sətri opsional).
+- Eyni ad + kateqoriya birləşməsi tapdıqda **stok avtomatik yenilənir** (məsələn: 3 → 4).
+- "Yeni məhsulları avtomatik yarat" checkbox: tapılmayan məhsullar avtomatik əlavə olunur (kateqoriya/brend yoxdursa onlar da yaradılır).
+- Preview cədvəli: matched (köhnə → yeni stok) və notFound siyahısı.
+- AdminPanel "Məhsullar" tab-ında yuxarıda görünür.
+
+#### #13 Worker bölməsi yenidən sıralandı
+- `WorkersTab.tsx` `WorkerDetail`: default tab `info` → `total` (Satış planı) dəyişdirildi.
+- Tab sırası: **Satış planı** → Cərimələr → Mükafatlar → Məzuniyyət → Bildiriş → Məlumat (axırda).
+- Header-də "Redaktə" düyməsi əlavə edildi (Edit ikonu) — yalnız klikləndikdə "Məlumat" tab-ına keçir; əvvəl avtomatik açılırdı.
+
+## Architecture
+- React 18 + TypeScript + Vite
+- Firebase Firestore + Auth
+- Supabase (qalıqlar)
+- Epoint payments
+- OpenAI gpt-4o-mini chat
+
+## Backlog
+- P2: Excel migrasiya üçün xls/xlsx native dəstəyi (hazırda yalnız CSV; Excel-də "Save As → CSV UTF-8" kifayətdir)
+- P2: Daily visits-də unikal IP/user-id ayrımı (hazırda sessiya bazlı)
+- P3: Anonim user-lərin telefon/email collection (cart abandonment recovery üçün)
+- P3: Worker info edit-i avtomatik açıq yox, password protected modal şəklində
+
+
 
 ## What was done — May 4, 2026 iteration #4 — Group A (təhlükəsiz UI/SEO/data fixes)
 

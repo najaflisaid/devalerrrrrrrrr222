@@ -15,6 +15,11 @@ const B2BLogin: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const { clearCart } = useCart();
 
   useEffect(() => {
@@ -32,6 +37,13 @@ const B2BLogin: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Redirect after login (kept as effect so hooks are not skipped on re-render)
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/products');
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleLogout = async () => {
     try {
@@ -56,19 +68,11 @@ const B2BLogin: React.FC = () => {
     }
   };
 
-  if (isLoggedIn) {
-    navigate('/products');
-    return null;
-  }
-
-  const [showLogin, setShowLogin] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loginLoading) return;
     setLoginError('');
+    setLoginLoading(true);
 
     try {
       const previousRole = localStorage.getItem('userRole');
@@ -87,7 +91,8 @@ const B2BLogin: React.FC = () => {
       if (!querySnapshot.empty) {
         const userData = querySnapshot.docs[0].data();
         if (userData.role === 'b2b') {
-          if (previousRole && previousRole !== 'b2b') {
+          // Hər B2B login-də səbət təmizlənir (əvvəlki guest/customer cart qarışmasın)
+          if (previousRole !== 'b2b') {
             clearCart(true);
           }
 
@@ -136,16 +141,26 @@ const B2BLogin: React.FC = () => {
             setIsLoggedIn(true);
             setUserName(userData.name || email);
             window.location.reload();
-          }, 2000);
+          }, 1200);
         } else {
           setLoginError(t('auth.notB2BUser'));
+          setLoginLoading(false);
         }
+      } else {
+        setLoginError(t('auth.invalidCredentials'));
+        setLoginLoading(false);
       }
     } catch (error: any) {
       console.error('Login error:', error);
       setLoginError(t('auth.invalidCredentials'));
+      setLoginLoading(false);
     }
   };
+
+  // Avoid rendering the rest of the UI while we redirect (but DON'T return before all hooks above run!)
+  if (isLoggedIn) {
+    return null;
+  }
 
   return (
     <>
@@ -246,9 +261,17 @@ const B2BLogin: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-gray-900 transition-colors"
+                disabled={loginLoading}
+                className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-gray-900 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                data-testid="b2b-login-submit"
               >
-                {t('auth.signIn')}
+                {loginLoading && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                )}
+                {loginLoading ? 'Daxil olunur...' : t('auth.signIn')}
               </button>
             </form>
           </div>

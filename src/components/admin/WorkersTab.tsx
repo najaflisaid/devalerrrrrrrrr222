@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Loader2, Plus, Search, Users, X, Edit2, Trash2, Save,
+  Loader2, Plus, Search, Users, X, Edit2, Edit, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
   Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, GraduationCap, RotateCcw, Trophy, Activity,
   ChevronDown, ChevronUp,
@@ -714,7 +714,9 @@ const inp = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ri
 
 // ───────────────────── Worker Detail (edit + fines/rewards/sales/notify/total) ─────────────────────
 const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: Branch[]; onClose: () => void; onUpdated: () => Promise<void> }> = ({ worker, positions, branches, onClose, onUpdated }) => {
-  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'total' | 'vacation' | 'notify'>('info');
+  // Default olaraq "Aylıq satış" / Satış planı tab-ı açılır.
+  // Email və şəxsi məlumatlar gizli edit modal-da açılır (sağ üstdə Edit ikonu).
+  const [tab, setTab] = useState<'info' | 'fines' | 'rewards' | 'total' | 'vacation' | 'notify'>('total');
   const [fines, setFines] = useState<Fine[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [sales, setSales] = useState<SalesEntry[]>([]);
@@ -749,9 +751,23 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
             <p className="text-xs text-gray-500">{worker.position} · {worker.email}</p>
           </div>
         </div>
-        <button onClick={handleDelete} className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50" data-testid="workers-delete">
-          <Trash2 className="h-3.5 w-3.5" /> Sil
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTab('info')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+              tab === 'info'
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+            title="Məlumatları redaktə et"
+            data-testid="workers-edit-info-icon"
+          >
+            <Edit className="h-3.5 w-3.5" /> Redaktə
+          </button>
+          <button onClick={handleDelete} className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50" data-testid="workers-delete">
+            <Trash2 className="h-3.5 w-3.5" /> Sil
+          </button>
+        </div>
       </div>
 
       {/* Performance summary */}
@@ -766,12 +782,12 @@ const WorkerDetail: React.FC<{ worker: Worker; positions: Position[]; branches: 
 
       <div className="flex border-b border-gray-100 mb-5 overflow-x-auto">
         {([
-          ['info', 'Məlumat'],
+          ['total', 'Satış planı'],
           ['fines', 'Cərimələr'],
           ['rewards', 'Mükafatlar'],
-          ['total', 'Aylıq satış'],
           ['vacation', 'Məzuniyyət'],
           ['notify', 'Bildiriş'],
+          ['info', 'Məlumat'],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k as any)}
             className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap ${tab === k ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>

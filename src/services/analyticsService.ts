@@ -137,3 +137,131 @@ export const getTopSearches = async (n = 30): Promise<SearchStat[]> => {
 
 // Eslint helper: prevent unused warnings for getDoc
 export const __ping = async () => getDoc(doc(db, VIEWS_COL, '__ping__'));
+
+// =================================================================
+// Daily visitors tracking — sayta giriş edənlərin günlük statistikası
+// =================================================================
+const VISITS_COL = 'daily_visits';
+const VISIT_SESSION_KEY = '__dv_visit_logged'; // sessionStorage flag
+
+const todayId = () => {
+  const d = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+export const trackDailyVisit = async (): Promise<void> => {
+  // Sessiya başına bir dəfə qeyd et (eyni browser tab-ı dəfələrlə açmasın)
+  try {
+    if (sessionStorage.getItem(VISIT_SESSION_KEY)) return;
+    sessionStorage.setItem(VISIT_SESSION_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+  try {
+    const id = todayId();
+    await setDoc(
+      doc(db, VISITS_COL, id),
+      {
+        date: id,
+        count: increment(1),
+        lastUpdated: Timestamp.now(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('trackDailyVisit failed:', err);
+  }
+};
+
+export interface DailyVisitStat {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export const getDailyVisits = async (days = 30): Promise<DailyVisitStat[]> => {
+  try {
+    const snap = await getDocs(collection(db, VISITS_COL));
+    const all = snap.docs.map((d) => ({ ...(d.data() as any) } as DailyVisitStat));
+    // Son N gün üçün YYYY-MM-DD massivi qur, çatışmayanları 0 ilə doldur
+    const result: DailyVisitStat[] = [];
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const id = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const found = all.find((x) => x.date === id);
+      result.push({ date: id, count: found?.count || 0 });
+    }
+    return result;
+  } catch (err) {
+    console.warn('getDailyVisits failed:', err);
+    return [];
+  }
+};
+
+// =================================================================
+// Anonim cart / wishlist event tracking — qeydiyyatsız istifadəçilər
+// hansı məhsulları sebete/wishlist-a əlavə etdiklərini görmək üçün
+// =================================================================
+const ANON_EVENTS_COL = 'anon_product_interest';
+
+export const trackAnonProductInterest = async (
+  productId: string,
+  kind: 'cart' | 'wishlist',
+  meta?: { name?: string; image?: string; brand?: string }
+): Promise<void> => {
+  if (!productId) return;
+  // Qeydiyyatlı istifadəçilər customer_carts / customer_wishlists-də saxlanır
+  if (localStorage.getItem('userId')) return;
+  // Throttle: eyni məhsul + eyni kind, 5 dəq ərzində bir dəfə
+  try {
+    const k = `__dv_anon_${kind}_${productId}`;
+    const last = Number(localStorage.getItem(k) || '0');
+    if (Date.now() - last < 5 * 60 * 1000) return;
+    localStorage.setItem(k, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+  try {
+    const id = `${kind}_${productId}`;
+    await setDoc(
+      doc(db, ANON_EVENTS_COL, id),
+      {
+        productId,
+        kind,
+        productName: meta?.name || '',
+        image: meta?.image || '',
+        brand: meta?.brand || '',
+        count: increment(1),
+        lastEvent: Timestamp.now(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('trackAnonProductInterest failed:', err);
+  }
+};
+
+export interface AnonInterestStat {
+  productId: string;
+  kind: 'cart' | 'wishlist';
+  productName: string;
+  image: string;
+  brand?: string;
+  count: number;
+  lastEvent?: any;
+}
+
+export const getAnonProductInterest = async (kind?: 'cart' | 'wishlist'): Promise<AnonInterestStat[]> => {
+  try {
+    const snap = await getDocs(collection(db, ANON_EVENTS_COL));
+    const all = snap.docs.map((d) => ({ ...(d.data() as any) } as AnonInterestStat));
+    const filtered = kind ? all.filter((x) => x.kind === kind) : all;
+    return filtered.sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 50);
+  } catch {
+    return [];
+  }
+};
+

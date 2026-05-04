@@ -101,7 +101,16 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const isFavorite = (id: string) => productIds.includes(id);
 
   const toggleFavorite = (id: string) => {
-    setProductIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setProductIds((prev) => {
+      const isAdding = !prev.includes(id);
+      // Qeydiyyatsız istifadəçi əlavə edirsə analitikaya at
+      if (isAdding && !localStorage.getItem('userId')) {
+        import('../services/analyticsService').then(({ trackAnonProductInterest }) =>
+          trackAnonProductInterest(id, 'wishlist').catch(() => undefined)
+        );
+      }
+      return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+    });
   };
 
   return (

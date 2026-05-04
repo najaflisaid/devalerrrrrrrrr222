@@ -183,6 +183,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [...prevItems, { product, quantity }];
     });
 
+    // Qeydiyyatsız istifadəçinin marağını analitikada qeyd et (rəqabət vermir, throttled)
+    if (!localStorage.getItem('userId')) {
+      import('../services/analyticsService').then(({ trackAnonProductInterest }) =>
+        trackAnonProductInterest(product.id, 'cart', {
+          name: product.name?.az || product.name?.en || '',
+          image: product.images?.[0],
+          brand: product.brand,
+        }).catch(() => undefined)
+      );
+    }
+
     addNotification(t('cart.addedToCart'));
   };
 

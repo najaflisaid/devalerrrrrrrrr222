@@ -341,6 +341,8 @@ const AiChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
+  // Salamlama "tooltip" üçün state — sayta girəndə avtomatik bir neçə saniyə göstərilir
+  const [showGreetBubble, setShowGreetBubble] = useState(false);
   const productsRef = useRef<Product[]>([]);
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -432,6 +434,25 @@ const AiChatWidget: React.FC = () => {
     }
   }, [open, productsLoaded]);
 
+  // Sayta giriş edəndə salamlama bubble (satış mütəxəssisi notification kimi).
+  // Sessiya ərzində yalnız bir dəfə göstərilir (sessionStorage flag).
+  useEffect(() => {
+    if (hidden || open) return;
+    try {
+      const SHOWN_KEY = 'devaleur_ai_greet_shown';
+      if (sessionStorage.getItem(SHOWN_KEY)) return;
+      const timer = setTimeout(() => {
+        setShowGreetBubble(true);
+        sessionStorage.setItem(SHOWN_KEY, '1');
+        // 12 saniyə sonra avtomatik gizlət
+        setTimeout(() => setShowGreetBubble(false), 12000);
+      }, 4500);
+      return () => clearTimeout(timer);
+    } catch {
+      /* ignore */
+    }
+  }, [hidden, open]);
+
   // First-time greeting when chat opens with empty history
   useEffect(() => {
     if (open && messages.length === 0 && productsLoaded && !busy) {
@@ -506,23 +527,59 @@ const AiChatWidget: React.FC = () => {
     <>
       {/* Floating launcher button — circle only */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="group fixed bottom-5 right-5 z-[9998] flex items-center justify-center w-12 h-12 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/30"
-          title="De Valeur AI ilə danış"
-          aria-label="De Valeur AI ilə danış"
-          data-testid="ai-chat-launcher"
-        >
-          <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/5 ring-1 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
-            <img
-              src={DEVALEUR_LOGO}
-              alt=""
-              className="w-6 h-6 object-contain"
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
-          </span>
-        </button>
+        <div className="fixed bottom-5 right-5 z-[9998] flex items-end gap-2">
+          {/* Salamlama bubble — satış mütəxəssisi bildirişi kimi */}
+          {showGreetBubble && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(true);
+                setShowGreetBubble(false);
+              }}
+              className="mb-1 max-w-[260px] bg-white shadow-[0_10px_30px_-8px_rgba(0,0,0,0.25)] border border-gray-100 rounded-2xl rounded-br-sm pl-3 pr-7 py-2.5 text-left animate-in slide-in-from-right-2 fade-in relative cursor-pointer hover:shadow-[0_12px_36px_-8px_rgba(0,0,0,0.35)] transition-shadow"
+              data-testid="ai-greet-bubble"
+              aria-label="AI satış mütəxəssisi ilə danış"
+            >
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGreetBubble(false);
+                }}
+                className="absolute top-1.5 right-1.5 text-gray-300 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </span>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[10px] font-bold tracking-wider text-amber-600 uppercase">DE VALEUR</span>
+              </div>
+              <p className="text-[13px] text-gray-900 font-medium leading-snug">
+                Salam! 👋 Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm.
+              </p>
+              <p className="text-[11px] text-gray-500 mt-0.5">Yazışmaya başlamaq üçün tıklayın</p>
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setOpen(true);
+              setShowGreetBubble(false);
+            }}
+            className="group relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/30"
+            title="De Valeur AI ilə danış"
+            aria-label="De Valeur AI ilə danış"
+            data-testid="ai-chat-launcher"
+          >
+            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/5 ring-1 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
+              <img
+                src={DEVALEUR_LOGO}
+                alt=""
+                className="w-6 h-6 object-contain"
+                style={{ filter: 'brightness(0) invert(1)' }}
+              />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Chat panel */}

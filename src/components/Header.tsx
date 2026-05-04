@@ -65,7 +65,9 @@ const Header: React.FC = () => {
             const userData = usersSnapshot.docs[0].data();
             const newRole = userData.role || 'customer';
 
-            if (previousRole && previousRole !== newRole) {
+            // Hər login dəyişiminde (guest→login və ya rol dəyişəndə) səbət təmizlənsin.
+            // Eyni rolla yenidən bağlanan token-refresh halında dəyişmir.
+            if (previousRole !== newRole) {
               clearCart(true);
             }
 
@@ -84,7 +86,7 @@ const Header: React.FC = () => {
               loadB2BNotifications();
             }
           } else {
-            if (previousRole && previousRole !== 'customer') {
+            if (previousRole !== 'customer') {
               clearCart(true);
             }
 
@@ -96,7 +98,7 @@ const Header: React.FC = () => {
           console.error('Error fetching user data:', error);
           const storedRole = localStorage.getItem('userRole') || 'customer';
 
-          if (previousRole && previousRole !== storedRole) {
+          if (previousRole !== storedRole) {
             clearCart(true);
           }
 
@@ -315,7 +317,7 @@ const Header: React.FC = () => {
     }
   }, [showSearch, allProducts.length]);
 
-  // Filter products as user types
+  // Filter products as user types + analytics tracking (debounced)
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
@@ -336,6 +338,15 @@ const Header: React.FC = () => {
     setSearchResults(matches);
     setHighlightIndex(matches.length > 0 ? 0 : -1);
     void lang;
+    // Debounced: 1.2 saniyə yazmadıqdan sonra analitikaya göndər
+    if (q.length >= 2) {
+      const debounceTimer = setTimeout(() => {
+        import('../services/analyticsService').then(({ trackSearch }) =>
+          trackSearch(searchQuery.trim()).catch(() => undefined)
+        );
+      }, 1200);
+      return () => clearTimeout(debounceTimer);
+    }
   }, [searchQuery, allProducts, i18n.language]);
 
   const goToProduct = (p: Product) => {

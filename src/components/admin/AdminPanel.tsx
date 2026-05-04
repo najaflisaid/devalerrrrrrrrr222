@@ -31,6 +31,7 @@ import PasswordsManagementTab from './PasswordsManagementTab';
 import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
+import ProductExcelImport from './ProductExcelImport';
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -1436,6 +1437,11 @@ const AdminPanel: React.FC = () => {
                 <Plus className="h-5 w-5" />
                 Məhsul əlavə et
               </button>
+            </div>
+
+            {/* Excel/CSV ilə stok migrasiyası */}
+            <div className="mb-6">
+              <ProductExcelImport products={products} onDone={loadData} />
             </div>
 
             <div className="mb-6 space-y-4">

@@ -24,8 +24,12 @@ import { db } from '../../lib/firebase';
 import {
   getTopViewedProducts,
   getTopSearches,
+  getDailyVisits,
+  getAnonProductInterest,
   type ProductViewStat,
   type SearchStat,
+  type DailyVisitStat,
+  type AnonInterestStat,
 } from '../../services/analyticsService';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
@@ -77,9 +81,11 @@ const relativeTime = (raw: any): string => {
 
 const AnalyticsTab: React.FC = () => {
   const { i18n } = useTranslation();
-  const [tab, setTab] = useState<'overview' | 'carts' | 'wishlists'>('overview');
+  const [tab, setTab] = useState<'overview' | 'visits' | 'anonymous' | 'carts' | 'wishlists'>('overview');
   const [topViews, setTopViews] = useState<ProductViewStat[]>([]);
   const [topSearches, setTopSearches] = useState<SearchStat[]>([]);
+  const [dailyVisits, setDailyVisits] = useState<DailyVisitStat[]>([]);
+  const [anonInterests, setAnonInterests] = useState<AnonInterestStat[]>([]);
   const [carts, setCarts] = useState<CustomerCart[]>([]);
   const [wishlists, setWishlists] = useState<CustomerWishlist[]>([]);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
@@ -99,15 +105,19 @@ const AnalyticsTab: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [v, s, cartsSnap, wlSnap, products] = await Promise.all([
+      const [v, s, visits, anons, cartsSnap, wlSnap, products] = await Promise.all([
         getTopViewedProducts(20),
         getTopSearches(30),
+        getDailyVisits(30),
+        getAnonProductInterest(),
         getDocs(collection(db, 'customer_carts')),
         getDocs(collection(db, 'customer_wishlists')),
         productService.getAll(true).catch(() => [] as Product[]),
       ]);
       setTopViews(v);
       setTopSearches(s);
+      setDailyVisits(visits);
+      setAnonInterests(anons);
       const pm: Record<string, Product> = {};
       products.forEach((p) => {
         pm[p.id] = p;
@@ -296,16 +306,18 @@ const AnalyticsTab: React.FC = () => {
         />
       </div>
 
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
         {[
           { id: 'overview', label: 'Ümumi statistika' },
+          { id: 'visits', label: 'Günlük ziyarətçilər' },
+          { id: 'anonymous', label: 'Qeydiyyatsız maraq' },
           { id: 'carts', label: 'Müştəri səbətləri' },
           { id: 'wishlists', label: 'Wishlist-lər' },
         ].map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id as any)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap ${
               tab === t.id
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -424,6 +436,149 @@ const AnalyticsTab: React.FC = () => {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'visits' && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Eye className="h-4 w-4 text-gray-700" />
+                Son 30 günün ziyarətçi sayı
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Hər sessiya unikal sayılır. Cəmi {dailyVisits.reduce((s, v) => s + v.count, 0)} ziyarət
+              </p>
+            </div>
+            {(() => {
+              const last7 = dailyVisits.slice(-7).reduce((s, v) => s + v.count, 0);
+              const prev7 = dailyVisits.slice(-14, -7).reduce((s, v) => s + v.count, 0);
+              const diff = last7 - prev7;
+              const pct = prev7 > 0 ? Math.round((diff / prev7) * 100) : 0;
+              return (
+                <div className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                  diff >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  Son 7 gün: {diff >= 0 ? '↑' : '↓'} {Math.abs(diff)} ({pct >= 0 ? '+' : ''}{pct}%)
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Bar chart — pure SVG, no lib */}
+          {dailyVisits.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-10">Hələ ziyarət statistikası yoxdur</p>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
+              <div className="min-w-[600px]">
+                {(() => {
+                  const max = Math.max(1, ...dailyVisits.map((v) => v.count));
+                  const W = 760, H = 220, P = 30;
+                  const bw = (W - P * 2) / dailyVisits.length;
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-56">
+                      {/* Y axis ticks */}
+                      {[0, 0.5, 1].map((r) => {
+                        const y = H - P - r * (H - P * 2);
+                        const val = Math.round(max * r);
+                        return (
+                          <g key={r}>
+                            <line x1={P} x2={W - P} y1={y} y2={y} stroke="#e5e7eb" strokeDasharray="3 3" />
+                            <text x={4} y={y + 3} fontSize="10" fill="#9ca3af">{val}</text>
+                          </g>
+                        );
+                      })}
+                      {/* Bars */}
+                      {dailyVisits.map((v, i) => {
+                        const h = (v.count / max) * (H - P * 2);
+                        const x = P + i * bw + 2;
+                        const y = H - P - h;
+                        const isToday = i === dailyVisits.length - 1;
+                        return (
+                          <g key={v.date}>
+                            <rect
+                              x={x}
+                              y={y}
+                              width={Math.max(2, bw - 4)}
+                              height={h}
+                              fill={isToday ? '#111827' : '#9ca3af'}
+                              rx={2}
+                              data-testid={`daily-visit-bar-${v.date}`}
+                            >
+                              <title>{v.date}: {v.count} ziyarət</title>
+                            </rect>
+                            {(i % 5 === 0 || isToday) && (
+                              <text x={x + bw / 2 - 2} y={H - 8} fontSize="9" fill="#6b7280" textAnchor="middle">
+                                {v.date.slice(5)}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Detailed daily list */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+            {dailyVisits.slice(-10).reverse().map((v) => (
+              <div key={v.date} className="bg-gray-50 rounded-lg p-2 border border-gray-100" data-testid={`visit-day-${v.date}`}>
+                <p className="text-[10px] text-gray-400">{v.date.slice(5)}</p>
+                <p className="text-base font-bold text-gray-900">{v.count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'anonymous' && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="mb-4">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-gray-700" />
+              Qeydiyyatsız istifadəçilərin marağı
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Sayta giriş etmədən səbətə və ya wishlist-ə əlavə edilən məhsullar (anonim, məhsul ID + kind əsasında qruplaşır)
+            </p>
+          </div>
+          {anonInterests.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-10">Hələ qeydiyyatsız maraq qeydi yoxdur</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {anonInterests.map((a) => (
+                <div
+                  key={`${a.kind}_${a.productId}`}
+                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  data-testid={`anon-interest-${a.kind}-${a.productId}`}
+                >
+                  {a.image ? (
+                    <img src={a.image} alt="" className="w-12 h-12 object-cover rounded-md flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-100 rounded-md flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                        a.kind === 'cart' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'
+                      }`}>
+                        {a.kind === 'cart' ? 'Səbət' : 'Wishlist'}
+                      </span>
+                      {a.brand && <span className="text-[10px] text-gray-500 truncate">{a.brand}</span>}
+                    </div>
+                    <p className="text-sm text-gray-900 truncate">{a.productName || a.productId}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">son: {relativeTime(a.lastEvent)}</p>
+                  </div>
+                  <span className="text-base font-bold text-gray-900 tabular-nums flex-shrink-0">{a.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

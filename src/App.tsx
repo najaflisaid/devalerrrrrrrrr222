@@ -149,6 +149,13 @@ const AiChatWidgetGate: React.FC = () => {
 };
 
 function App() {
+  // Sayta giriş edən hər bir ziyarətçini gündəlik analitikaya əlavə et (sessiya başına 1 dəfə)
+  React.useEffect(() => {
+    import('./services/analyticsService').then(({ trackDailyVisit }) =>
+      trackDailyVisit().catch(() => undefined)
+    );
+  }, []);
+
   return (
     <ThemeProvider>
       <Router>
