@@ -67,13 +67,10 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  // Scroll products list back to top when any filter changes
-  // Also close filter drawer on mobile so user immediately sees the filtered products
+  // Scroll products list back to top when any filter changes.
+  // Note: Filter panel is NOT auto-closed on mobile anymore — user closes it manually
+  // (bu, "filtrin öz-özünə yox olması" hissini aradan qaldırır).
   const scrollToTop = () => {
-    // Close mobile filter panel after selection
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsFilterOpen(false);
-    }
     // Scroll window to top — use requestAnimationFrame to ensure DOM update first
     requestAnimationFrame(() => {
       try {
@@ -631,18 +628,7 @@ const ProductsPage: React.FC = () => {
               </div>
 
               <div className="border-t border-gray-200 pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">{t('product.brand')}</h3>
-                  {selectedBrand !== 'all' && (
-                    <button
-                      onClick={() => handleBrandChange('all')}
-                      className="text-xs text-gray-500 hover:text-gray-900 underline"
-                      data-testid="brand-clear-btn"
-                    >
-                      Sıfırla
-                    </button>
-                  )}
-                </div>
+                <h3 className="font-medium mb-3">{t('product.brand')}</h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {brands.filter(b => b !== 'all').map((brand) => (
                     <label key={brand} className="flex items-center cursor-pointer">

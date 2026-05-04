@@ -458,7 +458,7 @@ const AiChatWidget: React.FC = () => {
       setShowGreetBubble(true);
       safeSessionSet(SHOWN_KEY, '1');
       window.setTimeout(() => setShowGreetBubble(false), 14000);
-    }, 4500);
+    }, 40000);
     return () => window.clearTimeout(timer);
   }, [hidden, open]);
 
@@ -520,19 +520,19 @@ const AiChatWidget: React.FC = () => {
         products: compactProducts(productsRef.current),
         knowledge: knowledgeRef.current || undefined,
         language: lang,
+        sessionId: sessionIdRef.current,
       });
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: reply, ts: Date.now() },
       ]);
-    } catch (err: any) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content:
-            'Bağışlayın, indi cavab verə bilmədim. Bir az sonra yenidən yazın və ya bizimlə əlaqə vasitəsilə bağlanın. ' +
-            (err?.message ? `(${err.message})` : ''),
+            'Bir anlıq bağlantı problemi oldu. Zəhmət olmasa bir neçə saniyə sonra yenidən yazın.',
           ts: Date.now(),
         },
       ]);

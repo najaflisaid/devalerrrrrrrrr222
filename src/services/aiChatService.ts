@@ -42,22 +42,12 @@ export interface ChatRequest {
   products: ChatProductLite[];
   knowledge?: ChatKnowledgeLite | null;
   language?: 'az' | 'ru' | 'en';
+  sessionId?: string;
 }
 
-const ENV_OPENAI_API_KEY: string =
-  (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
-
-// Fallback: bu açar build-də .env oxunmasa belə (məsələn Vercel/Netlify-da
-// VITE_OPENAI_API_KEY təyin edilməsə) chat işləməyə davam etsin deyə
-// birbaşa bundle-a hardcode edilib. İstifadəçi öz açarını verib və açarın
-// brauzerdə görünməsini qəbul edib.
-const FALLBACK_OPENAI_API_KEY =
-  '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';
-
-const OPENAI_API_KEY: string = ENV_OPENAI_API_KEY || FALLBACK_OPENAI_API_KEY;
-
-const OPENAI_MODEL = 'gpt-4o-mini';
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// OpenAI artıq birbaşa brauzerdən çağırılmır — backend /api/chat proxy-dən
+// istifadə olunur (açarın ifşa olmaması və CORS/Failed-to-fetch xətasının
+// qarşısının alınması üçün).
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
@@ -297,44 +287,55 @@ const buildSystemMessage = (req: ChatRequest): string => {
 };
 
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OpenAI açarı konfiqurasiya edilməyib (VITE_OPENAI_API_KEY).');
+  // Chat artıq backend /api/chat endpoint üzərindən işləyir.
+  // Bu, OpenAI açarının frauzerdə ifşa olunmasının və CORS/"Failed to fetch"
+  // xətalarının qarşısını alır.
+  const BACKEND_URL: string =
+    (import.meta as any).env?.VITE_BACKEND_URL ||
+    (import.meta as any).env?.REACT_APP_BACKEND_URL ||
+    '';
+
+  if (!BACKEND_URL) {
+    throw new Error('Backend URL konfiqurasiya edilməyib.');
   }
 
-  const systemMessage = buildSystemMessage(req);
+  const sessionId =
+    req.sessionId ||
+    (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? (crypto as any).randomUUID()
+      : `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
-  // Send last few messages as proper chat turns + the new user message.
-  const recentTurns = (req.history || []).slice(-8).map((h) => ({
-    role: h.role,
-    content: h.content,
-  }));
+  const payload = {
+    session_id: sessionId,
+    message: req.message.trim(),
+    history: (req.history || []).slice(-8).map((h) => ({
+      role: h.role,
+      content: h.content,
+    })),
+    products: req.products || [],
+    knowledge: req.knowledge || null,
+    language: req.language || 'az',
+  };
 
-  const messages = [
-    { role: 'system', content: systemMessage },
-    ...recentTurns,
-    { role: 'user', content: req.message.trim() },
-  ];
-
-  const res = await fetch(OPENAI_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages,
-      temperature: 0.7,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BACKEND_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Şəbəkə xətası — istifadəçiyə qısa, mehriban mesaj
+    throw new Error('Şəbəkə bağlantısı yoxdur. Bir az sonra yenidən cəhd edin.');
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`OpenAI xətası (${res.status}): ${errText.slice(0, 200)}`);
+    throw new Error(`AI xidməti cavab vermədi (${res.status}). ${errText.slice(0, 120)}`);
   }
 
   const data = await res.json();
-  const reply: string = data?.choices?.[0]?.message?.content || '';
+  const reply: string = data?.reply || '';
   const trimmed = reply.trim();
   return trimmed || 'Bağışlayın, cavab yarana bilmədi.';
 };
