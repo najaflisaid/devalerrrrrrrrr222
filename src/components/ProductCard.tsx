@@ -52,16 +52,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Out-of-stock only blocks B2B users; customers can always add
-    if (isB2BUser && product.stock === 0) {
-      addNotification('Bu məhsul bitib', 'error');
+    // Stok 0 olduqda bütün istifadəçilər üçün səbətə əlavə bloklanır
+    if (product.stock === 0) {
+      addNotification('Mövcud deyil', 'error');
       return;
     }
     addToCart(product, 1);
   };
 
-  // "Bitdi" göstəricisi yalnız B2B istifadəçilərə görünür
-  const isOutOfStock = isB2BUser && product.stock === 0;
+  // Stok 0 → bütün istifadəçilərə "Mövcud deyil" göstər
+  const isOutOfStock = product.stock === 0;
   const hasSecondImage = !!product.images[1];
 
   return (
@@ -137,7 +137,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
             )}
           </div>
           {isOutOfStock && (
-            <span className="text-xs text-red-600 font-medium">Bitdi</span>
+            <span className="text-xs text-red-600 font-medium">Mövcud deyil</span>
           )}
           {isB2BUser && !compact && !isOutOfStock && (
             <p className={`text-xs font-medium mt-1 ${

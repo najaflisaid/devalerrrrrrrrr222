@@ -7,6 +7,7 @@ import {
   computeAverageRating,
   type ProductReview,
 } from '../services/productReviewService';
+import CustomerLogin from './auth/CustomerLogin';
 
 interface Props {
   productId: string;
@@ -58,6 +59,7 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const userId = localStorage.getItem('userId');
   const userRole = localStorage.getItem('userRole');
@@ -86,7 +88,7 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
 
   const handleSubmit = async () => {
     if (!isLoggedIn) {
-      alert('Rəy yazmaq üçün öncə hesabınıza giriş edin');
+      setShowAuthModal(true);
       return;
     }
     if (rating < 1) {
@@ -144,7 +146,7 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
           <button
             onClick={() => {
               if (!isLoggedIn) {
-                alert('Rəy yazmaq üçün öncə hesabınıza giriş edin');
+                setShowAuthModal(true);
                 return;
               }
               setShowForm(true);
@@ -206,8 +208,31 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
       )}
 
       {!isLoggedIn && (
-        <div className="mb-4 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
-          Rəy yazmaq üçün öncə hesabınıza giriş edin.
+        <div className="mb-4 p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl">
+          <p className="text-sm text-gray-700 mb-2 font-medium">Bu məhsulu qiymətləndirin</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-0.5"
+              data-testid="review-login-stars"
+              aria-label="Rəy yazmaq üçün qeydiyyatdan keçin"
+            >
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  className="h-6 w-6 text-gray-300 hover:fill-amber-400 hover:text-amber-400 transition-colors cursor-pointer"
+                  strokeWidth={1.5}
+                />
+              ))}
+            </button>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="ml-2 text-xs text-amber-700 hover:text-amber-900 underline font-medium"
+              data-testid="review-register-link"
+            >
+              Qeydiyyatdan keçin
+            </button>
+          </div>
         </div>
       )}
 
@@ -294,6 +319,12 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
             </div>
           ))}
         </div>
+      )}
+      {showAuthModal && (
+        <CustomerLogin
+          initialMode="register"
+          onClose={() => setShowAuthModal(false)}
+        />
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import CustomerLogin from './auth/CustomerLogin';
 import { productService } from '../services/productService';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
+import { toBrandSlug } from '../utils/brandSlug';
 import type { Product } from '../types';
 
 const Header: React.FC = () => {
@@ -504,10 +505,14 @@ const Header: React.FC = () => {
                                       <li key={`${hoveredCategory || 'all'}-${brand}`}>
                                         <button
                                           onClick={() => {
-                                            const params = new URLSearchParams();
-                                            params.set('brand', brand);
-                                            if (hoveredCategory) params.set('category', hoveredCategory);
-                                            navigate(`/products?${params.toString()}`);
+                                            if (hoveredCategory) {
+                                              const params = new URLSearchParams();
+                                              params.set('brand', brand);
+                                              params.set('category', hoveredCategory);
+                                              navigate(`/products?${params.toString()}`);
+                                            } else {
+                                              navigate(`/brand/${toBrandSlug(brand)}`);
+                                            }
                                             setShowDropdown(false);
                                           }}
                                           style={{ ['--dv-i' as any]: idx }}

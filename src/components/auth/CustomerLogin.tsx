@@ -10,11 +10,12 @@ import { useCart } from '../../context/CartContext';
 
 interface CustomerLoginProps {
   onClose: () => void;
+  initialMode?: 'login' | 'register';
 }
 
-const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose }) => {
+const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose, initialMode = 'login' }) => {
   const { t } = useTranslation();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

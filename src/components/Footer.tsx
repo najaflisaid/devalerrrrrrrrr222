@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
+import { toBrandSlug } from '../utils/brandSlug';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -142,7 +143,7 @@ const Footer: React.FC = () => {
               {brands.map((brand) => (
                 <li key={brand}>
                   <button
-                    onClick={() => navigate(`/products?brand=${encodeURIComponent(brand)}`)}
+                    onClick={() => navigate(`/brand/${toBrandSlug(brand)}`)}
                     className="text-gray-600 hover:text-gray-900 transition-colors text-sm text-left"
                   >
                     {brand}

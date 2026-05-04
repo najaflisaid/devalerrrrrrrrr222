@@ -590,32 +590,30 @@ const ProductsPage: React.FC = () => {
                   <div className="space-y-2">
                     <label className="flex items-center cursor-pointer">
                       <input
-                        type="radio"
-                        name="stock"
-                        value="all"
-                        checked={stockFilter === 'all'}
-                        onChange={() => { setStockFilter('all'); scrollToTop(); }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{t('common.all')}</span>
-                    </label>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="radio"
-                        name="stock"
-                        value="inStock"
+                        type="checkbox"
                         checked={stockFilter === 'inStock'}
-                        onChange={() => { setStockFilter('inStock'); scrollToTop(); }}
-                        className="mr-2"
+                        onChange={(e) => { setStockFilter(e.target.checked ? 'inStock' : 'all'); scrollToTop(); }}
+                        className="mr-2 w-4 h-4"
                       />
-                      <span className="text-sm">Mövcud məhsullar</span>
+                      <span className="text-sm">Yalnız mövcud məhsullar</span>
                     </label>
                   </div>
                 </div>
               )}
 
               <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium mb-3">{t('product.category')}</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium">{t('product.category')}</h3>
+                  {selectedCategory !== 'all' && (
+                    <button
+                      onClick={() => handleCategoryChange('all')}
+                      className="text-xs text-gray-500 hover:text-gray-900 underline"
+                      data-testid="category-clear-btn"
+                    >
+                      Sıfırla
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {categories.filter(c => c !== 'all').map((category) => (
                     <label key={category} className="flex items-center cursor-pointer">
@@ -635,9 +633,20 @@ const ProductsPage: React.FC = () => {
               </div>
 
               <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium mb-3">{t('product.brand')}</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium">{t('product.brand')}</h3>
+                  {selectedBrand !== 'all' && (
+                    <button
+                      onClick={() => handleBrandChange('all')}
+                      className="text-xs text-gray-500 hover:text-gray-900 underline"
+                      data-testid="brand-clear-btn"
+                    >
+                      Sıfırla
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {brands.map((brand) => (
+                  {brands.filter(b => b !== 'all').map((brand) => (
                     <label key={brand} className="flex items-center cursor-pointer">
                       <input
                         type="radio"
@@ -647,28 +656,26 @@ const ProductsPage: React.FC = () => {
                         onChange={(e) => handleBrandChange(e.target.value)}
                         className="mr-2"
                       />
-                      <span className="text-sm">
-                        {brand === 'all' ? t('common.all') : brand}
-                      </span>
+                      <span className="text-sm">{brand}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium mb-3">{t('category.filterByGender')}</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium">{t('category.filterByGender')}</h3>
+                  {selectedGender !== 'all' && (
+                    <button
+                      onClick={() => handleGenderChange('all')}
+                      className="text-xs text-gray-500 hover:text-gray-900 underline"
+                      data-testid="gender-clear-btn"
+                    >
+                      Sıfırla
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="all"
-                      checked={selectedGender === 'all'}
-                      onChange={(e) => handleGenderChange(e.target.value)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">{t('common.all')}</span>
-                  </label>
                   <label className="flex items-center cursor-pointer">
                     <input
                       type="radio"

@@ -3,14 +3,16 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
+import { toBrandSlug } from '../utils/brandSlug';
 import type { Product } from '../types';
 
 const BrandPage: React.FC = () => {
   const { brand } = useParams<{ brand: string }>();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('name');
+  const [resolvedBrandName, setResolvedBrandName] = useState<string>('');
 
   useEffect(() => {
     if (brand) {
@@ -23,9 +25,18 @@ const BrandPage: React.FC = () => {
       const userRole = localStorage.getItem('userRole');
       const isB2B = userRole === 'b2b' || userRole === 'admin';
       const allProducts = await productService.getAll();
-      const brandProducts = allProducts.filter(p =>
-        p.brand.toLowerCase() === brand?.toLowerCase() && p.isEnabled
-      );
+      // Brand slug ilə uyğunlaşdırma: ya birbaşa ad, ya da slug formatı
+      const brandProducts = allProducts.filter(p => {
+        if (!p.brand || !p.isEnabled) return false;
+        if (p.brand.toLowerCase() === brand?.toLowerCase()) return true;
+        return toBrandSlug(p.brand) === (brand || '').toUpperCase();
+      });
+      // İlk uyğun məhsulun brendinin tam adını göstərmək üçün saxla
+      if (brandProducts.length > 0) {
+        setResolvedBrandName(brandProducts[0].brand);
+      } else {
+        setResolvedBrandName(brand || '');
+      }
       const filteredProducts = isB2B ? brandProducts : brandProducts.filter(p => p.comingSoon !== true);
       setProducts(filteredProducts);
     } catch (error) {
@@ -63,7 +74,7 @@ const BrandPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
             <h1 className="text-3xl font-light text-gray-900 mb-2">
-              {brand}
+              {resolvedBrandName || brand}
             </h1>
             <p className="text-gray-600">
               {products.length} məhsul tapıldı

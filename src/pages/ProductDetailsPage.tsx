@@ -80,8 +80,8 @@ const ProductDetailsPage: React.FC = () => {
   const handleWhatsAppOrder = async () => {
     // Customers now use Epoint via cart
     if (!product) return;
-    if (isB2BUser && product.stock === 0) {
-      addNotification('Bu məhsul bitib', 'error');
+    if (product.stock === 0) {
+      addNotification('Mövcud deyil', 'error');
       return;
     }
     addToCart(product, quantity);
@@ -114,8 +114,8 @@ const ProductDetailsPage: React.FC = () => {
 
   const displayPrice = getDisplayPrice();
   const originalPrice = getOriginalPrice();
-  // "Bitdi" / stok göstəricisi yalnız B2B istifadəçilərə
-  const isOutOfStock = isB2BUser && product.stock === 0;
+  // Stok 0 olarsa BÜTÜN istifadəçilər üçün "Mövcud deyil" göstər və əlavə etməyə icazə vermə
+  const isOutOfStock = product.stock === 0;
 
   return (
     <div className="min-h-screen bg-white">
@@ -181,7 +181,7 @@ const ProductDetailsPage: React.FC = () => {
                   <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)}₼</p>
                 )}
                 {isOutOfStock && (
-                  <p className="text-sm text-red-600 font-medium">Bitdi</p>
+                  <p className="text-sm text-red-600 font-medium">Mövcud deyil</p>
                 )}
               </div>
 
@@ -199,7 +199,7 @@ const ProductDetailsPage: React.FC = () => {
                     product.stock <= 5 ? 'text-orange-700' :
                     'text-green-700'
                   }`}>
-                    {isOutOfStock ? 'Bitdi' : `Mövcud: ${product.stock} ədəd`}
+                    {isOutOfStock ? 'Mövcud deyil' : `Mövcud: ${product.stock} ədəd`}
                   </span>
                 </div>
               </div>
@@ -263,9 +263,9 @@ const ProductDetailsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (product) {
-                      // Stok blokajı yalnız B2B üçün
-                      if (isB2BUser && product.stock === 0) {
-                        addNotification('Bu məhsul bitib', 'error');
+                      // Stok 0 olduqda bütün istifadəçilər üçün bloklanır
+                      if (product.stock === 0) {
+                        addNotification('Mövcud deyil', 'error');
                         return;
                       }
                       addToCart(product, quantity);

@@ -1,15 +1,59 @@
 # De Valeur — Premium Saatlar və Aksesuarlar Saytı
 
-## Original problem statement (Jan 2026 iteration)
-"Filtirde kateqoriya yerində 'hamısı' olmasın. Menyuda Kategoriyaların içində brendlər görsənsin (Saatlar üzərinə qoyduqda saat brendləri açılsın). Kateqoriyaya alt-kateqoriya əlavə etmək olsun (məs: Dəri aksesuarlar → Çantalar → Pul qabıları). İşçi panelində tarix DD.MM.YYYY (31.12.2026) formatında olsun. Satıcının aylıq hədəfini konkret aprel/may ayı üçün qeyd etmə standart olsun, amma admin/işçi hansı ay olduğunu görməsin. İşçinin doğum tarixini dəyişib təsdiqləyəndə dəyişmir, düzəlt. Müştəri sifariş ödənişinə keçərkən gecikmə olur, fırlanan loading bildirişi qoy. AI chatbot bəzən özözünə itir, səbətə məhsul əlavə etmək olmur — düzəlt."
+## Original problem statement (May 2026 iteration — Group A: təhlükəsiz fixes)
+"Rəy/ulduz vermək istəyəndə avtomatik qeydiyyat açılsın. Filterdən 'Hamısı' seçimini bütün filtrdən yığışdır. US Polo Assn linki yuxarıda /USPA olsun. Google-da yazıda DE VALEUR (kiçik hərflərledir indi) düzəlt. Stok 0 olanda müştəri görsün amma səbətə əlavə edə bilməsin, 'mövcud deyil' yazsın."
+
+## What was done — May 4, 2026 iteration #4 — Group A (təhlükəsiz UI/SEO/data fixes)
+
+### 1. Rəy/Ulduz → avtomatik qeydiyyat modal (#1)
+- `src/components/ProductReviews.tsx`: `alert()` əvəzinə `CustomerLogin` modalı qeydiyyat modunda (`initialMode="register"`) açılır.
+- Qeydiyyatsız istifadəçi üçün "Bu məhsulu qiymətləndirin" başlıqlı interaktiv ulduz blok əlavə olundu — istənilən ulduza/Qeydiyyat linkinə klik qeydiyyat modalını açır.
+- `src/components/auth/CustomerLogin.tsx`: yeni opsional prop `initialMode?: 'login' | 'register'`.
+
+### 2. Filtrdən "Hamısı" seçimi silindi (#9)
+- `src/pages/ProductsPage.tsx`:
+  - Stock filter: radio `Hamısı / Mövcud məhsullar` → tək checkbox "Yalnız mövcud məhsullar".
+  - Brand list: 'all' option silindi (yalnız real brendlər radio kimi).
+  - Gender: "Hamısı" radio silindi (men / women / unisex).
+- Hər filtrin yanına kiçik "Sıfırla" düyməsi əlavə olundu — yalnız filter aktiv olduqda görünür, sıfırlamağa imkan verir.
+
+### 3. Stok 0 → bütün istifadəçilər üçün "Mövcud deyil" + əlavə bloklanır (#8)
+- `src/components/ProductCard.tsx`: `isOutOfStock = product.stock === 0` (əvvəl yalnız B2B üçün idi).
+- Bütün istifadəçilər üçün "Bitdi" yerinə "Mövcud deyil" yazısı, səbətə əlavə düyməsi gizlədilir, müştəri klikləsə notification göstərilir.
+- `src/pages/ProductDetailsPage.tsx`: addToCart, buyNow düymələri stok 0 olarsa hamı üçün bloklanır.
+
+### 4. US Polo Assn → URL `/brand/USPA` (#11)
+- Yeni utility: `src/utils/brandSlug.ts` — `toBrandSlug()` və `fromBrandSlug()`.
+- Xüsusi alias map: "U.S. Polo Assn." → `USPA`. Digər brendlər avtomatik (nöqtə/boşluq sil → CAPS).
+- `src/components/Header.tsx`: mega menyuda kategoriya seçilməyibsə brend kliki `/brand/USPA` formatında URL-ə gedir (kategoriya seçilibsə əvvəlki kimi `?brand=...&category=...`).
+- `src/components/Footer.tsx`: brendlər `/brand/${slug}` formatına yönləndirilir.
+- `src/pages/BrandPage.tsx`: brendi həm tam ad ilə, həm də slug ilə resolve edir; başlıqda tam ad göstərilir ("U.S. Polo Assn.").
+
+### 5. Google-da `DE VALEUR` böyük hərf (#12)
+- `index.html`: title, description, og:title, og:site_name, twitter:title, schema.org Organization/Store/WebSite name field-ləri "De Valeur" → "DE VALEUR" olaraq dəyişdirildi.
+- `Organization.alternateName` siyahısına "De Valeur" backup üçün qaldırıldı (köhnə backlinks/bookmark-lar üçün).
 
 ## Architecture
 - **Frontend**: React 18 + TypeScript + Vite (root: `/app`, served via supervisor on :3000).
-- **Backend**: FastAPI on :8001 (`/api/health`, `/api/chat` — chat hələ də backup endpoint kimi qalır, frontend artıq birbaşa OpenAI-ə zəng vurur).
+- **Backend**: FastAPI on :8001 (`/api/health`, `/api/chat`).
 - **Database**: Firebase Firestore (məhsullar, users, kategoriyalar, sifarişlər, işçi məlumatları və s.) + Supabase qalıqları.
 - **Auth**: Firebase Auth (admin, B2B, customer, worker).
-- **Payments**: Epoint (Azərbaycan ödəniş gateway).
-- **AI Chat**: OpenAI gpt-4o-mini, frontend-dən direkt çağırılır (`src/services/aiChatService.ts`).
+- **Payments**: Epoint.
+- **AI Chat**: OpenAI gpt-4o-mini, frontend-dən direkt çağırılır.
+
+## Backlog — Group B (orta risk: cart/auth flow)
+- **#3** Login/logout zamanı səbət təmizlənsin (B2B vs normal session)
+- **#2** Safari donma + B2B login button issue
+- **#10** AI köməkçi salamlama (satış mütəxəssisi kimi)
+
+## Backlog — Group C (analytics / admin features)
+- **#4** Real-time search analytics (yazılanlar hamısı, Enter basmadan)
+- **#5** Daily visitors qrafiki (artma/azalma)
+- **#6** Anonim user cart/wishlist tracking
+- **#7** Excel məhsul miqrasiyası + stok auto-update
+- **#13** Worker bölməsi yenidən qurma (email tetikleyicisi gec, satış planı sıralama)
+
+
 
 ## What was done — Apr 30, 2026 iteration #3 — Mobil menyu + alt-kateqoriya
 
