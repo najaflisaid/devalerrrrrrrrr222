@@ -83,10 +83,10 @@ const Features: React.FC = () => {
                   <Icon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-[#D4AF37] relative z-10 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.2} />
                 </div>
 
-                <h3 className="font-playfair text-base sm:text-lg md:text-2xl font-light text-black mb-2 sm:mb-3 tracking-tight">
+                <h3 className="font-playfair text-xl sm:text-2xl md:text-3xl font-light text-black mb-2 sm:mb-3 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-black/55 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto font-light">
+                <p className="text-black/60 text-sm sm:text-base leading-relaxed max-w-xs mx-auto font-light">
                   {feature.description}
                 </p>
               </div>

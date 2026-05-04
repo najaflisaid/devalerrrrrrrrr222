@@ -102,7 +102,7 @@ const BestSellersSection: React.FC = () => {
         <div className="text-center mb-5 md:mb-8">
           <div className="inline-flex items-center mb-2">
             <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-            <span className="mx-2.5 text-[8px] sm:text-[9px] uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
+            <span className="mx-2.5 text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
               {t('bestSellers.eyebrow', { defaultValue: "De Valeur'da kəşfə çıxın" })}
             </span>
             <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
