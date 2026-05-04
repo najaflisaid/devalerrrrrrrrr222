@@ -180,8 +180,8 @@ const ProductDetailsPage: React.FC = () => {
                 ) : (
                   <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)} AZN</p>
                 )}
-                {isOutOfStock && (
-                  <p className="text-sm text-red-600 font-medium">Mövcud deyil</p>
+                {isOutOfStock && isB2BUser && (
+                  <p className="text-sm text-red-600 font-medium">Bitdi</p>
                 )}
               </div>
 
@@ -199,7 +199,7 @@ const ProductDetailsPage: React.FC = () => {
                     product.stock <= 5 ? 'text-orange-700' :
                     'text-green-700'
                   }`}>
-                    {isOutOfStock ? 'Mövcud deyil' : `Mövcud: ${product.stock} ədəd`}
+                    {isOutOfStock ? 'Bitdi' : `Mövcud: ${product.stock} ədəd`}
                   </span>
                 </div>
               </div>

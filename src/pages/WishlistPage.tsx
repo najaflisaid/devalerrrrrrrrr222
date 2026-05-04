@@ -144,7 +144,7 @@ const WishlistPage: React.FC = () => {
                       data-testid={`wishlist-add-cart-${p.id}`}
                     >
                       <ShoppingCart className="h-3 w-3" />
-                      {p.stock === 0 ? 'Bitdi' : 'Səbətə'}
+                      {'Səbətə'}
                     </button>
                   </div>
                 </div>

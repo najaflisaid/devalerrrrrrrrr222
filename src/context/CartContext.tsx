@@ -157,8 +157,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addToCart = (product: Product, quantity: number) => {
     const isB2BUser = localStorage.getItem('userRole') === 'b2b';
 
-    if (isB2BUser && product.stock !== undefined && product.stock <= 0) {
-      addNotification(t('cart.outOfStock'), 'error');
+    if (product.stock !== undefined && product.stock <= 0) {
+      if (isB2BUser) {
+        addNotification(t('cart.outOfStock'), 'error');
+      }
       return;
     }
 

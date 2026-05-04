@@ -136,8 +136,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               </span>
             )}
           </div>
-          {isOutOfStock && (
-            <span className="text-xs text-red-600 font-medium">Mövcud deyil</span>
+          {isOutOfStock && isB2BUser && (
+            <span className="text-xs text-red-600 font-medium">Bitdi</span>
           )}
           {isB2BUser && !compact && !isOutOfStock && (
             <p className={`text-xs font-medium mt-1 ${
