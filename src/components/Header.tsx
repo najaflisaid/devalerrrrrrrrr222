@@ -229,6 +229,9 @@ const Header: React.FC = () => {
     // Clear any in-flight timers first
     if (dropdownTimersRef.current.outer) clearTimeout(dropdownTimersRef.current.outer);
     if (dropdownTimersRef.current.inner) clearTimeout(dropdownTimersRef.current.inner);
+    // Müştəri tələbi: menyu çox tez bağlanmasın — hover-i itirəndən sonra
+    // 500ms gözlə, sonra bağlama animasiyasına başla. Bu, miskanın azacıq
+    // sürüşməsi (Məhsullar düyməsi ilə dropdown arasında) ilə bağlı problemi həll edir.
     dropdownTimersRef.current.outer = setTimeout(() => {
       setIsDropdownClosing(true);
       dropdownTimersRef.current.inner = setTimeout(() => {
@@ -237,7 +240,7 @@ const Header: React.FC = () => {
         dropdownTimersRef.current.inner = null;
       }, 320);
       dropdownTimersRef.current.outer = null;
-    }, 160);
+    }, 500);
   };
 
   const closeMobileMenu = () => {
