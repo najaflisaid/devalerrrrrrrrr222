@@ -31,7 +31,7 @@ import PasswordsManagementTab from './PasswordsManagementTab';
 import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
-import ProductExcelImport from './ProductExcelImport';
+const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -1439,9 +1439,11 @@ const AdminPanel: React.FC = () => {
               </button>
             </div>
 
-            {/* Excel/CSV ilə stok migrasiyası */}
+            {/* Excel/CSV ilə stok migrasiyası — lazy-loaded (xlsx ~440KB) */}
             <div className="mb-6">
-              <ProductExcelImport products={products} onDone={loadData} />
+              <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Miqrasiya paneli yüklənir...</div>}>
+                <ProductExcelImport products={products} onDone={loadData} />
+              </React.Suspense>
             </div>
 
             <div className="mb-6 space-y-4">

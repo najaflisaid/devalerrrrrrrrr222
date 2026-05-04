@@ -35,13 +35,16 @@
 - `WishlistContext.toggleFavorite`: qeydiyyatsız user üçün eyni — wishlist-ə əlavə zamanı.
 - `AnalyticsTab.tsx`: yeni "Qeydiyyatsız maraq" tab-ı — hansı məhsullara maraq var, brand/şəkil/ad ilə.
 
-#### #7 Excel/CSV ilə məhsul miqrasiyası + auto stock update
-- Yeni komponent: `src/components/admin/ProductExcelImport.tsx`.
-- Format: `ad,kateqoriya,brend,stok,qiymət` (comma və ya semicolon, header sətri opsional).
-- Eyni ad + kateqoriya birləşməsi tapdıqda **stok avtomatik yenilənir** (məsələn: 3 → 4).
-- "Yeni məhsulları avtomatik yarat" checkbox: tapılmayan məhsullar avtomatik əlavə olunur (kateqoriya/brend yoxdursa onlar da yaradılır).
-- Preview cədvəli: matched (köhnə → yeni stok) və notFound siyahısı.
-- AdminPanel "Məhsullar" tab-ında yuxarıda görünür.
+#### #7 Excel/xlsx ilə məhsul miqrasiyası + hazır şablon + auto stock update
+- Yeni komponent: `src/components/admin/ProductExcelImport.tsx` (lazy-loaded, 437KB ayrı chunk).
+- **Hazır şablon**: "Şablonu yüklə (.xlsx)" düyməsi — 2 vərəqli Excel faylı verir:
+  - **Məhsullar** vərəqi: sample 3 sətir + boş sətir. Sütunlar: `Kateqoriya, Brend, Məhsul kodu (SKU), Məhsul adı, Qiymət (AZN), B2B qiymət (AZN), Miqdar, Cins`.
+  - **Təlimat** vərəqi: istifadə qaydaları azərbaycan dilində.
+- **Dəqiq uyğunlaşdırma**: Yalnız şablonun sütun adlarına uyğun faylları qəbul edir. Tələb olunan sütunlar (`Məhsul adı`, `Miqdar`) yoxdursa xəta göstərir.
+- **Match prioriteti**: 1) SKU, 2) Ad+Kateqoriya. Uyğun tapıldıqda **yalnız stok yenilənir** (Product type-ə `sku?: string` əlavə olundu).
+- **Yeni məhsul yaradarkən**: `Kateqoriya + Ad` məcburidir. Tam SKU, qiymət, b2bPrice, cins, marka saxlanılır. Şəkil boş buraxılır — sonra admin əlavə edir. Kateqoriya/brend yoxdursa avtomatik yaradılır.
+- Preview: yenilənəcək (emerald), yaradılacaq (blue), atlandı (amber) — hamısı ayrı siyahıda.
+- .xlsx, .xls, .csv formatları dəstəklənir.
 
 #### #13 Worker bölməsi yenidən sıralandı
 - `WorkersTab.tsx` `WorkerDetail`: default tab `info` → `total` (Satış planı) dəyişdirildi.
