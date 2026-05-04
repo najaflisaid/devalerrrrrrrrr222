@@ -384,14 +384,20 @@ const AiChatWidget: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Init: load session id + history from localStorage
+  // Init: load session id + history from localStorage (safe-wrapped for Safari private mode)
   useEffect(() => {
-    let sid = localStorage.getItem(SESSION_KEY);
-    if (!sid) {
+    let sid: string | null = null;
+    try {
+      sid = localStorage.getItem(SESSION_KEY);
+      if (!sid) {
+        sid = newSessionId();
+        localStorage.setItem(SESSION_KEY, sid);
+      }
+    } catch {
+      // Safari private mode / storage disabled → use in-memory sessionId
       sid = newSessionId();
-      localStorage.setItem(SESSION_KEY, sid);
     }
-    sessionIdRef.current = sid;
+    sessionIdRef.current = sid!;
     try {
       const raw = localStorage.getItem(HISTORY_KEY);
       if (raw) setMessages(JSON.parse(raw));
@@ -434,32 +440,62 @@ const AiChatWidget: React.FC = () => {
     }
   }, [open, productsLoaded]);
 
+  // Safe storage helpers — Safari private mode, cookies-disabled scenarios
+  const safeSessionGet = (k: string): string | null => {
+    try { return sessionStorage.getItem(k); } catch { return null; }
+  };
+  const safeSessionSet = (k: string, v: string) => {
+    try { sessionStorage.setItem(k, v); } catch { /* ignore */ }
+  };
+
   // Sayta giriş edəndə salamlama bubble (satış mütəxəssisi notification kimi).
-  // Sessiya ərzində yalnız bir dəfə göstərilir (sessionStorage flag).
+  // Tab üçün bir dəfə göstərilir; storage olmasa da in-memory fallback.
   useEffect(() => {
     if (hidden || open) return;
-    try {
-      const SHOWN_KEY = 'devaleur_ai_greet_shown';
-      if (sessionStorage.getItem(SHOWN_KEY)) return;
-      const timer = setTimeout(() => {
-        setShowGreetBubble(true);
-        sessionStorage.setItem(SHOWN_KEY, '1');
-        // 12 saniyə sonra avtomatik gizlət
-        setTimeout(() => setShowGreetBubble(false), 12000);
-      }, 4500);
-      return () => clearTimeout(timer);
-    } catch {
-      /* ignore */
-    }
+    const SHOWN_KEY = 'devaleur_ai_greet_shown';
+    if (safeSessionGet(SHOWN_KEY)) return;
+    const timer = window.setTimeout(() => {
+      setShowGreetBubble(true);
+      safeSessionSet(SHOWN_KEY, '1');
+      window.setTimeout(() => setShowGreetBubble(false), 14000);
+    }, 4500);
+    return () => window.clearTimeout(timer);
   }, [hidden, open]);
 
-  // First-time greeting when chat opens with empty history
+  // 1 dəqiqə (60 saniyə) sonra istifadəçi chat-ı açmayıbsa, chat-ı avtomatik aç
+  // və satış mütəxəssisi kimi proaktiv salamlama mesajı göstər.
   useEffect(() => {
-    if (open && messages.length === 0 && productsLoaded && !busy) {
+    if (hidden) return;
+    const PROACTIVE_KEY = 'devaleur_ai_proactive_sent';
+    if (safeSessionGet(PROACTIVE_KEY)) return;
+    const timer = window.setTimeout(() => {
+      // Əgər istifadəçi hələ də chat açmayıbsa
+      if (!open && messages.length === 0) {
+        safeSessionSet(PROACTIVE_KEY, '1');
+        const proactiveMsg: ChatMessage = {
+          role: 'assistant',
+          content:
+            'Salam! 👋 Mən DE VALEUR-in satış mütəxəssisiyəm. Saat, dəri aksesuar və ya hədiyyə seçimində sizə kömək etməyə hazıram. Hansı növdə məhsul sizi maraqlandırır?',
+          ts: Date.now(),
+        };
+        setMessages([proactiveMsg]);
+        setOpen(true);
+        setShowGreetBubble(false);
+      }
+    }, 60000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidden]);
+
+  // First-time greeting when chat opens with empty history.
+  // Do NOT wait for productsLoaded — greeting shows immediately;
+  // products load in parallel and are used by subsequent messages.
+  useEffect(() => {
+    if (open && messages.length === 0 && !busy) {
       void sendToServer('Salam', { silent: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, productsLoaded]);
+  }, [open]);
 
   const sendToServer = async (
     text: string,
@@ -517,8 +553,10 @@ const AiChatWidget: React.FC = () => {
     if (!confirm('Söhbəti təmizləmək istəyirsiniz?')) return;
     setMessages([]);
     sessionIdRef.current = newSessionId();
-    localStorage.setItem(SESSION_KEY, sessionIdRef.current);
-    localStorage.removeItem(HISTORY_KEY);
+    try {
+      localStorage.setItem(SESSION_KEY, sessionIdRef.current);
+      localStorage.removeItem(HISTORY_KEY);
+    } catch { /* ignore */ }
   };
 
   if (hidden) return null;
