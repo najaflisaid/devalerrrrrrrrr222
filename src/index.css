@@ -18,6 +18,24 @@ body {
   font-family: 'Montserrat', sans-serif;
 }
 
+/* Prevent iOS auto-zoom when focusing inputs / textareas / selects on mobile.
+   iOS Safari zooms automatically if input font-size < 16px regardless of the
+   viewport user-scalable=no rule. Force 16px on mobile only — desktop keeps
+   the smaller, designed font-size. Also disable touch double-tap zoom and
+   text-size-adjust so tapping anywhere never triggers a page zoom. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Hide native number-input spinner arrows globally
    so accidental wheel/arrow taps cannot change values
    (admin panel staff requested manual entry only). */
