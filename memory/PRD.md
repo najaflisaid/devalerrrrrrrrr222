@@ -420,3 +420,8 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 ### Files
 - `src/index.css` (menu animation rewrite)
 - `src/components/Header.tsx` (strokeWidth=1.5 on all icons, lighter box-shadow, faster close timeout)
+
+## Update — Partners page hover + AI chat greeting (Jan 2026)
+- PartnersPage: partner tiles now use the same animated 4-line hover frame as the homepage BrandShowcase (dv-brand-line / dv-brand-tile classes, continuous sequential draw).
+- AiChatWidget: persistent greet bubble slides in from the left of the launcher with copy "Sizə necə kömək göstərə bilərik?" + "DE VALEUR AI" label and green status dot, so customers immediately recognise it as an AI chat.
+- Removed all zoom/scale animations from the AI chat launcher (dv-ai-pulse rings and sparkle scale removed, product card image scale-105 removed). Only a subtle rotation remains on the sparkle icon.

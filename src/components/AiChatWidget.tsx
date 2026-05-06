@@ -106,7 +106,7 @@ const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick, o
               src={img}
               alt={name}
               loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">N/A</div>
@@ -341,8 +341,8 @@ const AiChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
-  // Salamlama "tooltip" üçün state — sayta girəndə avtomatik bir neçə saniyə göstərilir
-  const [showGreetBubble, setShowGreetBubble] = useState(false);
+  // Salamlama "tooltip" üçün state — sayta girəndə avtomatik göstərilir
+  const [showGreetBubble, setShowGreetBubble] = useState(true);
   const productsRef = useRef<Product[]>([]);
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -540,7 +540,7 @@ const AiChatWidget: React.FC = () => {
       {/* Floating launcher button — minimalist */}
       {!open && (
         <div className="fixed bottom-5 right-5 z-[9998] flex items-end gap-2">
-          {/* Greet bubble */}
+          {/* Greet bubble — slides in from the left so the customer knows this is an AI chat */}
           {showGreetBubble && (
             <button
               type="button"
@@ -548,7 +548,7 @@ const AiChatWidget: React.FC = () => {
                 setOpen(true);
                 setShowGreetBubble(false);
               }}
-              className="mb-1 max-w-[240px] bg-white border border-black/10 pl-3 pr-7 py-2.5 text-left relative cursor-pointer hover:border-black/30 transition-colors"
+              className="dv-ai-greet mb-1 max-w-[260px] bg-white border border-black/10 pl-3 pr-7 py-2.5 text-left relative cursor-pointer hover:border-black/40 transition-colors shadow-[0_6px_24px_-12px_rgba(0,0,0,0.25)]"
               data-testid="ai-greet-bubble"
               aria-label="AI satış mütəxəssisi ilə danış"
             >
@@ -561,10 +561,15 @@ const AiChatWidget: React.FC = () => {
               >
                 <X className="h-3 w-3" strokeWidth={1.25} />
               </span>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-black/45 font-medium mb-1">DE VALEUR</p>
-              <p className="text-[12px] text-black font-light leading-snug">
-                Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm.
+              <p className="text-[10px] uppercase tracking-[0.25em] text-black/55 font-semibold mb-1 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                DE VALEUR AI
               </p>
+              <p className="text-[12.5px] text-black font-light leading-snug">
+                Sizə necə kömək göstərə bilərik?
+              </p>
+              {/* Tail pointing to the launcher */}
+              <span aria-hidden="true" className="dv-ai-greet-tail" />
             </button>
           )}
           <button
@@ -577,8 +582,6 @@ const AiChatWidget: React.FC = () => {
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            <span aria-hidden="true" className="dv-ai-pulse" />
-            <span aria-hidden="true" className="dv-ai-pulse dv-ai-pulse-delay" />
             <Sparkles className="h-5 w-5 dv-ai-sparkle relative z-[1]" strokeWidth={1.25} />
             <span aria-hidden="true" className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
           </button>

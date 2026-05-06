@@ -77,24 +77,34 @@ const PartnersPage: React.FC = () => {
             <p>{t('common.noProductsFound')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 border-t border-l border-black/8">
-            {partners.map((partner) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-y-4 md:gap-y-6 gap-x-2 md:gap-x-4">
+            {partners.map((partner, idx) => (
               <a
                 key={partner.id}
                 href={partner.website || '#'}
                 target={partner.website ? '_blank' : undefined}
                 rel={partner.website ? 'noopener noreferrer' : undefined}
-                className="group relative aspect-[4/3] flex items-center justify-center p-6 sm:p-8 border-r border-b border-black/8 hover:bg-black/[0.02] transition-colors"
+                className="dv-brand-tile dv-brand-in group relative aspect-[4/3] flex items-center justify-center p-6 sm:p-8 transition-opacity duration-500 hover:opacity-100 opacity-90"
+                style={{
+                  animationDelay: `${120 + idx * 90}ms`,
+                  ['--dv-line-delay' as any]: `${idx * 0.55}s`,
+                }}
                 data-testid={`partner-${partner.id}`}
               >
+                {/* Hover frame — 4 lines drawing in sequence (same as home brand tiles) */}
+                <span aria-hidden="true" className="dv-brand-line dv-brand-line-top" />
+                <span aria-hidden="true" className="dv-brand-line dv-brand-line-right" />
+                <span aria-hidden="true" className="dv-brand-line dv-brand-line-bottom" />
+                <span aria-hidden="true" className="dv-brand-line dv-brand-line-left" />
+
                 {partner.logo ? (
                   <img
                     src={partner.logo}
                     alt={partner.name}
-                    className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                    className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105 relative z-[1]"
                   />
                 ) : (
-                  <span className="font-playfair text-base sm:text-lg md:text-xl font-light text-black text-center group-hover:text-black/70 transition-colors px-2">
+                  <span className="font-playfair text-base sm:text-lg md:text-xl font-light text-black text-center group-hover:text-black/70 transition-colors px-2 relative z-[1]">
                     {partner.name}
                   </span>
                 )}
