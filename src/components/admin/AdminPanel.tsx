@@ -25,6 +25,7 @@ import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
 import ConfirmModal from './ConfirmModal';
 import { siteConfirm } from '../ui/NotificationProvider';
+import { playNewOrderSound, unlockAudio } from '../../utils/notificationSound';
 import ContactMessagesTab from './ContactMessagesTab';
 import SiteSettingsTab from './SiteSettingsTab';
 import PasswordsManagementTab from './PasswordsManagementTab';
@@ -93,56 +94,12 @@ const AdminPanel: React.FC = () => {
   const prevB2BOrdersCountRef = useRef<number>(0);
   const audioUnlockedRef = useRef<boolean>(false);
 
-  // Beep helper using WebAudio. "Two-chime" notification sound similar to
-  // common modern notification cues: a clean two-tone ding, repeated TWICE
-  // with a short gap so it's easy to notice. Volume is intentionally loud.
+  // Beep helper — artıq qlobal `playNewOrderSound` istifadə olunur (TTS + custom MP3 fallback).
+  // AdminPanel mount olduqda da sayğacı izləyir, amma SƏS qlobal listener tərəfindən çalınır
+  // (`/app/src/components/AdminGlobalNotifications.tsx`) ki, admin /admin səhifəsində olmasa belə eşitsin.
+  // Bu funksiya yalnız "Sayt parametrləri" tab-ından test düyməsi üçün saxlanılır.
   const playOrderSound = () => {
-    // Respect admin preference (sound toggle in CustomerOrdersTab)
-    try {
-      const pref = localStorage.getItem('admin_sound_notifications_enabled');
-      if (pref === 'false') return;
-    } catch { /* ignore */ }
-    try {
-      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx: AudioContext = new Ctx();
-      const playTones = () => {
-        // Two notes per chime: high → mid (modern notification feel).
-        // Chime #1 at t=0, Chime #2 at t=0.55s — two clear signals.
-        const tones: { f: number; t: number; d: number }[] = [
-          // Chime 1
-          { f: 1175, t: 0.00, d: 0.16 },  // D6
-          { f: 880,  t: 0.16, d: 0.28 },  // A5
-          // Chime 2
-          { f: 1175, t: 0.55, d: 0.16 },
-          { f: 880,  t: 0.71, d: 0.28 },
-        ];
-        tones.forEach(({ f, t, d }) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.frequency.value = f;
-          osc.type = 'sine';
-          // Mild low-pass coloration via slight detune for a warmer chime
-          osc.detune.value = -3;
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          const start = ctx.currentTime + t;
-          gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(0.45, start + 0.015);  // louder peak
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + d);
-          osc.start(start);
-          osc.stop(start + d + 0.02);
-        });
-        setTimeout(() => ctx.close(), 1500);
-      };
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(playTones).catch(() => playTones());
-      } else {
-        playTones();
-      }
-    } catch (e) {
-      // ignore
-    }
+    void playNewOrderSound();
   };
 
   // Mark audio as unlocked on first user gesture so subsequent beeps
@@ -150,6 +107,7 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     const unlock = () => {
       audioUnlockedRef.current = true;
+      unlockAudio();
       window.removeEventListener('click', unlock);
       window.removeEventListener('keydown', unlock);
       window.removeEventListener('touchstart', unlock);
@@ -208,9 +166,9 @@ const AdminPanel: React.FC = () => {
         if (ms > b2bLastSeen) count += 1;
       });
       // Play sound when count INCREASES — see comment above for rationale.
-      if (prevB2BOrdersCountRef.current !== -1 && count > prevB2BOrdersCountRef.current) {
-        playOrderSound();
-      }
+      // NOT: Səs artıq `AdminGlobalNotifications` qlobal komponenti tərəfindən çalınır
+      // (admin başqa səhifədə olsa belə eşidilsin deyə). Bu listener yalnız badge sayğacını izləyir.
+      void playOrderSound; // saxlanılır ki, lint xəta verməsin və test üçün lazım olduqda istifadə oluna bilsin
       prevB2BOrdersCountRef.current = count;
       setPendingB2BOrdersCount(count);
     }, (err) => {
@@ -235,12 +193,8 @@ const AdminPanel: React.FC = () => {
         if (ms > customerOrdersLastSeen) count += 1;
       });
       // Play sound when count INCREASES (new order arrived). Skip the very
-      // first set (initial mount snapshot, prev=-1). We no longer gate on
-      // audioUnlockedRef — the browser will silently ignore if it's blocked
-      // and most admin sessions already have user gestures by then.
-      if (prevCustomerOrdersCountRef.current !== -1 && count > prevCustomerOrdersCountRef.current) {
-        playOrderSound();
-      }
+      // first set (initial mount snapshot, prev=-1).
+      // NOT: Səs `AdminGlobalNotifications`-də verilir; burada yalnız badge sayğacı yenilənir.
       prevCustomerOrdersCountRef.current = count;
       setPendingCustomerOrdersCount(count);
     }, (err) => {
@@ -311,12 +265,15 @@ const AdminPanel: React.FC = () => {
     setB2bLastSeen(now);
     try { localStorage.setItem(B2B_ACK_KEY, String(now)); } catch { /* ignore */ }
     setPendingB2BOrdersCount(0);
+    // Qlobal listener ack edildiyini bilsin və prev sayğacını sıfırlasın
+    try { window.dispatchEvent(new Event('adminOrdersAcknowledged')); } catch { /* ignore */ }
   };
   const acknowledgeCustomerOrders = () => {
     const now = Date.now();
     setCustomerOrdersLastSeen(now);
     try { localStorage.setItem(CUSTOMER_ORDERS_ACK_KEY, String(now)); } catch { /* ignore */ }
     setPendingCustomerOrdersCount(0);
+    try { window.dispatchEvent(new Event('adminOrdersAcknowledged')); } catch { /* ignore */ }
   };
   const b2bBadgeCount = pendingB2BOrdersCount;
   const customerBadgeCount = pendingCustomerOrdersCount;

@@ -288,10 +288,50 @@ const CartPage: React.FC = () => {
         }).catch((e) => console.warn('Promo kod redeem xətası:', e));
       }
 
-      const signed = await buildSignedPayment({
-        orderId,
-        amount: total,
-      });
+      let signed;
+      try {
+        signed = await buildSignedPayment({
+          orderId,
+          amount: total,
+        });
+      } catch (signErr: any) {
+        // Epoint açarları konfiqurasiya olunmayıbsa və ya imza qurmaq alınmayıbsa,
+        // dərhal yaranmış orphan sifarişi `payment_failed` kimi qeyd et ki, admin
+        // panelində "ödəniş gözləyir" siyahısında qalmasın.
+        try {
+          const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
+          await fsUpdate(fsDocRef(fsDb, 'customer_orders', orderId), {
+            status: 'payment_failed',
+            paymentStatus: 'failed',
+          });
+        } catch { /* ignore */ }
+        sessionStorage.removeItem('pending_epoint_order_id');
+        throw signErr;
+      }
+
+      // Watchdog: əgər 8 saniyədən sonra hələ də cart səhifəsindəyiksə (yəni
+      // form submit səssizcə uğursuz olub və ya brauzer bloklayıb), istifadəçiyə
+      // aydın xəta göstər və yarımçıq sifarişi `payment_failed` kimi qeyd et.
+      const watchdog = window.setTimeout(async () => {
+        try {
+          const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
+          await fsUpdate(fsDocRef(fsDb, 'customer_orders', orderId), {
+            status: 'payment_failed',
+            paymentStatus: 'failed',
+          });
+        } catch { /* ignore */ }
+        sessionStorage.removeItem('pending_epoint_order_id');
+        setErrorMessage(
+          'Ödəniş səhifəsi açıla bilmədi. Zəhmət olmasa internet bağlantınızı yoxlayın və yenidən cəhd edin.'
+        );
+        setShowError(true);
+        setLoading(false);
+        setTimeout(() => setShowError(false), 6000);
+      }, 8000);
+      // Səhifə dəyişəndə (Epoint yönləndirməsi baş tutanda) timer-i ləğv et
+      const cancelWatchdog = () => window.clearTimeout(watchdog);
+      window.addEventListener('beforeunload', cancelWatchdog, { once: true });
+      window.addEventListener('pagehide', cancelWatchdog, { once: true });
 
       redirectToEpoint(signed);
     } catch (error: any) {

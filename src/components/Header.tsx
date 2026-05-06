@@ -318,6 +318,13 @@ const Header: React.FC = () => {
   };
 
   const closeSearchModal = () => {
+    // Modal bağlananda da yazılmış axtarışı analitikaya yaz (Enter/click etməsələr belə)
+    const q = searchQuery.trim();
+    if (q.length >= 2) {
+      import('../services/analyticsService').then(({ trackSearch }) =>
+        trackSearch(q).catch(() => undefined)
+      );
+    }
     setShowSearch(false);
     setSearchQuery('');
     setSearchResults([]);
@@ -1009,6 +1016,16 @@ const Header: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
+                  onBlur={() => {
+                    // Müştəri OK/axtar düyməsi basmasa belə yazdığı sözü analitikaya yaz —
+                    // bəzən dropdown-dakı məhsula klik etmədən modal-dan çıxırlar.
+                    const q = searchQuery.trim();
+                    if (q.length >= 2) {
+                      import('../services/analyticsService').then(({ trackSearch }) =>
+                        trackSearch(q).catch(() => undefined)
+                      );
+                    }
+                  }}
                   placeholder={t('header.search')}
                   className="flex-1 text-lg outline-none text-gray-900 placeholder-gray-400"
                   autoFocus

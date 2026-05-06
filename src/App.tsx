@@ -42,6 +42,7 @@ import { useCart } from './context/CartContext';
 import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
 import AiChatWidget from './components/AiChatWidget';
+import AdminGlobalNotifications from './components/AdminGlobalNotifications';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import './i18n';
@@ -124,6 +125,9 @@ const AppContent: React.FC = () => {
       </div>
 
       <AiChatWidgetGate />
+
+      {/* Admin üçün qlobal sifariş bildiriş səsi — admin hansı səhifədə olursa olsun çalışır */}
+      <AdminGlobalNotifications />
     </>
   );
 };

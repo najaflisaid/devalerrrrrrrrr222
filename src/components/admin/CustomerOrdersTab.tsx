@@ -8,6 +8,7 @@ import {
   type CustomerOrder,
   type CustomerOrderStatus,
 } from '../../services/customerOrderService';
+import { playNewOrderSound, unlockAudio } from '../../utils/notificationSound';
 
 const SOUND_PREF_KEY = 'admin_sound_notifications_enabled';
 
@@ -46,45 +47,11 @@ const formatDate = (raw: any) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// Reusable beep helper for the toggle preview — must mirror AdminPanel.playOrderSound
-// so the admin hears EXACTLY what the live notification will sound like.
+// Test/preview üçün — qlobal `playNewOrderSound` istifadə olunur (TTS "Yeni sifariş daxil oldu" + custom MP3 + beep fallback).
 const previewOrderSound = () => {
-  try {
-    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx: AudioContext = new Ctx();
-    const playTones = () => {
-      const tones: { f: number; t: number; d: number }[] = [
-        { f: 1175, t: 0.00, d: 0.16 },
-        { f: 880,  t: 0.16, d: 0.28 },
-        { f: 1175, t: 0.55, d: 0.16 },
-        { f: 880,  t: 0.71, d: 0.28 },
-      ];
-      tones.forEach(({ f, t, d }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = f;
-        osc.type = 'sine';
-        osc.detune.value = -3;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const start = ctx.currentTime + t;
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.45, start + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + d);
-        osc.start(start);
-        osc.stop(start + d + 0.02);
-      });
-      setTimeout(() => ctx.close(), 1500);
-    };
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(playTones).catch(() => playTones());
-    } else {
-      playTones();
-    }
-  } catch {
-    /* ignore */
-  }
+  // İstifadəçi kliki olduğu üçün audio kilidlənmir, amma yenə də speech synth-i hazır vəziyyətə gətir
+  unlockAudio();
+  void playNewOrderSound();
 };
 
 const CustomerOrdersTab: React.FC = () => {

@@ -218,3 +218,38 @@ Bax: `/app/memory/test_credentials.md`
 - **Fix**: `BrandPage.tsx` və `CategoryPage.tsx` müstəqil layout əvəzinə `/products?brand=<canonicalName>` və `/products?category=<name>` ünvanlarına `<Navigate replace />` ilə yönləndirilir. Brend slug-ı (`ZIPPO`, `USPA`) məhsul siyahısından `fromBrandSlug` ilə həqiqi brend adına çevrilib göndərilir.
 - **Nəticə**: Bütün məhsul siyahı səhifələri (məhsullar, kateqoriya, brend) eyni `ProductsPage` filter UI-ı paylaşır — filter HƏMİŞƏ görünür və davranış identikdir.
 - Files: `src/pages/BrandPage.tsx`, `src/pages/CategoryPage.tsx`
+
+## What was done — Jan 6, 2026 iteration #2
+
+### Admin bildiriş sistemi — qlobal səs + TTS "Yeni sifariş daxil oldu"
+- **Problem (1)**: Admin başqa səhifədə (`/products` və s.) olarkən yeni sifariş gələndə səs gəlmirdi — listener yalnız `AdminPanel` mount olduqda işləyirdi.
+- **Problem (2)**: Müştəri sifarişləri üçün bildiriş bəzən tətiklənmirdi (B2B işləyirdi).
+- **Problem (3)**: Bildiriş səsi default beep idi — istifadəçi "YENİ Sifariş daxil oldu" səsi istəyirdi.
+- **Fix**:
+  - Yeni komponent: `src/components/AdminGlobalNotifications.tsx` — App.tsx-də həmişə render olunur, `userRole === 'admin'` olduqda Firestore real-time listener-ləri başladır (customer_orders + b2bOrders). Bu listener admin hansı route-da olursa olsun işləyir.
+  - Yeni utility: `src/utils/notificationSound.ts` — üstünlük sırası: (1) `/sounds/new-order.mp3` (gələcəkdə custom yükləmə üçün), (2) `window.speechSynthesis` ilə `"Yeni sifariş daxil oldu"` (az/tr/ru voice fallback), (3) WebAudio iki-tonlu beep.
+  - `AdminPanel.tsx`: artıq özü səs çalmır, yalnız badge sayğacını izləyir (qlobal listener çalır → ikiqat səsi qarşısı). `acknowledgeXxx` çağırışlarında `adminOrdersAcknowledged` event göndərilir ki, qlobal listener prev count-u sıfırlaya bilsin.
+  - `CustomerOrdersTab.tsx`: test/preview düyməsi də artıq eyni TTS səsini çalır.
+
+### Axtarış analytics — onBlur + close tracking
+- **İstək**: Müştəri Enter/OK basmasa belə yazdığı söz analitikaya düşsün (dropdown-dakı məhsula klik etmədən modal-dan çıxsa belə).
+- **Fix** (`Header.tsx`):
+  - Search input-a `onBlur` tracking — input fokusu itirəndə yazılmış sözü trackSearch-ə göndərir (≥2 simvol)
+  - `closeSearchModal` daxilində də track çağırışı (X düyməsi və ya backdrop ilə bağlananda)
+  - Mövcud 1.2s debounce və product-click tracking saxlanılıb.
+
+### e-Pos checkout sağlamlığı
+- **İstək**: e-Point bəzən açılmır və ya gec açılır; uğursuz olsa müştəriyə dəqiq bildiriş gəlsin.
+- **Fix** (`CartPage.tsx → handleEpointCheckout`):
+  - `buildSignedPayment` xəta atarsa, yeni yaranmış orphan sifariş `payment_failed` kimi qeyd olunur (admin panelində `pending_payment` siyahısında qalmasın).
+  - **Watchdog timer (8 san)**: Əgər `redirectToEpoint` form submit-i səssizcə uğursuz olarsa (brauzer bloku, şəbəkə problemi), 8 saniyədən sonra istifadəçiyə "Ödəniş səhifəsi açıla bilmədi" xətası göstərilir, sifariş `payment_failed` qeyd olunur. `beforeunload`/`pagehide` event-lərində timer ləğv olunur (uğurlu yönləndirmədə təkrar bildiriş çıxmasın).
+  - Mövcud "Ödəniş hazırlanır..." overlay saxlanılıb (donmuş hissini aradan qaldırır).
+
+### Files
+- `src/utils/notificationSound.ts` (yeni)
+- `src/components/AdminGlobalNotifications.tsx` (yeni)
+- `src/App.tsx` (qlobal komponent əlavə olundu)
+- `src/components/admin/AdminPanel.tsx` (səs qlobala köçürüldü; ack event dispatch)
+- `src/components/admin/CustomerOrdersTab.tsx` (preview səsi TTS-ə keçdi)
+- `src/components/Header.tsx` (search analytics genişləndi)
+- `src/pages/CartPage.tsx` (epoint watchdog + orphan order cleanup)
