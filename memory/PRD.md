@@ -326,3 +326,20 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/components/AiChatWidget.tsx` (error log)
 - `index.html` (viewport)
 - `src/index.css` (mobile font-size guard)
+
+## Jan 6, 2026 — iteration #6 — Ana səhifə vizual harmonizasiya
+- **Header naviqasiya** — `Ana Səhifə`, `Məhsullar`, `Haqqımızda`, `Bloq`, `Tərəfdaşlarımız`, `Əlaqə` artıq UPPERCASE + `letter-spacing: 0.06em`. Həm desktop (`.dv-navlink`), həm mobil (`.dv-mobile-nav-link`) üçün CSS qaydaları əlavə olundu — yeni Link-lərə avtomatik tətbiq olunur.
+- **"Ən çox satılanlar"** (`BestSellersSection`) — uppercase + `tracking-[0.18em]`, ölçü `text-base sm:text-lg md:text-xl lg:text-2xl` → `text-sm sm:text-base md:text-lg lg:text-xl`-ə kiçildildi (istifadəçi tələbi).
+- **"Seçilmiş Kolleksiya" → subtitle** (`HomeProductBanners`):
+  - Yuxarı boşluq `pt-10 md:pt-28` → `pt-6 md:pt-12` (yarıdan az)
+  - Heading-bottom margin `mb-6 md:mb-16` → `mb-5 md:mb-8`
+  - Eyebrow `text-[10px] tracking-[0.4em]` → `text-xs sm:text-sm tracking-[0.22em] sm:tracking-[0.28em]` (BestSellers ilə eyni)
+  - h2 ("Hər detalında dəyərini qoruyan orijinal seçimlər") → BestSellers-ün h2-i ilə **eyni stil** (uppercase, font-playfair, tracking-[0.18em], eyni ölçü) → vizual harmoniya
+- **"Bizim Öhdəliyimiz"** (`Features`) — eyebrow ölçüsü/stili BestSellers ilə eyniləşdirildi; bottom margin `mb-8 md:mb-20` → `mb-6 md:mb-12` (digər bölmələrlə tarazlıq).
+
+### Files
+- `src/index.css` (uppercase nav qaydaları)
+- `src/components/Header.tsx` (mobil nav class əlavə olundu)
+- `src/components/BestSellersSection.tsx` (uppercase title + kiçildilmiş ölçü)
+- `src/components/HomeProductBanners.tsx` (spacing + uniform heading)
+- `src/components/Features.tsx` (uniform eyebrow + spacing)

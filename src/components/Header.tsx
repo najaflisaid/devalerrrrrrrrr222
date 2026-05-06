@@ -754,7 +754,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
                   <Link
                     to="/"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     {t('header.home')}
@@ -765,7 +765,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
                     <button
                       onClick={() => setMobileProductsOpen(v => !v)}
-                      className="w-full flex items-center justify-between px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors text-left"
+                      className="dv-mobile-nav-link w-full flex items-center justify-between px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors text-left"
                       data-testid="mobile-products-toggle"
                     >
                       <span>{t('header.products')}</span>
@@ -872,7 +872,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 4 }}>
                   <Link
                     to="/about"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     {t('header.about')}
@@ -881,7 +881,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 5 }}>
                   <Link
                     to="/blog"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     {t('header.blog')}
@@ -890,7 +890,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 6 }}>
                   <Link
                     to="/partners"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     {t('header.partners')}
@@ -899,7 +899,7 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 7 }}>
                   <Link
                     to="/contact"
-                    className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     {t('header.contact')}

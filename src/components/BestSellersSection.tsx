@@ -107,7 +107,7 @@ const BestSellersSection: React.FC = () => {
             </span>
             <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
           </div>
-          <h2 className="font-playfair text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black tracking-tight leading-[1.1]">
+          <h2 className="font-playfair text-sm sm:text-base md:text-lg lg:text-xl font-light text-black tracking-[0.18em] leading-[1.1] uppercase">
             {t('bestSellers.title')}
           </h2>
         </div>

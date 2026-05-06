@@ -47,7 +47,7 @@ const HomeProductBanners: React.FC = () => {
       <MiddleBanner />
 
       <section
-        className="relative pt-10 md:pt-28 pb-8 md:pb-14 bg-white overflow-hidden"
+        className="relative pt-6 md:pt-12 pb-8 md:pb-14 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
         {/* Ambient gold orb */}
@@ -58,16 +58,16 @@ const HomeProductBanners: React.FC = () => {
         />
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-          {/* Heading */}
-          <div className="text-center mb-6 md:mb-16 dv-reveal is-in">
-            <div className="inline-flex items-center mb-3 md:mb-5">
-              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
-              <span className="mx-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
+          {/* Heading — BestSellers ilə eyni stil (eyebrow + uppercase h2) */}
+          <div className="text-center mb-5 md:mb-8 dv-reveal is-in">
+            <div className="inline-flex items-center mb-2">
+              <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
+              <span className="mx-2.5 text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
                 {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
               </span>
-              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
+              <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
             </div>
-            <h2 className="font-playfair text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black leading-[1.15] sm:leading-[1.05] max-w-4xl mx-auto px-2">
+            <h2 className="font-playfair text-sm sm:text-base md:text-lg lg:text-xl font-light text-black tracking-[0.18em] leading-[1.1] uppercase max-w-4xl mx-auto px-2">
               {heading}
             </h2>
           </div>
