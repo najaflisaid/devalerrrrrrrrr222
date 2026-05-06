@@ -263,7 +263,7 @@ const Header: React.FC = () => {
     const timeout = setTimeout(() => {
       setIsMobileMenuOpen(false);
       setIsMobileMenuClosing(false);
-    }, 460);
+    }, 280);
     setMobileMenuCloseTimeout(timeout);
   };
 
@@ -427,7 +427,7 @@ const Header: React.FC = () => {
               aria-label="Menu"
               data-testid="mobile-menu-toggle"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-6 w-6" strokeWidth={1.5} />
             </button>
 
             {/* Logo - Always centered on mobile, left on desktop */}
@@ -638,7 +638,7 @@ const Header: React.FC = () => {
                 aria-label="Search"
                 data-testid="header-search-btn"
               >
-                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.5} />
               </button>
 
               {/* B2B Bildiriş İkonu */}
@@ -653,7 +653,7 @@ const Header: React.FC = () => {
                     }}
                     className="relative p-1"
                   >
-                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.5} />
                     {b2bNotifications.length > 0 && !notificationsRead && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                         {b2bNotifications.length}
@@ -709,7 +709,7 @@ const Header: React.FC = () => {
                     onClick={() => setShowLoginModal(true)}
                     className="hidden md:flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
                   >
-                    <User className="h-5 w-5 mr-1" />
+                    <User className="h-5 w-5 mr-1" strokeWidth={1.5} />
                     <span>{t('header.login')}</span>
                   </button>
                   <Link to="/b2b-login" className="hidden md:block text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -720,13 +720,13 @@ const Header: React.FC = () => {
                 <div className="hidden md:flex items-center space-x-3">
                   <span className="text-sm text-gray-700 font-medium">{userName}</span>
                   <button onClick={handleLogout} className="text-gray-600 hover:text-gray-900">
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-5 w-5" strokeWidth={1.5} />
                   </button>
                 </div>
               )}
 
               <button onClick={() => navigate('/cart')} className="relative p-1 -m-1" aria-label="Cart">
-                <ShoppingCart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" />
+                <ShoppingCart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.5} />
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                     {getTotalItems()}
@@ -740,7 +740,7 @@ const Header: React.FC = () => {
                 title="Wishlist"
                 data-testid="header-wishlist-btn"
               >
-                <Heart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" />
+                <Heart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" strokeWidth={1.5} />
                 {wishlistCount > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white"
@@ -764,12 +764,12 @@ const Header: React.FC = () => {
 
             <div
               className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
-              style={{ boxShadow: '40px 0 80px -20px rgba(0,0,0,0.35)' }}
+              style={{ boxShadow: '8px 0 32px -8px rgba(0,0,0,0.18)' }}
             >
               <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
                 <button onClick={closeMobileMenu} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" strokeWidth={1.5} />
                 </button>
               </div>
 
@@ -793,7 +793,7 @@ const Header: React.FC = () => {
                       data-testid="mobile-products-toggle"
                     >
                       <span>{t('header.products')}</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                     </button>
                     {mobileProductsOpen && (
                       <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
@@ -817,7 +817,7 @@ const Header: React.FC = () => {
                                 data-testid={`mobile-category-toggle-${cat.name}`}
                               >
                                 <span className="capitalize">{cat.displayName}</span>
-                                <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                               </button>
                               {isOpen && (
                                 <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
@@ -835,7 +835,7 @@ const Header: React.FC = () => {
                                           data-testid={`mobile-subcategory-toggle-${sub.name}`}
                                         >
                                           <span className="capitalize">{sub.name}</span>
-                                          <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} />
+                                          <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                                         </button>
                                         {subOpen && (
                                           <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
@@ -990,7 +990,7 @@ const Header: React.FC = () => {
                         }}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors"
                       >
-                        <User className="h-5 w-5" />
+                        <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">{t('header.login')}</span>
                       </button>
                       <Link
@@ -998,7 +998,7 @@ const Header: React.FC = () => {
                         onClick={closeMobileMenu}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                       >
-                        <User className="h-5 w-5" />
+                        <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">B2B {t('header.login')}</span>
                       </Link>
                     </>
@@ -1015,7 +1015,7 @@ const Header: React.FC = () => {
                         }}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                       >
-                        <LogOut className="h-5 w-5" />
+                        <LogOut className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">{t('header.logout')}</span>
                       </button>
                     </div>

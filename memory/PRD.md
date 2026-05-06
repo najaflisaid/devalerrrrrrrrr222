@@ -398,3 +398,25 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/components/StatsBand.tsx` (eyebrow uniform)
 - `src/index.css` (nav letter/word/font tightening)
 - `src/components/Header.tsx` (md-only condense + bigger hamburger + z-fix + testid)
+
+---
+
+## 2026-01-06 — Mobil menyu animasiya fix + minimalist ikonlar
+
+### Mobil menyu açılış/bağlanma yaxşılaşdırıldı
+**Problem**: 3D `rotateY(-28deg)` rotation, `filter: blur(6px)`, və `backdrop-filter` keçidləri mobil cihazlarda lag yaradırdı. Animasiya 620ms (açılış) + 460ms (bağlanma) + per-item stagger ilə 800ms+ təsiri yaradırdı.
+
+**Fix** (`src/index.css`):
+- Panel: 3D rotateY + perspective + blur silindi → sadə `translateX(-100%)` slide-in, `320ms` (açılış) / `280ms` (bağlanma)
+- Backdrop: `backdrop-filter: blur(8px)` keçidi silindi → sadə opacity fade `220ms`
+- Item stagger: 520ms → 260ms duration; per-item delay 45ms → 28ms
+- `box-shadow` 40px → 8px (daha yüngül)
+- `setIsMobileMenuClosing` timeout 460ms → 280ms
+
+### Header ikonları minimalist
+Bütün Lucide ikonlarına `strokeWidth={1.5}` əlavə edildi (default 2-dən nazik):
+Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (×3 accordion).
+
+### Files
+- `src/index.css` (menu animation rewrite)
+- `src/components/Header.tsx` (strokeWidth=1.5 on all icons, lighter box-shadow, faster close timeout)

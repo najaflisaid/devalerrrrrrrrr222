@@ -408,56 +408,42 @@ html.dark .dv-orb { opacity: 0.28; }
   animation: slideInLeft 0.3s ease-out;
 }
 
-/* ================= 3D Minimal Menu Animations ================= */
+/* ================= Minimal Menu Animations ================= */
 @keyframes dv-menu-backdrop-in {
-  from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
-  to   { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes dv-menu-panel-in {
   0% {
     opacity: 0;
-    transform: perspective(1400px) rotateY(-28deg) translateX(-18%) scale(0.985);
-    filter: blur(6px);
-    transform-origin: left center;
-    box-shadow: 0 0 0 rgba(0,0,0,0);
-  }
-  55% {
-    opacity: 1;
-    filter: blur(0);
+    transform: translateX(-100%);
   }
   100% {
     opacity: 1;
-    transform: perspective(1400px) rotateY(0deg) translateX(0) scale(1);
-    filter: blur(0);
-    transform-origin: left center;
-    box-shadow: 40px 0 80px -20px rgba(0,0,0,0.35);
+    transform: translateX(0);
   }
 }
 
 @keyframes dv-menu-item-in {
-  0%   { opacity: 0; transform: translateX(-14px) translateZ(-30px); }
-  60%  { opacity: 1; }
-  100% { opacity: 1; transform: translateX(0) translateZ(0); }
+  0%   { opacity: 0; transform: translateX(-8px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
 .dv-menu-backdrop {
-  animation: dv-menu-backdrop-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  animation: dv-menu-backdrop-in 220ms ease-out both;
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .dv-menu-panel {
-  animation: dv-menu-panel-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  transform-style: preserve-3d;
-  will-change: transform, opacity, filter;
+  animation: dv-menu-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
 }
 
 .dv-menu-item {
-  animation: dv-menu-item-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(120ms + var(--dv-i, 0) * 45ms);
+  animation: dv-menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(80ms + var(--dv-i, 0) * 28ms);
   opacity: 0;
-  transform-style: preserve-3d;
 }
 
 /* Subtle hover lift inside the panel — minimalist */
@@ -541,38 +527,33 @@ html.dark .dv-orb { opacity: 0.28; }
 
 /* ---- Close (reverse) animations ---- */
 @keyframes dv-menu-backdrop-out {
-  from { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-  to   { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 @keyframes dv-menu-panel-out {
   0% {
     opacity: 1;
-    transform: perspective(1400px) rotateY(0deg) translateX(0) scale(1);
-    filter: blur(0);
-    transform-origin: left center;
+    transform: translateX(0);
   }
   100% {
     opacity: 0;
-    transform: perspective(1400px) rotateY(-28deg) translateX(-18%) scale(0.985);
-    filter: blur(6px);
-    transform-origin: left center;
+    transform: translateX(-100%);
   }
 }
 @keyframes dv-menu-item-out {
-  0%   { opacity: 1; transform: translateX(0) translateZ(0); }
-  100% { opacity: 0; transform: translateX(-14px) translateZ(-30px); }
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-8px); }
 }
 
 .dv-menu-backdrop.is-closing {
-  animation: dv-menu-backdrop-out 360ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: dv-menu-backdrop-out 240ms ease-in both;
 }
 .dv-menu-panel.is-closing {
-  animation: dv-menu-panel-out 460ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: dv-menu-panel-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 .dv-menu-panel.is-closing .dv-menu-item {
-  /* Reverse stagger: top items leave first, bottom last */
-  animation: dv-menu-item-out 320ms cubic-bezier(0.4, 0, 1, 1) both;
-  animation-delay: calc(var(--dv-i, 0) * 18ms);
+  animation: dv-menu-item-out 200ms ease-in both;
+  animation-delay: 0ms;
 }
 /* ================= /3D Minimal Menu Animations ================= */
 
