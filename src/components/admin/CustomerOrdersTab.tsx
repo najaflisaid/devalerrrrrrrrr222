@@ -246,8 +246,19 @@ const CustomerOrdersTab: React.FC = () => {
                   <p className="text-gray-600">{order.customerPhone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase">Çatdırılma ünvanı</p>
-                  <p className="text-gray-700">{order.customerAddress}</p>
+                  <p className="text-xs text-gray-400 uppercase">
+                    {order.isPickup ? 'Filialdan götürmə' : 'Çatdırılma ünvanı'}
+                  </p>
+                  {order.isPickup && order.pickupBranchName ? (
+                    <>
+                      <p className="text-gray-900 font-medium text-sm leading-tight">{order.pickupBranchName}</p>
+                      {order.pickupBranchAddress && (
+                        <p className="text-gray-600 text-xs mt-0.5">{order.pickupBranchAddress}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-gray-700">{order.customerAddress}</p>
+                  )}
                   {order.deliveryMethodName && (
                     <p className="text-xs text-gray-500 mt-1">
                       <span className="font-medium">Üsul:</span> {order.deliveryMethodName}

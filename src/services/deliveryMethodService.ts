@@ -10,6 +10,14 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+export interface PickupBranch {
+  id: string;
+  name: string;
+  address: string;
+  mapUrl?: string;
+  phone?: string;
+}
+
 export interface DeliveryMethod {
   id?: string;
   name: string;
@@ -18,8 +26,31 @@ export interface DeliveryMethod {
   estimatedDays?: string;
   isActive: boolean;
   order?: number;
+  /** When true, this method is "Filialdan götürmə" — customer picks one of the branches
+   *  instead of entering an address. */
+  isPickup?: boolean;
+  branches?: PickupBranch[];
   createdAt?: any;
 }
+
+/** Default branches used on first seed — admin can later edit/add/remove from the panel. */
+export const DEFAULT_PICKUP_BRANCHES: PickupBranch[] = [
+  {
+    id: 'sumqayit-sulh',
+    name: 'DE VALEUR — Sumqayıt, Sülh küçəsi',
+    address: 'Sumqayıt şəh., Sülh küçəsi',
+  },
+  {
+    id: 'baki-azadliq',
+    name: 'DE VALEUR — Bakı, Azadlıq Prospekti',
+    address: 'Bakı şəh., Azadlıq Prospekti',
+  },
+  {
+    id: 'sumqayit-karvan',
+    name: 'DE VALEUR — Sumqayıt, Karvan Mall',
+    address: 'Sumqayıt şəh., Karvan Mall',
+  },
+];
 
 const COLLECTION = 'delivery_methods';
 
@@ -42,6 +73,8 @@ export const getDeliveryMethods = async (activeOnly = false): Promise<DeliveryMe
           estimatedDays: 'Eyni gün',
           isActive: true,
           order: 1,
+          isPickup: true,
+          branches: DEFAULT_PICKUP_BRANCHES,
         },
       },
       {
@@ -109,6 +142,40 @@ export const getDeliveryMethods = async (activeOnly = false): Promise<DeliveryMe
   }
   list = Array.from(seen.values());
   list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+  // Auto-upgrade legacy pickup method docs so the branch picker works
+  // without admin intervention. A method is considered "pickup" when:
+  //   - its id is 'pickup', OR
+  //   - its name contains the AZ word "filial"
+  // If it lacks isPickup / branches, we patch the flag in-memory AND fire-and-forget
+  // persist the default branches to Firestore so the admin panel shows them too.
+  const upgrades: Promise<unknown>[] = [];
+  list = list.map((m) => {
+    const nm = (m.name || '').toLowerCase();
+    const looksLikePickup = m.id === 'pickup' || nm.includes('filial');
+    if (!looksLikePickup) return m;
+    const patched: DeliveryMethod = { ...m };
+    let needsPersist = false;
+    if (!patched.isPickup) {
+      patched.isPickup = true;
+      needsPersist = true;
+    }
+    if (!patched.branches || patched.branches.length === 0) {
+      patched.branches = DEFAULT_PICKUP_BRANCHES;
+      needsPersist = true;
+    }
+    if (needsPersist && patched.id) {
+      upgrades.push(
+        updateDoc(doc(db, COLLECTION, patched.id), {
+          isPickup: true,
+          branches: patched.branches,
+        }).catch((err) => console.warn('Pickup auto-upgrade failed:', err))
+      );
+    }
+    return patched;
+  });
+  // Fire-and-forget (don't block render)
+  if (upgrades.length > 0) void Promise.all(upgrades);
 
   // Background cleanup: delete duplicate docs (fire-and-forget)
   if (duplicateIds.length > 0) {

@@ -46,6 +46,12 @@ export interface CustomerOrder {
   deliveryMethodId?: string;
   deliveryMethodName?: string;
   deliveryFee?: number;
+  /** If the customer chose "Filialdan götürmə" these fields are populated and
+   *  customerAddress is set to the branch address string. */
+  isPickup?: boolean;
+  pickupBranchId?: string;
+  pickupBranchName?: string;
+  pickupBranchAddress?: string;
   status: CustomerOrderStatus;
   paymentMethod: 'epoint';
   paymentStatus?: 'success' | 'failed' | 'unknown';

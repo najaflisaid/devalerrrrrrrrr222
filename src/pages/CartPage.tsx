@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft, Truck, Check } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft, Truck, Check, MapPin, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc as fsDoc } from 'firebase/firestore';
@@ -32,6 +32,7 @@ const CartPage: React.FC = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   // Guest registration fields (only used when no userId)
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -72,8 +73,22 @@ const CartPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isB2BUser]);
 
+  // Auto-pick the first branch whenever a pickup method becomes selected.
+  useEffect(() => {
+    if (selectedDelivery?.isPickup && selectedDelivery.branches && selectedDelivery.branches.length > 0) {
+      if (!selectedBranchId || !selectedDelivery.branches.some((b) => b.id === selectedBranchId)) {
+        setSelectedBranchId(selectedDelivery.branches[0].id);
+      }
+    } else if (selectedBranchId) {
+      setSelectedBranchId('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeliveryId]);
+
   const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId);
   const deliveryFee = selectedDelivery?.price || 0;
+  const isPickupFlow = !!(selectedDelivery?.isPickup && selectedDelivery?.branches?.length);
+  const selectedBranch = selectedDelivery?.branches?.find((b) => b.id === selectedBranchId) || null;
 
   // Promo endirimdən sonra məhsulların dəyəri (userDiscount + promo tətbiq olunur)
   const getItemsAfterAllDiscounts = (): number => {
@@ -154,7 +169,7 @@ const CartPage: React.FC = () => {
     }
     const fullPhone = `+994${cleanPhone}`;
 
-    if (!customerAddress.trim()) {
+    if (!isPickupFlow && !customerAddress.trim()) {
       setErrorMessage('Çatdırılma ünvanını daxil edin.');
       setShowError(true);
       setTimeout(() => setShowError(false), 4000);
@@ -163,6 +178,13 @@ const CartPage: React.FC = () => {
 
     if (deliveryMethods.length > 0 && !selectedDeliveryId) {
       setErrorMessage('Çatdırılma üsulunu seçin.');
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      return;
+    }
+
+    if (isPickupFlow && !selectedBranch) {
+      setErrorMessage('Hansı filialdan götürəcəyinizi seçin.');
       setShowError(true);
       setTimeout(() => setShowError(false), 4000);
       return;
@@ -261,7 +283,9 @@ const CartPage: React.FC = () => {
         customerName: userName,
         customerEmail: userEmail,
         customerPhone: fullPhone,
-        customerAddress: customerAddress.trim(),
+        customerAddress: isPickupFlow && selectedBranch
+          ? `${selectedBranch.name} — ${selectedBranch.address}`
+          : customerAddress.trim(),
         notes: customerNote.trim() || '',
         items: orderItems,
         subtotal,
@@ -270,6 +294,14 @@ const CartPage: React.FC = () => {
         deliveryMethodId: selectedDelivery?.id || '',
         deliveryMethodName: selectedDelivery?.name || '',
         deliveryFee,
+        ...(isPickupFlow && selectedBranch
+          ? {
+              isPickup: true,
+              pickupBranchId: selectedBranch.id,
+              pickupBranchName: selectedBranch.name,
+              pickupBranchAddress: selectedBranch.address,
+            }
+          : {}),
         paymentMethod: 'epoint',
         promoCode: promoApplied?.code || '',
         promoDiscountPercent: promoApplied?.discount || 0,
@@ -849,18 +881,20 @@ const CartPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Address */}
-              <div>
-                <label className="block text-[11px] font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
-                <textarea
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  placeholder="Şəhər, küçə, ev/mənzil"
-                  rows={2}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none bg-white"
-                  data-testid="checkout-address-input"
-                />
-              </div>
+              {/* Address — hidden when customer chose "Filialdan götürmə" */}
+              {!isPickupFlow && (
+                <div>
+                  <label className="block text-[11px] font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
+                  <textarea
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="Şəhər, küçə, ev/mənzil"
+                    rows={2}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none bg-white"
+                    data-testid="checkout-address-input"
+                  />
+                </div>
+              )}
 
               {/* Delivery methods */}
               <div>
@@ -908,6 +942,61 @@ const CartPage: React.FC = () => {
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Pickup branch selector — appears only when a pickup method is selected */}
+                {isPickupFlow && selectedDelivery?.branches && selectedDelivery.branches.length > 0 && (
+                  <div className="mt-3" data-testid="pickup-branch-selector">
+                    <label className="block text-[11px] font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                      <Store className="h-3 w-3" />
+                      Hansı filialdan götürəcəksiniz? *
+                    </label>
+                    <div className="space-y-1.5">
+                      {selectedDelivery.branches.map((b) => {
+                        const selected = b.id === selectedBranchId;
+                        return (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setSelectedBranchId(b.id)}
+                            className={`w-full text-left px-2.5 py-2.5 rounded-lg border transition-all ${
+                              selected
+                                ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900'
+                                : 'border-gray-200 bg-white hover:border-gray-400'
+                            }`}
+                            data-testid={`pickup-branch-option-${b.id}`}
+                          >
+                            <div className="flex items-start gap-2 min-w-0">
+                              <div
+                                className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                  selected ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
+                                }`}
+                              >
+                                {selected && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-gray-900 text-xs leading-tight">{b.name}</p>
+                                <p className="text-[11px] text-gray-500 leading-tight mt-0.5 flex items-center gap-1">
+                                  <MapPin className="h-2.5 w-2.5" /> {b.address}
+                                </p>
+                                {b.mapUrl && (
+                                  <a
+                                    href={b.mapUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-block text-[10px] text-blue-600 hover:underline mt-1"
+                                  >
+                                    Xəritədə aç →
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

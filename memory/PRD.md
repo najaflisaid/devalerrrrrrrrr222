@@ -425,3 +425,16 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 - PartnersPage: partner tiles now use the same animated 4-line hover frame as the homepage BrandShowcase (dv-brand-line / dv-brand-tile classes, continuous sequential draw).
 - AiChatWidget: persistent greet bubble slides in from the left of the launcher with copy "Sizə necə kömək göstərə bilərik?" + "DE VALEUR AI" label and green status dot, so customers immediately recognise it as an AI chat.
 - Removed all zoom/scale animations from the AI chat launcher (dv-ai-pulse rings and sparkle scale removed, product card image scale-105 removed). Only a subtle rotation remains on the sparkle icon.
+
+## Update — Blog/About minimalist + Pickup branches (Jan 2026)
+**Blog & About pages**
+- BlogPage: rebuilt in minimalist editorial style (centred hero with gold hairlines, featured 2-column post, hairline grid for the rest, playfair font, no shadowy cards).
+- AboutPage: rebuilt to match Partners / Brand-showcase visual language — centred hero, numbered sections (01 Hekayəmiz, 02 Rəqəmlər, 03 Missiya), hairline stats grid with playfair numbers, no coloured boxes/circles.
+
+**Pickup-from-branch checkout flow**
+- `DeliveryMethod` extended with `isPickup: boolean` + `branches: PickupBranch[]` (id, name, address, mapUrl?, phone?).
+- Default seed now includes 3 branches on the `Filialdan götürmə` method: Sumqayıt–Sülh, Bakı–Azadlıq Prospekti, Sumqayıt–Karvan Mall.
+- Legacy pickup docs in Firestore are auto-upgraded on first load (in-memory + fire-and-forget persist) so the branch picker works without admin intervention.
+- CartPage: when the customer picks a pickup method, the "Çatdırılma ünvanı" textarea is hidden and replaced by a branch picker; submission requires a branch; saved order carries `isPickup / pickupBranchId / pickupBranchName / pickupBranchAddress`; `customerAddress` is auto-filled with the chosen branch string.
+- CustomerOrdersTab (admin): now shows the pickup branch name + address with a "Filialdan götürmə" label instead of the generic delivery-address block when `isPickup` is true.
+- DeliveryMethodsTab (admin): the form now has an "Filialdan götürmə" toggle. When enabled, the default 3 branches are prefilled and each branch can be edited (name, address, phone, map link) or deleted; new branches can be added. The list cards display the pickup badge + all branches inline so the admin sees everything at a glance.

@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Save, X, Truck, ToggleLeft, ToggleRight, Edit3 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, X, Truck, ToggleLeft, ToggleRight, Edit3, Store, MapPin } from 'lucide-react';
 import {
   getDeliveryMethods,
   addDeliveryMethod,
   updateDeliveryMethod,
   deleteDeliveryMethod,
   type DeliveryMethod,
+  type PickupBranch,
+  DEFAULT_PICKUP_BRANCHES,
 } from '../../services/deliveryMethodService';
+
+const emptyBranch = (): PickupBranch => ({
+  id: 'branch-' + Math.random().toString(36).slice(2, 8),
+  name: '',
+  address: '',
+  mapUrl: '',
+  phone: '',
+});
 
 const empty: Omit<DeliveryMethod, 'id' | 'createdAt'> = {
   name: '',
@@ -15,6 +25,8 @@ const empty: Omit<DeliveryMethod, 'id' | 'createdAt'> = {
   estimatedDays: '',
   isActive: true,
   order: 0,
+  isPickup: false,
+  branches: [],
 };
 
 const DeliveryMethodsTab: React.FC = () => {
@@ -45,12 +57,27 @@ const DeliveryMethodsTab: React.FC = () => {
       alert('Adı daxil edin');
       return;
     }
+    if (form.isPickup) {
+      const valid = (form.branches || []).filter((b) => b.name.trim() && b.address.trim());
+      if (valid.length === 0) {
+        alert('Ən azı bir filialı (ad + ünvan ilə) əlavə edin.');
+        return;
+      }
+    }
     setSaving(true);
     try {
+      // Strip empty branches before persist so the admin panel & checkout show
+      // only the valid ones.
+      const payload: Omit<DeliveryMethod, 'id' | 'createdAt'> = form.isPickup
+        ? {
+            ...form,
+            branches: (form.branches || []).filter((b) => b.name.trim() && b.address.trim()),
+          }
+        : { ...form, isPickup: false, branches: [] };
       if (editingId) {
-        await updateDeliveryMethod(editingId, form);
+        await updateDeliveryMethod(editingId, payload);
       } else {
-        await addDeliveryMethod(form);
+        await addDeliveryMethod(payload);
       }
       setForm({ ...empty });
       setEditingId(null);
@@ -72,6 +99,8 @@ const DeliveryMethodsTab: React.FC = () => {
       estimatedDays: m.estimatedDays || '',
       isActive: m.isActive,
       order: m.order ?? 0,
+      isPickup: !!m.isPickup,
+      branches: m.branches && m.branches.length > 0 ? m.branches : [],
     });
     setShowForm(true);
   };
@@ -240,6 +269,133 @@ const DeliveryMethodsTab: React.FC = () => {
                 Aktiv (müştəriyə görünür)
               </label>
             </div>
+            <div className="sm:col-span-2 flex items-center gap-3 pt-2 border-t border-gray-200 mt-1">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700" data-testid="delivery-form-is-pickup">
+                <input
+                  type="checkbox"
+                  checked={!!form.isPickup}
+                  onChange={(e) => {
+                    const isPickup = e.target.checked;
+                    setForm((prev) => ({
+                      ...prev,
+                      isPickup,
+                      // When enabling pickup for the first time, prefill default branches
+                      branches:
+                        isPickup && (!prev.branches || prev.branches.length === 0)
+                          ? [...DEFAULT_PICKUP_BRANCHES]
+                          : prev.branches,
+                    }));
+                  }}
+                  className="w-4 h-4"
+                />
+                <Store className="h-3.5 w-3.5 text-gray-500" />
+                <span>Filialdan götürmə (müştəri ünvan yazmasın, filial seçsin)</span>
+              </label>
+            </div>
+
+            {form.isPickup && (
+              <div className="sm:col-span-2 bg-white border border-gray-200 rounded-lg p-3 space-y-2" data-testid="delivery-form-branches">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-900 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Filiallar ({form.branches?.length || 0})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        branches: [...(prev.branches || []), emptyBranch()],
+                      }))
+                    }
+                    className="inline-flex items-center gap-1 text-xs bg-gray-900 text-white px-2.5 py-1 rounded-md hover:bg-black"
+                    data-testid="delivery-form-add-branch"
+                  >
+                    <Plus className="h-3 w-3" /> Filial əlavə et
+                  </button>
+                </div>
+                {(form.branches || []).length === 0 ? (
+                  <p className="text-[11px] text-gray-400 italic">Hələ filial əlavə edilməyib.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(form.branches || []).map((b, idx) => (
+                      <div key={b.id} className="bg-gray-50 border border-gray-200 rounded-md p-2.5 space-y-1.5" data-testid={`delivery-form-branch-${idx}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-gray-500 font-medium">FİLİAL {idx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                branches: (prev.branches || []).filter((_, i) => i !== idx),
+                              }))
+                            }
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="Filialı sil"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={b.name}
+                          onChange={(e) =>
+                            setForm((prev) => {
+                              const next = [...(prev.branches || [])];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              return { ...prev, branches: next };
+                            })
+                          }
+                          placeholder="DE VALEUR — Bakı, Azadlıq Prospekti"
+                          className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-gray-900 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={b.address}
+                          onChange={(e) =>
+                            setForm((prev) => {
+                              const next = [...(prev.branches || [])];
+                              next[idx] = { ...next[idx], address: e.target.value };
+                              return { ...prev, branches: next };
+                            })
+                          }
+                          placeholder="Bakı şəh., Azadlıq Prospekti"
+                          className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-gray-900 focus:outline-none"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={b.phone || ''}
+                            onChange={(e) =>
+                              setForm((prev) => {
+                                const next = [...(prev.branches || [])];
+                                next[idx] = { ...next[idx], phone: e.target.value };
+                                return { ...prev, branches: next };
+                              })
+                            }
+                            placeholder="Telefon (istəyə bağlı)"
+                            className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-gray-900 focus:outline-none"
+                          />
+                          <input
+                            type="url"
+                            value={b.mapUrl || ''}
+                            onChange={(e) =>
+                              setForm((prev) => {
+                                const next = [...(prev.branches || [])];
+                                next[idx] = { ...next[idx], mapUrl: e.target.value };
+                                return { ...prev, branches: next };
+                              })
+                            }
+                            placeholder="Xəritə linki (istəyə bağlı)"
+                            className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-gray-900 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex gap-2 pt-2">
             <button
@@ -351,13 +507,32 @@ const DeliveryMethodsTab: React.FC = () => {
                   )}
                 </div>
                 {m.description && <p className="text-sm text-gray-600">{m.description}</p>}
-                <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
                   <span className="font-semibold text-gray-900">
                     {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Pulsuz'}
                   </span>
                   {m.estimatedDays && <span>· {m.estimatedDays}</span>}
                   <span>· Sıra: {m.order ?? 0}</span>
+                  {m.isPickup && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded">
+                      <Store className="h-3 w-3" />
+                      Filialdan götürmə · {m.branches?.length || 0} filial
+                    </span>
+                  )}
                 </div>
+                {m.isPickup && m.branches && m.branches.length > 0 && (
+                  <ul className="mt-2 space-y-0.5 text-[11px] text-gray-600 border-t border-dashed border-gray-200 pt-2">
+                    {m.branches.map((b) => (
+                      <li key={b.id} className="flex items-start gap-1.5">
+                        <MapPin className="h-3 w-3 mt-0.5 text-gray-400 flex-shrink-0" />
+                        <span className="leading-tight">
+                          <span className="font-medium text-gray-800">{b.name}</span>
+                          {b.address && <span className="text-gray-500"> — {b.address}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
