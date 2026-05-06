@@ -572,12 +572,15 @@ const AiChatWidget: React.FC = () => {
               setOpen(true);
               setShowGreetBubble(false);
             }}
-            className="group relative flex items-center justify-center w-12 h-12 bg-black text-white border border-black hover:bg-white hover:text-black transition-colors duration-300"
+            className="dv-ai-launcher group relative flex items-center justify-center w-12 h-12 bg-black text-white border border-black hover:bg-white hover:text-black transition-colors duration-300"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            <Sparkles className="h-5 w-5" strokeWidth={1.25} />
+            <span aria-hidden="true" className="dv-ai-pulse" />
+            <span aria-hidden="true" className="dv-ai-pulse dv-ai-pulse-delay" />
+            <Sparkles className="h-5 w-5 dv-ai-sparkle relative z-[1]" strokeWidth={1.25} />
+            <span aria-hidden="true" className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
           </button>
         </div>
       )}
@@ -594,12 +597,9 @@ const AiChatWidget: React.FC = () => {
         >
           {/* Header — clean */}
           <div className="px-5 py-4 flex items-center justify-between border-b border-black/10 bg-white">
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.32em] text-black/45 font-medium">DE VALEUR</p>
-              <p className="font-playfair text-lg font-light text-black leading-tight tracking-tight">
-                AI Konsultant
-              </p>
-            </div>
+            <p className="font-playfair text-lg font-light text-black tracking-tight">
+              De Valeur
+            </p>
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={handleClear}

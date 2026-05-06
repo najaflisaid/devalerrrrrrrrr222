@@ -91,10 +91,10 @@ const PartnersPage: React.FC = () => {
                   <img
                     src={partner.logo}
                     alt={partner.name}
-                    className="max-w-full max-h-full object-contain opacity-65 group-hover:opacity-100 transition-opacity duration-500 filter grayscale group-hover:grayscale-0"
+                    className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <span className="font-playfair text-base sm:text-lg font-light text-black/70 text-center group-hover:text-black transition-colors">
+                  <span className="font-playfair text-base sm:text-lg md:text-xl font-light text-black text-center group-hover:text-black/70 transition-colors px-2">
                     {partner.name}
                   </span>
                 )}

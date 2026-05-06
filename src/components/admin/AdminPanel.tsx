@@ -887,8 +887,8 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleAddPartner = async () => {
-    if (!newPartner.name || !newPartner.logo) {
-      alert('Ad və loqo daxil edin');
+    if (!newPartner.name) {
+      alert('Ən azı ad daxil edin (loqo URL-i istəyə bağlıdır)');
       return;
     }
 
@@ -897,7 +897,7 @@ const AdminPanel: React.FC = () => {
       const { db } = await import('../../lib/firebase');
       await addDoc(collection(db, 'partners'), {
         name: newPartner.name,
-        logo: newPartner.logo,
+        logo: newPartner.logo || '',
         website: newPartner.website || null,
         createdAt: new Date()
       });
@@ -2606,7 +2606,7 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo URL *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo URL <span className="text-gray-400">(istəyə bağlı)</span></label>
                     <input
                       type="text"
                       value={newPartner.logo}
@@ -2614,6 +2614,7 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="https://example.com/logo.jpg"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Boş saxlasanız, saytın "Tərəfdaşlarımız" səhifəsində şəkil əvəzinə tərəfdaşın adı premium tipoqrafiya ilə göstəriləcək.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vebsayt</label>
@@ -2646,7 +2647,13 @@ const AdminPanel: React.FC = () => {
                 partners.map((partner) => (
                   <div key={partner.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
                     <div className="flex items-center gap-3">
-                      <img src={partner.logo} alt={partner.name} className="w-12 h-12 object-contain rounded" />
+                      {partner.logo ? (
+                        <img src={partner.logo} alt={partner.name} className="w-12 h-12 object-contain rounded" />
+                      ) : (
+                        <div className="w-12 h-12 rounded border border-gray-300 flex items-center justify-center text-[10px] uppercase tracking-wider text-gray-500 font-medium bg-white">
+                          Mətn
+                        </div>
+                      )}
                       <div>
                         <p className="font-medium text-gray-900">{partner.name}</p>
                         {partner.website && (
