@@ -33,7 +33,7 @@ const Features: React.FC = () => {
         {/* Heading */}
         <div className="text-center mb-12 md:mb-20 dv-reveal is-in">
           <span
-            className="block text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-black/45 font-light mb-3"
+            className="block text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-black font-medium mb-3"
             data-testid="dv-features-subtitle"
           >
             {subtitle}
