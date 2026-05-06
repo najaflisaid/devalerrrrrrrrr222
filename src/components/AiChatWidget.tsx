@@ -448,43 +448,16 @@ const AiChatWidget: React.FC = () => {
     try { sessionStorage.setItem(k, v); } catch { /* ignore */ }
   };
 
-  // Sayta giriş edəndə salamlama bubble (satış mütəxəssisi notification kimi).
-  // Tab üçün bir dəfə göstərilir; storage olmasa da in-memory fallback.
+  // (Auto-show greet bubble disabled — icon stays consistently visible without
+  // periodic UI changes that gave the impression of "appearing / disappearing".)
   useEffect(() => {
-    if (hidden || open) return;
-    const SHOWN_KEY = 'devaleur_ai_greet_shown';
-    if (safeSessionGet(SHOWN_KEY)) return;
-    const timer = window.setTimeout(() => {
-      setShowGreetBubble(true);
-      safeSessionSet(SHOWN_KEY, '1');
-      window.setTimeout(() => setShowGreetBubble(false), 14000);
-    }, 40000);
-    return () => window.clearTimeout(timer);
+    return undefined;
   }, [hidden, open]);
 
-  // 1 dəqiqə (60 saniyə) sonra istifadəçi chat-ı açmayıbsa, chat-ı avtomatik aç
-  // və satış mütəxəssisi kimi proaktiv salamlama mesajı göstər.
+  // (Auto-open after 60s disabled — keeps the launcher icon consistently
+  // visible. Users can open the chat manually whenever they need it.)
   useEffect(() => {
-    if (hidden) return;
-    const PROACTIVE_KEY = 'devaleur_ai_proactive_sent';
-    if (safeSessionGet(PROACTIVE_KEY)) return;
-    const timer = window.setTimeout(() => {
-      // Əgər istifadəçi hələ də chat açmayıbsa
-      if (!open && messages.length === 0) {
-        safeSessionSet(PROACTIVE_KEY, '1');
-        const proactiveMsg: ChatMessage = {
-          role: 'assistant',
-          content:
-            'Salam! 👋 Mən DE VALEUR-in satış mütəxəssisiyəm. Saat, dəri aksesuar və ya hədiyyə seçimində sizə kömək etməyə hazıram. Hansı növdə məhsul sizi maraqlandırır?',
-          ts: Date.now(),
-        };
-        setMessages([proactiveMsg]);
-        setOpen(true);
-        setShowGreetBubble(false);
-      }
-    }, 60000);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return undefined;
   }, [hidden]);
 
   // First-time greeting when chat opens with empty history.
@@ -564,10 +537,10 @@ const AiChatWidget: React.FC = () => {
 
   return (
     <>
-      {/* Floating launcher button — circle only */}
+      {/* Floating launcher button — minimalist */}
       {!open && (
         <div className="fixed bottom-5 right-5 z-[9998] flex items-end gap-2">
-          {/* Salamlama bubble — satış mütəxəssisi bildirişi kimi */}
+          {/* Greet bubble */}
           {showGreetBubble && (
             <button
               type="button"
@@ -575,7 +548,7 @@ const AiChatWidget: React.FC = () => {
                 setOpen(true);
                 setShowGreetBubble(false);
               }}
-              className="mb-1 max-w-[260px] bg-white shadow-[0_10px_30px_-8px_rgba(0,0,0,0.25)] border border-gray-100 rounded-2xl rounded-br-sm pl-3 pr-7 py-2.5 text-left animate-in slide-in-from-right-2 fade-in relative cursor-pointer hover:shadow-[0_12px_36px_-8px_rgba(0,0,0,0.35)] transition-shadow"
+              className="mb-1 max-w-[240px] bg-white border border-black/10 pl-3 pr-7 py-2.5 text-left relative cursor-pointer hover:border-black/30 transition-colors"
               data-testid="ai-greet-bubble"
               aria-label="AI satış mütəxəssisi ilə danış"
             >
@@ -584,18 +557,14 @@ const AiChatWidget: React.FC = () => {
                   e.stopPropagation();
                   setShowGreetBubble(false);
                 }}
-                className="absolute top-1.5 right-1.5 text-gray-300 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 cursor-pointer"
+                className="absolute top-1.5 right-1.5 text-black/30 hover:text-black/70 p-0.5 cursor-pointer"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3" strokeWidth={1.25} />
               </span>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold tracking-wider text-amber-600 uppercase">DE VALEUR</span>
-              </div>
-              <p className="text-[13px] text-gray-900 font-medium leading-snug">
-                Salam! 👋 Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm.
+              <p className="text-[10px] uppercase tracking-[0.25em] text-black/45 font-medium mb-1">DE VALEUR</p>
+              <p className="text-[12px] text-black font-light leading-snug">
+                Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm.
               </p>
-              <p className="text-[11px] text-gray-500 mt-0.5">Yazışmaya başlamaq üçün tıklayın</p>
             </button>
           )}
           <button
@@ -603,88 +572,50 @@ const AiChatWidget: React.FC = () => {
               setOpen(true);
               setShowGreetBubble(false);
             }}
-            className="group relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 border border-amber-400/30"
+            className="group relative flex items-center justify-center w-12 h-12 bg-black text-white border border-black hover:bg-white hover:text-black transition-colors duration-300"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white/5 ring-1 ring-amber-400/40 group-hover:ring-amber-400/70 transition-all">
-              <img
-                src={DEVALEUR_LOGO}
-                alt=""
-                className="w-6 h-6 object-contain"
-                style={{ filter: 'brightness(0) invert(1)' }}
-              />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-gray-900 animate-pulse" />
-            </span>
+            <Sparkles className="h-5 w-5" strokeWidth={1.25} />
           </button>
         </div>
       )}
 
-      {/* Chat panel */}
+      {/* Chat panel — minimalist */}
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-[9999] bg-white rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.5)] border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in"
+          className="fixed bottom-5 right-5 z-[9999] bg-white border border-black/10 flex flex-col overflow-hidden"
           style={{
-            width: 'min(440px, calc(100vw - 32px))',
-            height: 'min(640px, calc(100vh - 80px))',
+            width: 'min(420px, calc(100vw - 24px))',
+            height: 'min(620px, calc(100vh - 60px))',
           }}
           data-testid="ai-chat-panel"
         >
-          {/* Header — premium with logo */}
-          <div
-            className="relative text-white px-5 py-4 flex items-center justify-between overflow-hidden"
-            style={{
-              background:
-                'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #0f0f0f 100%)',
-            }}
-          >
-            {/* Subtle gold shimmer */}
-            <div
-              className="absolute inset-0 opacity-30 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(circle at 30% 0%, rgba(251, 191, 36, 0.25), transparent 50%)',
-              }}
-            />
-            <div className="relative flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full bg-white/5 ring-2 ring-amber-400/40 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                <img
-                  src={DEVALEUR_LOGO}
-                  alt="De Valeur"
-                  className="w-7 h-7 object-contain"
-                  style={{ filter: 'brightness(0) invert(1)' }}
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-[15px] leading-tight tracking-wide">
-                    De Valeur AI
-                  </p>
-                  <Sparkles className="h-3 w-3 text-amber-400" />
-                </div>
-                <p className="text-[11px] text-white/60 leading-tight flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block animate-pulse" />
-                  Onlayn satış konsultantı
-                </p>
-              </div>
+          {/* Header — clean */}
+          <div className="px-5 py-4 flex items-center justify-between border-b border-black/10 bg-white">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.32em] text-black/45 font-medium">DE VALEUR</p>
+              <p className="font-playfair text-lg font-light text-black leading-tight tracking-tight">
+                AI Konsultant
+              </p>
             </div>
-            <div className="relative flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={handleClear}
-                className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                className="p-1.5 hover:bg-black/5 transition-colors"
                 title="Söhbəti təmizlə"
                 data-testid="ai-chat-clear"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 text-black/55" strokeWidth={1.25} />
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                className="p-1.5 hover:bg-black/5 transition-colors"
                 title="Bağla"
                 data-testid="ai-chat-close"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4 text-black/70" strokeWidth={1.25} />
               </button>
             </div>
           </div>
@@ -692,22 +623,17 @@ const AiChatWidget: React.FC = () => {
           {/* Messages */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-4 py-4 bg-gradient-to-b from-gray-50/80 to-white"
+            className="flex-1 overflow-y-auto px-5 py-5 bg-white"
             data-testid="ai-chat-messages"
           >
             {messages.length === 0 && !busy && (
               <div className="text-center py-10">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center mx-auto mb-3 shadow-xl ring-2 ring-amber-400/30">
-                  <img
-                    src={DEVALEUR_LOGO}
-                    alt="De Valeur"
-                    className="w-10 h-10 object-contain"
-                    style={{ filter: 'brightness(0) invert(1)' }}
-                  />
+                <div className="inline-flex w-12 h-12 border border-black/15 items-center justify-center mb-4">
+                  <Sparkles className="h-5 w-5 text-black/70" strokeWidth={1.25} />
                 </div>
-                <p className="text-sm font-bold text-gray-900 tracking-wide">DE VALEUR AI</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Sizə uyğun saat və aksesuar tapmaqda kömək edirəm
+                <p className="font-playfair text-base text-black font-light tracking-tight mb-1">Necə kömək edə bilərəm?</p>
+                <p className="text-[12px] text-black/50 font-light px-4 leading-relaxed">
+                  Sizə uyğun saat və aksesuar tapmaqda yardım edirəm.
                 </p>
               </div>
             )}
@@ -715,25 +641,14 @@ const AiChatWidget: React.FC = () => {
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`mb-3 flex ${m.role === 'user' ? 'justify-end' : 'justify-start gap-2 items-end'}`}
+                className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 data-testid={`ai-chat-msg-${m.role}-${i}`}
               >
-                {/* Assistant avatar */}
-                {m.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center flex-shrink-0 ring-1 ring-amber-400/30 mb-1">
-                    <img
-                      src={DEVALEUR_LOGO}
-                      alt=""
-                      className="w-4 h-4 object-contain"
-                      style={{ filter: 'brightness(0) invert(1)' }}
-                    />
-                  </div>
-                )}
                 <div
-                  className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
+                  className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed break-words ${
                     m.role === 'user'
-                      ? 'bg-gradient-to-br from-gray-900 to-black text-white rounded-br-md whitespace-pre-wrap shadow-md'
-                      : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
+                      ? 'bg-black text-white whitespace-pre-wrap'
+                      : 'bg-black/[0.03] border border-black/10 text-black'
                   }`}
                 >
                   {m.role === 'assistant' ? (
@@ -753,29 +668,12 @@ const AiChatWidget: React.FC = () => {
             ))}
 
             {busy && (
-              <div className="flex justify-start gap-2 items-end mb-3">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center flex-shrink-0 ring-1 ring-amber-400/30 mb-1">
-                  <img
-                    src={DEVALEUR_LOGO}
-                    alt=""
-                    className="w-4 h-4 object-contain"
-                    style={{ filter: 'brightness(0) invert(1)' }}
-                  />
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
+              <div className="flex justify-start mb-4">
+                <div className="bg-black/[0.03] border border-black/10 px-4 py-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '0ms' }}
-                    />
-                    <span
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '150ms' }}
-                    />
-                    <span
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '300ms' }}
-                    />
+                    <span className="w-1.5 h-1.5 bg-black/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-black/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-black/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -785,7 +683,7 @@ const AiChatWidget: React.FC = () => {
           {/* Input */}
           <form
             onSubmit={handleSubmit}
-            className="border-t border-gray-100 px-3 py-3 bg-white flex items-end gap-2"
+            className="border-t border-black/10 px-3 py-3 bg-white flex items-end gap-2"
           >
             <textarea
               value={input}
@@ -800,32 +698,23 @@ const AiChatWidget: React.FC = () => {
               rows={1}
               maxLength={2000}
               disabled={busy}
-              className="flex-1 resize-none border border-gray-200 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 outline-none rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 max-h-28 disabled:bg-gray-50 transition-colors"
+              className="flex-1 resize-none border border-black/15 focus:border-black outline-none px-3.5 py-2.5 text-[13px] text-black placeholder-black/35 max-h-28 disabled:bg-black/[0.02] transition-colors bg-white"
               style={{ minHeight: 40 }}
               data-testid="ai-chat-input"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              className="bg-gradient-to-br from-gray-900 to-black text-white rounded-xl p-2.5 hover:from-gray-800 hover:to-gray-900 disabled:from-gray-300 disabled:to-gray-300 transition-all flex-shrink-0 shadow-md hover:shadow-lg"
+              className="bg-black text-white border border-black hover:bg-white hover:text-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors p-2.5 flex-shrink-0"
               data-testid="ai-chat-send"
             >
               {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.25} />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4" strokeWidth={1.25} />
               )}
             </button>
           </form>
-
-          {/* Footer brand strip */}
-          <div className="px-4 py-1.5 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-1.5">
-            <span className="text-[10px] text-gray-400">Powered by</span>
-            <span className="text-[10px] font-bold tracking-[0.15em] text-gray-700">
-              DE VALEUR
-            </span>
-            <Sparkles className="h-2.5 w-2.5 text-amber-500" />
-          </div>
         </div>
       )}
     </>
