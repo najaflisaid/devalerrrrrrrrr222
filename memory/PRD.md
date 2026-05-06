@@ -209,3 +209,12 @@
 
 ## Test credentials
 Bax: `/app/memory/test_credentials.md`
+
+## What was done — Jan 6, 2026 iteration
+
+### Filter "gah var, gah yox" problemi — root-cause fix
+- **Problem**: İstifadəçi qeyd etdi ki, hər rolla (qonaq, müştəri, B2B) məhsullara baxanda filter itir, sonra qayıdır. Screenshot brend səhifəsində (`/brand/zippo`) filter olmadığını göstərdi.
+- **Root cause**: `BrandPage.tsx` və `CategoryPage.tsx` filter sidebar olmadan göstərilirdi — yalnız `/products` səhifəsində filter var idi. Naviqasiya zamanı filter "yoxa çıxırdı".
+- **Fix**: `BrandPage.tsx` və `CategoryPage.tsx` müstəqil layout əvəzinə `/products?brand=<canonicalName>` və `/products?category=<name>` ünvanlarına `<Navigate replace />` ilə yönləndirilir. Brend slug-ı (`ZIPPO`, `USPA`) məhsul siyahısından `fromBrandSlug` ilə həqiqi brend adına çevrilib göndərilir.
+- **Nəticə**: Bütün məhsul siyahı səhifələri (məhsullar, kateqoriya, brend) eyni `ProductsPage` filter UI-ı paylaşır — filter HƏMİŞƏ görünür və davranış identikdir.
+- Files: `src/pages/BrandPage.tsx`, `src/pages/CategoryPage.tsx`
