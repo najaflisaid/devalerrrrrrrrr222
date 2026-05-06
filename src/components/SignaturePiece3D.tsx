@@ -64,14 +64,14 @@ const SignaturePiece3D: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative pt-8 pb-10 md:pt-12 md:pb-14 overflow-hidden bg-white"
+      className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden bg-gradient-to-b from-white via-[#FAF8F3]/40 to-white"
       data-testid="dv-signature-3d"
     >
       {/* Subtle gold glow */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(212,175,55,0.12) 0%, transparent 70%)',
           filter: 'blur(20px)',
         }}
         aria-hidden="true"
@@ -106,33 +106,41 @@ const SignaturePiece3D: React.FC = () => {
             <h2 className="font-playfair text-4xl md:text-6xl lg:text-7xl font-light text-black leading-[1.05] tracking-tight mb-5">
               {get(cfg.title)}
             </h2>
-            <p className="text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-8">
+            <p className="text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-10">
               {get(cfg.subtitle)}
             </p>
 
-            <div className="border-t border-black/10 pt-6">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-black/50 mb-2">
+            <div className="border-t border-black/10 pt-7">
+              <p className="text-[10px] uppercase tracking-[0.35em] text-black/50 mb-3">
                 {get(cfg.pickLabel)}
               </p>
-              <h3 className="font-playfair text-2xl md:text-3xl font-medium text-black mb-1">
-                {getName(product)}
-              </h3>
-              <p className="text-black text-lg font-light mb-6">
-                <span className="font-medium">{product.price?.toFixed(2)}</span>
-                <span className="ml-1 text-black/60"> AZN</span>
-              </p>
+
+              {/* Product card — minimal, refined */}
+              <div className="flex items-end justify-between gap-6 mb-7">
+                <div className="min-w-0">
+                  <h3 className="font-playfair text-xl md:text-2xl font-medium text-black leading-tight truncate">
+                    {getName(product)}
+                  </h3>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-black/40 font-mono">
+                    Ref. {product.id?.slice(0, 8) || ''}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-black/40 mb-0.5">Qiymət</p>
+                  <p className="font-playfair text-2xl md:text-3xl font-light text-black leading-none">
+                    {product.price?.toFixed(0)}
+                    <span className="ml-1 text-sm font-light tracking-wider text-black/60">AZN</span>
+                  </p>
+                </div>
+              </div>
 
               <button
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="group inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.4em] font-medium text-black/80 hover:text-[#C99B1F] transition-colors duration-500 relative pb-1"
+                className="dv-signature-cta group inline-flex items-center justify-center gap-3 px-7 py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.32em] font-medium text-black transition-all duration-500"
                 data-testid="dv-signature-cta"
               >
-                <span className="relative">
-                  {get(cfg.ctaLabel)}
-                  <span className="absolute left-0 -bottom-1 h-[1px] w-full bg-black/20 group-hover:bg-[#D4AF37] transition-colors duration-500" />
-                  <span className="absolute left-0 -bottom-1 h-[1px] w-0 bg-[#D4AF37] group-hover:w-full transition-all duration-700 ease-out" />
-                </span>
-                <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base">→</span>
+                <span>{get(cfg.ctaLabel)}</span>
+                <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>
               </button>
             </div>
           </div>
