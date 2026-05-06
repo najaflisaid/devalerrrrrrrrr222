@@ -422,7 +422,7 @@ const Header: React.FC = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden flex-shrink-0 p-2 -ml-2 relative z-[51]"
+              className={`md:hidden flex-shrink-0 p-2 -ml-2 relative z-[51] transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); }}
               aria-label="Menu"
               data-testid="mobile-menu-toggle"
@@ -988,7 +988,7 @@ const Header: React.FC = () => {
                           setShowLoginModal(true);
                           closeMobileMenu();
                         }}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 hover:text-black border-b border-gray-100 transition-colors"
                       >
                         <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">{t('header.login')}</span>
@@ -996,7 +996,7 @@ const Header: React.FC = () => {
                       <Link
                         to="/b2b-login"
                         onClick={closeMobileMenu}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-700 hover:text-black transition-colors"
                       >
                         <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">B2B {t('header.login')}</span>
