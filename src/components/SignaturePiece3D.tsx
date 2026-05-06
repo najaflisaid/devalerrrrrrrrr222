@@ -78,16 +78,16 @@ const SignaturePiece3D: React.FC = () => {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div className="grid grid-cols-2 gap-4 sm:gap-8 md:gap-16 items-center">
           {/* LEFT: text */}
-          <div className={`order-2 md:order-1 dv-reveal ${inView ? 'is-in' : ''}`}>
-            {/* Brand name (auto from product) — desktop only, above eyebrow */}
+          <div className={`order-1 dv-reveal ${inView ? 'is-in' : ''}`}>
+            {/* Brand name (auto from product) */}
             {product.brand && (
-              <div className="hidden md:block mb-3 lg:mb-4">
+              <div className="mb-2 md:mb-3 lg:mb-4">
                 <span
-                  className="dv-shimmer font-playfair font-semibold leading-none tracking-tight whitespace-nowrap select-none"
+                  className="dv-shimmer font-playfair font-semibold leading-none tracking-tight whitespace-nowrap select-none block"
                   style={{
-                    fontSize: 'clamp(2.5rem, 5.5vw, 5rem)',
+                    fontSize: 'clamp(1.4rem, 5.5vw, 5rem)',
                     letterSpacing: '-0.01em',
                   }}
                   data-testid="dv-signature-brand-desktop"
@@ -97,50 +97,50 @@ const SignaturePiece3D: React.FC = () => {
               </div>
             )}
 
-            <div className="flex items-center mb-5">
-              <span className="inline-block w-10 h-[1px] bg-[#D4AF37]" />
-              <span className="ml-3 text-[10px] uppercase tracking-[0.4em] dv-shimmer font-semibold">
+            <div className="flex items-center mb-3 md:mb-5">
+              <span className="inline-block w-6 md:w-10 h-[1px] bg-[#D4AF37]" />
+              <span className="ml-2 md:ml-3 text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] dv-shimmer font-semibold">
                 {get(cfg.eyebrow)}
               </span>
             </div>
-            <h2 className="font-playfair text-4xl md:text-6xl lg:text-7xl font-light text-black leading-[1.05] tracking-tight mb-5">
+            <h2 className="font-playfair text-xl sm:text-3xl md:text-6xl lg:text-7xl font-light text-black leading-[1.05] tracking-tight mb-2 md:mb-5">
               {get(cfg.title)}
             </h2>
-            <p className="text-black/60 text-base md:text-lg font-light leading-relaxed max-w-md mb-10">
+            <p className="text-black/60 text-[11px] sm:text-sm md:text-lg font-light leading-relaxed max-w-md mb-4 md:mb-10">
               {get(cfg.subtitle)}
             </p>
 
-            <div className="border-t border-black/10 pt-7">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-black/50 mb-3">
+            <div className="border-t border-black/10 pt-3 md:pt-7">
+              <p className="text-[8px] md:text-[10px] uppercase tracking-[0.25em] md:tracking-[0.35em] text-black/50 mb-1.5 md:mb-3">
                 {get(cfg.pickLabel)}
               </p>
 
-              {/* Product card — minimal, refined */}
-              <div className="flex items-end justify-between gap-6 mb-7">
+              {/* Product card */}
+              <div className="mb-4 md:mb-7 md:flex md:items-end md:justify-between md:gap-6">
                 <div className="min-w-0">
-                  <h3 className="font-playfair text-xl md:text-2xl font-medium text-black leading-tight truncate">
+                  <h3 className="font-playfair text-sm sm:text-lg md:text-2xl font-medium text-black leading-tight truncate">
                     {getName(product)}
                   </h3>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-black/40 font-mono">
+                  <p className="mt-0.5 md:mt-1 text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em] text-black/40 font-mono">
                     Ref. {product.id?.slice(0, 8) || ''}
                   </p>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-black/40 mb-0.5">Qiymət</p>
-                  <p className="font-playfair text-2xl md:text-3xl font-light text-black leading-none">
+                <div className="md:text-right flex-shrink-0 mt-2 md:mt-0">
+                  <p className="text-[8px] md:text-[10px] uppercase tracking-[0.25em] md:tracking-[0.3em] text-black/40 mb-0.5">Qiymət</p>
+                  <p className="font-playfair text-base sm:text-xl md:text-3xl font-light text-black leading-none">
                     {product.price?.toFixed(0)}
-                    <span className="ml-1 text-sm font-light tracking-wider text-black/60">AZN</span>
+                    <span className="ml-1 text-[10px] sm:text-xs md:text-sm font-light tracking-wider text-black/60">AZN</span>
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="dv-signature-cta group inline-flex items-center justify-center gap-3 px-7 py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.32em] font-medium text-black transition-all duration-500"
+                className="dv-signature-cta group inline-flex items-center justify-center gap-2 md:gap-3 px-3 sm:px-5 md:px-7 py-2 sm:py-2.5 md:py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[8px] sm:text-[10px] md:text-[11px] uppercase tracking-[0.2em] sm:tracking-[0.28em] md:tracking-[0.32em] font-medium text-black transition-all duration-500"
                 data-testid="dv-signature-cta"
               >
                 <span>{get(cfg.ctaLabel)}</span>
-                <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>
+                <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-xs md:text-base leading-none">→</span>
               </button>
             </div>
           </div>
@@ -148,30 +148,11 @@ const SignaturePiece3D: React.FC = () => {
           {/* RIGHT: 3D stage */}
           <div
             ref={stageRef}
-            className={`order-1 md:order-2 relative aspect-square max-w-[420px] md:max-w-[520px] mx-auto w-full dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-2`}
+            className={`order-2 relative aspect-square max-w-[420px] md:max-w-[520px] mx-auto w-full dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-2`}
             onMouseMove={handleMove}
             onMouseLeave={handleLeave}
             style={{ perspective: '1200px' }}
           >
-            {/* Brand name (auto from product) — mobile only, above the piece */}
-            {product.brand && (
-              <div
-                className="md:hidden absolute -top-4 sm:-top-6 left-0 right-0 flex items-center justify-center pointer-events-none select-none z-[1]"
-                aria-hidden="true"
-              >
-                <span
-                  className="dv-shimmer font-playfair font-semibold leading-none tracking-tight whitespace-nowrap text-center"
-                  style={{
-                    fontSize: 'clamp(2.25rem, 9vw, 6rem)',
-                    letterSpacing: '-0.01em',
-                  }}
-                  data-testid="dv-signature-brand"
-                >
-                  {product.brand}
-                </span>
-              </div>
-            )}
-
             {/* Soft shadow beneath */}
             <div
               className="absolute bottom-[8%] left-1/2 -translate-x-1/2 w-[60%] h-8 rounded-full pointer-events-none"
@@ -183,7 +164,7 @@ const SignaturePiece3D: React.FC = () => {
             />
 
             <div
-              className="absolute inset-[20%] md:inset-[18%] flex items-center justify-center"
+              className="absolute inset-[10%] sm:inset-[15%] md:inset-[18%] flex items-center justify-center"
               style={{
                 transformStyle: 'preserve-3d',
                 transform: `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg) translateZ(60px)`,
