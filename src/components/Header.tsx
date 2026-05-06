@@ -53,6 +53,18 @@ const Header: React.FC = () => {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationsRead, setNotificationsRead] = useState(false);
+  // Scroll edildikcə header kompaktlaşması üçün
+  const [isHeaderCondensed, setIsHeaderCondensed] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      // 24px-dən artıq sürüşmədə header kompakt hala düşür
+      setIsHeaderCondensed(window.scrollY > 24);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -398,9 +410,15 @@ const Header: React.FC = () => {
   return (
     <>
       {/* Main Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
+      <header
+        className={`dv-main-header sticky top-0 z-50 transition-[background,backdrop-filter,box-shadow,border-color] duration-300 ${
+          isHeaderCondensed
+            ? 'is-condensed bg-white/85 backdrop-blur-md border-b border-gray-200/70 shadow-[0_1px_12px_rgba(0,0,0,0.04)]'
+            : 'bg-white border-b border-gray-100'
+        }`}
+      >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className={`dv-header-row flex items-center justify-between transition-[height] duration-300 ${isHeaderCondensed ? 'h-12' : 'h-16'}`}>
 
             {/* Mobile Menu Button */}
             <button
@@ -414,7 +432,11 @@ const Header: React.FC = () => {
             {/* Logo - Always centered on mobile, left on desktop */}
             <div className="absolute left-1/2 transform -translate-x-1/2 md:static md:transform-none">
               <Link to="/">
-                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-8 sm:h-9 md:h-10" />
+                <img
+                  src="https://i.hizliresim.com/tmu65g6.png"
+                  alt="De Valeur"
+                  className={`transition-[height] duration-300 ${isHeaderCondensed ? 'h-7 sm:h-7 md:h-8' : 'h-8 sm:h-9 md:h-10'}`}
+                />
               </Link>
             </div>
 
@@ -436,7 +458,8 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <div
-                    className={`fixed left-0 right-0 top-[64px] z-50 dv-megamenu${isDropdownClosing ? ' is-closing' : ''}`}
+                    className={`fixed left-0 right-0 z-50 dv-megamenu${isDropdownClosing ? ' is-closing' : ''}`}
+                    style={{ top: isHeaderCondensed ? 48 : 64 }}
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
                   >

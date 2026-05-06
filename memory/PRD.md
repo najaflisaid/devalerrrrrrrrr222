@@ -354,3 +354,19 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/components/SignaturePiece3D.tsx` (pb azaldıldı)
 - `src/components/BestSellersSection.tsx` (h2 kiçildildi)
 - `src/components/HomeProductBanners.tsx` (h2 kiçildildi)
+
+## Jan 6, 2026 — iteration #8 — Sticky condensed header + nav incəliyi
+- **Header scroll-condensed effekt** (`Header.tsx`):
+  - Yeni `isHeaderCondensed` state (`scrollY > 24`-də aktiv)
+  - Aktiv olduqda: `bg-white/85 backdrop-blur-md border-gray-200/70 shadow-[0_1px_12px_rgba(0,0,0,0.04)]`, hündürlük `h-16 → h-12`, loqo `h-10 → h-8`
+  - 300ms `transition-[background,backdrop-filter,box-shadow,border-color,height]` — yumşaq keçid
+  - Mega-menyu top offset-i də dinamik (`64 → 48`) ki, açıq olduqda boşluq qalmasın
+  - Modern luxury saytlardakı pattern (Tag Heuer, Breitling) — engagement artırır
+- **Nav letter/word spacing** — `.dv-navlink` və `.dv-mobile-nav-link` üçün `letter-spacing: 0.04em` (əvvəl 0.06-0.08), `word-spacing: -0.04em` əlavə olundu. "ANA SƏHIFƏ" kimi iki-sözlü maddələr daha sıx görünür, "kobud" hissi azalır.
+- **H2 başlıqlar** — BestSellers və HomeProductBanners-də `tracking-[0.22em] → tracking-[0.1em]` + `wordSpacing: -0.05em`. "ƏN ÇOX SATILANLAR" və "PRESTIJINIZƏ DƏYƏR QATAN DETALLAR" daha incə, balanslı görünür.
+
+### Files
+- `src/components/Header.tsx` (scroll detection + dynamic classes)
+- `src/index.css` (.dv-navlink letter/word spacing)
+- `src/components/BestSellersSection.tsx` (h2 tracking + wordSpacing)
+- `src/components/HomeProductBanners.tsx` (h2 tracking + wordSpacing)
