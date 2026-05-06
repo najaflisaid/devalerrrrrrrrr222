@@ -64,19 +64,9 @@ const SignaturePiece3D: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden bg-gradient-to-b from-white via-[#FAF8F3]/40 to-white"
+      className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden bg-white"
       data-testid="dv-signature-3d"
     >
-      {/* Subtle gold glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(212,175,55,0.12) 0%, transparent 70%)',
-          filter: 'blur(20px)',
-        }}
-        aria-hidden="true"
-      />
-
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="grid grid-cols-2 gap-4 sm:gap-8 md:gap-16 items-center">
           {/* LEFT: text */}
