@@ -31,6 +31,17 @@ input[type='number'] {
   appearance: textfield;
 }
 
+/* Mobil iOS Safari avtomatik yaxınlaşdırmanı dayandır:
+   font-size < 16px olan input/textarea-ya fokus düşəndə Safari avtomatik zoom edir.
+   Mobil ekranlarda hər input-textarea-select üçün ən az 16px təmin edirik. */
+@media screen and (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

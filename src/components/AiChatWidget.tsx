@@ -526,7 +526,8 @@ const AiChatWidget: React.FC = () => {
         ...prev,
         { role: 'assistant', content: reply, ts: Date.now() },
       ]);
-    } catch {
+    } catch (err) {
+      console.warn('[AI Chat] sendChatMessage failed:', err);
       setMessages((prev) => [
         ...prev,
         {

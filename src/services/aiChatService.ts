@@ -303,6 +303,9 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
       : `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
   // 1) İlk cəhd: backend proxy (emergent preview-da işləyir, açar gizli qalır)
+  // Backend bəzən gec cavab verir və ya 502 qaytarır — istifadəçinin "tez-tez cavab vermir"
+  // problemini həll etmək üçün backend istəyini 6 saniyə ilə zaman aşımına saxlayırıq və
+  // uğursuzluqda dərhal birbaşa OpenAI fallback-inə keçirik.
   if (BACKEND_URL) {
     const payload = {
       session_id: sessionId,
@@ -317,26 +320,32 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
     };
 
     try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
       const res = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: ctrl.signal,
       });
+      clearTimeout(timer);
 
       if (res.ok) {
         const data = await res.json();
         const reply: string = (data?.reply || '').trim();
         if (reply) return reply;
       }
-      // Backend cavab verdi, amma xəta / boş → OpenAI-a keç
-    } catch {
-      // Şəbəkə xətası / backend çatmır → OpenAI-a keç
+      console.warn('[AI] Backend proxy boş/xəta cavab verdi, OpenAI-a keçirik:', res.status);
+    } catch (err) {
+      console.warn('[AI] Backend proxy çatmır, OpenAI-a keçirik:', err);
     }
   }
 
-  // 2) Fallback: birbaşa OpenAI (netlify kimi backend-siz deploy-larda)
+  // 2) Fallback: birbaşa OpenAI — 1 dəfə yenidən cəhd ilə
   if (!ENV_OPENAI_KEY) {
-    throw new Error('AI xidməti hazırda əlçatan deyil.');
+    throw new Error(
+      'AI xidməti hazırda əlçatan deyil (VITE_OPENAI_API_KEY env-də qoyulmayıb).'
+    );
   }
 
   const systemMessage = buildSystemMessage(req);
@@ -350,14 +359,41 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
     { role: 'user', content: req.message.trim() },
   ];
 
-  const res = await fetch(OPENAI_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${ENV_OPENAI_KEY}`,
-    },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.7 }),
-  });
+  const callOpenAI = async (): Promise<Response> => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      return await fetch(OPENAI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ENV_OPENAI_KEY}`,
+        },
+        body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.7 }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  // 1-ci cəhd
+  let res: Response;
+  try {
+    res = await callOpenAI();
+  } catch (err) {
+    console.warn('[AI] OpenAI 1-ci cəhd uğursuz, 1 dəfə təkrar:', err);
+    // Qısa pauzadan sonra 1 dəfə təkrar
+    await new Promise((r) => setTimeout(r, 600));
+    res = await callOpenAI();
+  }
+
+  // 429 (rate limit) və ya 5xx olarsa 1 dəfə təkrar
+  if (!res.ok && (res.status === 429 || res.status >= 500)) {
+    console.warn('[AI] OpenAI status', res.status, '— 1 dəfə təkrar');
+    await new Promise((r) => setTimeout(r, 800));
+    res = await callOpenAI();
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');

@@ -296,3 +296,33 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/components/admin/PromoCodesTab.tsx` (user picker UI)
 - `src/pages/MyOrdersPage.tsx` (assigned codes card)
 - `src/pages/CartPage.tsx` (userId-aware validation)
+
+## Jan 6, 2026 — iteration #5 — AI Chat reliability + mobile auto-zoom fix
+
+### #1 AI chat-bot tez-tez cavab vermir — multi-fix
+**Kök problemlər**:
+- `/app/.env` faylı yox idi (Vite root `/app`-dədir), `VITE_OPENAI_API_KEY` yüklənmirdi → fallback işləmirdi
+- Backend proxy bəzən gec/502 cavab verirdi, timeout yox idi → bütün istək asılıb qalırdı
+- OpenAI 429/5xx olduqda heç bir retry yox idi → bir-iki saniyəlik network glitch tam uğursuzluq verirdi
+- catch silent idi, debugging mümkün deyildi
+
+**Fix-lər** (`aiChatService.ts`, `AiChatWidget.tsx`):
+- `/app/frontend/.env` → `/app/.env`-ə kopyalandı (Vite-ın .env-i tapması üçün)
+- Backend proxy üçün **6 saniyəlik AbortController timeout** — uğursuzluqda dərhal OpenAI fallback
+- OpenAI istəyi üçün **25 saniyəlik timeout** + **1 dəfə avtomatik retry** (network/abort xətasında 600ms gözləmə)
+- 429/5xx response üçün **1 dəfə əlavə retry** (800ms gözləmə) — keyfiyyətli rate-limit/transient handling
+- AiChatWidget catch-də `console.warn(err)` — istifadəçi şikayət edəndə browser console-da real səbəb görünür
+- Production deploy-da (Netlify/Vercel) admin öz dashboard-ında `VITE_OPENAI_API_KEY` qoymalıdır (deploy-time var)
+
+### #2 Mobil avtomatik yaxınlaşdırma
+**Kök səbəb**: iOS Safari font-size < 16px olan input-a fokus düşəndə avtomatik zoom edir.
+**Fix**:
+- `index.html` viewport: `maximum-scale=1.0, user-scalable=no` əlavə olundu (zoom tam dayandırıldı)
+- `index.css` defansiv: mobildə (`max-width: 767px`) bütün `input/textarea/select` üçün `font-size: 16px !important` — viewport meta uyğunsuzluğu olsa belə zoom baş vermir
+
+### Files
+- `/app/.env` (yeni — frontend-dən kopyalandı)
+- `src/services/aiChatService.ts` (timeout + retry + fallback)
+- `src/components/AiChatWidget.tsx` (error log)
+- `index.html` (viewport)
+- `src/index.css` (mobile font-size guard)
