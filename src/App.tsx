@@ -9,7 +9,7 @@ import CategoryBanner from './components/CategoryBanner';
 import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
 import StatsBand from './components/StatsBand';
-import SignaturePiece3D from './components/SignaturePiece3D';
+import BrandShowcase from './components/BrandShowcase';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
 import B2BRequestForm from './components/auth/B2BRequestForm';
@@ -52,7 +52,7 @@ const HomePage: React.FC = () => {
     <>
       <Hero />
       <BestSellersSection />
-      <SignaturePiece3D />
+      <BrandShowcase />
       <HomeProductBanners />
       <StatsBand />
       <Features />
