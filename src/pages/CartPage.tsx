@@ -756,29 +756,36 @@ const CartPage: React.FC = () => {
       {showCheckout && !isB2BUser && (
         <div
           id="inline-checkout"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
-          onClick={() => !loading && setShowCheckout(false)}
+          className="fixed inset-0 z-50 bg-white overflow-y-auto"
           data-testid="inline-checkout-panel"
         >
-          <div
-            className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">Sifarişi tamamla</h2>
-                <p className="text-[11px] text-gray-500">Bütün sahələri doldurun</p>
-              </div>
+          <div className="min-h-screen flex flex-col max-w-2xl mx-auto px-5 sm:px-8 py-6 md:py-10">
+            {/* Top bar — back button */}
+            <div className="flex items-center justify-between mb-8 md:mb-12">
               <button
-                onClick={() => setShowCheckout(false)}
-                className="text-gray-400 hover:text-gray-700 w-8 h-8 inline-flex items-center justify-center rounded-full hover:bg-gray-100"
+                onClick={() => !loading && setShowCheckout(false)}
+                className="inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.2em] text-black hover:opacity-60 transition-opacity"
                 data-testid="inline-checkout-close"
               >
-                ✕
+                <ChevronLeft className="h-4 w-4" strokeWidth={1.25} />
+                <span>Geri</span>
               </button>
+              <div className="text-[10px] uppercase tracking-[0.32em] text-black/45">
+                Ödəniş
+              </div>
             </div>
 
-            <div className="overflow-y-auto px-5 py-4 space-y-3">
+            {/* Heading */}
+            <div className="mb-8 md:mb-10">
+              <h1 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-tight mb-2">
+                Sifarişi tamamla
+              </h1>
+              <p className="text-[13px] text-black/55 font-light">
+                Bütün məlumatları doldurun və ödənişə keçin.
+              </p>
+            </div>
+
+            <div className="flex-1 space-y-6">
               {/* Guest registration */}
               {!isLoggedIn && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
@@ -987,35 +994,40 @@ const CartPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Footer with summary + CTA */}
-            <div className="border-t border-gray-100 px-5 py-3.5 bg-gray-50 sticky bottom-0">
+            {/* Footer with summary + CTA — minimalist */}
+            <div className="border-t border-black/10 pt-6 mt-8">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-[11px] text-gray-500">
-                  {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN
-                  {promoApplied && (
-                    <span className="text-emerald-600 font-medium"> −{getPromoDiscountAmount().toFixed(2)} AZN</span>
-                  )}
-                  {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} AZN</span>}
+                <div className="text-[11px] text-black/55 uppercase tracking-[0.2em]">
+                  Cəm
                 </div>
-                <div className="text-base font-bold text-gray-900">
-                  {(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)} AZN
+                <div className="font-playfair text-2xl md:text-3xl font-light text-black">
+                  {(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)}
+                  <span className="ml-1 text-sm tracking-wider text-black/55">AZN</span>
                 </div>
               </div>
+              <div className="text-[11px] text-black/45 mb-4">
+                {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN
+                {promoApplied && (
+                  <span className="text-emerald-700 font-medium"> −{getPromoDiscountAmount().toFixed(2)} AZN</span>
+                )}
+                {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} AZN çatdırılma</span>}
+              </div>
               {promoApplied && (
-                <div className="text-[10px] text-emerald-700 font-medium mb-1.5">
-                  Promo {promoApplied.code} · {promoApplied.discount}% endirim tətbiq edildi
+                <div className="text-[10px] text-emerald-700 font-medium mb-3 uppercase tracking-[0.15em]">
+                  {promoApplied.code} · {promoApplied.discount}% endirim tətbiq edildi
                 </div>
               )}
               <button
                 onClick={handleEpointCheckout}
                 disabled={loading}
-                className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-semibold disabled:opacity-60"
+                className="w-full inline-flex items-center justify-center gap-3 px-6 py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.3em] font-medium text-black transition-all duration-500 disabled:opacity-60 disabled:cursor-not-allowed group"
                 data-testid="checkout-pay-btn"
               >
-                {loading ? 'Yönləndirilir...' : 'Ödəniş et'}
+                <span>{loading ? 'Yönləndirilir...' : 'Ödəniş et'}</span>
+                {!loading && <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>}
               </button>
-              <p className="text-[10px] text-gray-400 text-center mt-1.5">
-                Ödəniş təhlükəsiz şəkildə həyata keçirilir.
+              <p className="text-[10px] text-black/40 text-center mt-3 tracking-wide">
+                Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.
               </p>
             </div>
           </div>
