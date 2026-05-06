@@ -988,7 +988,7 @@ const Header: React.FC = () => {
                           setShowLoginModal(true);
                           closeMobileMenu();
                         }}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 hover:text-black border-b border-gray-100 transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 hover:bg-gray-50 border border-black transition-colors"
                       >
                         <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">{t('header.login')}</span>
@@ -996,7 +996,7 @@ const Header: React.FC = () => {
                       <Link
                         to="/b2b-login"
                         onClick={closeMobileMenu}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-700 hover:text-black transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 hover:bg-gray-50 border border-black transition-colors"
                       >
                         <User className="h-5 w-5" strokeWidth={1.5} />
                         <span className="font-medium">B2B {t('header.login')}</span>
