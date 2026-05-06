@@ -642,6 +642,7 @@ html.dark .dv-orb { opacity: 0.28; }
   text-transform: uppercase;
   letter-spacing: 0.02em;
   word-spacing: -0.06em;
+  font-size: 0.72rem;
 }
 
 .dv-navlink {
