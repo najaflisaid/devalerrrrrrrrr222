@@ -64,7 +64,7 @@ const SignaturePiece3D: React.FC = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative pt-8 pb-20 md:pt-12 md:pb-32 overflow-hidden bg-white"
+      className="relative pt-8 pb-10 md:pt-12 md:pb-14 overflow-hidden bg-white"
       data-testid="dv-signature-3d"
     >
       {/* Subtle gold glow */}

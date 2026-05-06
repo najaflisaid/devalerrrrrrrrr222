@@ -343,3 +343,14 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/components/BestSellersSection.tsx` (uppercase title + kiçildilmiş ölçü)
 - `src/components/HomeProductBanners.tsx` (spacing + uniform heading)
 - `src/components/Features.tsx` (uniform eyebrow + spacing)
+
+## Jan 6, 2026 — iteration #7 — Vizual incəlik (uppercase ölçü + spacing)
+- **Header nav uppercase kobud görünürdü** — `.dv-navlink` üçün `font-size: 0.78rem` təyin edildi və letter-spacing `0.06em → 0.08em` çəkildi. Mövcud `text-sm` class override olunur — naviqasiya daha incə və luxury hissini verir.
+- **"Ən çox satılanlar" və "Prestijinizə dəyər qatan detallar"** — h2 ölçüsü bir pillə də kiçildildi (`text-sm/base/lg/xl` → `text-xs/sm/base/lg`), `tracking-[0.18em]` → `tracking-[0.22em]`. İki bölmə arasında vizual ölçü sinxronu.
+- **SignaturePiece3D ↔ HomeProductBanners boşluğu** — `SignaturePiece3D` bölməsinin `pb-20 md:pb-32` (8rem desktop) → `pb-10 md:pb-14` (3.5rem desktop). Yığılmış `pt-12 + pb-14 = 6.5rem` üçün rahat oxunaqlı tarazlıq.
+
+### Files
+- `src/index.css` (.dv-navlink font-size + letter-spacing)
+- `src/components/SignaturePiece3D.tsx` (pb azaldıldı)
+- `src/components/BestSellersSection.tsx` (h2 kiçildildi)
+- `src/components/HomeProductBanners.tsx` (h2 kiçildildi)

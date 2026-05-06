@@ -666,7 +666,8 @@ html.dark .dv-orb { opacity: 0.28; }
   position: relative;
   transition: color 200ms ease;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
 }
 .dv-navlink::after {
   content: none;
