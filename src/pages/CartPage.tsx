@@ -8,7 +8,7 @@ import { setDoc, doc as fsDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { buildSignedPayment, redirectToEpoint } from '../services/epointPaymentService';
+import { startEpointPayment } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
@@ -289,9 +289,13 @@ const CartPage: React.FC = () => {
         }).catch((e) => console.warn('Promo kod redeem xətası:', e));
       }
 
-      let signed;
       try {
-        signed = await buildSignedPayment({
+        // Use widget URL flow when possible — supports Apple Pay (iOS) and
+        // Google Pay (Android) on the hosted payment page. Falls back to
+        // the standard signed checkout form internally if widget endpoint
+        // is not reachable. Always opens as top-level navigation, never
+        // inside an iframe.
+        await startEpointPayment({
           orderId,
           amount: total,
         });
@@ -333,8 +337,6 @@ const CartPage: React.FC = () => {
       const cancelWatchdog = () => window.clearTimeout(watchdog);
       window.addEventListener('beforeunload', cancelWatchdog, { once: true });
       window.addEventListener('pagehide', cancelWatchdog, { once: true });
-
-      redirectToEpoint(signed);
     } catch (error: any) {
       console.error('Epoint checkout error:', error);
       setErrorMessage(
