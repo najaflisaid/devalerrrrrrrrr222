@@ -23,10 +23,37 @@ const PromoCodesTab: React.FC = () => {
   const [recent, setRecent] = useState<PromoCode | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unused' | 'used'>('all');
+  // Müştəriyə təyinat üçün
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [userSearch, setUserSearch] = useState('');
 
   useEffect(() => {
     void load();
+    // Müştəriləri də paralel yükləyirik (kod təyinatı üçün)
+    userService
+      .getAllUsers()
+      .then((all) => {
+        // Yalnız adi müştərilər (B2B və admin yox) — promo kodlar pərakəndə üçündür
+        const customers = all.filter((u) => (u as any).role === 'customer' || !(u as any).role);
+        setUsers(customers);
+      })
+      .catch(() => setUsers([]));
   }, []);
+
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return users.slice(0, 30);
+    return users
+      .filter((u) => {
+        const name = ((u as any).name || '').toLowerCase();
+        const email = ((u as any).email || '').toLowerCase();
+        return name.includes(q) || email.includes(q);
+      })
+      .slice(0, 30);
+  }, [users, userSearch]);
+
+  const selectedUser = users.find((u) => (u as any).id === selectedUserId);
 
   const load = async () => {
     setLoading(true);
@@ -43,7 +70,14 @@ const PromoCodesTab: React.FC = () => {
     setCreating(discount);
     try {
       const adminEmail = localStorage.getItem('userEmail') || '';
-      const created = await createPromoCode(discount, adminEmail);
+      const assignedTo = selectedUser
+        ? {
+            userId: (selectedUser as any).id as string,
+            userEmail: (selectedUser as any).email as string | undefined,
+            userName: (selectedUser as any).name as string | undefined,
+          }
+        : undefined;
+      const created = await createPromoCode(discount, adminEmail, assignedTo);
       setRecent(created);
       await load();
     } catch (e) {
@@ -93,7 +127,75 @@ const PromoCodesTab: React.FC = () => {
         <p className="text-sm text-gray-600 mb-5">
           Pərakəndə müştərilər üçün birdəfəlik istifadəyə yararlı promo kodlar yaradın.
           Düymələrdən birini sıxın — sistem 6 rəqəmli unikal kod yaradacaq.
+          {selectedUser ? (
+            <span className="block mt-1 text-emerald-700">
+              Bu kod yalnız <b>{(selectedUser as any).name || (selectedUser as any).email}</b> müştərisi üçün etibarlı olacaq.
+            </span>
+          ) : (
+            <span className="block mt-1 text-gray-500 text-xs">
+              Müştəri seçməsəz, kod hər kəs tərəfindən istifadə edilə biləndir.
+            </span>
+          )}
         </p>
+
+        {/* Müştəri seçim paneli (istəyə bağlı) */}
+        <div className="mb-5 bg-gray-50 rounded-lg border border-gray-200 p-4">
+          <label className="text-xs uppercase tracking-wider text-gray-600 font-semibold flex items-center gap-1.5 mb-2">
+            <UserIcon className="h-3.5 w-3.5" /> Konkret müştəriyə təyin et (istəyə bağlı)
+          </label>
+          {selectedUser ? (
+            <div className="flex items-center justify-between gap-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg" data-testid="promo-selected-user">
+              <div className="text-sm">
+                <p className="font-semibold text-emerald-900">{(selectedUser as any).name || 'Adsız'}</p>
+                <p className="text-xs text-emerald-700">{(selectedUser as any).email}</p>
+              </div>
+              <button
+                onClick={() => { setSelectedUserId(''); setUserSearch(''); }}
+                className="text-xs text-emerald-700 hover:text-emerald-900 underline"
+                data-testid="promo-clear-user"
+              >
+                Sil
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Ad və ya e-poçtla axtar..."
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+                  data-testid="promo-user-search"
+                />
+              </div>
+              <div className="max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {filteredUsers.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">
+                    {userSearch ? 'Uyğun müştəri tapılmadı' : 'Müştəri yüklənir...'}
+                  </p>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <button
+                      key={(u as any).id}
+                      type="button"
+                      onClick={() => setSelectedUserId((u as any).id)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                      data-testid={`promo-pick-user-${(u as any).id}`}
+                    >
+                      <UserIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 truncate">{(u as any).name || 'Adsız'}</p>
+                        <p className="text-xs text-gray-500 truncate">{(u as any).email}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {DISCOUNT_OPTIONS.map((d) => (
@@ -184,7 +286,7 @@ const PromoCodesTab: React.FC = () => {
                   <th className="text-center px-2 py-2 font-medium">Endirim</th>
                   <th className="text-left px-2 py-2 font-medium">Status</th>
                   <th className="text-left px-2 py-2 font-medium">Yaradılıb</th>
-                  <th className="text-left px-2 py-2 font-medium">İstifadəçi</th>
+                  <th className="text-left px-2 py-2 font-medium">Təyinat / İstifadə</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -221,7 +323,17 @@ const PromoCodesTab: React.FC = () => {
                     </td>
                     <td className="px-2 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(c.createdAt)}</td>
                     <td className="px-2 py-3 text-xs text-gray-600">
-                      {c.usedBy?.userEmail || c.usedBy?.userId || (c.used ? '—' : '—')}
+                      {c.assignedTo?.userId ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] rounded-full" title={c.assignedTo.userEmail}>
+                          <UserIcon className="h-3 w-3" />
+                          {c.assignedTo.userName || c.assignedTo.userEmail || 'müştəri'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">Hamı üçün</span>
+                      )}
+                      {c.usedBy?.userEmail && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">İstifadə: {c.usedBy.userEmail}</p>
+                      )}
                       {c.usedAt && <p className="text-[10px] text-gray-400">{formatDate(c.usedAt)}</p>}
                     </td>
                     <td className="px-2 py-3 text-right">

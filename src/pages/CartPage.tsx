@@ -97,7 +97,8 @@ const CartPage: React.FC = () => {
     }
     setPromoLoading(true);
     try {
-      const res = await validatePromoCode(code);
+      const userId = localStorage.getItem('userId') || undefined;
+      const res = await validatePromoCode(code, userId);
       if (res.valid) {
         setPromoApplied({ code, discount: res.discount });
         setPromoError('');

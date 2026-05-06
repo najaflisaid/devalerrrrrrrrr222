@@ -28,6 +28,12 @@ export interface PromoCode {
   code: string;
   discount: number; // percent
   used: boolean;
+  // Admin müəyyən bir müştəriyə kod təyin edə bilər. Boş olarsa hər kəs istifadə edə bilər.
+  assignedTo?: {
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
+  };
   usedBy?: {
     userId?: string;
     userEmail?: string;
@@ -47,10 +53,12 @@ const generate6DigitCode = (): string => {
 
 /**
  * Yeni promo kod yaradır. Dublikatdan qaçınmaq üçün 5 dəfəyə qədər təkrarlayır.
+ * `assignedTo` verilərsə kod yalnız həmin istifadəçi üçün etibarlı olur.
  */
 export const createPromoCode = async (
   discount: number,
-  createdBy?: string
+  createdBy?: string,
+  assignedTo?: { userId: string; userEmail?: string; userName?: string }
 ): Promise<PromoCode> => {
   if (![5, 10, 15, 20].includes(discount)) {
     throw new Error('Endirim faizi yalnız 5, 10, 15 və ya 20 ola bilər');
@@ -67,6 +75,15 @@ export const createPromoCode = async (
       used: false,
       createdAt: Timestamp.now(),
       createdBy: createdBy || '',
+      ...(assignedTo
+        ? {
+            assignedTo: {
+              userId: assignedTo.userId,
+              userEmail: assignedTo.userEmail || '',
+              userName: assignedTo.userName || '',
+            },
+          }
+        : {}),
     };
     await setDoc(ref, data);
     return data;
@@ -90,9 +107,14 @@ export const deletePromoCode = async (code: string): Promise<void> => {
 /**
  * Müştəri kodu səbətdə yoxlayır (mark-etmir, sadəcə validate edir).
  * Ok varsa { valid: true, discount } qaytarır.
+ *
+ * Əgər kod konkret müştəriyə təyin olunubsa (`assignedTo.userId`), yalnız
+ * həmin istifadəçi onu istifadə edə bilər. `userId` parametri verilməyibsə
+ * və ya uyğun deyilsə, kod rədd olunur.
  */
 export const validatePromoCode = async (
-  code: string
+  code: string,
+  userId?: string
 ): Promise<{ valid: true; discount: number } | { valid: false; reason: string }> => {
   const trimmed = (code || '').trim();
   if (!/^\d{6}$/.test(trimmed)) {
@@ -107,7 +129,39 @@ export const validatePromoCode = async (
   if (data.used) {
     return { valid: false, reason: 'Bu promo kod artıq istifadə olunub' };
   }
+  // Konkret müştəriyə təyin olunmuş kod yalnız o müştəri üçün
+  if (data.assignedTo?.userId) {
+    if (!userId || data.assignedTo.userId !== userId) {
+      return {
+        valid: false,
+        reason: 'Bu promo kod sizə təyin olunmayıb',
+      };
+    }
+  }
   return { valid: true, discount: data.discount };
+};
+
+/**
+ * Müəyyən istifadəçiyə təyin olunmuş, hələ istifadə edilməmiş promo kodları qaytarır.
+ * Müştərinin "Sifarişlərim" səhifəsində göstərmək üçün istifadə olunur.
+ */
+export const getUserAssignedCodes = async (userId: string): Promise<PromoCode[]> => {
+  if (!userId) return [];
+  const snap = await getDocs(collection(db, COLLECTION));
+  const list: PromoCode[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as PromoCode;
+    if (data.assignedTo?.userId === userId && !data.used) {
+      list.push(data);
+    }
+  });
+  // Ən yenilər əvvəl
+  list.sort((a, b) => {
+    const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return tb - ta;
+  });
+  return list;
 };
 
 /**

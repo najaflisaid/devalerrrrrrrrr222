@@ -110,13 +110,18 @@ const AdminGlobalNotifications: React.FC = () => {
           )
             return;
           if (data.isReadByAdmin) return;
-          const ms = data?.createdAt?.toMillis
+          // ROOT FIX: paidAt prioritetli — sifariş əvvəl `pending_payment` kimi yaranır,
+          // sonra ödəniş uğurlu olanda `paidAt` qoyulur. Bu vaxt admin əvvəlcədən tab-ı
+          // açıb `lastSeen=now` etmiş ola bilər; createdAt ondan kiçik, paidAt böyükdür.
+          const paid = data?.paidAt?.toMillis ? data.paidAt.toMillis() : 0;
+          const created = data?.createdAt?.toMillis
             ? data.createdAt.toMillis()
             : typeof data?.createdAt === 'number'
             ? data.createdAt
             : data?.createdAt instanceof Date
             ? data.createdAt.getTime()
             : 0;
+          const ms = Math.max(paid, created);
           if (ms > lastSeen) count += 1;
         });
         // İlk snapshot-da səs vermə, yalnız ARTIM olduqda

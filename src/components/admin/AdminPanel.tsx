@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -187,9 +187,14 @@ const AdminPanel: React.FC = () => {
         // Yalnız ödənilmiş və ya hazırlanan, oxunmamış sifarişlər
         if (data.status === 'pending_payment' || data.status === 'cancelled' || data.status === 'payment_failed') return;
         if (data.isReadByAdmin) return;
-        const ms = data?.createdAt?.toMillis ? data.createdAt.toMillis()
+        // ROOT FIX: paidAt > createdAt — sifariş əvvəl pending_payment kimi yaranır,
+        // ödəniş uğurlu olduqda paidAt qoyulur. Admin əvvəl tab-ı açıb lastSeen=now etmişsə,
+        // createdAt ondan kiçik olur amma paidAt sonrakı vaxtdır → düzgün hesablansın.
+        const paid = data?.paidAt?.toMillis ? data.paidAt.toMillis() : 0;
+        const created = data?.createdAt?.toMillis ? data.createdAt.toMillis()
           : (typeof data?.createdAt === 'number' ? data.createdAt
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
+        const ms = Math.max(paid, created);
         if (ms > customerOrdersLastSeen) count += 1;
       });
       // Play sound when count INCREASES (new order arrived). Skip the very
@@ -1945,6 +1950,41 @@ const AdminPanel: React.FC = () => {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${product.stock === 0 ? 'bg-red-100 text-red-700' : product.stock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                           {product.stock === 0 ? 'Bitdi' : `Mövcud: ${product.stock}`}
                         </span>
+                        {/* Görünürlük badge — bir baxışda hansı qrupun görəcəyi məlum olsun */}
+                        {(() => {
+                          const v = (product as any).visibleTo || 'all';
+                          if (v === 'b2b') {
+                            return (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 inline-flex items-center gap-1"
+                                title="Yalnız B2B müştərilər görür"
+                                data-testid={`visibility-badge-${product.id}`}
+                              >
+                                B2B
+                              </span>
+                            );
+                          }
+                          if (v === 'customer') {
+                            return (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200 inline-flex items-center gap-1"
+                                title="Yalnız müştərilər görür (qonaq + normal). B2B görmür."
+                                data-testid={`visibility-badge-${product.id}`}
+                              >
+                                C
+                              </span>
+                            );
+                          }
+                          return (
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1"
+                              title="Hamı görür (qonaq + müştəri + B2B)"
+                              data-testid={`visibility-badge-${product.id}`}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </span>
+                          );
+                        })()}
                       </div>
                       {product.isBestseller && (
                         <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">

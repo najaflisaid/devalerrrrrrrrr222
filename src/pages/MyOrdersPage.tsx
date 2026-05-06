@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
+  Ticket,
 } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -27,6 +28,7 @@ import {
   type CustomerOrder,
   type CustomerOrderStatus,
 } from '../services/customerOrderService';
+import { getUserAssignedCodes, type PromoCode } from '../services/promoCodeService';
 
 const statusBadge = (status: CustomerOrderStatus) => {
   const map: Record<CustomerOrderStatus, string> = {
@@ -224,6 +226,8 @@ const MyOrdersPage: React.FC = () => {
     discountExpiresAt?: any;
     discountUsed?: boolean;
   }>({});
+  const [assignedCodes, setAssignedCodes] = useState<PromoCode[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -234,7 +238,21 @@ const MyOrdersPage: React.FC = () => {
     }
     void load(userId);
     void loadProfileExtra(userId);
+    // Müştəriyə təyin olunmuş hələ istifadə edilməmiş promo kodları yüklə
+    getUserAssignedCodes(userId)
+      .then(setAssignedCodes)
+      .catch(() => setAssignedCodes([]));
   }, [navigate]);
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 1500);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const load = async (userId: string) => {
     setLoading(true);
@@ -382,6 +400,56 @@ const MyOrdersPage: React.FC = () => {
                     })}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Sizə təyin olunmuş promo kodlar — admin hər kəs üçün ümumi yox, KONKRET sizin üçün yaradıb */}
+            {assignedCodes.length > 0 && (
+              <div
+                className="bg-white border border-emerald-200 rounded-2xl p-5 shadow-sm"
+                data-testid="profile-assigned-codes-card"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Ticket className="h-4 w-4 text-emerald-700" />
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 font-bold">Sizə hədiyyə kod{assignedCodes.length > 1 ? 'lar' : ''}</p>
+                </div>
+                <div className="space-y-2">
+                  {assignedCodes.map((c) => (
+                    <div
+                      key={c.code}
+                      className="relative bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-3"
+                      data-testid={`assigned-code-${c.code}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-mono text-2xl font-bold text-emerald-900 tabular-nums leading-tight">
+                            {c.code}
+                          </p>
+                          <p className="text-xs text-emerald-700 mt-0.5">
+                            {c.discount}% endirim · birdəfəlik
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleCopyCode(c.code)}
+                          className="px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 inline-flex items-center gap-1 flex-shrink-0"
+                          data-testid={`copy-code-${c.code}`}
+                          title="Kodu köçür"
+                        >
+                          {copiedCode === c.code ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3" /> OK
+                            </>
+                          ) : (
+                            'Köçür'
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-emerald-700/70 mt-2 leading-snug">
+                        Səbətdə "Endirim kodu" hissəsinə daxil edib tətbiq edin.
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </aside>

@@ -8,7 +8,7 @@
  *
  * `localStorage.admin_sound_notifications_enabled === 'false'` olarsa səs verilmir.
  */
-const SPEECH_TEXT = 'Yeni sifariş daxil oldu';
+const SPEECH_TEXT = 'New order received';
 const CUSTOM_AUDIO_URL = '/sounds/new-order.mp3';
 
 let cachedCustomAudioOk: boolean | null = null;
@@ -70,23 +70,18 @@ const playSpeech = (): boolean => {
     utter.rate = 1.0;
     utter.volume = 1.0;
     utter.pitch = 1.0;
-    utter.lang = 'az-AZ';
+    utter.lang = 'en-US';
 
     const voices = synth.getVoices();
     if (voices && voices.length > 0) {
-      const azVoice = voices.find((v) => v.lang?.toLowerCase().startsWith('az'));
-      const trVoice = voices.find((v) => v.lang?.toLowerCase().startsWith('tr'));
-      const ruVoice = voices.find((v) => v.lang?.toLowerCase().startsWith('ru'));
-      if (azVoice) {
-        utter.voice = azVoice;
-        utter.lang = azVoice.lang;
-      } else if (trVoice) {
-        // Türk dilində səs azərbaycanca mətni rahat oxuyur (oxşar fonetika)
-        utter.voice = trVoice;
-        utter.lang = 'tr-TR';
-      } else if (ruVoice) {
-        utter.voice = ruVoice;
-        utter.lang = 'ru-RU';
+      // En yaxşı: ABS/UK ingilis səs. Yoxsa default ingilis. Sonda heç biri yoxdursa default qalır.
+      const enUsVoice = voices.find((v) => v.lang?.toLowerCase() === 'en-us');
+      const enGbVoice = voices.find((v) => v.lang?.toLowerCase() === 'en-gb');
+      const anyEnVoice = voices.find((v) => v.lang?.toLowerCase().startsWith('en'));
+      const picked = enUsVoice || enGbVoice || anyEnVoice;
+      if (picked) {
+        utter.voice = picked;
+        utter.lang = picked.lang;
       }
     }
     synth.speak(utter);

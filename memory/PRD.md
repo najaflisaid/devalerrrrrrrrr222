@@ -260,3 +260,39 @@ Bax: `/app/memory/test_credentials.md`
 - Filter həm məhsul siyahısı grid-ində, həm başlıqdakı məhsul sayğacında tətbiq olunur. Müştəri qruplarına xüsusi məhsulların idarəsi üçün admin tez-tez B2B-yə xüsusi və ya yalnız adi müştəriyə görünən məhsulları izləməyə kömək edir.
 - Layout `md:grid-cols-3` → `md:grid-cols-2 lg:grid-cols-4`-ə dəyişdi ki, mobil/tablet ekrana sığsın.
 - File: `src/components/admin/AdminPanel.tsx`
+
+## Jan 6, 2026 — iteration #4 — Visibility badge, English voice, customer notification root-fix, user-assigned promo codes
+
+### #1 Visibility badge per məhsul kartı (admin)
+Admin → Məhsullar siyahısında hər məhsul kartında stok badge-inin yanında kiçik vizual badge:
+- 👁 yaşıl emerald = `visibleTo === 'all'` (hamı görür)
+- mavi **B2B** = `visibleTo === 'b2b'`
+- narıncı **C** = `visibleTo === 'customer'`
+Hover-ə açıqlama tooltip-i. Filterdən asılı olmayaraq bir baxışdan səhv konfiqurasiyalanmış məhsulları aşkar etmək asanlaşdı.
+
+### #2 Bildiriş səsi ingilis dilinə keçdi
+`notificationSound.ts`: `SPEECH_TEXT = 'New order received'`, `lang = 'en-US'`, voice picker → en-US > en-GB > any English. TTS keyfiyyəti yüksək (bütün modern brauzerlər en-US səs ilə gəlir). Gələcəkdə `/sounds/new-order.mp3` faylı qoyulsa avtomatik üstün tutulur (custom yazı).
+
+### #3 Müştəri sifariş bildirişi tətiklənmirdi — ROOT FIX
+- **Problem**: Müştəri sifarişi `pending_payment` statusu ilə yaranır (`createdAt` o anda qoyulur). Admin bu vaxt tab-ı açıb `lastSeen=now` etmiş ola bilər. Sonra ödəniş uğurlu olduqda status `preparing` olur, AMMA `createdAt` köhnə qalır → `createdAt < lastSeen` → sayğac artmır → səs gəlmir, badge yoxdur.
+- **Fix**: `AdminPanel.tsx` və `AdminGlobalNotifications.tsx` müştəri sifariş listener-lərində `ms = max(paidAt, createdAt)` istifadə olunur. `paidAt` `PaymentSuccessPage`-də ödəniş uğurla bitəndə qoyulur, deməli yeni dəyər həmişə `lastSeen`-dan böyük olacaq (ödənişdən sonra admin tab-ı açana qədər) → düzgün sayılır. B2B sifarişlər toxunulmadı (orada `pending_payment` mərhələsi yoxdur).
+
+### #4 Müştəriyə təyin olunmuş promo kodlar
+Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "Sifarişlərim" sidebar-ında həmin kodu görür və köçürə bilər.
+- `promoCodeService.ts`:
+  - `PromoCode` interface-inə `assignedTo: { userId, userEmail, userName }` (optional) əlavə olundu
+  - `createPromoCode(discount, createdBy, assignedTo?)` — yeni opsional parametr
+  - `validatePromoCode(code, userId?)` — assigned kod yalnız həmin userId üçün etibarlıdır
+  - Yeni `getUserAssignedCodes(userId)` — istifadə edilməmiş təyin olunmuş kodları qaytarır
+- `PromoCodesTab.tsx`: yuxarıda müştəri seçim paneli (axtarışlı, max 30 nəticə). Seçilibsə badge görünür, "Sil" düyməsi ilə təmizlənir. Cədvəlin "İstifadəçi" sütunu "Təyinat / İstifadə"-yə dəyişdi — kim üçün təyin olunduğunu və kim istifadə etdiyini ayırd edir.
+- `MyOrdersPage.tsx`: profil sidebar-ına yeni "Sizə hədiyyə kodlar" kartı — kodu, faiz, "Köçür" düyməsi və qısa təlimat. Admin kod yaradan kimi avtomatik görünür.
+- `CartPage.tsx`: `validatePromoCode(code, userId)` çağırılır — başqa müştəriyə təyin olunmuş kodu istifadəyə çalışan müştəri "Bu promo kod sizə təyin olunmayıb" xətası alır.
+
+### Files
+- `src/utils/notificationSound.ts` (en-US speech)
+- `src/components/AdminGlobalNotifications.tsx` (paidAt fix)
+- `src/components/admin/AdminPanel.tsx` (paidAt fix + visibility badge + Eye icon)
+- `src/services/promoCodeService.ts` (assignedTo + getUserAssignedCodes)
+- `src/components/admin/PromoCodesTab.tsx` (user picker UI)
+- `src/pages/MyOrdersPage.tsx` (assigned codes card)
+- `src/pages/CartPage.tsx` (userId-aware validation)
