@@ -82,11 +82,11 @@ const StatsBand: React.FC = () => {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-6 md:mb-8 dv-reveal is-in">
           <div className="inline-flex items-center mb-3">
-            <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
-            <span className="mx-3 text-sm sm:text-base uppercase tracking-[0.4em] dv-shimmer font-semibold">
+            <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
+            <span className="mx-2.5 text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
               {t('stats.eyebrow', { defaultValue: 'Bir Baxışda' })}
             </span>
-            <span className="inline-block w-8 h-[1px] bg-[#D4AF37]" />
+            <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
           </div>
         </div>
 

@@ -370,3 +370,31 @@ Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "
 - `src/index.css` (.dv-navlink letter/word spacing)
 - `src/components/BestSellersSection.tsx` (h2 tracking + wordSpacing)
 - `src/components/HomeProductBanners.tsx` (h2 tracking + wordSpacing)
+
+## Jan 6, 2026 — iteration #9 — Eyebrow uniformlaşma + nav daha sıx + mobil bug fix
+
+### Eyebrow ölçüləri uniformlaşdırıldı
+- 4 home eyebrow indi tam eyni ölçüdədir: `text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold` + `mx-2.5` margin + `w-6 h-[1px]` xəttlər
+- `StatsBand.tsx` ("Bir Baxışda") — əvvəl `text-sm sm:text-base tracking-[0.4em]` idi, indi BestSellers ilə eyni
+- "BİZİM ÖHDƏLİYİMİZ", "De Valeur'da kəşfə çıxın", "Seçilmiş Kolleksiya", "Bir Baxışda" — hamısı eyni ölçü, eyni xətt eni
+
+### Nav letter/word spacing daha sıx
+`.dv-navlink` və `.dv-mobile-nav-link`:
+- `letter-spacing: 0.02em` (əvvəl 0.04em — yarı qədər sıx)
+- `word-spacing: -0.06em` (əvvəl -0.04em — daha sıxılmış sözlər arası)
+- `font-size: 0.72rem` (əvvəl 0.78rem — kiçilmiş)
+- "ANA SƏHIFƏ" və s. daha incə, daha az "kobud"
+
+### Mobil responsive bug fix
+- **Bug**: Scroll edildikdə mobildə hamburger menu açılmırdı
+- **Kök səbəb**: Header kondensasiya effekti (backdrop-blur, h-12) mobildə də tətbiq olunurdu və z-index/click target düzgün işləmirdi
+- **Fix**:
+  - Kondensasiya effekti yalnız `md:` (768px+) breakpoint-də işləyir — mobildə header həmişə sabit (`bg-white border-b`, h-16, full logo)
+  - Hamburger button `p-1` → `p-2` (16px → 24px click target), `-ml-1` → `-ml-2`, `relative z-[51]` (header z-50-dən bir pillə yuxarı), `data-testid="mobile-menu-toggle"`
+  - Mega-menu top offset hesablanması `window.innerWidth >= 768` qoruması ilə: mobildə `64px` qalır
+- **Doğrulama**: Playwright iPhone 14 Pro viewport-unda scroll → click → "menu-open" panel state təsdiqləndi; screenshot-da bütün nav link-ləri uppercase + tighter görünür.
+
+### Files
+- `src/components/StatsBand.tsx` (eyebrow uniform)
+- `src/index.css` (nav letter/word/font tightening)
+- `src/components/Header.tsx` (md-only condense + bigger hamburger + z-fix + testid)
