@@ -47,7 +47,6 @@ const BrandShowcase: React.FC = () => {
       en: 'Behind every timepiece, a story. Our curated brands are crafted by the world\'s leading horologists.',
     },
     cta: { az: 'Bütün brendləri kəşf et', ru: 'Открыть все бренды', en: 'Discover all brands' },
-    items: { az: 'model', ru: 'моделей', en: 'pieces' },
   };
 
   if (brands.length === 0) return null;
@@ -76,43 +75,23 @@ const BrandShowcase: React.FC = () => {
           </p>
         </div>
 
-        {/* Brand grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/8 border border-black/8">
+        {/* Brand grid — minimalist typographic */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 md:gap-y-14 gap-x-6">
           {brands.map((b, idx) => (
             <button
               key={b.name}
               onClick={() => navigate(`/brand/${toBrandSlug(b.name)}`)}
-              className={`dv-brand-card group relative bg-white aspect-square sm:aspect-[4/3] md:aspect-square flex flex-col items-center justify-center p-4 sm:p-6 transition-all duration-500 hover:bg-black overflow-hidden dv-reveal ${inView ? 'is-in' : ''}`}
-              style={{ transitionDelay: `${80 + idx * 50}ms` }}
+              className={`group relative flex flex-col items-center justify-center py-2 transition-opacity duration-500 hover:opacity-100 md:opacity-70 dv-reveal ${inView ? 'is-in' : ''}`}
+              style={{ transitionDelay: `${80 + idx * 40}ms` }}
               data-testid={`dv-brand-card-${b.name}`}
             >
-              {/* Subtle gold corner accent */}
-              <span
-                aria-hidden="true"
-                className="absolute top-0 left-0 w-0 h-[1px] bg-[#D4AF37] group-hover:w-full transition-[width] duration-700 ease-out"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute bottom-0 right-0 w-0 h-[1px] bg-[#D4AF37] group-hover:w-full transition-[width] duration-700 ease-out"
-              />
-
-              {/* Brand name */}
-              <span className="font-playfair text-base sm:text-xl md:text-2xl lg:text-3xl font-light tracking-tight text-black group-hover:text-white transition-colors duration-500 text-center leading-tight">
+              <span className="font-playfair text-base sm:text-lg md:text-xl font-light tracking-wide text-black text-center leading-tight">
                 {b.name}
               </span>
-
-              {/* Count badge */}
-              <span className="mt-2 sm:mt-3 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-black/40 group-hover:text-[#D4AF37] transition-colors duration-500 font-mono">
-                {b.count} {copy.items[lang]}
-              </span>
-
-              {/* Arrow reveal on hover */}
               <span
                 aria-hidden="true"
-                className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 text-base sm:text-lg text-white opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-500"
-              >
-                →
-              </span>
+                className="mt-2 block h-px w-4 bg-black/15 group-hover:w-10 group-hover:bg-[#D4AF37] transition-[width,background-color] duration-500"
+              />
             </button>
           ))}
         </div>
