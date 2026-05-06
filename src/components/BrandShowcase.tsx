@@ -98,7 +98,10 @@ const BrandShowcase: React.FC = () => {
               key={name}
               onClick={() => navigate(`/brand/${toBrandSlug(name)}`)}
               className={`dv-brand-tile group relative flex flex-col items-center justify-center px-3 py-6 sm:py-8 transition-opacity duration-500 hover:opacity-100 md:opacity-75 ${inView ? 'dv-brand-in' : ''}`}
-              style={{ animationDelay: `${120 + idx * 110}ms` }}
+              style={{
+                animationDelay: `${120 + idx * 110}ms`,
+                ['--dv-line-delay' as any]: `${idx * 0.6}s`,
+              }}
               data-testid={`dv-brand-card-${name}`}
             >
               {/* Hover frame — 4 lines drawing in sequence */}
