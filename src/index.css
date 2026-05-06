@@ -668,6 +668,64 @@ html.dark .dv-orb { opacity: 0.28; }
 }
 /* ================= /Minimalist Desktop Mega Menu ================= */
 
+/* ================= Brand Showcase tiles ================= */
+@keyframes dv-brand-fade-in {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 0.75; transform: translateY(0); }
+}
+.dv-brand-tile {
+  opacity: 0;
+}
+.dv-brand-tile.dv-brand-in {
+  animation: dv-brand-fade-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (hover: none) {
+  .dv-brand-tile.dv-brand-in { animation-duration: 600ms; }
+}
+
+/* Hover frame lines — draw around the tile sequentially */
+.dv-brand-line {
+  position: absolute;
+  background: #000;
+  pointer-events: none;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dv-brand-line-top {
+  top: 0; left: 0; height: 1px; width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.dv-brand-line-right {
+  top: 0; right: 0; width: 1px; height: 100%;
+  transform-origin: top center;
+  transform: scaleY(0);
+}
+.dv-brand-line-bottom {
+  bottom: 0; right: 0; height: 1px; width: 100%;
+  transform-origin: right center;
+  transform: scaleX(0);
+}
+.dv-brand-line-left {
+  bottom: 0; left: 0; width: 1px; height: 100%;
+  transform-origin: bottom center;
+  transform: scaleY(0);
+}
+.dv-brand-tile:hover .dv-brand-line-top    { transform: scaleX(1); transition-delay: 0ms; }
+.dv-brand-tile:hover .dv-brand-line-right  { transform: scaleY(1); transition-delay: 280ms; }
+.dv-brand-tile:hover .dv-brand-line-bottom { transform: scaleX(1); transition-delay: 560ms; }
+.dv-brand-tile:hover .dv-brand-line-left   { transform: scaleY(1); transition-delay: 840ms; }
+/* On leave — collapse in reverse */
+.dv-brand-tile .dv-brand-line-top    { transition-delay: 840ms; }
+.dv-brand-tile .dv-brand-line-right  { transition-delay: 560ms; }
+.dv-brand-tile .dv-brand-line-bottom { transition-delay: 280ms; }
+.dv-brand-tile .dv-brand-line-left   { transition-delay: 0ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dv-brand-tile.dv-brand-in { animation: none; opacity: 0.75; }
+  .dv-brand-line { transition: none !important; }
+}
+/* ================= /Brand Showcase tiles ================= */
+
 /* Dropdown menu animations */
 @keyframes slideDown {
   from {

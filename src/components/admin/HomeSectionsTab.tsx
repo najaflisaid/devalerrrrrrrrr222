@@ -109,7 +109,7 @@ const HomeSectionsTab: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Ana səhifə bölmələri</h2>
-          <p className="text-sm text-gray-500 mt-1">Maison Quote və Signature Piece 3D mətnlərini idarə edin.</p>
+          <p className="text-sm text-gray-500 mt-1">Signature Piece, brend vitrinı və digər ana səhifə bölmələrini idarə edin.</p>
         </div>
         <div className="flex items-center gap-3">
           {status && <span className="text-sm text-gray-600">{status}</span>}
@@ -244,6 +244,118 @@ const HomeSectionsTab: React.FC = () => {
                     ? `${filtered.length} nəticə tapıldı (${products.length} məhsuldan)`
                     : 'Boş buraxsanız, avtomatik ilk best-seller göstərilir.'}
                 </p>
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* --- Brand Showcase --- */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5" data-testid="home-sections-brand-showcase">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Premium brendlər vitrinı</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Ana səhifədə hansı brendlər və hansı sıra ilə görünməsini seçin.</p>
+          </div>
+          <Toggle
+            on={data.brandShowcase.enabled}
+            onChange={(v) => setData({ ...data, brandShowcase: { ...data.brandShowcase, enabled: v } })}
+          />
+        </div>
+
+        <div>
+          <Label>Maksimum brend sayı (1–12)</Label>
+          <input
+            type="number"
+            min={1}
+            max={12}
+            value={data.brandShowcase.maxBrands}
+            onChange={(e) =>
+              setData({
+                ...data,
+                brandShowcase: {
+                  ...data.brandShowcase,
+                  maxBrands: Math.max(1, Math.min(12, Number(e.target.value) || 8)),
+                },
+              })
+            }
+            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+            data-testid="home-sections-brand-max"
+          />
+        </div>
+
+        <div>
+          <Label>Brendlər</Label>
+          <p className="text-xs text-gray-500 mb-2">
+            Heç biri seçilməsə, ən çox məhsulu olan top {data.brandShowcase.maxBrands} brend avtomatik göstərilir.
+            Seçdiyiniz brendlər seçilmə sırası ilə vitrində görünür.
+          </p>
+
+          {(() => {
+            const allBrands = Array.from(
+              new Set(products.map((p) => (p as any).brand).filter(Boolean))
+            ).sort((a: string, b: string) => a.localeCompare(b, 'az'));
+            const selected = data.brandShowcase.selectedBrands || [];
+            const toggleBrand = (b: string) => {
+              const next = selected.includes(b)
+                ? selected.filter((x) => x !== b)
+                : [...selected, b];
+              setData({ ...data, brandShowcase: { ...data.brandShowcase, selectedBrands: next } });
+            };
+            return (
+              <>
+                {selected.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {selected.map((b, i) => (
+                      <span
+                        key={b}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white rounded-full text-xs"
+                      >
+                        <span className="font-mono opacity-60">{i + 1}.</span> {b}
+                        <button
+                          type="button"
+                          onClick={() => toggleBrand(b)}
+                          className="ml-1 opacity-70 hover:opacity-100"
+                          aria-label="Sil"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setData({ ...data, brandShowcase: { ...data.brandShowcase, selectedBrands: [] } })
+                      }
+                      className="text-xs text-gray-500 hover:text-black underline ml-1"
+                    >
+                      Hamısını təmizlə
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto border border-gray-100 rounded-lg p-3 bg-gray-50">
+                  {allBrands.map((b: string) => {
+                    const isSel = selected.includes(b);
+                    return (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => toggleBrand(b)}
+                        className={`px-3 py-2 rounded-lg text-sm text-left transition-colors border ${
+                          isSel
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-800 border-gray-200 hover:border-black hover:bg-gray-50'
+                        }`}
+                        data-testid={`brand-toggle-${b}`}
+                      >
+                        {b}
+                      </button>
+                    );
+                  })}
+                  {allBrands.length === 0 && (
+                    <p className="col-span-full text-xs text-gray-500 italic">Brend tapılmadı.</p>
+                  )}
+                </div>
               </>
             );
           })()}

@@ -215,6 +215,11 @@ export interface HomepageSections {
     featuredProductId: string;
     enabled: boolean;
   };
+  brandShowcase: {
+    enabled: boolean;
+    selectedBrands: string[];
+    maxBrands: number;
+  };
 }
 
 const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
@@ -271,6 +276,11 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     featuredProductId: '',
     enabled: true,
   },
+  brandShowcase: {
+    enabled: true,
+    selectedBrands: [],
+    maxBrands: 8,
+  },
 };
 
 export const getHomepageSections = async (): Promise<HomepageSections> => {
@@ -282,6 +292,7 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
       return {
         quote: { ...DEFAULT_HOMEPAGE_SECTIONS.quote, ...(data.quote || {}) },
         signature: { ...DEFAULT_HOMEPAGE_SECTIONS.signature, ...(data.signature || {}) },
+        brandShowcase: { ...DEFAULT_HOMEPAGE_SECTIONS.brandShowcase, ...(data.brandShowcase || {}) },
       };
     }
   } catch (err) {

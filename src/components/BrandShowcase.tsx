@@ -4,32 +4,48 @@ import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import { toBrandSlug } from '../utils/brandSlug';
 import { useInView } from '../hooks/useInView';
+import { getHomepageSections, DEFAULT_HOMEPAGE_SECTIONS } from '../services/contentService';
 import type { Product } from '../types';
-
-interface BrandStat {
-  name: string;
-  count: number;
-}
 
 const BrandShowcase: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { ref, inView } = useInView<HTMLElement>();
-  const [brands, setBrands] = useState<BrandStat[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [enabled, setEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const products: Product[] = await productService.getAll();
-        const counts = new Map<string, number>();
-        products.forEach((p) => {
-          if (p.brand) counts.set(p.brand, (counts.get(p.brand) || 0) + 1);
-        });
-        const list = Array.from(counts.entries())
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 8);
-        setBrands(list);
+        const [products, sections] = await Promise.all([
+          productService.getAll(),
+          getHomepageSections(),
+        ]);
+        setEnabled(sections.brandShowcase?.enabled ?? true);
+
+        const allBrands = Array.from(
+          new Set((products as Product[]).map((p) => p.brand).filter(Boolean) as string[])
+        );
+
+        const selected = sections.brandShowcase?.selectedBrands || DEFAULT_HOMEPAGE_SECTIONS.brandShowcase.selectedBrands;
+        const max = sections.brandShowcase?.maxBrands ?? DEFAULT_HOMEPAGE_SECTIONS.brandShowcase.maxBrands;
+
+        let list: string[] = [];
+        if (selected.length > 0) {
+          // Admin-selected order respected, only valid existing brands
+          list = selected.filter((b) => allBrands.includes(b));
+        } else {
+          // Fallback: top-N by product count
+          const counts = new Map<string, number>();
+          (products as Product[]).forEach((p) => {
+            if (p.brand) counts.set(p.brand, (counts.get(p.brand) || 0) + 1);
+          });
+          list = Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, max)
+            .map(([name]) => name);
+        }
+        setBrands(list.slice(0, max));
       } catch (e) {
         console.error('BrandShowcase load error:', e);
       }
@@ -49,7 +65,7 @@ const BrandShowcase: React.FC = () => {
     cta: { az: 'Bütün brendləri kəşf et', ru: 'Открыть все бренды', en: 'Discover all brands' },
   };
 
-  if (brands.length === 0) return null;
+  if (!enabled || brands.length === 0) return null;
 
   return (
     <section
@@ -75,23 +91,25 @@ const BrandShowcase: React.FC = () => {
           </p>
         </div>
 
-        {/* Brand grid — minimalist typographic */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 md:gap-y-14 gap-x-6">
-          {brands.map((b, idx) => (
+        {/* Brand grid — minimalist typographic with sequential reveal + hover frame */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 md:gap-y-14 gap-x-2 md:gap-x-6">
+          {brands.map((name, idx) => (
             <button
-              key={b.name}
-              onClick={() => navigate(`/brand/${toBrandSlug(b.name)}`)}
-              className={`group relative flex flex-col items-center justify-center py-2 transition-opacity duration-500 hover:opacity-100 md:opacity-70 dv-reveal ${inView ? 'is-in' : ''}`}
-              style={{ transitionDelay: `${80 + idx * 40}ms` }}
-              data-testid={`dv-brand-card-${b.name}`}
+              key={name}
+              onClick={() => navigate(`/brand/${toBrandSlug(name)}`)}
+              className={`dv-brand-tile group relative flex flex-col items-center justify-center px-3 py-6 sm:py-8 transition-opacity duration-500 hover:opacity-100 md:opacity-75 ${inView ? 'dv-brand-in' : ''}`}
+              style={{ animationDelay: `${120 + idx * 110}ms` }}
+              data-testid={`dv-brand-card-${name}`}
             >
-              <span className="font-playfair text-base sm:text-lg md:text-xl font-light tracking-wide text-black text-center leading-tight">
-                {b.name}
+              {/* Hover frame — 4 lines drawing in sequence */}
+              <span aria-hidden="true" className="dv-brand-line dv-brand-line-top" />
+              <span aria-hidden="true" className="dv-brand-line dv-brand-line-right" />
+              <span aria-hidden="true" className="dv-brand-line dv-brand-line-bottom" />
+              <span aria-hidden="true" className="dv-brand-line dv-brand-line-left" />
+
+              <span className="font-playfair text-base sm:text-lg md:text-xl font-light tracking-wide text-black text-center leading-tight relative z-[1]">
+                {name}
               </span>
-              <span
-                aria-hidden="true"
-                className="mt-2 block h-px w-4 bg-black/15 group-hover:w-10 group-hover:bg-[#D4AF37] transition-[width,background-color] duration-500"
-              />
             </button>
           ))}
         </div>
