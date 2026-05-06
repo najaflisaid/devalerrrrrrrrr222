@@ -370,7 +370,8 @@ const AiChatWidget: React.FC = () => {
       p.startsWith('/workers') ||
       p.startsWith('/b2b-login') ||
       p.startsWith('/admin-login') ||
-      p.startsWith('/b2b-request')
+      p.startsWith('/b2b-request') ||
+      p.startsWith('/payment')
     );
   }, [location.pathname, chatEnabled]);
 
