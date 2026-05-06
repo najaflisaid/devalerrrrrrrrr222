@@ -635,23 +635,24 @@ html.dark .dv-orb { opacity: 0.28; }
   width: 12px;
 }
 
-/* Desktop top-nav link — underline animasiyası silindi (istifadəçi tələbi).
-   Yalnız rəng dəyişməsi qalır. */
-/* Mobil menyu link-ləri də desktop ilə eyni: uppercase + sıx letter/word spacing */
+/* Desktop top-nav link — Rosefield-style: clean sans, title-case, thin */
+/* Mobil menyu link-ləri də desktop ilə eyni */
 .dv-mobile-nav-link {
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  word-spacing: -0.06em;
-  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: 0;
+  word-spacing: normal;
+  font-size: 0.875rem;
+  font-weight: 400;
 }
 
 .dv-navlink {
   position: relative;
   transition: color 200ms ease;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  word-spacing: -0.06em;
-  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: 0;
+  word-spacing: normal;
+  font-size: 0.8125rem;
+  font-weight: 400;
 }
 .dv-navlink::after {
   content: none;
