@@ -296,6 +296,10 @@ const AdminPanel: React.FC = () => {
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('all');
   const [adminBrandFilter, setAdminBrandFilter] = useState('all');
   const [adminStockFilter, setAdminStockFilter] = useState('all');
+  // Görünürlük filteri: hansı istifadəçi qrupuna məhsul göstərilir
+  // 'all' → hamısı, 'public' → hamı (visibleTo === 'all'),
+  // 'b2b' → yalnız B2B, 'customer' → yalnız müştəri (qeydiyyatsız+normal)
+  const [adminVisibilityFilter, setAdminVisibilityFilter] = useState<'all' | 'public' | 'b2b' | 'customer'>('all');
 
   // Admin role toggle modal state
   const [adminToggleTarget, setAdminToggleTarget] = useState<{
@@ -1384,7 +1388,12 @@ const AdminPanel: React.FC = () => {
                       (adminStockFilter === 'inStock' && p.stock > 0) ||
                       (adminStockFilter === 'outOfStock' && p.stock === 0) ||
                       (adminStockFilter === 'lowStock' && p.stock > 0 && p.stock <= 5);
-                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock;
+                    const productVisibility = (p as any).visibleTo || 'all';
+                    const matchesVisibility = adminVisibilityFilter === 'all' ||
+                      (adminVisibilityFilter === 'public' && productVisibility === 'all') ||
+                      (adminVisibilityFilter === 'b2b' && productVisibility === 'b2b') ||
+                      (adminVisibilityFilter === 'customer' && productVisibility === 'customer');
+                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock && matchesVisibility;
                   }).length;
                 })()})
               </h2>
@@ -1480,8 +1489,8 @@ const AdminPanel: React.FC = () => {
                 </div>
               </div>
 
-              {/* Category, Brand, Stock Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Category, Brand, Stock, Visibility Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Kateqoriya</label>
                   <select
@@ -1519,6 +1528,23 @@ const AdminPanel: React.FC = () => {
                     <option value="inStock">Mövcud</option>
                     <option value="outOfStock">Bitdi</option>
                     <option value="lowStock">Az qalıb (≤5)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Görünür kim?
+                    <span className="text-xs text-gray-500 font-normal ml-1">(istifadəçi qrupu)</span>
+                  </label>
+                  <select
+                    value={adminVisibilityFilter}
+                    onChange={(e) => setAdminVisibilityFilter(e.target.value as 'all' | 'public' | 'b2b' | 'customer')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    data-testid="admin-visibility-filter"
+                  >
+                    <option value="all">Hamısı</option>
+                    <option value="public">Hamı görür (qonaq + müştəri + B2B)</option>
+                    <option value="customer">Yalnız müştəri (qeydiyyatsız + normal)</option>
+                    <option value="b2b">Yalnız B2B</option>
                   </select>
                 </div>
               </div>
@@ -1882,8 +1908,13 @@ const AdminPanel: React.FC = () => {
                       (adminStockFilter === 'inStock' && product.stock > 0) ||
                       (adminStockFilter === 'outOfStock' && product.stock === 0) ||
                       (adminStockFilter === 'lowStock' && product.stock > 0 && product.stock <= 5);
+                    const productVisibility = (product as any).visibleTo || 'all';
+                    const matchesVisibility = adminVisibilityFilter === 'all' ||
+                      (adminVisibilityFilter === 'public' && productVisibility === 'all') ||
+                      (adminVisibilityFilter === 'b2b' && productVisibility === 'b2b') ||
+                      (adminVisibilityFilter === 'customer' && productVisibility === 'customer');
 
-                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock;
+                    return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock && matchesVisibility;
                   })
                   .sort((a, b) => {
                     const brandCompare = a.brand.localeCompare(b.brand);

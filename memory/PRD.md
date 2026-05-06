@@ -253,3 +253,10 @@ Bax: `/app/memory/test_credentials.md`
 - `src/components/admin/CustomerOrdersTab.tsx` (preview səsi TTS-ə keçdi)
 - `src/components/Header.tsx` (search analytics genişləndi)
 - `src/pages/CartPage.tsx` (epoint watchdog + orphan order cleanup)
+
+## Jan 6, 2026 — iteration #3 — Admin məhsul filterinə "Görünürlük" filteri
+- Admin panel → Məhsullar bölməsinə yeni "Görünür kim?" filteri əlavə olundu (kateqoriya/brend/stok yanında 4-cü filter olaraq).
+- Seçimlər: **Hamısı** (default), **Hamı görür** (`visibleTo === 'all'`), **Yalnız müştəri** (`visibleTo === 'customer'` — qonaq + normal müştəri), **Yalnız B2B** (`visibleTo === 'b2b'`).
+- Filter həm məhsul siyahısı grid-ində, həm başlıqdakı məhsul sayğacında tətbiq olunur. Müştəri qruplarına xüsusi məhsulların idarəsi üçün admin tez-tez B2B-yə xüsusi və ya yalnız adi müştəriyə görünən məhsulları izləməyə kömək edir.
+- Layout `md:grid-cols-3` → `md:grid-cols-2 lg:grid-cols-4`-ə dəyişdi ki, mobil/tablet ekrana sığsın.
+- File: `src/components/admin/AdminPanel.tsx`
