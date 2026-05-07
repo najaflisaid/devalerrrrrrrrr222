@@ -8,7 +8,7 @@ import { setDoc, doc as fsDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment, fetchEpointWidgetUrl } from '../services/epointPaymentService';
+import { startEpointPayment } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
@@ -327,13 +327,18 @@ const CartPage: React.FC = () => {
 
       try {
         if (mode === 'widget') {
-          const url = await fetchEpointWidgetUrl({
+          // Use the canonical /api/1/payment-request flow (same as official
+          // OpenCart plugin). The hosted Epoint page automatically renders:
+          //  - Apple Pay native button on iOS Safari (when merchant has Apple Pay enabled)
+          //  - Google Pay native button on Android Chrome
+          //  - Card form fallback on all platforms
+          // Top-level navigation is REQUIRED for Apple Pay / Google Pay sheets
+          // to fire — iframes cannot trigger them on iOS Safari.
+          await startEpointPayment({
             orderId,
             amount: total,
             description: `DE VALEUR sifariş #${orderId.slice(0, 10)}`,
           });
-          setWidgetUrl(url);
-          setLoading(false);
           return;
         }
         await startEpointPayment({ orderId, amount: total });
