@@ -389,7 +389,7 @@ const AnalyticsTab: React.FC = () => {
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Search className="h-4 w-4 text-gray-700" />
-              <h3 className="font-semibold text-gray-900">Ən çox axtarılan sözlər</h3>
+              <h3 className="font-semibold text-gray-900">Ən son axtarılan sözlər</h3>
             </div>
             {topSearches.length === 0 ? (
               <p className="text-sm text-gray-500 py-6 text-center">Hələ axtarış statistikası yoxdur</p>

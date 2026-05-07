@@ -123,14 +123,21 @@ export const getTopViewedProducts = async (n = 20): Promise<ProductViewStat[]> =
 };
 
 export const getTopSearches = async (n = 30): Promise<SearchStat[]> => {
+  // Sort by `lastSearched` desc — ən son axtarılan söz birinci, sonra zamana görə
+  const toMs = (v: any): number =>
+    v?.toMillis ? v.toMillis()
+      : typeof v === 'number' ? v
+      : v instanceof Date ? v.getTime()
+      : v?.seconds ? v.seconds * 1000
+      : 0;
   try {
-    const snap = await getDocs(query(collection(db, SEARCHES_COL), orderBy('count', 'desc'), fbLimit(n)));
+    const snap = await getDocs(query(collection(db, SEARCHES_COL), orderBy('lastSearched', 'desc'), fbLimit(n)));
     return snap.docs.map((d) => ({ ...(d.data() as any) } as SearchStat));
   } catch {
     const snap = await getDocs(collection(db, SEARCHES_COL));
     return snap.docs
       .map((d) => ({ ...(d.data() as any) } as SearchStat))
-      .sort((a, b) => (b.count || 0) - (a.count || 0))
+      .sort((a, b) => toMs(b.lastSearched) - toMs(a.lastSearched))
       .slice(0, n);
   }
 };
