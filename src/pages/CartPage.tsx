@@ -810,39 +810,11 @@ const CartPage: React.FC = () => {
                     testId="checkout-guest-email"
                   />
                 )}
-
-                <label className="mt-3 flex items-center gap-2.5 cursor-pointer select-none">
-                  <span
-                    className={`w-4 h-4 border ${emailOptIn ? 'border-black bg-black' : 'border-black/40 bg-white'} flex items-center justify-center transition-colors`}
-                  >
-                    {emailOptIn && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={emailOptIn}
-                    onChange={(e) => setEmailOptIn(e.target.checked)}
-                  />
-                  <span className="text-[13px] text-black/70">{t('checkout.emailOptIn')}</span>
-                </label>
               </div>
 
               {/* Delivery */}
               <div className="mb-8">
                 <h2 className="text-[20px] font-normal text-black mb-4">{t('checkout.delivery')}</h2>
-
-                {/* Country (read-only Azerbaijan) */}
-                <div className="relative mb-3">
-                  <RFInput
-                    label={t('checkout.countryRegion')}
-                    required
-                    value="Azerbaijan"
-                    onChange={() => undefined}
-                    readOnly
-                    testId="checkout-country"
-                  />
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/50 pointer-events-none" />
-                </div>
 
                 {!isLoggedIn && (
                   <div className="grid grid-cols-2 gap-3 mb-3">

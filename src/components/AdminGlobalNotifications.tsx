@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Bell, ShoppingBag } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { playNewOrderSound, unlockAudio } from '../utils/notificationSound';
 
@@ -27,11 +29,14 @@ const getRole = () => {
 };
 
 const AdminGlobalNotifications: React.FC = () => {
+  const navigate = useNavigate();
   const [role, setRole] = useState<string | null>(() => getRole());
+  const [customerCount, setCustomerCount] = useState<number>(0);
+  const [b2bCount, setB2bCount] = useState<number>(0);
   const prevCustomerRef = useRef<number>(-1);
   const prevB2BRef = useRef<number>(-1);
   // last-seen məlumatlarını localStorage-dən reaktiv izləmək üçün storage event-i dinləyirik
-  const [, forceTick] = useState(0);
+  const [tick, forceTick] = useState(0);
 
   // Rol dəyişikliyini izlə (login/logout/role-change)
   useEffect(() => {
@@ -87,6 +92,7 @@ const AdminGlobalNotifications: React.FC = () => {
   useEffect(() => {
     if (role !== 'admin') {
       prevCustomerRef.current = -1;
+      setCustomerCount(0);
       return;
     }
     let lastSeen = 0;
@@ -129,6 +135,7 @@ const AdminGlobalNotifications: React.FC = () => {
           playNewOrderSound();
         }
         prevCustomerRef.current = count;
+        setCustomerCount(count);
       },
       (err) => {
         console.error('Global customer orders snapshot error:', err);
@@ -136,12 +143,13 @@ const AdminGlobalNotifications: React.FC = () => {
     );
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
+  }, [role, tick]);
 
   // B2B sifarişləri — real-vaxt
   useEffect(() => {
     if (role !== 'admin') {
       prevB2BRef.current = -1;
+      setB2bCount(0);
       return;
     }
     let lastSeen = 0;
@@ -171,6 +179,7 @@ const AdminGlobalNotifications: React.FC = () => {
           playNewOrderSound();
         }
         prevB2BRef.current = count;
+        setB2bCount(count);
       },
       (err) => {
         console.error('Global B2B orders snapshot error:', err);
@@ -178,9 +187,49 @@ const AdminGlobalNotifications: React.FC = () => {
     );
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
+  }, [role, tick]);
 
-  return null;
+  // Yalnız admin üçün və ən az 1 yeni sifariş varsa floating bildiriş göstər
+  if (role !== 'admin') return null;
+  const total = customerCount + b2bCount;
+  if (total <= 0) return null;
+
+  const handleClick = () => {
+    // Admin panelinə keçərkən "Müştəri Sifarişləri" prioritetdir; B2B yoxdursa o, var isə o
+    const targetTab = customerCount > 0 ? 'customerOrders' : 'b2bOrders';
+    try {
+      sessionStorage.setItem('admin_target_tab', targetTab);
+    } catch {
+      /* ignore */
+    }
+    navigate('/admin');
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="fixed top-20 right-5 z-[9998] flex items-center gap-2.5 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl shadow-red-500/40 ring-4 ring-red-500/20 transition-all animate-pulse hover:animate-none"
+      data-testid="admin-global-order-badge"
+      aria-label={`${total} yeni sifariş`}
+    >
+      <span className="relative">
+        <Bell className="h-5 w-5" />
+        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-white text-red-600 text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-red-600">
+          {total > 99 ? '99+' : total}
+        </span>
+      </span>
+      <span className="text-sm font-semibold">
+        {customerCount > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <ShoppingBag className="h-3.5 w-3.5" /> {customerCount} yeni sifariş
+          </span>
+        )}
+        {customerCount > 0 && b2bCount > 0 && <span className="opacity-60 mx-1">·</span>}
+        {b2bCount > 0 && <span>B2B: {b2bCount}</span>}
+      </span>
+    </button>
+  );
 };
 
 export default AdminGlobalNotifications;

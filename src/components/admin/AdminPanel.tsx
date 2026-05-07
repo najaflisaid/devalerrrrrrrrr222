@@ -432,6 +432,20 @@ const AdminPanel: React.FC = () => {
       navigate('/');
       return;
     }
+    // Bir başqa səhifədən "yeni sifariş" bildirişi vasitəsilə gəlmiş ola bilərik —
+    // sessionStorage-də saxlanmış hədəf tab varsa, ona keç.
+    try {
+      const target = sessionStorage.getItem('admin_target_tab');
+      if (target) {
+        setActiveTab(target);
+        // Müştəri sifarişləri / B2B sifarişləri tab-ları açılan kimi ack et
+        if (target === 'customerOrders') acknowledgeCustomerOrders();
+        if (target === 'b2bOrders') acknowledgeB2bOrders();
+        sessionStorage.removeItem('admin_target_tab');
+      }
+    } catch {
+      /* ignore */
+    }
     loadData();
   }, [navigate]);
 
