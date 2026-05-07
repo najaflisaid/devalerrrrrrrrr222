@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Ticket, Plus, Copy, Trash2, Check, Loader2, X } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Ticket, Plus, Copy, Trash2, Check, Loader2, X, Search, User as UserIcon } from 'lucide-react';
 import {
   createPromoCode,
   listPromoCodes,
   deletePromoCode,
   type PromoCode,
 } from '../../services/promoCodeService';
+import { userService } from '../../services/userService';
+import type { User } from '../../types';
 
 const DISCOUNT_OPTIONS = [5, 10, 15, 20];
 
