@@ -475,3 +475,23 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 - Verified: backend now successfully reaches Epoint API and Epoint accepts the signature (test merchant key returned the expected `"Merchant not active"` error rather than a signature error — confirms format).
 
 **To go live**: Admin → Sayt Parametrləri → Epoint, save real `public_key` and `private_key` from epoint.az merchant panel + the success/error/result URLs.
+
+## 2026-01 — Epoint full payment system aligned with official OpenCart plugin
+**Reference**: Official OpenCart 3.x Epoint plugin uses `/api/1/payment-request` (not `/api/1/request`) and verifies callback via `/api/1/get-status`.
+
+**Backend changes** (`/app/backend/server.py`):
+- ✅ `/api/epoint/create-payment` — now hits **`https://epoint.az/api/1/payment-request`** first (canonical, matches both OpenCart + WooCommerce plugins), falls back to `/api/1/request` if needed
+- ✅ `/api/epoint/widget-url` — `https://epoint.az/api/1/token/widget` for Apple Pay / Google Pay iframe
+- ✅ NEW `/api/epoint/get-status` — `https://epoint.az/api/1/get-status` for server-side payment verification
+- All three endpoints use the exact PHP-equivalent signature: `base64(sha1(privateKey + base64(json) + privateKey, raw=true))`
+
+**Frontend changes**:
+- ✅ `PaymentSuccessPage` — now calls `/api/epoint/get-status` after Epoint redirect to verify the payment was actually completed (matches OpenCart `callback()` flow). Marks order as `payment_failed` if status is not 'success'.
+
+**Result**: All three payment methods now use the proper API contract:
+- 💳 **Card / İndi ödə** → `payment-request` → top-level redirect to Epoint hosted card form
+- 🍎 **Apple Pay** → `token/widget` → iframe modal (native Apple Pay sheet on iOS Safari)
+- 📱 **Google Pay** → `token/widget` → iframe modal (native Google Pay sheet on Android Chrome)
+- ✅ **Verification** → `get-status` → server-side double-check before marking order paid
+
+**To go fully live**: Save real merchant `public_key` + `private_key` in Admin → Sayt Parametrləri → Epoint. For Apple Pay / Google Pay native sheets to render inside the widget, request a Merchant ID from Epoint (provide screenshots of button placement per their Google Pay onboarding doc).

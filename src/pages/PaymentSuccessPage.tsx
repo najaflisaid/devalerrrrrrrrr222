@@ -6,6 +6,12 @@ import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useCart } from '../context/CartContext';
 import { createGiftCardPromoCode } from '../services/promoCodeService';
+import { getEpointSettings } from '../services/epointPaymentService';
+
+const BACKEND_URL =
+  (import.meta as any).env?.VITE_BACKEND_URL ||
+  (import.meta as any).env?.REACT_APP_BACKEND_URL ||
+  (typeof window !== 'undefined' ? window.location.origin : '');
 
 interface IssuedGiftCode {
   code: string;
@@ -78,6 +84,42 @@ const PaymentSuccessPage: React.FC = () => {
     const finalize = async (resolvedOrderId?: string) => {
       const targetId = resolvedOrderId || pendingId;
       if (targetId) {
+        // Server-side verification via Epoint /api/1/get-status
+        // (matches the official OpenCart plugin's callback flow)
+        try {
+          const settings = await getEpointSettings();
+          if (settings.publicKey && settings.privateKey && BACKEND_URL) {
+            const r = await fetch(`${BACKEND_URL}/api/epoint/get-status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                public_key: settings.publicKey,
+                private_key: settings.privateKey,
+                order_id: targetId,
+              }),
+            });
+            if (r.ok) {
+              const j = await r.json();
+              const ok =
+                String(j?.status).toLowerCase() === 'success' ||
+                String(j?.payment_status).toLowerCase() === 'success';
+              if (!ok) {
+                try {
+                  await updateDoc(doc(db, 'customer_orders', targetId), {
+                    status: 'payment_failed',
+                    paymentStatus: 'failed',
+                  });
+                } catch { /* ignore */ }
+                sessionStorage.removeItem('pending_epoint_order_id');
+                setState('error');
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Epoint get-status verification failed (will trust redirect):', e);
+        }
+
         try {
           await updateDoc(doc(db, 'customer_orders', targetId), {
             status: 'preparing',

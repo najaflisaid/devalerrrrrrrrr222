@@ -348,6 +348,8 @@ async def chat_endpoint(req: ChatRequest):
 # ---------------------------------------------------------------------------
 
 EPOINT_REQUEST_URL = "https://epoint.az/api/1/request"
+EPOINT_PAYMENT_REQUEST_URL = "https://epoint.az/api/1/payment-request"
+EPOINT_GET_STATUS_URL = "https://epoint.az/api/1/get-status"
 
 
 def _epoint_sign(private_key: str, data_b64: str) -> str:
@@ -422,11 +424,20 @@ async def epoint_create_payment(req: EpointCreatePaymentRequest):
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
+            # Try the canonical payment-request endpoint first (used by both
+            # the official OpenCart and WooCommerce plugins). Fall back to
+            # /api/1/request which is the alternative documented endpoint.
             resp = await client.post(
-                EPOINT_REQUEST_URL,
+                EPOINT_PAYMENT_REQUEST_URL,
                 data={"data": data_b64, "signature": signature},
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
+            if resp.status_code >= 400 or "<html" in resp.text.lower()[:200]:
+                resp = await client.post(
+                    EPOINT_REQUEST_URL,
+                    data={"data": data_b64, "signature": signature},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
     except httpx.HTTPError as e:
         logger.exception("Epoint network error: %s", e)
         raise HTTPException(status_code=502, detail=f"Epoint ilə əlaqə qurulmadı: {e}")
@@ -519,6 +530,70 @@ async def epoint_widget_url(req: EpointWidgetRequest):
         )
 
     return EpointWidgetResponse(status="success", widget_url=str(body.get("widget_url")))
+
+
+# ---------------------------------------------------------------------------
+# Epoint get-status — verify final payment outcome with Epoint server
+# Endpoint: https://epoint.az/api/1/get-status
+# Used after the user returns from the hosted checkout / widget. Matches the
+# OpenCart plugin's `callback()` verification logic.
+# ---------------------------------------------------------------------------
+
+
+class EpointStatusRequest(BaseModel):
+    public_key: str = Field(..., min_length=1)
+    private_key: str = Field(..., min_length=1)
+    transaction: Optional[str] = None
+    order_id: Optional[str] = None
+
+
+class EpointStatusResponse(BaseModel):
+    status: str
+    payment_status: Optional[str] = None
+    transaction: Optional[str] = None
+    raw: Optional[dict] = None
+
+
+@app.post("/api/epoint/get-status", response_model=EpointStatusResponse)
+async def epoint_get_status(req: EpointStatusRequest):
+    if not req.transaction and not req.order_id:
+        raise HTTPException(
+            status_code=400, detail="`transaction` və ya `order_id` göstərin"
+        )
+
+    payload: dict = {"public_key": req.public_key}
+    if req.transaction:
+        payload["transaction"] = req.transaction
+    if req.order_id:
+        payload["order_id"] = req.order_id
+
+    data_b64, signature = _epoint_build_payload(req.public_key, req.private_key, payload)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                EPOINT_GET_STATUS_URL,
+                data={"data": data_b64, "signature": signature},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except httpx.HTTPError as e:
+        logger.exception("Epoint get-status error: %s", e)
+        raise HTTPException(status_code=502, detail=f"Epoint ilə əlaqə qurulmadı: {e}")
+
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"Epoint cavabı: HTTP {resp.status_code}")
+
+    try:
+        body = resp.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Epoint düzgün cavab qaytarmadı")
+
+    return EpointStatusResponse(
+        status=str(body.get("status") or "unknown"),
+        payment_status=str(body.get("payment_status") or body.get("status") or ""),
+        transaction=str(body.get("transaction") or req.transaction or ""),
+        raw=body,
+    )
 
 
 class EpointVerifyRequest(BaseModel):
