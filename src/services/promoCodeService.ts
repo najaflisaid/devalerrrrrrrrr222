@@ -26,7 +26,10 @@ import { db } from '../lib/firebase';
 
 export interface PromoCode {
   code: string;
-  discount: number; // percent
+  discount: number; // percent (0 if amount-based)
+  type?: 'percent' | 'amount'; // default 'percent'
+  amountAZN?: number; // fixed amount discount in AZN (only when type === 'amount')
+  isGiftCard?: boolean; // true if generated from a gift-card purchase
   used: boolean;
   // Admin müəyyən bir müştəriyə kod təyin edə bilər. Boş olarsa hər kəs istifadə edə bilər.
   assignedTo?: {
@@ -115,7 +118,11 @@ export const deletePromoCode = async (code: string): Promise<void> => {
 export const validatePromoCode = async (
   code: string,
   userId?: string
-): Promise<{ valid: true; discount: number } | { valid: false; reason: string }> => {
+): Promise<
+  | { valid: true; type: 'percent'; discount: number }
+  | { valid: true; type: 'amount'; amountAZN: number }
+  | { valid: false; reason: string }
+> => {
   const trimmed = (code || '').trim();
   if (!/^\d{6}$/.test(trimmed)) {
     return { valid: false, reason: 'Promo kod 6 rəqəmli olmalıdır' };
@@ -138,7 +145,52 @@ export const validatePromoCode = async (
       };
     }
   }
-  return { valid: true, discount: data.discount };
+  if (data.type === 'amount') {
+    return { valid: true, type: 'amount', amountAZN: data.amountAZN || 0 };
+  }
+  return { valid: true, type: 'percent', discount: data.discount };
+};
+
+/**
+ * Gift card satışı zamanı sabit AZN dəyəri olan unikal promo kod yaradır.
+ */
+export const createGiftCardPromoCode = async (
+  amountAZN: number,
+  createdBy?: string,
+  assignedTo?: { userId: string; userEmail?: string; userName?: string }
+): Promise<PromoCode> => {
+  if (!amountAZN || amountAZN <= 0) {
+    throw new Error('Gift kart məbləği 0-dan böyük olmalıdır');
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const code = generate6DigitCode();
+    const ref = doc(db, COLLECTION, code);
+    const existing = await getDoc(ref);
+    if (existing.exists()) continue;
+    const data: PromoCode = {
+      code,
+      discount: 0,
+      type: 'amount',
+      amountAZN: +amountAZN.toFixed(2),
+      isGiftCard: true,
+      used: false,
+      createdAt: Timestamp.now(),
+      createdBy: createdBy || '',
+      ...(assignedTo
+        ? {
+            assignedTo: {
+              userId: assignedTo.userId,
+              userEmail: assignedTo.userEmail || '',
+              userName: assignedTo.userName || '',
+            },
+          }
+        : {}),
+    };
+    await setDoc(ref, data);
+    return data;
+  }
+  throw new Error('Unikal gift kart kodu yaratmaq mümkün olmadı');
 };
 
 /**

@@ -20,6 +20,7 @@ export interface Product {
   gender: 'men' | 'women' | 'unisex';
   isEnabled: boolean;
   isBestseller?: boolean;
+  isGiftCard?: boolean;
   comingSoon?: boolean;
   stock: number;
   visibleTo?: 'all' | 'b2b' | 'customer';

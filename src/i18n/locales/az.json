@@ -22,7 +22,8 @@
     "login": "Giriş",
     "logout": "Çıxış",
     "welcome": "Xoş gəldiniz",
-    "welcomeUser": "Hoş gəldiniz"
+    "welcomeUser": "Hoş gəldiniz",
+    "giftCards": "Hədiyyə Kartı"
   },
   "hero": {
     "title": "Everything On Sale",
@@ -524,5 +525,21 @@
     "redirecting": "Yönləndirilir...",
     "securePayment": "Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.",
     "loadingMethods": "Yüklənir..."
+  },
+  "giftCards": {
+    "title": "Hədiyyə Kartı",
+    "eyebrow": "De Valeur",
+    "subtitle": "Hər anın xüsusi hədiyyəsi. Sevdiklərinizə De Valeur kolleksiyalarından dilədiyini seçmək azadlığını verin.",
+    "value": "Dəyər",
+    "buy": "Səbətə əlavə et",
+    "added": "Hədiyyə kartı səbətə əlavə olundu",
+    "empty": "Hələlik aktiv hədiyyə kartı yoxdur. Yaxınlarda əlavə olunacaq.",
+    "defaultDesc": "Alış-veriş zamanı promo kod kimi istifadə edilə bilən elektron hədiyyə kartı.",
+    "step1Title": "Seç",
+    "step1Desc": "İstədiyin dəyərdə hədiyyə kartını seç.",
+    "step2Title": "Ödə",
+    "step2Desc": "Təhlükəsiz ödənişi tamamla.",
+    "step3Title": "Hədiyyə et",
+    "step3Desc": "Unikal promo kod yaradılır və e-poçtuna göndərilir."
   }
 }

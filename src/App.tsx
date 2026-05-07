@@ -35,6 +35,7 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentErrorPage from './pages/PaymentErrorPage';
 import PaymentResultPage from './pages/PaymentResultPage';
 import WishlistPage from './pages/WishlistPage';
+import GiftCardsPage from './pages/GiftCardsPage';
 import WorkerLogin from './pages/workers/WorkerLogin';
 import WorkerDashboard from './pages/workers/WorkerDashboard';
 import { WorkerAuthProvider } from './context/WorkerAuthContext';
@@ -104,6 +105,7 @@ const AppContent: React.FC = () => {
                   <Route path="/payment/error" element={<PaymentErrorPage />} />
                   <Route path="/payment/result" element={<PaymentResultPage />} />
                   <Route path="/wishlist" element={<WishlistPage />} />
+                  <Route path="/gift-cards" element={<GiftCardsPage />} />
                 </Routes>
               </main>
               <BrandSlider />

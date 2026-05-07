@@ -581,6 +581,9 @@ const Header: React.FC = () => {
               <Link to="/about" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.about')}
               </Link>
+              <Link to="/gift-cards" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-gift-cards-link">
+                {t('header.giftCards', { defaultValue: 'Gift Kart' })}
+              </Link>
               <Link to="/blog" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                 {t('header.blog')}
               </Link>

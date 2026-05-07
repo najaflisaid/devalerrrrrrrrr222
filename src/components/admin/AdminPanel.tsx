@@ -32,6 +32,7 @@ import PasswordsManagementTab from './PasswordsManagementTab';
 import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
+import GiftCardsTab from './GiftCardsTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
@@ -1283,6 +1284,7 @@ const AdminPanel: React.FC = () => {
 
   const tabs = [
     { id: 'products', label: t('admin.products'), icon: Package },
+    { id: 'giftCards', label: 'Hədiyyə Kartları', icon: Ticket },
     { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
     { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
     { id: 'analytics', label: 'Analitika', icon: BarChart3 },
@@ -3115,6 +3117,10 @@ const AdminPanel: React.FC = () => {
           <PasswordProtectedSection sectionName="promoCodes">
             <PromoCodesTab />
           </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'giftCards' && (
+          <GiftCardsTab />
         )}
 
         {activeTab === 'banners' && (

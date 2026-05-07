@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Loader2, Package } from 'lucide-react';
+import { CheckCircle2, Loader2, Package, Gift, Copy, Check } from 'lucide-react';
 import { verifyRedirectPayload } from '../services/epointPaymentService';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useCart } from '../context/CartContext';
+import { createGiftCardPromoCode } from '../services/promoCodeService';
+
+interface IssuedGiftCode {
+  code: string;
+  amount: number;
+}
 
 const PaymentSuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,12 +18,62 @@ const PaymentSuccessPage: React.FC = () => {
   const { clearCart } = useCart();
   const [state, setState] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [giftCodes, setGiftCodes] = useState<IssuedGiftCode[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const data = params.get('data');
     const signature = params.get('signature');
-    // Reserved order id stored before redirect
     const pendingId = sessionStorage.getItem('pending_epoint_order_id');
+
+    const issueGiftCardsForOrder = async (resolvedOrderId: string) => {
+      try {
+        const orderSnap = await getDoc(doc(db, 'customer_orders', resolvedOrderId));
+        if (!orderSnap.exists()) return;
+        const orderData: any = orderSnap.data() || {};
+
+        // Skip if codes already issued for this order
+        if (orderData.giftCardsIssued) return;
+
+        const orderItems: any[] = orderData.items || [];
+        if (!orderItems.length) return;
+
+        // Look up each product to find isGiftCard==true
+        const issued: IssuedGiftCode[] = [];
+        for (const it of orderItems) {
+          if (!it?.productId) continue;
+          try {
+            const prodSnap = await getDoc(doc(db, 'products', it.productId));
+            if (!prodSnap.exists()) continue;
+            const pData: any = prodSnap.data();
+            if (!pData.isGiftCard) continue;
+
+            // Generate one promo code per quantity
+            const qty = Number(it.quantity || 1);
+            const amount = Number(it.price || pData.price || 0);
+            for (let q = 0; q < qty; q++) {
+              const created = await createGiftCardPromoCode(amount, 'gift-card-purchase', orderData.userId
+                ? { userId: orderData.userId, userEmail: orderData.customerEmail, userName: orderData.customerName }
+                : undefined
+              );
+              issued.push({ code: created.code, amount });
+            }
+          } catch (err) {
+            console.warn('Failed to issue gift card for item', it, err);
+          }
+        }
+
+        if (issued.length > 0) {
+          setGiftCodes(issued);
+          await updateDoc(doc(db, 'customer_orders', resolvedOrderId), {
+            giftCardsIssued: true,
+            giftCardCodes: issued,
+          });
+        }
+      } catch (e) {
+        console.warn('Gift card issuance failed:', e);
+      }
+    };
 
     const finalize = async (resolvedOrderId?: string) => {
       const targetId = resolvedOrderId || pendingId;
@@ -32,6 +88,7 @@ const PaymentSuccessPage: React.FC = () => {
           console.warn('Order status update failed (may already be updated by webhook):', e);
         }
         setOrderId(targetId);
+        await issueGiftCardsForOrder(targetId);
       }
       clearCart();
       sessionStorage.removeItem('pending_epoint_order_id');
@@ -44,10 +101,8 @@ const PaymentSuccessPage: React.FC = () => {
           if (decoded && (decoded.status === 'success' || !decoded.status)) {
             void finalize(decoded.order_id || pendingId || undefined);
           } else if (decoded) {
-            // Verified but status not success
             setState('error');
           } else {
-            // Signature mismatch — still trust optimistically since Epoint redirected to success
             void finalize();
           }
         })
@@ -60,6 +115,16 @@ const PaymentSuccessPage: React.FC = () => {
       setState('error');
     }
   }, [params, clearCart]);
+
+  const handleCopy = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
 
   if (state === 'verifying') {
     return (
@@ -90,8 +155,8 @@ const PaymentSuccessPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="bg-white border border-gray-200 rounded-2xl p-10 max-w-md w-full text-center" data-testid="payment-success-card">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 md:p-10 max-w-lg w-full text-center" data-testid="payment-success-card">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 className="h-12 w-12 text-green-600" />
         </div>
@@ -102,6 +167,49 @@ const PaymentSuccessPage: React.FC = () => {
         {orderId && (
           <p className="text-xs text-gray-400 mb-4">Sifariş ID: {orderId.slice(0, 10)}…</p>
         )}
+
+        {/* Gift card codes — show prominently if issued */}
+        {giftCodes.length > 0 && (
+          <div className="mb-6 text-left bg-gradient-to-br from-amber-50 to-rose-50 border border-amber-200 rounded-xl p-5" data-testid="gift-codes-block">
+            <div className="flex items-center gap-2 mb-3">
+              <Gift className="w-5 h-5 text-amber-700" />
+              <p className="text-sm font-semibold text-amber-900">Hədiyyə Kartı Kodlarınız</p>
+            </div>
+            <p className="text-xs text-amber-800/80 mb-4">
+              Bu kodları alış-veriş zamanı promo kod kimi istifadə edə bilərsiniz. Hər kod yalnız bir dəfə işlədilir.
+            </p>
+            <div className="space-y-2">
+              {giftCodes.map((g, i) => (
+                <div
+                  key={`${g.code}-${i}`}
+                  className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2.5"
+                  data-testid={`gift-code-row-${i}`}
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-base font-semibold text-gray-900 tracking-widest">{g.code}</p>
+                    <p className="text-xs text-gray-500">Dəyər: {g.amount.toFixed(2)} AZN</p>
+                  </div>
+                  <button
+                    onClick={() => handleCopy(g.code)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded hover:bg-gray-800"
+                    data-testid={`gift-code-copy-${i}`}
+                  >
+                    {copied === g.code ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" /> Köçürüldü
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" /> Köçür
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <button
             onClick={() => navigate('/my-orders')}

@@ -444,3 +444,20 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 - CartPage: drawer-style centered layout — "Cart" title + X close, cream image tiles, − 1 + quantity selector, subtotal row, big black CHECK OUT button, secondary "Continue shopping" / "Remove all" links
 - Checkout panel: two-column Rosefield layout with De Valeur logo header, Express checkout (PayPal/GPay placeholders, decorative — no real integration change), OR divider, Contact (email + opt-in), Delivery (country/name/address/phone), Shipping methods, Pickup branch, Note, Discount code on right column with order summary, Subtotal, Shipping, Total
 - All existing logic preserved: Epoint payment, B2B order flow, promo code validation, delivery methods from Firestore, guest auto-registration, credit application form
+
+## 2026-01 — Checkout/Auth fixes + Gift Cards
+- Sign in button in checkout now opens CustomerLogin modal (not admin login)
+- Express checkout: PayPal removed; device-aware buttons — Apple devices show **Kartla + Apple Pay**, others show **Kartla + Google Pay**
+- "Kreditlə al" button restyled: black bg + white text (clearly visible)
+- Apple Pay official mark SVG used
+- All express buttons trigger Epoint flow (which supports card / Apple Pay / Google Pay on its hosted page)
+
+### Gift Cards (NEW)
+- New public page `/gift-cards` with Rosefield-style hero + card grid + 3-step explainer
+- Header navigation: "Hədiyyə Kartı / Gift Cards / Подарочные карты" link added (3 languages)
+- Admin tab "Hədiyyə Kartları" — CRUD for gift card products (price, name 3-lang, image URL, description, active toggle)
+- Gift card stored as Product with `isGiftCard: true` flag
+- After successful Epoint payment, PaymentSuccessPage detects gift-card items and auto-generates unique 6-digit promo codes (one per quantity) with **fixed AZN amount** equal to gift card price
+- PromoCode service extended: `type: 'percent' | 'amount'`, `amountAZN`, `isGiftCard` fields; new `createGiftCardPromoCode()` function
+- CartPage promo validation/redemption supports both percent and fixed-amount codes
+- Gift codes shown prominently on payment success page with copy-to-clipboard buttons

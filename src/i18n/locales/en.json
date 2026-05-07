@@ -22,7 +22,8 @@
     "login": "Login",
     "logout": "Logout",
     "welcome": "Welcome",
-    "welcomeUser": "Welcome"
+    "welcomeUser": "Welcome",
+    "giftCards": "Gift Cards"
   },
   "hero": {
     "title": "Everything On Sale",
@@ -512,5 +513,21 @@
     "redirecting": "Redirecting...",
     "securePayment": "Payment is processed securely via Epoint.",
     "loadingMethods": "Loading..."
+  },
+  "giftCards": {
+    "title": "Gift Card",
+    "eyebrow": "De Valeur",
+    "subtitle": "A special gift for every moment. Give your loved ones the freedom to choose anything from the De Valeur collection.",
+    "value": "Value",
+    "buy": "Add to cart",
+    "added": "Gift card added to cart",
+    "empty": "No active gift cards yet. Coming soon.",
+    "defaultDesc": "An electronic gift card that can be used as a promo code at checkout.",
+    "step1Title": "Choose",
+    "step1Desc": "Pick the gift card value you want.",
+    "step2Title": "Pay",
+    "step2Desc": "Complete a secure payment.",
+    "step3Title": "Gift it",
+    "step3Desc": "A unique promo code is generated and emailed to you."
   }
 }
