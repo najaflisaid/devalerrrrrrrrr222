@@ -1282,37 +1282,78 @@ const AdminPanel: React.FC = () => {
     );
   }
 
-  const tabs = [
-    { id: 'products', label: t('admin.products'), icon: Package },
-    { id: 'giftCards', label: 'Hədiyyə Kartları', icon: Ticket },
-    { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
-    { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
-    { id: 'analytics', label: 'Analitika', icon: BarChart3 },
-    { id: 'promoCodes', label: 'Promo Kodlar', icon: Ticket },
-    { id: 'reviews', label: 'Müştəri Rəyləri', icon: MessageSquare },
-    { id: 'aiKnowledge', label: 'AI Bilik Bazası', icon: Sparkles },
-    { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
-    { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
-    { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
-    { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
-    { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
-    { id: 'about', label: 'Haqqımızda', icon: Info },
-    { id: 'privacy', label: 'Məxfilik Siyasəti', icon: ShieldCheck },
-    { id: 'return', label: 'Qaytarılma', icon: FileText },
-    { id: 'delivery', label: 'Çatdırılma', icon: ShoppingBag },
-    { id: 'careers', label: 'Karyera', icon: Briefcase },
-    { id: 'brands', label: t('admin.brands'), icon: Tag },
-    { id: 'categories', label: t('admin.categories'), icon: Tag },
-    { id: 'blogs', label: t('admin.blog'), icon: FileText },
-    { id: 'partners', label: t('admin.partners'), icon: Building2 },
-    { id: 'contactMessages', label: 'Müraciətlər', icon: Mail, badge: newContactMessagesCount },
-    { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Info },
-    { id: 'b2b', label: t('admin.b2bRequests'), icon: Users, badge: pendingB2BRequestsCount },
-    { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
-    { id: 'b2bNotifications', label: 'B2B Bildirişlər', icon: Bell },
-    { id: 'workers', label: 'İşçilər', icon: Briefcase },
-    { id: 'users', label: t('admin.users'), icon: Users },
-    { id: 'passwords', label: 'Şifrələr', icon: Lock },
+  // Sol-paneldə qruplaşdırılmış bölmələr (bir-biri ilə əlaqəli olanlar yan-yana / ardıcıl).
+  const tabGroups: { label: string; items: { id: string; label: string; icon: any; badge?: number }[] }[] = [
+    {
+      label: 'Sifarişlər',
+      items: [
+        { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount },
+        { id: 'b2bOrders', label: t('admin.b2bOrders'), icon: ShoppingBag, badge: b2bBadgeCount },
+        { id: 'giftCards', label: 'Hədiyyə Kartları', icon: Ticket },
+        { id: 'promoCodes', label: 'Promo Kodlar', icon: Ticket },
+        { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
+      ],
+    },
+    {
+      label: 'Kataloq',
+      items: [
+        { id: 'products', label: t('admin.products'), icon: Package },
+        { id: 'brands', label: t('admin.brands'), icon: Tag },
+        { id: 'categories', label: t('admin.categories'), icon: Tag },
+      ],
+    },
+    {
+      label: 'Marketing & Məzmun',
+      items: [
+        { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
+        { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
+        { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
+        { id: 'blogs', label: t('admin.blog'), icon: FileText },
+        { id: 'partners', label: t('admin.partners'), icon: Building2 },
+      ],
+    },
+    {
+      label: 'Sayt Səhifələri',
+      items: [
+        { id: 'about', label: 'Haqqımızda', icon: Info },
+        { id: 'privacy', label: 'Məxfilik Siyasəti', icon: ShieldCheck },
+        { id: 'return', label: 'Qaytarılma', icon: FileText },
+        { id: 'delivery', label: 'Çatdırılma', icon: ShoppingBag },
+        { id: 'careers', label: 'Karyera', icon: Briefcase },
+      ],
+    },
+    {
+      label: 'Müştəri Əlaqələri',
+      items: [
+        { id: 'reviews', label: 'Müştəri Rəyləri', icon: MessageSquare },
+        { id: 'contactMessages', label: 'Müraciətlər', icon: Mail, badge: newContactMessagesCount },
+      ],
+    },
+    {
+      label: 'İstifadəçilər',
+      items: [
+        { id: 'users', label: t('admin.users'), icon: Users },
+        { id: 'b2b', label: t('admin.b2bRequests'), icon: Users, badge: pendingB2BRequestsCount },
+        { id: 'b2bUsers', label: 'B2B İstifadəçilər', icon: Users },
+        { id: 'b2bNotifications', label: 'B2B Bildirişlər', icon: Bell },
+        { id: 'workers', label: 'İşçilər', icon: Briefcase },
+      ],
+    },
+    {
+      label: 'AI & Analitika',
+      items: [
+        { id: 'analytics', label: 'Analitika', icon: BarChart3 },
+        { id: 'aiKnowledge', label: 'AI Bilik Bazası', icon: Sparkles },
+      ],
+    },
+    {
+      label: 'Parametrlər',
+      items: [
+        { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Settings },
+        { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
+        { id: 'passwords', label: 'Şifrələr', icon: Lock },
+      ],
+    },
   ];
 
   return (
@@ -1332,44 +1373,64 @@ const AdminPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <nav className="flex space-x-2 overflow-x-auto pb-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const badgeCount = (tab as any).badge || 0;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    if (tab.id === 'contactMessages') acknowledgeContactMessages();
-                    if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
-                    if (tab.id === 'b2b') acknowledgeB2BRequests();
-                    if (tab.id === 'customerOrders') acknowledgeCustomerOrders();
-                  }}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium whitespace-nowrap transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-gray-900 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                  data-testid={`admin-tab-${tab.id}`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                  {badgeCount > 0 && (
-                    <span
-                      className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow animate-pulse"
-                      data-testid={`tab-badge-${tab.id}`}
-                    >
-                      {badgeCount > 99 ? '99+' : badgeCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sol panel — qruplaşdırılmış bölmələr */}
+          <aside
+            className="lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+            data-testid="admin-sidebar"
+          >
+            <nav className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-4">
+              {tabGroups.map((group) => (
+                <div key={group.label}>
+                  <div className="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    {group.label}
+                  </div>
+                  <div className="space-y-1">
+                    {group.items.map((tab) => {
+                      const Icon = tab.icon;
+                      const badgeCount = tab.badge || 0;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            setActiveTab(tab.id);
+                            if (tab.id === 'contactMessages') acknowledgeContactMessages();
+                            if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
+                            if (tab.id === 'b2b') acknowledgeB2BRequests();
+                            if (tab.id === 'customerOrders') acknowledgeCustomerOrders();
+                          }}
+                          className={`relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                            isActive
+                              ? 'bg-gray-900 text-white shadow-sm'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                          data-testid={`admin-tab-${tab.id}`}
+                        >
+                          <Icon className="h-4 w-4 flex-shrink-0" />
+                          <span className="flex-1 truncate">{tab.label}</span>
+                          {badgeCount > 0 && (
+                            <span
+                              className={`min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center shadow ${
+                                isActive ? 'bg-white text-gray-900' : 'bg-red-500 text-white animate-pulse'
+                              }`}
+                              data-testid={`tab-badge-${tab.id}`}
+                            >
+                              {badgeCount > 99 ? '99+' : badgeCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </aside>
+
+          {/* Sağ panel — aktiv bölmənin məzmunu */}
+          <main className="flex-1 min-w-0">
 
         {activeTab === 'products' && (
           <PasswordProtectedSection sectionName="products">
@@ -3372,6 +3433,8 @@ const AdminPanel: React.FC = () => {
           </div>
           </PasswordProtectedSection>
         )}
+          </main>
+        </div>
       </div>
 
       {/* Admin role toggle modal */}
