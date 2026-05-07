@@ -185,8 +185,9 @@ const AdminPanel: React.FC = () => {
       let count = 0;
       snap.forEach(d => {
         const data: any = d.data();
-        // Yalnız ödənilmiş və ya hazırlanan, oxunmamış sifarişlər
-        if (data.status === 'pending_payment' || data.status === 'cancelled' || data.status === 'payment_failed') return;
+        // Bütün yeni sifarişlər (pending_payment və payment_failed daxil) sayılır.
+        // Yalnız admin tərəfindən ləğv olunmuş və ya artıq oxunmuş sifarişlər atılır.
+        if (data.status === 'cancelled') return;
         if (data.isReadByAdmin) return;
         // ROOT FIX: paidAt > createdAt — sifariş əvvəl pending_payment kimi yaranır,
         // ödəniş uğurlu olduqda paidAt qoyulur. Admin əvvəl tab-ı açıb lastSeen=now etmişsə,

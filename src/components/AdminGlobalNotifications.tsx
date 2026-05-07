@@ -108,13 +108,10 @@ const AdminGlobalNotifications: React.FC = () => {
         let count = 0;
         snap.forEach((d) => {
           const data: any = d.data();
-          // Yalnız aktiv (oxunmamış) sifarişlər sayılır
-          if (
-            data.status === 'pending_payment' ||
-            data.status === 'cancelled' ||
-            data.status === 'payment_failed'
-          )
-            return;
+          // Bütün yeni sifarişləri göstər — `pending_payment` və `payment_failed` də daxil
+          // (admin başlanan amma bitməmiş ödənişləri də görsün). Yalnız admin tərəfindən
+          // ləğv olunmuş və ya artıq oxunmuş sifarişlər badge-də sayılmır.
+          if (data.status === 'cancelled') return;
           if (data.isReadByAdmin) return;
           // ROOT FIX: paidAt prioritetli — sifariş əvvəl `pending_payment` kimi yaranır,
           // sonra ödəniş uğurlu olanda `paidAt` qoyulur. Bu vaxt admin əvvəlcədən tab-ı
