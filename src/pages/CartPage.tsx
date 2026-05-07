@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, Minus, ShoppingBag, ChevronLeft, Truck, Check, MapPin, Store } from 'lucide-react';
+import { X, Plus, Minus, ChevronDown, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc as fsDoc } from 'firebase/firestore';
@@ -26,23 +26,22 @@ const CartPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  // Phone input — only digits after +994
   const initPhone = (localStorage.getItem('userPhone') || '').replace(/^\+?994/, '').replace(/\D/g, '');
   const [phoneDigits, setPhoneDigits] = useState(initPhone);
   const [showCheckout, setShowCheckout] = useState(false);
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
-  // Guest registration fields (only used when no userId)
   const [guestName, setGuestName] = useState('');
+  const [guestLastName, setGuestLastName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
-  // Promo kod state-ləri (yalnız müştəri Epoint checkout-da istifadə olunur)
+  const [emailOptIn, setEmailOptIn] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number } | null>(null);
   const [promoError, setPromoError] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
   const userDiscount = getUserDiscount();
-  // Reactive login state (refreshes when localStorage changes or on each render)
+
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('userId'));
   useEffect(() => {
     const sync = () => setIsLoggedIn(!!localStorage.getItem('userId'));
@@ -54,7 +53,6 @@ const CartPage: React.FC = () => {
       window.removeEventListener('focus', sync);
     };
   }, []);
-  // Re-check when checkout panel opens (login may have happened in another tab)
   useEffect(() => {
     if (showCheckout) setIsLoggedIn(!!localStorage.getItem('userId'));
   }, [showCheckout]);
@@ -73,7 +71,11 @@ const CartPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isB2BUser]);
 
-  // Auto-pick the first branch whenever a pickup method becomes selected.
+  const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId);
+  const deliveryFee = selectedDelivery?.price || 0;
+  const isPickupFlow = !!(selectedDelivery?.isPickup && selectedDelivery?.branches?.length);
+  const selectedBranch = selectedDelivery?.branches?.find((b) => b.id === selectedBranchId) || null;
+
   useEffect(() => {
     if (selectedDelivery?.isPickup && selectedDelivery.branches && selectedDelivery.branches.length > 0) {
       if (!selectedBranchId || !selectedDelivery.branches.some((b) => b.id === selectedBranchId)) {
@@ -85,12 +87,6 @@ const CartPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDeliveryId]);
 
-  const selectedDelivery = deliveryMethods.find((m) => m.id === selectedDeliveryId);
-  const deliveryFee = selectedDelivery?.price || 0;
-  const isPickupFlow = !!(selectedDelivery?.isPickup && selectedDelivery?.branches?.length);
-  const selectedBranch = selectedDelivery?.branches?.find((b) => b.id === selectedBranchId) || null;
-
-  // Promo endirimdən sonra məhsulların dəyəri (userDiscount + promo tətbiq olunur)
   const getItemsAfterAllDiscounts = (): number => {
     const baseItems = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
     if (!promoApplied) return baseItems;
@@ -134,22 +130,10 @@ const CartPage: React.FC = () => {
     setPromoError('');
   };
 
-  const handleWhatsAppOrder = async () => {
+  const openCheckout = async () => {
     if (items.length === 0) return;
-
-    if (isB2BUser) {
-      await handleB2BOrder();
-      return;
-    }
-
-    // Toggle inline checkout panel
-    setShowCheckout((v) => !v);
-    if (!showCheckout) {
-      // scroll into view smoothly
-      setTimeout(() => {
-        document.getElementById('inline-checkout')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 50);
-    }
+    if (isB2BUser) { await handleB2BOrder(); return; }
+    setShowCheckout(true);
   };
 
   const handleEpointCheckout = async () => {
@@ -159,7 +143,6 @@ const CartPage: React.FC = () => {
     let userName = localStorage.getItem('userName') || '';
     let userEmail = localStorage.getItem('userEmail') || '';
 
-    // Validate phone (digits-only check, expecting 9 digits like 501234567)
     const cleanPhone = phoneDigits.replace(/\D/g, '');
     if (cleanPhone.length < 9) {
       setErrorMessage('Telefon nömrəsi düzgün deyil. Məs: 50 123 45 67');
@@ -192,7 +175,6 @@ const CartPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Auto-register guest if not logged in
       if (!userId) {
         if (!guestName.trim()) {
           setErrorMessage('Adınızı daxil edin.');
@@ -208,12 +190,11 @@ const CartPage: React.FC = () => {
           setLoading(false);
           return;
         }
-        // Auto-generated password (user can request reset later)
         const autoPassword = `dv-${cleanPhone}-${Date.now().toString(36)}`;
         try {
           const cred = await createUserWithEmailAndPassword(auth, guestEmail.trim(), autoPassword);
           userId = cred.user.uid;
-          userName = guestName.trim();
+          userName = (guestName.trim() + (guestLastName ? ' ' + guestLastName.trim() : '')).trim();
           userEmail = guestEmail.trim();
 
           await setDoc(fsDoc(fsDb, 'users', userId), {
@@ -226,6 +207,7 @@ const CartPage: React.FC = () => {
             discountUsageType: 'unlimited',
             discountUsed: false,
             autoRegistered: true,
+            emailOptIn,
             createdAt: new Date().toISOString(),
           });
 
@@ -238,7 +220,6 @@ const CartPage: React.FC = () => {
             id: userId, email: userEmail, name: userName, role: 'customer',
             discountPercentage: 0, discountUsageType: 'unlimited', discountUsed: false,
           }));
-          // Stash auto password in session so we can email user later if needed
           sessionStorage.setItem('dv_auto_pw', autoPassword);
         } catch (regErr: any) {
           if (regErr?.code === 'auth/email-already-in-use') {
@@ -252,7 +233,6 @@ const CartPage: React.FC = () => {
           return;
         }
       } else {
-        // Save updated phone for future
         localStorage.setItem('userPhone', fullPhone);
       }
 
@@ -310,9 +290,6 @@ const CartPage: React.FC = () => {
 
       sessionStorage.setItem('pending_epoint_order_id', orderId);
 
-      // Promo kodu istifadə olunmuş kimi qeyd et (birdəfəlik istifadə qaydası).
-      // Ödəniş uğursuz olsa belə, kod təkrar istifadəyə buraxılmır — admin istəsə
-      // silib yenisini yarada bilər.
       if (promoApplied) {
         redeemPromoCode(promoApplied.code, {
           userId,
@@ -322,19 +299,8 @@ const CartPage: React.FC = () => {
       }
 
       try {
-        // Use widget URL flow when possible — supports Apple Pay (iOS) and
-        // Google Pay (Android) on the hosted payment page. Falls back to
-        // the standard signed checkout form internally if widget endpoint
-        // is not reachable. Always opens as top-level navigation, never
-        // inside an iframe.
-        await startEpointPayment({
-          orderId,
-          amount: total,
-        });
+        await startEpointPayment({ orderId, amount: total });
       } catch (signErr: any) {
-        // Epoint açarları konfiqurasiya olunmayıbsa və ya imza qurmaq alınmayıbsa,
-        // dərhal yaranmış orphan sifarişi `payment_failed` kimi qeyd et ki, admin
-        // panelində "ödəniş gözləyir" siyahısında qalmasın.
         try {
           const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
           await fsUpdate(fsDocRef(fsDb, 'customer_orders', orderId), {
@@ -346,9 +312,6 @@ const CartPage: React.FC = () => {
         throw signErr;
       }
 
-      // Watchdog: əgər 8 saniyədən sonra hələ də cart səhifəsindəyiksə (yəni
-      // form submit səssizcə uğursuz olub və ya brauzer bloklayıb), istifadəçiyə
-      // aydın xəta göstər və yarımçıq sifarişi `payment_failed` kimi qeyd et.
       const watchdog = window.setTimeout(async () => {
         try {
           const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
@@ -358,22 +321,17 @@ const CartPage: React.FC = () => {
           });
         } catch { /* ignore */ }
         sessionStorage.removeItem('pending_epoint_order_id');
-        setErrorMessage(
-          'Ödəniş səhifəsi açıla bilmədi. Zəhmət olmasa internet bağlantınızı yoxlayın və yenidən cəhd edin.'
-        );
+        setErrorMessage('Ödəniş səhifəsi açıla bilmədi. Zəhmət olmasa internet bağlantınızı yoxlayın və yenidən cəhd edin.');
         setShowError(true);
         setLoading(false);
         setTimeout(() => setShowError(false), 6000);
       }, 8000);
-      // Səhifə dəyişəndə (Epoint yönləndirməsi baş tutanda) timer-i ləğv et
       const cancelWatchdog = () => window.clearTimeout(watchdog);
       window.addEventListener('beforeunload', cancelWatchdog, { once: true });
       window.addEventListener('pagehide', cancelWatchdog, { once: true });
     } catch (error: any) {
       console.error('Epoint checkout error:', error);
-      setErrorMessage(
-        error.message || 'Ödəniş başladıla bilmədi. Zəhmət olmasa yenidən cəhd edin.'
-      );
+      setErrorMessage(error.message || 'Ödəniş başladıla bilmədi. Zəhmət olmasa yenidən cəhd edin.');
       setShowError(true);
       setTimeout(() => setShowError(false), 6000);
       setLoading(false);
@@ -386,17 +344,12 @@ const CartPage: React.FC = () => {
       const userName = localStorage.getItem('userName') || 'B2B Müştəri';
       const userEmail = localStorage.getItem('userEmail') || '';
       const userPhone = localStorage.getItem('userPhone') || '';
+      if (!userEmail) throw new Error('İstifadəçi email tapılmadı');
 
-      if (!userEmail) {
-        throw new Error('İstifadəçi email tapılmadı');
-      }
-
-      let totalDiscount = 0;
       const orderItems = items.map(item => {
         const regularPrice = isB2BUser
           ? (item.product.b2bSalePrice || item.product.b2bPrice || item.product.salePrice || item.product.price)
           : (item.product.salePrice || item.product.price);
-
         return {
           productId: item.product.id,
           productName: item.product.name,
@@ -423,42 +376,34 @@ const CartPage: React.FC = () => {
         notes: customerNote.trim() || ''
       };
 
-      console.log('Creating B2B order:', order);
       const createdOrder = await createB2BOrder(order);
-      console.log('Order created:', createdOrder);
 
-      // Sifariş Firestore-da yarandı — istifadəçiyə dərhal uğur bildirişi göstər.
-      // Email göndərilməsi və endirim yenilənməsi fonda baş versin (gözlətmə yoxdur).
       clearCart();
       setCustomerNote('');
       setShowSuccess(true);
       setLoading(false);
 
-      // Fonda: admin-ə email
       sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber)
-        .then(() => console.log('Email sent successfully'))
-        .catch((emailError) => console.warn('Email göndərilə bilmədi (sifariş yaradılıb):', emailError));
+        .catch((emailError) => console.warn('Email göndərilə bilmədi:', emailError));
 
-      // Fonda: birdəfəlik endirim istifadəçidə qeyd et
       if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
-        if (userData.discountUsageType === 'once' && userDiscount > 0 && userData.id) {
+        const ud = JSON.parse(userDataStr);
+        if (ud.discountUsageType === 'once' && userDiscount > 0 && ud.id) {
           (async () => {
             try {
               const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
               const { db } = await import('../lib/firebase');
-              const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userData.id)));
+              const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', ud.id)));
               if (!usersSnapshot.empty) {
                 await updateDoc(usersSnapshot.docs[0].ref, { discountUsed: true });
-                userData.discountUsed = true;
-                localStorage.setItem('userData', JSON.stringify(userData));
+                ud.discountUsed = true;
+                localStorage.setItem('userData', JSON.stringify(ud));
               }
             } catch (e) { console.warn('Discount update failed:', e); }
           })();
         }
       }
 
-      // Müştəri uğur bildirişini görüb məhsullara qayıtsın deyə 2.5s gözlə
       setTimeout(() => {
         setShowSuccess(false);
         navigate('/products');
@@ -467,20 +412,12 @@ const CartPage: React.FC = () => {
     } catch (error: any) {
       console.error('Order error:', error);
       let message = 'Sifariş göndərilə bilmədi. ';
-
-      if (error.message) {
-        message += error.message;
-      } else if (error.code === 'permission-denied') {
-        message += 'İcazə xətası. Zəhmət olmasa yenidən daxil olun.';
-      } else {
-        message += 'Zəhmət olmasa yenidən cəhd edin.';
-      }
-
+      if (error.message) message += error.message;
+      else if (error.code === 'permission-denied') message += 'İcazə xətası. Zəhmət olmasa yenidən daxil olun.';
+      else message += 'Zəhmət olmasa yenidən cəhd edin.';
       setErrorMessage(message);
       setShowError(true);
-      setTimeout(() => {
-        setShowError(false);
-      }, 5000);
+      setTimeout(() => setShowError(false), 5000);
     } finally {
       setLoading(false);
     }
@@ -493,6 +430,7 @@ const CartPage: React.FC = () => {
     return item.product.salePrice || item.product.price;
   };
 
+  // Empty cart
   if (items.length === 0) {
     return (
       <>
@@ -511,19 +449,18 @@ const CartPage: React.FC = () => {
             duration={5000}
           />
         )}
-        <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="min-h-screen bg-white flex items-center justify-center px-6">
           <div className="text-center max-w-md mx-auto">
-            <div className="inline-flex w-14 h-14 border border-black/15 items-center justify-center mb-6">
-              <ShoppingBag className="h-6 w-6 text-black/55" strokeWidth={1.25} />
-            </div>
-            <h2 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight mb-3">{t('cart.emptyCart')}</h2>
-            <p className="text-black/55 text-sm font-light mb-8">{t('cart.noProducts')}</p>
+            <h2 className="text-2xl md:text-3xl font-light text-black tracking-tight mb-3">
+              {t('cart.emptyCart', { defaultValue: 'Cart' })}
+            </h2>
+            <p className="text-black/55 text-sm font-light mb-8">{t('cart.noProducts', { defaultValue: 'Səbətiniz boşdur' })}</p>
             <button
               onClick={() => navigate('/products')}
-              className="group inline-flex items-center justify-center gap-3 px-7 py-3 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.3em] font-medium text-black transition-all duration-500"
+              className="inline-flex items-center justify-center px-8 py-3.5 bg-black text-white text-[12px] uppercase tracking-[0.25em] font-medium hover:bg-black/85 transition-colors"
+              data-testid="cart-empty-shop-btn"
             >
-              <span>{t('cart.viewProducts')}</span>
-              <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>
+              {t('cart.viewProducts', { defaultValue: 'Alış-verişə davam et' })}
             </button>
           </div>
         </div>
@@ -531,6 +468,9 @@ const CartPage: React.FC = () => {
     );
   }
 
+  const subtotal = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
+
+  // Rosefield-style CART (drawer-like centered column)
   return (
     <>
       {showSuccess && (
@@ -550,226 +490,177 @@ const CartPage: React.FC = () => {
         />
       )}
 
-      {/* Tam ekran "Ödəniş hazırlanır" overlay — ödəniş zamanı donmuş hissini aradan qaldırır */}
       {loading && !isB2BUser && (
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
           data-testid="payment-loading-overlay"
         >
-          <div className="bg-white rounded-2xl shadow-2xl px-8 py-7 max-w-sm mx-4 flex flex-col items-center text-center">
-            <div className="relative w-16 h-16 mb-4">
-              <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-gray-900 animate-spin"></div>
-              <div className="absolute inset-3 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                  <line x1="2" y1="10" x2="22" y2="10" />
-                </svg>
-              </div>
+          <div className="bg-white px-8 py-7 max-w-sm mx-4 flex flex-col items-center text-center">
+            <div className="relative w-12 h-12 mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-gray-100"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-black animate-spin"></div>
             </div>
-            <h3 className="font-semibold text-gray-900 text-lg mb-1">Ödəniş hazırlanır...</h3>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Sizi təhlükəsiz ödəniş səhifəsinə yönləndiririk.<br />
-              Zəhmət olmasa gözləyin və səhifəni bağlamayın.
+            <h3 className="font-medium text-black text-base mb-1">Ödəniş hazırlanır...</h3>
+            <p className="text-xs text-black/55 leading-relaxed">
+              Sizi təhlükəsiz ödəniş səhifəsinə yönləndiririk.
             </p>
-            <div className="flex items-center gap-1.5 mt-4">
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
           </div>
         </div>
       )}
 
+      {/* CART PAGE — Rosefield-style centered column */}
       <div className="min-h-screen bg-white">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] text-black hover:opacity-60 mb-8 transition-opacity"
-        >
-          <ChevronLeft className="h-4 w-4" strokeWidth={1.25} />
-          {t('cart.backButton')}
-        </button>
+        <div className="max-w-[640px] mx-auto px-5 sm:px-8 py-8 md:py-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-[26px] md:text-[28px] font-normal text-black" data-testid="cart-title">
+              Cart
+            </h1>
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Close"
+              className="text-black hover:opacity-60 transition-opacity"
+              data-testid="cart-close-btn"
+            >
+              <X className="w-6 h-6" strokeWidth={1.5} />
+            </button>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-14">
-          <div className="lg:col-span-2">
-            <div className="flex justify-between items-end mb-8 pb-5 border-b border-black/10">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.32em] text-black/45 mb-1">Səbət</p>
-                <h1 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight">
-                  {t('cart.cartItems', { count: items.length })}
-                </h1>
-              </div>
-              <button
-                onClick={clearCart}
-                className="text-[10px] uppercase tracking-[0.2em] text-black/55 hover:text-black transition-colors"
-              >
-                {t('cart.removeAll')}
-              </button>
-            </div>
+          {/* Items */}
+          <div className="space-y-6 mb-10">
+            {items.map((item) => {
+              const price = getItemPrice(item);
+              const productName = item.product.name[i18n.language as 'az' | 'ru' | 'en'] || item.product.name.en || item.product.name.az;
 
-            <div className="divide-y divide-black/10">
-              {items.map((item) => {
-                const price = getItemPrice(item);
-                const productName = item.product.name[i18n.language as 'az' | 'ru' | 'en'] || item.product.name.en || item.product.name.az;
-
-                return (
-                  <div key={item.product.id} className="relative py-6 flex gap-4 sm:gap-6">
+              return (
+                <div key={item.product.id} className="flex gap-5" data-testid={`cart-item-${item.product.id}`}>
+                  {/* Image tile */}
+                  <div className="w-[110px] h-[140px] flex-shrink-0 bg-[#F5EAE2] flex items-center justify-center overflow-hidden">
                     <img
-                      src={item.product.images[0]}
+                      src={item.product.images?.[0]}
                       alt={productName}
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover flex-shrink-0 bg-black/[0.02]"
+                      className="max-w-full max-h-full object-contain p-3"
                     />
+                  </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-[0.25em] text-black/45 mb-0.5">{item.product.brand}</p>
-                          <h3 className="font-playfair text-base sm:text-lg font-light text-black leading-tight tracking-tight truncate">
-                            {productName}
-                          </h3>
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="text-black/40 hover:text-black p-1 -m-1 transition-colors flex-shrink-0"
-                          aria-label="Sil"
-                        >
-                          <Trash2 className="h-4 w-4" strokeWidth={1.25} />
-                        </button>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-[15px] text-black font-normal leading-tight truncate">
+                          {productName}
+                        </h3>
+                        <p className="text-[14px] text-black/80 mt-1.5">
+                          ${(price * item.quantity).toFixed(2)}
+                        </p>
                       </div>
+                      <button
+                        onClick={() => removeFromCart(item.product.id)}
+                        className="text-black/50 hover:text-black transition-colors"
+                        aria-label="Remove"
+                        data-testid={`cart-remove-${item.product.id}`}
+                      >
+                        <X className="w-4 h-4" strokeWidth={1.5} />
+                      </button>
+                    </div>
 
-                      <div className="flex items-end justify-between gap-3 mt-3">
-                        <div className="inline-flex items-center border border-black/15">
-                          <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
-                            aria-label="-"
-                          >
-                            <Minus className="h-3.5 w-3.5" strokeWidth={1.25} />
-                          </button>
-                          <span className="w-10 text-center text-[13px] font-medium select-none">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
-                            aria-label="+"
-                          >
-                            <Plus className="h-3.5 w-3.5" strokeWidth={1.25} />
-                          </button>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="font-playfair text-lg sm:text-xl font-light text-black leading-none">
-                            {(price * item.quantity).toFixed(2)}
-                            <span className="ml-1 text-[11px] tracking-wider text-black/55">AZN</span>
-                          </p>
-                          <p className="text-[10px] text-black/40 mt-1 tracking-wide">
-                            {price.toFixed(2)} × {item.quantity}
-                          </p>
-                        </div>
+                    <div className="mt-auto pt-4">
+                      <div className="inline-flex items-center border border-black/30">
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
+                          aria-label="Decrease"
+                          data-testid={`cart-qty-minus-${item.product.id}`}
+                        >
+                          <Minus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                        <span className="w-10 text-center text-[14px] select-none border-x border-black/30 leading-9">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
+                          aria-label="Increase"
+                          data-testid={`cart-qty-plus-${item.product.id}`}
+                        >
+                          <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="lg:col-span-1">
-            <div className="border border-black/10 p-6 sm:p-7 lg:sticky lg:top-24">
-              <p className="text-[10px] uppercase tracking-[0.32em] text-black/55 mb-1">Yekun</p>
-              <h2 className="font-playfair text-2xl font-light text-black tracking-tight mb-6">
-                {t('cart.orderSummary')}
-              </h2>
+          {/* Divider */}
+          <div className="border-t border-black/15"></div>
 
-              <div className="space-y-3 mb-6 text-[13px]">
-                <div className="flex justify-between text-black/65">
-                  <span>{t('cart.productsLabel')}</span>
-                  <span>{items.length}</span>
-                </div>
-                <div className="flex justify-between text-black/65">
-                  <span>{t('cart.totalQuantity')}</span>
-                  <span>{items.reduce((total, item) => total + item.quantity, 0)}</span>
-                </div>
-
-                <div className="border-t border-black/10 pt-3 flex justify-between text-black/65">
-                  <span>{t('cart.totalAmount')}</span>
-                  <span>{getTotalPrice().toFixed(2)} AZN</span>
-                </div>
-
-                {userDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>{t('cart.discount')} ({userDiscount}%)</span>
-                    <span>−{getDiscountAmount().toFixed(2)} AZN</span>
-                  </div>
-                )}
-
-                <div className="border-t border-black/15 pt-4 mt-4 flex items-end justify-between">
-                  <span className="text-[10px] uppercase tracking-[0.3em] text-black/55">{t('cart.finalTotal')}</span>
-                  <span className="font-playfair text-2xl font-light text-black leading-none">
-                    {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)}
-                    <span className="ml-1 text-sm tracking-wider text-black/55">AZN</span>
-                  </span>
-                </div>
-              </div>
-
-              {isB2BUser && (
-                <div className="mb-5">
-                  <label htmlFor="customer-note" className="block text-[10px] uppercase tracking-[0.25em] text-black/55 mb-2">
-                    Qeyd əlavə et
-                  </label>
-                  <textarea
-                    id="customer-note"
-                    data-testid="b2b-cart-customer-note"
-                    value={customerNote}
-                    onChange={(e) => setCustomerNote(e.target.value)}
-                    placeholder="Əlavə qeyd yazın..."
-                    rows={3}
-                    maxLength={500}
-                    className="w-full px-3 py-2.5 text-sm border border-black/15 focus:border-black outline-none resize-none transition-colors bg-white"
-                  />
-                  <p className="text-[10px] text-black/40 mt-1 text-right tracking-wide">{customerNote.length}/500</p>
-                </div>
-              )}
-
-              <button
-                onClick={handleWhatsAppOrder}
-                disabled={loading}
-                className="w-full inline-flex items-center justify-center gap-3 px-5 py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.3em] font-medium text-black transition-all duration-500 disabled:opacity-60 disabled:cursor-not-allowed mb-3 group"
-                data-testid="cart-checkout-btn"
-              >
-                <span>
-                  {loading
-                    ? t('cart.sending')
-                    : isB2BUser
-                    ? t('cart.completeOrder')
-                    : showCheckout
-                    ? 'Bağla'
-                    : 'Ödəniş et'}
-                </span>
-                {!loading && <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>}
-              </button>
-
-              <button
-                onClick={() => navigate('/products')}
-                className="w-full inline-flex items-center justify-center px-5 py-3 text-[11px] uppercase tracking-[0.25em] font-medium text-black/65 hover:text-black border-b border-transparent hover:border-black transition-colors mb-3"
-              >
-                {t('cart.continueShopping')}
-              </button>
-
-              {!isB2BUser && (
-                <button
-                  onClick={() => setShowCreditForm(true)}
-                  className="w-full inline-flex items-center justify-center px-5 py-3 text-[11px] uppercase tracking-[0.25em] font-medium text-black/55 hover:text-black border border-black/15 hover:border-black transition-colors"
-                >
-                  {t('cart.buyWithCredit')}
-                </button>
-              )}
-            </div>
+          {/* Subtotal */}
+          <div className="flex items-center justify-between py-7">
+            <span className="text-[15px] text-black">Subtotal</span>
+            <span className="text-[15px] text-black tabular-nums" data-testid="cart-subtotal">
+              ${subtotal.toFixed(2)}
+            </span>
           </div>
+
+          {/* Checkout button */}
+          <button
+            onClick={openCheckout}
+            disabled={loading}
+            className="w-full h-14 bg-black text-white text-[13px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            data-testid="cart-checkout-btn"
+          >
+            {loading ? 'Sending...' : isB2BUser ? t('cart.completeOrder', { defaultValue: 'COMPLETE ORDER' }) : 'CHECK OUT'}
+          </button>
+
+          {/* Secondary actions */}
+          <div className="mt-5 flex items-center justify-between text-[12px]">
+            <button
+              onClick={() => navigate('/products')}
+              className="text-black/60 hover:text-black underline-offset-4 hover:underline transition-colors"
+              data-testid="cart-continue-shopping"
+            >
+              Continue shopping
+            </button>
+            <button
+              onClick={() => clearCart()}
+              className="text-black/60 hover:text-black underline-offset-4 hover:underline transition-colors"
+              data-testid="cart-clear-all"
+            >
+              Remove all
+            </button>
+          </div>
+
+          {!isB2BUser && (
+            <button
+              onClick={() => setShowCreditForm(true)}
+              className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 text-[11px] uppercase tracking-[0.25em] font-medium text-black/70 hover:text-black border border-black/20 hover:border-black transition-colors"
+              data-testid="cart-credit-btn"
+            >
+              {t('cart.buyWithCredit', { defaultValue: 'Buy with credit' })}
+            </button>
+          )}
+
+          {isB2BUser && (
+            <div className="mt-6">
+              <label htmlFor="customer-note" className="block text-[11px] uppercase tracking-[0.25em] text-black/55 mb-2">
+                Qeyd əlavə et
+              </label>
+              <textarea
+                id="customer-note"
+                data-testid="b2b-cart-customer-note"
+                value={customerNote}
+                onChange={(e) => setCustomerNote(e.target.value)}
+                placeholder="Əlavə qeyd yazın..."
+                rows={3}
+                maxLength={500}
+                className="w-full px-3 py-2.5 text-sm border border-black/20 focus:border-black outline-none resize-none transition-colors bg-white"
+              />
+              <p className="text-[10px] text-black/40 mt-1 text-right">{customerNote.length}/500</p>
+            </div>
+          )}
         </div>
-      </div>
       </div>
 
       {showCreditForm && items.length > 0 && (
@@ -780,344 +671,418 @@ const CartPage: React.FC = () => {
         />
       )}
 
+      {/* CHECKOUT — Rosefield-style two-column */}
       {showCheckout && !isB2BUser && (
         <div
           id="inline-checkout"
           className="fixed inset-0 z-50 bg-white overflow-y-auto"
           data-testid="inline-checkout-panel"
         >
-          <div className="min-h-screen flex flex-col max-w-2xl mx-auto px-5 sm:px-8 py-6 md:py-10">
-            {/* Top bar — back button */}
-            <div className="flex items-center justify-between mb-8 md:mb-12">
+          {/* Logo header */}
+          <div className="border-b border-black/10">
+            <div className="max-w-[1200px] mx-auto px-5 sm:px-8 py-5 flex items-center justify-between">
               <button
                 onClick={() => !loading && setShowCheckout(false)}
-                className="inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.2em] text-black hover:opacity-60 transition-opacity"
+                className="text-[12px] uppercase tracking-[0.2em] text-black hover:opacity-60 transition-opacity"
                 data-testid="inline-checkout-close"
               >
-                <ChevronLeft className="h-4 w-4" strokeWidth={1.25} />
-                <span>Geri</span>
+                ← Back
               </button>
-              <div className="text-[10px] uppercase tracking-[0.32em] text-black/45">
-                Ödəniş
+              <img
+                src="https://i.hizliresim.com/tmu65g6.png"
+                alt="De Valeur"
+                className="h-8 md:h-10"
+              />
+              <div className="w-12" />
+            </div>
+          </div>
+
+          <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-12">
+            {/* LEFT — form */}
+            <div className="px-5 sm:px-8 lg:pl-12 lg:pr-6 py-8 md:py-12 lg:border-r lg:border-black/10">
+              {/* Express checkout */}
+              <div className="mb-8 text-center">
+                <p className="text-[12px] text-black/55 mb-3">Express checkout</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    disabled
+                    className="h-11 bg-[#FFC439] text-[#003087] font-bold text-sm flex items-center justify-center disabled:cursor-not-allowed hover:opacity-90"
+                    data-testid="checkout-paypal-btn"
+                  >
+                    <span className="italic">Pay</span><span className="italic font-extrabold">Pal</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className="h-11 bg-black text-white text-sm flex items-center justify-center gap-1.5 disabled:cursor-not-allowed hover:opacity-90"
+                    data-testid="checkout-gpay-btn"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+                    </svg>
+                    <span className="font-medium">Pay</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Heading */}
-            <div className="mb-8 md:mb-10">
-              <h1 className="font-playfair text-3xl md:text-4xl font-light text-black tracking-tight leading-tight mb-2">
-                Sifarişi tamamla
-              </h1>
-              <p className="text-[13px] text-black/55 font-light">
-                Bütün məlumatları doldurun və ödənişə keçin.
-              </p>
-            </div>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="flex-1 h-px bg-black/15" />
+                <span className="text-[12px] text-black/55">OR</span>
+                <div className="flex-1 h-px bg-black/15" />
+              </div>
 
-            <div className="flex-1 space-y-6">
-              {/* Guest registration */}
-              {!isLoggedIn && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
-                  <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Şəxsi məlumatlar</p>
-                  <input
-                    type="text"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    placeholder="Ad Soyad"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white"
-                    data-testid="checkout-guest-name"
-                  />
-                  <input
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    placeholder="E-poçt ünvanı"
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white"
-                    data-testid="checkout-guest-email"
-                  />
-                  <p className="text-[10px] text-gray-500 leading-relaxed">
-                    Sifariş tamamlananda hesabınız avtomatik yaradılacaq. Şifrəni e-poçtunuzdan
-                    "Şifrəni unutdum" ilə təyin edə bilərsiniz.
-                  </p>
+              {/* Contact */}
+              <div className="mb-8">
+                <div className="flex items-end justify-between mb-4">
+                  <h2 className="text-[20px] font-normal text-black">Contact</h2>
+                  {!isLoggedIn && (
+                    <button
+                      onClick={() => navigate('/admin-login')}
+                      className="text-[13px] text-black underline underline-offset-2 hover:opacity-70"
+                      data-testid="checkout-signin-btn"
+                    >
+                      Sign in
+                    </button>
+                  )}
                 </div>
-              )}
 
-              {/* Logged-in user banner */}
-              {isLoggedIn && (
-                <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2 text-xs">
-                  <Check className="h-3.5 w-3.5 text-green-700 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-green-900 truncate">{loggedInName || loggedInEmail || 'Hesab aktiv'}</p>
-                    {loggedInEmail && loggedInName && (
-                      <p className="text-green-700 truncate">{loggedInEmail}</p>
-                    )}
-                    {phoneDigits.length === 9 && (
-                      <p className="text-green-700 truncate">+994 {phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Phone with locked +994 prefix - hide if logged-in user has phone saved */}
-              {!(isLoggedIn && phoneDigits.length === 9) && (
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-700 mb-1">Telefon nömrəsi *</label>
-                  <div className="flex items-stretch border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent overflow-hidden bg-white">
-                    <span className="px-3 flex items-center bg-gray-50 text-sm text-gray-700 font-medium border-r border-gray-200 select-none">
-                      +994
-                    </span>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
-                      onChange={(e) => {
-                        const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 9);
-                        setPhoneDigits(onlyDigits);
-                      }}
-                      placeholder="50 123 45 67"
-                      maxLength={13}
-                      className="flex-1 px-3 py-2.5 text-sm focus:outline-none"
-                      data-testid="checkout-phone-input"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Address — hidden when customer chose "Filialdan götürmə" */}
-              {!isPickupFlow && (
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-700 mb-1">Çatdırılma ünvanı *</label>
-                  <textarea
-                    value={customerAddress}
-                    onChange={(e) => setCustomerAddress(e.target.value)}
-                    placeholder="Şəhər, küçə, ev/mənzil"
-                    rows={2}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm resize-none bg-white"
-                    data-testid="checkout-address-input"
-                  />
-                </div>
-              )}
-
-              {/* Delivery methods */}
-              <div>
-                <label className="block text-[11px] font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <Truck className="h-3 w-3" />
-                  Çatdırılma üsulu *
-                </label>
-                {deliveryMethods.length === 0 ? (
-                  <div className="px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-700">
-                    Yüklənir... Əgər boş qalırsa, admin paneldən "Çatdırılma Üsulları" hissəsinə əlavə edin.
+                {isLoggedIn ? (
+                  <div className="px-3 py-3 border border-black/15 bg-black/[0.02] text-[13px] text-black/80">
+                    {loggedInName || loggedInEmail}
                   </div>
                 ) : (
-                  <div className="space-y-1.5" data-testid="delivery-method-list">
-                    {deliveryMethods.map((m) => {
-                      const selected = m.id === selectedDeliveryId;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setSelectedDeliveryId(m.id!)}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg border transition-all ${
-                            selected
-                              ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900'
-                              : 'border-gray-200 bg-white hover:border-gray-400'
-                          }`}
-                          data-testid={`delivery-method-option-${m.id}`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <div
-                                className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                  selected ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
-                                }`}
-                              >
-                                {selected && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-gray-900 text-xs leading-tight truncate">{m.name}</p>
-                                {m.estimatedDays && (
-                                  <p className="text-[10px] text-gray-500 leading-tight">{m.estimatedDays}</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <RFInput
+                    type="email"
+                    label="Email"
+                    required
+                    value={guestEmail}
+                    onChange={(v) => setGuestEmail(v)}
+                    testId="checkout-guest-email"
+                  />
+                )}
+
+                <label className="mt-3 flex items-center gap-2.5 cursor-pointer select-none">
+                  <span
+                    className={`w-4 h-4 border ${emailOptIn ? 'border-black bg-black' : 'border-black/40 bg-white'} flex items-center justify-center transition-colors`}
+                  >
+                    {emailOptIn && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={emailOptIn}
+                    onChange={(e) => setEmailOptIn(e.target.checked)}
+                  />
+                  <span className="text-[13px] text-black/70">Email me with news and offers</span>
+                </label>
+              </div>
+
+              {/* Delivery */}
+              <div className="mb-8">
+                <h2 className="text-[20px] font-normal text-black mb-4">Delivery</h2>
+
+                {/* Country (read-only Azerbaijan) */}
+                <div className="relative mb-3">
+                  <RFInput
+                    label="Country/region"
+                    required
+                    value="Azerbaijan"
+                    onChange={() => undefined}
+                    readOnly
+                    testId="checkout-country"
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/50 pointer-events-none" />
+                </div>
+
+                {!isLoggedIn && (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <RFInput label="First name" required value={guestName} onChange={setGuestName} testId="checkout-first-name" />
+                    <RFInput label="Last name" required value={guestLastName} onChange={setGuestLastName} testId="checkout-last-name" />
                   </div>
                 )}
 
-                {/* Pickup branch selector — appears only when a pickup method is selected */}
-                {isPickupFlow && selectedDelivery?.branches && selectedDelivery.branches.length > 0 && (
-                  <div className="mt-3" data-testid="pickup-branch-selector">
-                    <label className="block text-[11px] font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                      <Store className="h-3 w-3" />
-                      Hansı filialdan götürəcəksiniz? *
-                    </label>
-                    <div className="space-y-1.5">
-                      {selectedDelivery.branches.map((b) => {
-                        const selected = b.id === selectedBranchId;
+                {!isPickupFlow && (
+                  <div className="mb-3">
+                    <RFInput
+                      label="Street and house number"
+                      required
+                      value={customerAddress}
+                      onChange={setCustomerAddress}
+                      testId="checkout-address-input"
+                    />
+                  </div>
+                )}
+
+                {/* Phone */}
+                {!(isLoggedIn && phoneDigits.length === 9) && (
+                  <div className="mb-3">
+                    <RFInput
+                      label="Phone (+994)"
+                      required
+                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                      onChange={(v) => setPhoneDigits(v.replace(/\D/g, '').slice(0, 9))}
+                      testId="checkout-phone-input"
+                      inputMode="numeric"
+                      placeholder="50 123 45 67"
+                    />
+                  </div>
+                )}
+
+                {/* Delivery methods */}
+                <div className="mt-5">
+                  <p className="text-[13px] text-black mb-2">Shipping method</p>
+                  {deliveryMethods.length === 0 ? (
+                    <div className="px-3 py-2.5 border border-black/15 bg-black/[0.02] text-[12px] text-black/60">
+                      Yüklənir...
+                    </div>
+                  ) : (
+                    <div className="border border-black/15 divide-y divide-black/15" data-testid="delivery-method-list">
+                      {deliveryMethods.map((m) => {
+                        const selected = m.id === selectedDeliveryId;
                         return (
                           <button
-                            key={b.id}
+                            key={m.id}
                             type="button"
-                            onClick={() => setSelectedBranchId(b.id)}
-                            className={`w-full text-left px-2.5 py-2.5 rounded-lg border transition-all ${
-                              selected
-                                ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900'
-                                : 'border-gray-200 bg-white hover:border-gray-400'
-                            }`}
-                            data-testid={`pickup-branch-option-${b.id}`}
+                            onClick={() => setSelectedDeliveryId(m.id!)}
+                            className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors ${selected ? 'bg-black/[0.03]' : 'hover:bg-black/[0.02]'}`}
+                            data-testid={`delivery-method-option-${m.id}`}
                           >
-                            <div className="flex items-start gap-2 min-w-0">
-                              <div
-                                className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                  selected ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
-                                }`}
-                              >
-                                {selected && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-gray-900 text-xs leading-tight">{b.name}</p>
-                                <p className="text-[11px] text-gray-500 leading-tight mt-0.5 flex items-center gap-1">
-                                  <MapPin className="h-2.5 w-2.5" /> {b.address}
-                                </p>
-                                {b.mapUrl && (
-                                  <a
-                                    href={b.mapUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-block text-[10px] text-blue-600 hover:underline mt-1"
-                                  >
-                                    Xəritədə aç →
-                                  </a>
-                                )}
-                              </div>
+                            <span
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${selected ? 'border-black' : 'border-black/40'}`}
+                            >
+                              {selected && <span className="w-2 h-2 rounded-full bg-black" />}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] text-black truncate">{m.name}</p>
+                              {m.estimatedDays && <p className="text-[11px] text-black/55">{m.estimatedDays}</p>}
                             </div>
+                            <span className="text-[13px] text-black tabular-nums">
+                              {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Free'}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {isPickupFlow && selectedDelivery?.branches && selectedDelivery.branches.length > 0 && (
+                    <div className="mt-3" data-testid="pickup-branch-selector">
+                      <p className="text-[13px] text-black mb-2">Pickup branch</p>
+                      <div className="border border-black/15 divide-y divide-black/15">
+                        {selectedDelivery.branches.map((b) => {
+                          const selected = b.id === selectedBranchId;
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => setSelectedBranchId(b.id)}
+                              className={`w-full flex items-start gap-3 px-3 py-3 text-left transition-colors ${selected ? 'bg-black/[0.03]' : 'hover:bg-black/[0.02]'}`}
+                              data-testid={`pickup-branch-option-${b.id}`}
+                            >
+                              <span
+                                className={`mt-1 w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${selected ? 'border-black' : 'border-black/40'}`}
+                              >
+                                {selected && <span className="w-2 h-2 rounded-full bg-black" />}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] text-black">{b.name}</p>
+                                <p className="text-[11px] text-black/55">{b.address}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Note */}
+                <div className="mt-5">
+                  <RFInput
+                    label="Note (optional)"
+                    value={customerNote}
+                    onChange={(v) => setCustomerNote(v.slice(0, 200))}
+                    testId="checkout-note-input"
+                  />
+                </div>
               </div>
 
-              {/* Note */}
-              <div>
-                <label className="block text-[11px] font-medium text-gray-700 mb-1">Qeyd (istəyə bağlı)</label>
-                <input
-                  type="text"
-                  value={customerNote}
-                  onChange={(e) => setCustomerNote(e.target.value)}
-                  placeholder="Əlavə qeyd..."
-                  maxLength={200}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white"
-                />
+              {/* Pay button */}
+              <button
+                onClick={handleEpointCheckout}
+                disabled={loading}
+                className="w-full h-14 bg-black text-white text-[13px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="checkout-pay-btn"
+              >
+                {loading ? 'Yönləndirilir...' : 'Pay now'}
+              </button>
+              <p className="text-[11px] text-black/45 text-center mt-3">
+                Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.
+              </p>
+            </div>
+
+            {/* RIGHT — order summary */}
+            <div className="bg-[#FAFAFA] lg:bg-white px-5 sm:px-8 lg:pr-12 lg:pl-6 py-8 md:py-12">
+              {/* Items */}
+              <div className="space-y-4 mb-6">
+                {items.map((item) => {
+                  const price = getItemPrice(item);
+                  const productName = item.product.name[i18n.language as 'az' | 'ru' | 'en'] || item.product.name.en || item.product.name.az;
+                  return (
+                    <div key={item.product.id} className="flex items-center gap-4">
+                      <div className="relative w-[64px] h-[64px] flex-shrink-0 bg-[#F5EAE2] flex items-center justify-center overflow-hidden">
+                        <img src={item.product.images?.[0]} alt={productName} className="max-w-full max-h-full object-contain p-1.5" />
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black text-white text-[11px] flex items-center justify-center">
+                          {item.quantity}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] text-black truncate">{productName}</p>
+                      </div>
+                      <span className="text-[13px] text-black tabular-nums">
+                        ${(price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Promo kod */}
-              <div>
-                <label className="block text-[11px] font-medium text-gray-700 mb-1">
-                  Endirim kodu (istəyə bağlı)
-                </label>
+              {/* Discount code */}
+              <div className="mb-6">
                 {promoApplied ? (
                   <div
-                    className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200"
+                    className="flex items-center justify-between px-3 py-3 border border-black/20 bg-black/[0.03]"
                     data-testid="promo-applied-box"
                   >
-                    <div className="flex items-center gap-2 text-sm min-w-0">
-                      <Check className="h-4 w-4 text-emerald-700 flex-shrink-0" />
-                      <span className="font-mono font-semibold text-emerald-900 truncate">
-                        {promoApplied.code}
-                      </span>
-                      <span className="text-xs font-bold text-emerald-700 whitespace-nowrap">
-                        -{promoApplied.discount}%
-                      </span>
+                    <div className="text-[13px] text-black flex items-center gap-2 min-w-0">
+                      <Check className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-mono truncate">{promoApplied.code}</span>
+                      <span className="text-[12px] text-black/60 whitespace-nowrap">−{promoApplied.discount}%</span>
                     </div>
                     <button
                       type="button"
                       onClick={handleRemovePromo}
-                      className="text-xs font-medium text-emerald-700 hover:text-emerald-900 underline"
+                      className="text-[12px] text-black underline underline-offset-2 hover:opacity-70"
                       data-testid="promo-remove-btn"
                     >
-                      Sil
+                      Remove
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-stretch gap-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={promoInput}
-                        onChange={(e) => {
-                          setPromoInput(e.target.value.replace(/\D/g, '').slice(0, 6));
-                          if (promoError) setPromoError('');
-                        }}
-                        placeholder="6 rəqəmli kod"
-                        maxLength={6}
-                        className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white tabular-nums tracking-widest"
-                        data-testid="promo-code-input"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyPromo}
-                        disabled={promoLoading || promoInput.length !== 6}
-                        className="px-4 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        data-testid="promo-apply-btn"
-                      >
-                        {promoLoading ? '...' : 'Tətbiq et'}
-                      </button>
-                    </div>
-                    {promoError && (
-                      <p className="text-[11px] text-red-600 mt-1" data-testid="promo-error">
-                        {promoError}
-                      </p>
-                    )}
-                  </>
+                  <div className="flex items-stretch border border-black/20 focus-within:border-black transition-colors">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={promoInput}
+                      onChange={(e) => {
+                        setPromoInput(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        if (promoError) setPromoError('');
+                      }}
+                      placeholder="Discount code"
+                      maxLength={6}
+                      className="flex-1 px-3 py-3 text-[13px] bg-transparent outline-none placeholder:text-black/40"
+                      data-testid="promo-code-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromo}
+                      disabled={promoLoading || promoInput.length !== 6}
+                      className="px-5 text-[12px] uppercase tracking-[0.18em] text-black/70 disabled:text-black/30 hover:text-black transition-colors"
+                      data-testid="promo-apply-btn"
+                    >
+                      {promoLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
                 )}
+                {promoError && <p className="text-[11px] text-[#D14545] mt-1.5" data-testid="promo-error">{promoError}</p>}
               </div>
-            </div>
 
-            {/* Footer with summary + CTA — minimalist */}
-            <div className="border-t border-black/10 pt-6 mt-8">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-[11px] text-black/55 uppercase tracking-[0.2em]">
-                  Cəm
+              {/* Totals */}
+              <div className="space-y-3 text-[14px] py-4 border-t border-black/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-black/70">Subtotal</span>
+                  <span className="text-black tabular-nums">${getTotalPrice().toFixed(2)}</span>
                 </div>
-                <div className="font-playfair text-2xl md:text-3xl font-light text-black">
-                  {(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)}
-                  <span className="ml-1 text-sm tracking-wider text-black/55">AZN</span>
-                </div>
-              </div>
-              <div className="text-[11px] text-black/45 mb-4">
-                {(userDiscount > 0 ? getDiscountedTotal() : getTotalPrice()).toFixed(2)} AZN
-                {promoApplied && (
-                  <span className="text-emerald-700 font-medium"> −{getPromoDiscountAmount().toFixed(2)} AZN</span>
+                {userDiscount > 0 && (
+                  <div className="flex items-center justify-between text-emerald-700">
+                    <span>Discount ({userDiscount}%)</span>
+                    <span className="tabular-nums">−${getDiscountAmount().toFixed(2)}</span>
+                  </div>
                 )}
-                {deliveryFee > 0 && <span> + {deliveryFee.toFixed(2)} AZN çatdırılma</span>}
-              </div>
-              {promoApplied && (
-                <div className="text-[10px] text-emerald-700 font-medium mb-3 uppercase tracking-[0.15em]">
-                  {promoApplied.code} · {promoApplied.discount}% endirim tətbiq edildi
+                {promoApplied && (
+                  <div className="flex items-center justify-between text-emerald-700">
+                    <span>Promo ({promoApplied.discount}%)</span>
+                    <span className="tabular-nums">−${getPromoDiscountAmount().toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-black/70">Shipping</span>
+                  <span className="text-black/55 text-[13px]">
+                    {selectedDelivery
+                      ? deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free'
+                      : 'Enter shipping address'}
+                  </span>
                 </div>
-              )}
-              <button
-                onClick={handleEpointCheckout}
-                disabled={loading}
-                className="w-full inline-flex items-center justify-center gap-3 px-6 py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[11px] uppercase tracking-[0.3em] font-medium text-black transition-all duration-500 disabled:opacity-60 disabled:cursor-not-allowed group"
-                data-testid="checkout-pay-btn"
-              >
-                <span>{loading ? 'Yönləndirilir...' : 'Ödəniş et'}</span>
-                {!loading && <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>}
-              </button>
-              <p className="text-[10px] text-black/40 text-center mt-3 tracking-wide">
-                Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.
-              </p>
+              </div>
+
+              <div className="flex items-end justify-between py-4 border-t border-black/10">
+                <span className="text-[18px] font-medium text-black">Total</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[12px] text-black/50">USD</span>
+                  <span className="text-[22px] font-medium text-black tabular-nums" data-testid="checkout-total">
+                    ${(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
     </>
+  );
+};
+
+// Floating-label Rosefield-style input
+const RFInput: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  readOnly?: boolean;
+  testId?: string;
+  inputMode?: 'text' | 'numeric' | 'email' | 'tel';
+  placeholder?: string;
+}> = ({ label, value, onChange, type = 'text', required, readOnly, testId, inputMode, placeholder }) => {
+  const [focused, setFocused] = useState(false);
+  const filled = value.length > 0;
+  const float = focused || filled;
+  return (
+    <label className="relative block">
+      <span
+        className={`absolute left-3 transition-all pointer-events-none ${
+          float ? 'top-1.5 text-[10px] text-black/55' : 'top-1/2 -translate-y-1/2 text-[13px] text-black/55'
+        }`}
+      >
+        {label}{required && ' *'}
+      </span>
+      <input
+        type={type}
+        value={value}
+        readOnly={readOnly}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onChange={(e) => onChange(e.target.value)}
+        inputMode={inputMode}
+        placeholder={float ? placeholder : ''}
+        data-testid={testId}
+        className={`w-full h-[52px] px-3 pt-4 pb-1 border border-black/25 focus:border-black outline-none text-[14px] bg-white transition-colors ${readOnly ? 'cursor-default' : ''}`}
+      />
+    </label>
   );
 };
 

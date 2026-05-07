@@ -1,139 +1,155 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types';
-import Tilt3D from './Tilt3D';
 
 const BestSellersSection: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const trackRef = useRef<HTMLDivElement | null>(null);
 
   const getProductName = (product: Product): string => {
-    if (typeof product.name === 'string') return product.name;
+    if (typeof product.name === 'string') return product.name as unknown as string;
     const lang = i18n.language as 'az' | 'ru' | 'en';
     return product.name[lang] || product.name.az || product.name.en || '';
   };
 
-  useEffect(() => { loadBestSellers(); }, []);
-
-  const loadBestSellers = async () => {
-    try {
-      // 1 sıra infinite-loop marquee — hərəkət üçün kifayət qədər məhsul lazımdır
-      const data = await productService.getBestSellers(24);
-      setProducts(data);
-    } catch (error) {
-      console.error('Error loading best sellers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    productService.getBestSellers(24)
+      .then((data) => setProducts(data))
+      .catch((e) => console.error('Error loading best sellers:', e))
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading || products.length === 0) return null;
 
-  // Hərəkət üçün minimum məhsul sayı — azdırsa təkrarlanır
-  const safeItems = products.length >= 12 ? products : [...products, ...products, ...products].slice(0, 12);
-
-  const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
-    <div
-      className="shrink-0 w-[calc(25vw-12px)] sm:w-[calc(20vw-12px)] md:w-[calc(16.666vw-16px)] lg:w-[calc(16.666vw-20px)] xl:w-[calc(16.666vw-22px)]"
-    >
-      <Tilt3D
-        maxTilt={6}
-        className="cursor-pointer group transition-transform duration-500 ease-out hover:-translate-y-2 hover:scale-[1.04] hover:z-10 relative block"
-        onClick={() => navigate(`/product/${product.id}`)}
-        testId={`dv-bestseller-card-${product.id}`}
-      >
-        <div className="dv-tilt-inner">
-          <div className="relative bg-white overflow-hidden rounded-md transition-shadow duration-500 group-hover:shadow-[0_18px_40px_-12px_rgba(0,0,0,0.25)] ring-0 group-hover:ring-1 group-hover:ring-[#D4AF37]/30">
-            {product.isPersonalizable && (
-              <span className="absolute top-2 left-2 text-[8px] uppercase tracking-[0.25em] text-[#D4AF37] font-medium z-[2]">
-                Personalize
-              </span>
-            )}
-
-            <div className="aspect-[3/4] flex items-center justify-center p-1.5 sm:p-3 md:p-4 relative">
-              <img
-                src={product.images?.[0] || product.imageUrl}
-                alt={getProductName(product)}
-                loading="lazy"
-                decoding="async"
-                className={`max-w-full max-h-full object-contain transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110 group-hover:-rotate-1 ${
-                  product.images?.[1] ? 'group-hover:opacity-0' : ''
-                }`}
-              />
-              {product.images?.[1] && (
-                <img
-                  src={product.images[1]}
-                  alt={getProductName(product)}
-                  aria-hidden="true"
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-contain p-1.5 sm:p-3 md:p-4 opacity-0 scale-105 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-110 group-hover:-rotate-1"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="pt-1.5 pb-1 sm:pt-2 md:pt-3 md:pb-2 px-0.5 sm:px-1">
-            <h3 className="text-[10px] sm:text-xs md:text-sm text-black font-medium truncate leading-tight">
-              <span className="dv-gold-line">{getProductName(product)}</span>
-            </h3>
-            <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-light tracking-wide">
-              <span className="text-black font-medium">{product.price?.toFixed(2)}</span>{' '}
-              AZN
-            </p>
-          </div>
-        </div>
-      </Tilt3D>
-    </div>
-  );
+  const scrollByCard = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>('[data-rf-card]');
+    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.6;
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
 
   return (
     <section
-      className="relative py-10 md:py-16 bg-white overflow-hidden"
+      className="relative py-12 md:py-20 bg-white"
       data-testid="dv-bestsellers"
     >
-      {/* Full-width container — Yarımçıq düşmə problemini həll edir (max-w limiti silindi) */}
-      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 relative">
-        {/* Yığcam başlıq */}
-        <div className="text-center mb-5 md:mb-8">
-          <div className="inline-flex items-center mb-2">
-            <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-            <span className="mx-2.5 text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
-              {t('bestSellers.eyebrow', { defaultValue: "De Valeur'da kəşfə çıxın" })}
-            </span>
-            <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-          </div>
-          <h2 className="font-playfair text-xs sm:text-sm md:text-base lg:text-lg font-light text-black tracking-[0.1em] leading-[1.1] uppercase" style={{ wordSpacing: '-0.05em' }}>
-            {t('bestSellers.title')}
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-8 md:mb-10">
+          <h2
+            className="text-[20px] md:text-[26px] font-semibold tracking-[0.18em] uppercase text-black inline-block pb-2 border-b border-black"
+            data-testid="bestsellers-heading"
+          >
+            {t('bestSellers.title', { defaultValue: 'BEST SELLERS' })}
           </h2>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => scrollByCard(-1)}
+              aria-label="Previous"
+              className="text-black/30 hover:text-black transition-colors"
+              data-testid="bestsellers-prev"
+            >
+              <ChevronLeft className="w-7 h-7 md:w-9 md:h-9" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByCard(1)}
+              aria-label="Next"
+              className="text-black hover:opacity-70 transition-opacity"
+              data-testid="bestsellers-next"
+            >
+              <ChevronRight className="w-7 h-7 md:w-9 md:h-9" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
 
-        {/* Sola doğru avtomatik sürüşən 1 sıra (marquee) */}
-        <div className="dv-bs-row relative overflow-hidden">
-          <div className="dv-bs-track dv-bs-track-left">
-            {/* Seamless loop üçün 2 dəfə render */}
-            {[...safeItems, ...safeItems].map((p, i) => (
-              <ProductCard key={`${p.id}-${i}`} product={p} />
-            ))}
-          </div>
+        {/* Track */}
+        <div
+          ref={trackRef}
+          className="rf-track flex gap-4 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {products.map((product) => {
+            const onSale = !!product.salePrice && product.salePrice < product.price;
+            const price = onSale ? product.salePrice! : product.price;
+            const name = getProductName(product);
+
+            return (
+              <button
+                key={product.id}
+                type="button"
+                data-rf-card
+                data-testid={`bestseller-card-${product.id}`}
+                onClick={() => navigate(`/product/${product.id}`)}
+                className="group flex-none snap-start text-left w-[60vw] sm:w-[40vw] md:w-[28vw] lg:w-[20vw] xl:w-[18vw] max-w-[300px]"
+              >
+                <div className="relative aspect-[3/4] overflow-hidden bg-[#F5EAE2]">
+                  {/* Top label */}
+                  <span
+                    className={`absolute top-3 left-3 z-[2] text-[11px] tracking-[0.22em] uppercase font-medium ${
+                      onSale ? 'text-[#D14545]' : 'text-black/80'
+                    }`}
+                  >
+                    {onSale ? 'SALE' : 'PERSONALIZE'}
+                  </span>
+
+                  <img
+                    src={product.images?.[0]}
+                    alt={name}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-contain p-6 md:p-8 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  />
+
+                  {product.images?.[1] && (
+                    <img
+                      src={product.images[1]}
+                      alt={name}
+                      aria-hidden="true"
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-contain p-6 md:p-8 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
+                    />
+                  )}
+                </div>
+
+                <div className="pt-4">
+                  <h3 className="text-[14px] md:text-[15px] text-black font-normal tracking-tight truncate">
+                    {name}
+                  </h3>
+                  <p className="mt-1 text-[14px] md:text-[15px] text-black tabular-nums">
+                    {onSale ? (
+                      <>
+                        <span className="text-black/40 line-through mr-2">
+                          {product.price.toFixed(0)} AZN
+                        </span>
+                        <span className="text-[#D14545] font-medium">
+                          {price.toFixed(2)} AZN
+                        </span>
+                      </>
+                    ) : (
+                      <span>{price.toFixed(0)} AZN</span>
+                    )}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Soft kənar gradient — elegant bluendinq */}
-      <div
-        className="pointer-events-none absolute top-0 bottom-0 left-0 w-8 sm:w-16 z-10"
-        style={{ background: 'linear-gradient(90deg, white, transparent)' }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute top-0 bottom-0 right-0 w-8 sm:w-16 z-10"
-        style={{ background: 'linear-gradient(270deg, white, transparent)' }}
-        aria-hidden="true"
-      />
+      <style>{`
+        .rf-track::-webkit-scrollbar { display: none; }
+      `}</style>
     </section>
   );
 };

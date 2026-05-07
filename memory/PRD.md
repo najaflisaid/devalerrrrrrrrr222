@@ -438,3 +438,9 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 - CartPage: when the customer picks a pickup method, the "Çatdırılma ünvanı" textarea is hidden and replaced by a branch picker; submission requires a branch; saved order carries `isPickup / pickupBranchId / pickupBranchName / pickupBranchAddress`; `customerAddress` is auto-filled with the chosen branch string.
 - CustomerOrdersTab (admin): now shows the pickup branch name + address with a "Filialdan götürmə" label instead of the generic delivery-address block when `isPickup` is true.
 - DeliveryMethodsTab (admin): the form now has an "Filialdan götürmə" toggle. When enabled, the default 3 branches are prefilled and each branch can be edited (name, address, phone, map link) or deleted; new branches can be added. The list cards display the pickup badge + all branches inline so the admin sees everything at a glance.
+
+## 2026-01 — Rosefield-style UI restyle
+- BestSellersSection: cream/blush product tiles with PERSONALIZE/SALE badges, left-aligned heading with underline, chevron arrow scroll controls, name + price below cards
+- CartPage: drawer-style centered layout — "Cart" title + X close, cream image tiles, − 1 + quantity selector, subtotal row, big black CHECK OUT button, secondary "Continue shopping" / "Remove all" links
+- Checkout panel: two-column Rosefield layout with De Valeur logo header, Express checkout (PayPal/GPay placeholders, decorative — no real integration change), OR divider, Contact (email + opt-in), Delivery (country/name/address/phone), Shipping methods, Pickup branch, Note, Discount code on right column with order summary, Subtotal, Shipping, Total
+- All existing logic preserved: Epoint payment, B2B order flow, promo code validation, delivery methods from Firestore, guest auto-registration, credit application form
