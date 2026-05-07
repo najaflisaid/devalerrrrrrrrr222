@@ -26,6 +26,8 @@ const CartPage: React.FC = () => {
   const [showCreditForm, setShowCreditForm] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  // Hansı sahə boşdur — pulsing red ring üçün istifadə olunur
+  const [missingField, setMissingField] = useState<string | null>(null);
   const [customerNote, setCustomerNote] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const initPhone = (localStorage.getItem('userPhone') || '').replace(/^\+?994/, '').replace(/\D/g, '');
@@ -169,53 +171,72 @@ const CartPage: React.FC = () => {
     let userName = localStorage.getItem('userName') || '';
     let userEmail = localStorage.getItem('userEmail') || '';
 
+    // Validation helper — boş sahəni göstər, scroll et, qırmızı diqqət ringi qoy
+    const flagMissing = (testId: string, message: string, durationMs = 4500) => {
+      setErrorMessage(message);
+      setShowError(true);
+      setTimeout(() => setShowError(false), durationMs);
+      setMissingField(testId);
+      // Növbəti tick-də scroll + focus (input render olduqdan sonra)
+      setTimeout(() => {
+        try {
+          const el = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = (el as HTMLElement).tagName === 'INPUT' || (el as HTMLElement).tagName === 'TEXTAREA'
+              ? (el as HTMLInputElement)
+              : el.querySelector<HTMLInputElement>('input, textarea');
+            input?.focus({ preventScroll: true });
+          }
+        } catch {
+          /* ignore */
+        }
+      }, 50);
+      // Diqqət ringi 5 saniyə sonra söndür
+      setTimeout(() => setMissingField((c) => (c === testId ? null : c)), 5000);
+    };
+
+    if (!userId) {
+      if (!guestName.trim()) {
+        flagMissing('checkout-first-name', 'Adınızı daxil edin.');
+        return;
+      }
+      if (!guestLastName.trim()) {
+        flagMissing('checkout-last-name', 'Soyadınızı daxil edin.');
+        return;
+      }
+      if (!guestEmail.trim() || !/.+@.+\..+/.test(guestEmail)) {
+        flagMissing('checkout-guest-email', 'Düzgün e-poçt daxil edin.');
+        return;
+      }
+    }
+
     const cleanPhone = phoneDigits.replace(/\D/g, '');
     if (cleanPhone.length < 9) {
-      setErrorMessage('Telefon nömrəsi düzgün deyil. Məs: 50 123 45 67');
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
+      flagMissing('checkout-phone-input', 'Telefon nömrəsi düzgün deyil. Məs: 50 123 45 67');
       return;
     }
     const fullPhone = `+994${cleanPhone}`;
 
-    if (!isPickupFlow && !customerAddress.trim()) {
-      setErrorMessage('Çatdırılma ünvanını daxil edin.');
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
-      return;
-    }
-
     if (deliveryMethods.length > 0 && !selectedDeliveryId) {
-      setErrorMessage('Çatdırılma üsulunu seçin.');
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
+      flagMissing('delivery-method-list', 'Çatdırılma üsulunu seçin.');
       return;
     }
 
     if (isPickupFlow && !selectedBranch) {
-      setErrorMessage('Hansı filialdan götürəcəyinizi seçin.');
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
+      flagMissing('pickup-branch-selector', 'Hansı filialdan götürəcəyinizi seçin.');
       return;
     }
 
+    if (!isPickupFlow && !customerAddress.trim()) {
+      flagMissing('checkout-address-input', 'Çatdırılma ünvanını daxil edin.');
+      return;
+    }
+
+    setMissingField(null);
     setLoading(true);
     try {
       if (!userId) {
-        if (!guestName.trim()) {
-          setErrorMessage('Adınızı daxil edin.');
-          setShowError(true);
-          setTimeout(() => setShowError(false), 4000);
-          setLoading(false);
-          return;
-        }
-        if (!guestEmail.trim() || !/.+@.+\..+/.test(guestEmail)) {
-          setErrorMessage('Düzgün e-poçt daxil edin.');
-          setShowError(true);
-          setTimeout(() => setShowError(false), 4000);
-          setLoading(false);
-          return;
-        }
         const autoPassword = `dv-${cleanPhone}-${Date.now().toString(36)}`;
         try {
           const cred = await createUserWithEmailAndPassword(auth, guestEmail.trim(), autoPassword);
@@ -806,8 +827,9 @@ const CartPage: React.FC = () => {
                     label={t('checkout.email')}
                     required
                     value={guestEmail}
-                    onChange={(v) => setGuestEmail(v)}
+                    onChange={(v) => { setGuestEmail(v); if (missingField === 'checkout-guest-email') setMissingField(null); }}
                     testId="checkout-guest-email"
+                    error={missingField === 'checkout-guest-email'}
                   />
                 )}
               </div>
@@ -818,8 +840,8 @@ const CartPage: React.FC = () => {
 
                 {!isLoggedIn && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <RFInput label={t('checkout.firstName')} required value={guestName} onChange={setGuestName} testId="checkout-first-name" />
-                    <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={setGuestLastName} testId="checkout-last-name" />
+                    <RFInput label={t('checkout.firstName')} required value={guestName} onChange={(v) => { setGuestName(v); if (missingField === 'checkout-first-name') setMissingField(null); }} testId="checkout-first-name" error={missingField === 'checkout-first-name'} />
+                    <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={(v) => { setGuestLastName(v); if (missingField === 'checkout-last-name') setMissingField(null); }} testId="checkout-last-name" error={missingField === 'checkout-last-name'} />
                   </div>
                 )}
 
@@ -829,8 +851,9 @@ const CartPage: React.FC = () => {
                       label={t('checkout.streetHouse')}
                       required
                       value={customerAddress}
-                      onChange={setCustomerAddress}
+                      onChange={(v) => { setCustomerAddress(v); if (missingField === 'checkout-address-input') setMissingField(null); }}
                       testId="checkout-address-input"
+                      error={missingField === 'checkout-address-input'}
                     />
                   </div>
                 )}
@@ -842,10 +865,11 @@ const CartPage: React.FC = () => {
                       label={t('checkout.phone')}
                       required
                       value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
-                      onChange={(v) => setPhoneDigits(v.replace(/\D/g, '').slice(0, 9))}
+                      onChange={(v) => { setPhoneDigits(v.replace(/\D/g, '').slice(0, 9)); if (missingField === 'checkout-phone-input') setMissingField(null); }}
                       testId="checkout-phone-input"
                       inputMode="numeric"
                       placeholder={t('checkout.phonePlaceholder')}
+                      error={missingField === 'checkout-phone-input'}
                     />
                   </div>
                 )}
@@ -858,14 +882,21 @@ const CartPage: React.FC = () => {
                       {t('checkout.loadingMethods')}
                     </div>
                   ) : (
-                    <div className="border border-black/15 divide-y divide-black/15" data-testid="delivery-method-list">
+                    <div
+                      className={`border divide-y transition-all ${
+                        missingField === 'delivery-method-list'
+                          ? 'border-red-500 ring-2 ring-red-500/30 animate-pulse divide-red-200'
+                          : 'border-black/15 divide-black/15'
+                      }`}
+                      data-testid="delivery-method-list"
+                    >
                       {deliveryMethods.map((m) => {
                         const selected = m.id === selectedDeliveryId;
                         return (
                           <button
                             key={m.id}
                             type="button"
-                            onClick={() => setSelectedDeliveryId(m.id!)}
+                            onClick={() => { setSelectedDeliveryId(m.id!); if (missingField === 'delivery-method-list') setMissingField(null); }}
                             className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors ${selected ? 'bg-black/[0.03]' : 'hover:bg-black/[0.02]'}`}
                             data-testid={`delivery-method-option-${m.id}`}
                           >
@@ -890,14 +921,18 @@ const CartPage: React.FC = () => {
                   {isPickupFlow && selectedDelivery?.branches && selectedDelivery.branches.length > 0 && (
                     <div className="mt-3" data-testid="pickup-branch-selector">
                       <p className="text-[13px] text-black mb-2">{t('checkout.pickupBranch')}</p>
-                      <div className="border border-black/15 divide-y divide-black/15">
+                      <div className={`border divide-y transition-all ${
+                        missingField === 'pickup-branch-selector'
+                          ? 'border-red-500 ring-2 ring-red-500/30 animate-pulse divide-red-200'
+                          : 'border-black/15 divide-black/15'
+                      }`}>
                         {selectedDelivery.branches.map((b) => {
                           const selected = b.id === selectedBranchId;
                           return (
                             <button
                               key={b.id}
                               type="button"
-                              onClick={() => setSelectedBranchId(b.id)}
+                              onClick={() => { setSelectedBranchId(b.id); if (missingField === 'pickup-branch-selector') setMissingField(null); }}
                               className={`w-full flex items-start gap-3 px-3 py-3 text-left transition-colors ${selected ? 'bg-black/[0.03]' : 'hover:bg-black/[0.02]'}`}
                               data-testid={`pickup-branch-option-${b.id}`}
                             >
@@ -1143,7 +1178,8 @@ const RFInput: React.FC<{
   testId?: string;
   inputMode?: 'text' | 'numeric' | 'email' | 'tel';
   placeholder?: string;
-}> = ({ label, value, onChange, type = 'text', required, readOnly, testId, inputMode, placeholder }) => {
+  error?: boolean;
+}> = ({ label, value, onChange, type = 'text', required, readOnly, testId, inputMode, placeholder, error }) => {
   const [focused, setFocused] = useState(false);
   const filled = value.length > 0;
   const float = focused || filled;
@@ -1151,8 +1187,8 @@ const RFInput: React.FC<{
     <label className="relative block">
       <span
         className={`absolute left-3 transition-all pointer-events-none ${
-          float ? 'top-1.5 text-[10px] text-black/55' : 'top-1/2 -translate-y-1/2 text-[13px] text-black/55'
-        }`}
+          float ? 'top-1.5 text-[10px]' : 'top-1/2 -translate-y-1/2 text-[13px]'
+        } ${error ? 'text-red-600' : 'text-black/55'}`}
       >
         {label}{required && ' *'}
       </span>
@@ -1166,7 +1202,11 @@ const RFInput: React.FC<{
         inputMode={inputMode}
         placeholder={float ? placeholder : ''}
         data-testid={testId}
-        className={`w-full h-[52px] px-3 pt-4 pb-1 border border-black/25 focus:border-black outline-none text-[14px] bg-white transition-colors ${readOnly ? 'cursor-default' : ''}`}
+        className={`w-full h-[52px] px-3 pt-4 pb-1 outline-none text-[14px] bg-white transition-colors border ${
+          error
+            ? 'border-red-500 ring-2 ring-red-500/30 animate-pulse'
+            : 'border-black/25 focus:border-black'
+        } ${readOnly ? 'cursor-default' : ''}`}
       />
     </label>
   );

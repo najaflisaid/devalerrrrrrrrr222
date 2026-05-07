@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { Bell, ShoppingBag } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { playNewOrderSound, unlockAudio } from '../utils/notificationSound';
@@ -156,13 +156,16 @@ const AdminGlobalNotifications: React.FC = () => {
       /* ignore */
     }
     prevB2BRef.current = -1;
-    const q = query(collection(db, 'b2bOrders'), where('status', '==', 'pending'));
+    // Bütün B2B sifarişlərini izlə — yalnız `cancelled` və `delivered` statusları və
+    // ya artıq oxunmuş (isReadByAdmin) sifarişlər badge-də sayılmır.
     const unsub = onSnapshot(
-      q,
+      collection(db, 'b2bOrders'),
       (snap) => {
         let count = 0;
         snap.forEach((d) => {
           const data: any = d.data();
+          if (data.status === 'cancelled' || data.status === 'delivered') return;
+          if (data.isReadByAdmin) return;
           const ms = data?.createdAt?.toMillis
             ? data.createdAt.toMillis()
             : typeof data?.createdAt === 'number'

@@ -154,13 +154,14 @@ const AdminPanel: React.FC = () => {
   });
   const [pendingB2BRequestsCount, setPendingB2BRequestsCount] = useState(0);
 
-  // Real-vaxt: yalnız b2bLastSeen-dan sonra yaradılmış pending sifarişləri say
+  // Real-vaxt: bütün B2B sifarişləri (cancelled/delivered və oxunmuş istisna) — b2bLastSeen-dən sonra yaradılmışlar
   useEffect(() => {
-    const q = query(collection(db, 'b2bOrders'), where('status', '==', 'pending'));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(collection(db, 'b2bOrders'), (snap) => {
       let count = 0;
       snap.forEach(d => {
         const data: any = d.data();
+        if (data.status === 'cancelled' || data.status === 'delivered') return;
+        if (data.isReadByAdmin) return;
         const ms = data?.createdAt?.toMillis ? data.createdAt.toMillis()
           : (typeof data?.createdAt === 'number' ? data.createdAt
             : data?.createdAt instanceof Date ? data.createdAt.getTime() : 0);
