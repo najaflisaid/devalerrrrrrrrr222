@@ -461,3 +461,17 @@ Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (�
 - PromoCode service extended: `type: 'percent' | 'amount'`, `amountAZN`, `isGiftCard` fields; new `createGiftCardPromoCode()` function
 - CartPage promo validation/redemption supports both percent and fixed-amount codes
 - Gift codes shown prominently on payment success page with copy-to-clipboard buttons
+
+## 2026-01 — Epoint payment system — official spec compliance
+**Problem**: Old client-side direct fetch to `/api/1/checkout` and `/api/1/token/widget` did not match the official WooCommerce plugin contract (private key signature mismatch + browser CORS issues).
+
+**Fix — server-side flow matching official PHP plugin**:
+- New backend endpoints in `/app/backend/server.py`:
+  - `POST /api/epoint/create-payment` — builds the canonical payload, signs it with `base64(sha1(privateKey + base64(json) + privateKey, raw=true))`, POSTs to **`https://epoint.az/api/1/request`** (per official PDF), returns `redirect_url`.
+  - `POST /api/epoint/verify-callback` — verifies the redirect-back `data` + `signature` and decodes the payload.
+- Frontend `epointPaymentService.ts` rewritten to call these backend endpoints (no more browser-side direct calls / CORS issues).
+- JSON serialization uses `separators=(",", ":")` so Python output is byte-equivalent to PHP `json_encode` (signature stays valid).
+- `httpx` added to backend requirements.
+- Verified: backend now successfully reaches Epoint API and Epoint accepts the signature (test merchant key returned the expected `"Merchant not active"` error rather than a signature error — confirms format).
+
+**To go live**: Admin → Sayt Parametrləri → Epoint, save real `public_key` and `private_key` from epoint.az merchant panel + the success/error/result URLs.

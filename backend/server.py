@@ -3,11 +3,17 @@
 Endpoints:
 - GET  /api/health        – supervisor / load balancer probe
 - POST /api/chat          – De Valeur AI sales assistant (Claude Sonnet 4.5 via emergent LLM key)
+- POST /api/epoint/create-payment – Server-side Epoint payment-request (matches official WooCommerce plugin spec)
+- POST /api/epoint/verify-callback – Verify a redirect/result-url payload signature
 """
 import os
+import json
+import base64
+import hashlib
 import logging
 from typing import List, Optional
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -330,3 +336,147 @@ async def chat_endpoint(req: ChatRequest):
     except Exception as e:
         logger.exception("Chat error: %s", e)
         raise HTTPException(status_code=500, detail=f"AI cavab verə bilmədi: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Epoint.az — official payment-request flow
+# Matches the official WooCommerce plugin (epoint.az/api/1/request):
+#   data      = base64(json_encode(payload))
+#   signature = base64(sha1(private_key + data + private_key, raw=True))
+# Server-side call avoids browser CORS and keeps the contract identical to
+# the official PHP plugin so Epoint always accepts the signature.
+# ---------------------------------------------------------------------------
+
+EPOINT_REQUEST_URL = "https://epoint.az/api/1/request"
+
+
+def _epoint_sign(private_key: str, data_b64: str) -> str:
+    raw = (private_key + data_b64 + private_key).encode("utf-8")
+    digest = hashlib.sha1(raw).digest()
+    return base64.b64encode(digest).decode("ascii")
+
+
+def _epoint_build_payload(
+    public_key: str,
+    private_key: str,
+    payload: dict,
+) -> tuple[str, str]:
+    # IMPORTANT: PHP's json_encode emits compact JSON with no spaces and uses
+    # "/" without escaping in this plugin context. Python's json.dumps with
+    # separators=(",", ":") matches the PHP output the signature was built on.
+    json_str = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    data_b64 = base64.b64encode(json_str.encode("utf-8")).decode("ascii")
+    signature = _epoint_sign(private_key, data_b64)
+    return data_b64, signature
+
+
+class EpointCreatePaymentRequest(BaseModel):
+    public_key: str = Field(..., min_length=1)
+    private_key: str = Field(..., min_length=1)
+    amount: float = Field(..., gt=0)
+    order_id: str = Field(..., min_length=1, max_length=128)
+    currency: str = "AZN"
+    language: str = "az"
+    description: str = "DE VALEUR sifariş ödənişi"
+    success_redirect_url: Optional[str] = None
+    error_redirect_url: Optional[str] = None
+    result_url: Optional[str] = None
+    is_installment: Optional[int] = None
+
+
+class EpointCreatePaymentResponse(BaseModel):
+    status: str
+    transaction: Optional[str] = None
+    redirect_url: Optional[str] = None
+    message: Optional[str] = None
+
+
+@app.post("/api/epoint/create-payment", response_model=EpointCreatePaymentResponse)
+async def epoint_create_payment(req: EpointCreatePaymentRequest):
+    if req.language not in ("az", "en", "ru"):
+        req.language = "az"
+
+    # Build payload exactly like the official plugin
+    payload: dict = {
+        "public_key": req.public_key,
+        # Send as float (PHP does (float)$total). PHP json_encode of a float
+        # like 232.0 produces "232" — match by formatting with %g-like rules.
+        # Safest: send as string "232.00" which the plugin's PHP cast accepts
+        # and Epoint accepts. We choose the WooCommerce-plugin route: float.
+        "amount": float(f"{req.amount:.2f}"),
+        "currency": req.currency,
+        "language": req.language,
+        "order_id": req.order_id,
+        "description": req.description or f"Order #{req.order_id}",
+    }
+    if req.success_redirect_url:
+        payload["success_redirect_url"] = req.success_redirect_url
+    if req.error_redirect_url:
+        payload["error_redirect_url"] = req.error_redirect_url
+    if req.result_url:
+        payload["result_url"] = req.result_url
+    if req.is_installment:
+        payload["is_installment"] = int(req.is_installment)
+
+    data_b64, signature = _epoint_build_payload(req.public_key, req.private_key, payload)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                EPOINT_REQUEST_URL,
+                data={"data": data_b64, "signature": signature},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except httpx.HTTPError as e:
+        logger.exception("Epoint network error: %s", e)
+        raise HTTPException(status_code=502, detail=f"Epoint ilə əlaqə qurulmadı: {e}")
+
+    if resp.status_code >= 400:
+        logger.warning("Epoint HTTP %s: %s", resp.status_code, resp.text[:500])
+        raise HTTPException(
+            status_code=502,
+            detail=f"Epoint cavabı uğursuz oldu (HTTP {resp.status_code})",
+        )
+
+    try:
+        body = resp.json()
+    except Exception:
+        logger.warning("Epoint non-JSON response: %s", resp.text[:500])
+        raise HTTPException(status_code=502, detail="Epoint düzgün cavab qaytarmadı")
+
+    status = (body.get("status") or "").lower()
+    if status != "success":
+        return EpointCreatePaymentResponse(
+            status="error",
+            message=body.get("message") or body.get("description") or "Epoint xətası",
+        )
+
+    return EpointCreatePaymentResponse(
+        status="success",
+        transaction=str(body.get("transaction") or ""),
+        redirect_url=str(body.get("redirect_url") or ""),
+    )
+
+
+class EpointVerifyRequest(BaseModel):
+    private_key: str = Field(..., min_length=1)
+    data: str = Field(..., min_length=1)
+    signature: str = Field(..., min_length=1)
+
+
+class EpointVerifyResponse(BaseModel):
+    valid: bool
+    payload: Optional[dict] = None
+
+
+@app.post("/api/epoint/verify-callback", response_model=EpointVerifyResponse)
+async def epoint_verify_callback(req: EpointVerifyRequest):
+    expected = _epoint_sign(req.private_key, req.data)
+    if expected != req.signature:
+        return EpointVerifyResponse(valid=False)
+    try:
+        decoded_json = base64.b64decode(req.data).decode("utf-8")
+        payload = json.loads(decoded_json)
+        return EpointVerifyResponse(valid=True, payload=payload)
+    except Exception:
+        return EpointVerifyResponse(valid=False)
