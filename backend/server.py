@@ -458,6 +458,69 @@ async def epoint_create_payment(req: EpointCreatePaymentRequest):
     )
 
 
+# ---------------------------------------------------------------------------
+# Epoint widget URL — for Apple Pay / Google Pay (iframe-based)
+# Endpoint: https://epoint.az/api/1/token/widget
+# Payload (per official docs): public_key, amount, order_id, description
+# ---------------------------------------------------------------------------
+
+EPOINT_WIDGET_URL = "https://epoint.az/api/1/token/widget"
+
+
+class EpointWidgetRequest(BaseModel):
+    public_key: str = Field(..., min_length=1)
+    private_key: str = Field(..., min_length=1)
+    amount: float = Field(..., gt=0)
+    order_id: str = Field(..., min_length=1, max_length=255)
+    description: str = "DE VALEUR sifariş"
+
+
+class EpointWidgetResponse(BaseModel):
+    status: str
+    widget_url: Optional[str] = None
+    message: Optional[str] = None
+
+
+@app.post("/api/epoint/widget-url", response_model=EpointWidgetResponse)
+async def epoint_widget_url(req: EpointWidgetRequest):
+    payload = {
+        "public_key": req.public_key,
+        "amount": float(f"{req.amount:.2f}"),
+        "order_id": req.order_id,
+        "description": req.description or f"Order #{req.order_id}",
+    }
+    data_b64, signature = _epoint_build_payload(req.public_key, req.private_key, payload)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                EPOINT_WIDGET_URL,
+                data={"data": data_b64, "signature": signature},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except httpx.HTTPError as e:
+        logger.exception("Epoint widget network error: %s", e)
+        raise HTTPException(status_code=502, detail=f"Epoint ilə əlaqə qurulmadı: {e}")
+
+    if resp.status_code >= 400:
+        logger.warning("Epoint widget HTTP %s: %s", resp.status_code, resp.text[:500])
+        raise HTTPException(status_code=502, detail=f"Epoint widget cavabı: HTTP {resp.status_code}")
+
+    try:
+        body = resp.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Epoint widget düzgün cavab qaytarmadı")
+
+    status = (body.get("status") or "").lower()
+    if status != "success" or not body.get("widget_url"):
+        return EpointWidgetResponse(
+            status="error",
+            message=body.get("message") or body.get("description") or "Widget URL alınmadı",
+        )
+
+    return EpointWidgetResponse(status="success", widget_url=str(body.get("widget_url")))
+
+
 class EpointVerifyRequest(BaseModel):
     private_key: str = Field(..., min_length=1)
     data: str = Field(..., min_length=1)

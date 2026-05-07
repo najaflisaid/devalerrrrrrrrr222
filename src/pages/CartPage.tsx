@@ -8,11 +8,12 @@ import { setDoc, doc as fsDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment } from '../services/epointPaymentService';
+import { startEpointPayment, fetchEpointWidgetUrl } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import CustomerLogin from '../components/auth/CustomerLogin';
+import EpointWidgetModal from '../components/EpointWidgetModal';
 import { validatePromoCode, redeemPromoCode } from '../services/promoCodeService';
 
 const CartPage: React.FC = () => {
@@ -31,6 +32,7 @@ const CartPage: React.FC = () => {
   const [phoneDigits, setPhoneDigits] = useState(initPhone);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
 
   // Device detection — show Apple Pay on Apple devices, Google Pay on others
@@ -160,7 +162,7 @@ const CartPage: React.FC = () => {
     setShowCheckout(true);
   };
 
-  const handleEpointCheckout = async () => {
+  const handleEpointCheckout = async (mode: 'redirect' | 'widget' = 'redirect') => {
     if (items.length === 0) return;
 
     let userId = localStorage.getItem('userId');
@@ -324,6 +326,16 @@ const CartPage: React.FC = () => {
       }
 
       try {
+        if (mode === 'widget') {
+          const url = await fetchEpointWidgetUrl({
+            orderId,
+            amount: total,
+            description: `DE VALEUR sifariş #${orderId.slice(0, 10)}`,
+          });
+          setWidgetUrl(url);
+          setLoading(false);
+          return;
+        }
         await startEpointPayment({ orderId, amount: total });
       } catch (signErr: any) {
         try {
@@ -335,6 +347,10 @@ const CartPage: React.FC = () => {
         } catch { /* ignore */ }
         sessionStorage.removeItem('pending_epoint_order_id');
         throw signErr;
+      }
+
+      if ((mode as string) === 'widget') {
+        return; // Widget mode handled inline above
       }
 
       const watchdog = window.setTimeout(async () => {
@@ -707,6 +723,30 @@ const CartPage: React.FC = () => {
         </div>
       )}
 
+      {/* Epoint widget iframe modal — Apple Pay / Google Pay / Card */}
+      {widgetUrl && (
+        <EpointWidgetModal
+          url={widgetUrl}
+          onClose={() => {
+            setWidgetUrl(null);
+            setLoading(false);
+          }}
+          onSuccess={() => {
+            const orderId = sessionStorage.getItem('pending_epoint_order_id') || '';
+            setWidgetUrl(null);
+            // Navigate to success page so codes/order display works the same
+            navigate(`/payment/success${orderId ? `?orderId=${orderId}` : ''}`);
+          }}
+          onError={(msg) => {
+            setWidgetUrl(null);
+            setLoading(false);
+            setErrorMessage(msg || 'Ödəniş tamamlanmadı. Yenidən cəhd edin.');
+            setShowError(true);
+            setTimeout(() => setShowError(false), 5000);
+          }}
+        />
+      )}
+
       {/* CHECKOUT — Rosefield-style two-column */}
       {showCheckout && !isB2BUser && (
         <div
@@ -914,7 +954,7 @@ const CartPage: React.FC = () => {
 
               {/* Pay button */}
               <button
-                onClick={handleEpointCheckout}
+                onClick={() => handleEpointCheckout('redirect')}
                 disabled={loading}
                 className="w-full h-14 bg-black text-white text-[13px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 data-testid="checkout-pay-btn"
@@ -934,7 +974,7 @@ const CartPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={handleEpointCheckout}
+                    onClick={() => handleEpointCheckout('redirect')}
                     disabled={loading}
                     className="h-12 bg-white border border-black text-black text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     data-testid="checkout-card-btn"
@@ -946,7 +986,7 @@ const CartPage: React.FC = () => {
                   {deviceType === 'apple' ? (
                     <button
                       type="button"
-                      onClick={handleEpointCheckout}
+                      onClick={() => handleEpointCheckout('widget')}
                       disabled={loading}
                       className="h-12 bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                       data-testid="checkout-applepay-btn"
@@ -963,7 +1003,7 @@ const CartPage: React.FC = () => {
                   ) : (
                     <button
                       type="button"
-                      onClick={handleEpointCheckout}
+                      onClick={() => handleEpointCheckout('widget')}
                       disabled={loading}
                       className="h-12 bg-black text-white flex items-center justify-center gap-1.5 hover:opacity-85 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                       data-testid="checkout-gpay-btn"

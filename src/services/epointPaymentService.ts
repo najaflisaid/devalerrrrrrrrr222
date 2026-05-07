@@ -139,6 +139,57 @@ export const startEpointPayment = async (input: BuildPaymentInput): Promise<void
 };
 
 /**
+ * Fetch the Epoint widget URL for Apple Pay / Google Pay (iframe flow).
+ * Per official docs: payload = { public_key, amount, order_id, description }
+ * The returned URL is meant to be embedded in an iframe; the widget will
+ * render Apple Pay sheet on iOS Safari, Google Pay sheet on Chrome/Android,
+ * and a card form as fallback. Listen on `window.message` for completion:
+ *   { status: 'success', payment: {...} } or { status: 'error', ... }
+ */
+export const fetchEpointWidgetUrl = async (input: {
+  orderId: string;
+  amount: number;
+  description?: string;
+}): Promise<string> => {
+  const settings = await getEpointSettings();
+  if (!settings.publicKey || !settings.privateKey) {
+    throw new Error(
+      'Epoint açarları konfiqurasiya edilməyib. Admin paneldən "Sayt Parametrləri → Epoint" hissəsinə açarları daxil edin.'
+    );
+  }
+  if (!BACKEND_URL) {
+    throw new Error('Backend URL təyin olunmayıb.');
+  }
+
+  const res = await fetch(`${BACKEND_URL}/api/epoint/widget-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      public_key: settings.publicKey,
+      private_key: settings.privateKey,
+      amount: +input.amount.toFixed(2),
+      order_id: input.orderId,
+      description: input.description || 'DE VALEUR sifariş',
+    }),
+  });
+
+  if (!res.ok) {
+    let msg = `Backend cavabı uğursuz (HTTP ${res.status})`;
+    try {
+      const j = await res.json();
+      if (j?.detail) msg = String(j.detail);
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  const body = await res.json();
+  if (body?.status !== 'success' || !body?.widget_url) {
+    throw new Error(body?.message || 'Widget URL alınmadı');
+  }
+  return body.widget_url as string;
+};
+
+/**
  * Verify the redirect-back payload (data + signature) coming from Epoint.
  * Tries the backend verify endpoint first (canonical), falls back to local
  * SHA-1 with the private key from Firestore for offline verification.
