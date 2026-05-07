@@ -42,7 +42,7 @@ const StarRating: React.FC<{ value: number; onChange?: (v: number) => void; size
             className={`${onChange ? 'cursor-pointer' : 'cursor-default'} transition-transform ${onChange ? 'hover:scale-110' : ''}`}
           >
             <Star
-              className={`${sizes[size]} ${filled ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+              className={`${sizes[size]} ${filled ? 'fill-black text-black' : 'text-black/25'}`}
               strokeWidth={1.5}
             />
           </button>
@@ -130,17 +130,19 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6" data-testid="product-reviews-section">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+    <div className="bg-white" data-testid="product-reviews-section">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
         <div>
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Müştəri rəyləri</h3>
-          {reviews.length > 0 && (
-            <div className="flex items-center gap-2 mt-1">
-              <StarRating value={Math.round(avg)} size="sm" />
-              <span className="text-sm font-semibold text-gray-900">{avg.toFixed(1)}</span>
-              <span className="text-xs text-gray-500">({reviews.length} rəy)</span>
-            </div>
-          )}
+          <p className="text-[11px] uppercase tracking-[0.32em] text-black/55 mb-2">Müştəri rəyləri</p>
+          <div className="flex items-center gap-3">
+            <h3 className="text-[24px] sm:text-[28px] font-light text-black tracking-tight">
+              {reviews.length > 0 ? avg.toFixed(1) : '—'}
+            </h3>
+            <StarRating value={Math.round(avg)} size="md" />
+            {reviews.length > 0 && (
+              <span className="text-[12px] text-black/50">({reviews.length} rəy)</span>
+            )}
+          </div>
         </div>
         {!myExistingReview && !showForm && (
           <button
@@ -151,10 +153,9 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
               }
               setShowForm(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
+            className="inline-flex items-center justify-center px-5 py-3 bg-black text-white text-[11px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors"
             data-testid="review-add-btn"
           >
-            <Star className="h-3.5 w-3.5" />
             Rəy yaz
           </button>
         )}
@@ -162,43 +163,34 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
 
       {/* Stats panel — total + average + star distribution */}
       {reviews.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 pb-5 border-b border-gray-100">
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-md bg-gray-900 text-white flex items-center justify-center">
-                <Star className="h-3 w-3 fill-white" />
-              </div>
-              <span className="text-xs text-gray-500">Ümumi rəylər</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
-            <p className="text-[10px] text-gray-400">rəy</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 pb-10 border-b border-black/10">
+          <div className="border border-black/10 p-5">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-black/50 mb-2">Ümumi rəylər</p>
+            <p className="text-[28px] font-light text-black tracking-tight">{reviews.length}</p>
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-md bg-amber-400 text-white flex items-center justify-center">
-                <Star className="h-3 w-3 fill-white" />
-              </div>
-              <span className="text-xs text-gray-500">Orta reytinq</span>
+          <div className="border border-black/10 p-5">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-black/50 mb-2">Orta reytinq</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-[28px] font-light text-black tracking-tight">{avg.toFixed(1)}</p>
+              <span className="text-[12px] text-black/40">/ 5</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{avg.toFixed(1)}</p>
-            <p className="text-[10px] text-gray-400">5 ulduzdan</p>
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-4 sm:col-span-1 col-span-1">
-            <p className="text-xs text-gray-500 mb-2">Ulduz paylanması</p>
-            <div className="space-y-1">
+          <div className="border border-black/10 p-5">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-black/50 mb-3">Ulduz paylanması</p>
+            <div className="space-y-1.5">
               {[5, 4, 3, 2, 1].map((star) => {
                 const count = reviews.filter((r) => r.rating === star).length;
                 const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                 return (
-                  <div key={star} className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-medium text-gray-700 w-3">{star}</span>
-                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400 flex-shrink-0" strokeWidth={1.5} />
-                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  <div key={star} className="flex items-center gap-2">
+                    <span className="text-[10px] font-medium text-black/70 w-3 tabular-nums">{star}</span>
+                    <Star className="h-2.5 w-2.5 fill-black text-black flex-shrink-0" strokeWidth={1.5} />
+                    <div className="flex-1 h-[3px] bg-black/10 overflow-hidden">
+                      <div className="h-full bg-black transition-all duration-500" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-gray-500 w-4 text-right tabular-nums">{count}</span>
+                    <span className="text-[10px] text-black/50 w-4 text-right tabular-nums">{count}</span>
                   </div>
                 );
               })}
@@ -208,52 +200,59 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
       )}
 
       {!isLoggedIn && (
-        <div className="mb-4 p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl">
-          <p className="text-sm text-gray-700 mb-2 font-medium">Bu məhsulu qiymətləndirin</p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-0.5"
-              data-testid="review-login-stars"
-              aria-label="Rəy yazmaq üçün qeydiyyatdan keçin"
-            >
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  className="h-6 w-6 text-gray-300 hover:fill-amber-400 hover:text-amber-400 transition-colors cursor-pointer"
-                  strokeWidth={1.5}
-                />
-              ))}
-            </button>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="ml-2 text-xs text-amber-700 hover:text-amber-900 underline font-medium"
-              data-testid="review-register-link"
-            >
-              Qeydiyyatdan keçin
-            </button>
+        <div className="mb-8 p-6 sm:p-8 bg-white border border-black/15">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.32em] text-black/55 mb-1.5">Bu məhsulu qiymətləndirin</p>
+              <p className="text-[14px] text-black/70 leading-relaxed">
+                Rəy yazmaq üçün hesabınıza daxil olun və ya yeni hesab yaradın.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="inline-flex items-center gap-1"
+                data-testid="review-login-stars"
+                aria-label="Rəy yazmaq üçün qeydiyyatdan keçin"
+              >
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star
+                    key={i}
+                    className="h-5 w-5 text-black/25 hover:fill-black hover:text-black transition-colors cursor-pointer"
+                    strokeWidth={1.5}
+                  />
+                ))}
+              </button>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-[11px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors"
+                data-testid="review-register-link"
+              >
+                Qeydiyyat
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showForm && isLoggedIn && (
-        <div className="mb-5 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+        <div className="mb-8 p-6 border border-black/15 bg-white space-y-5">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Reytinq</label>
+            <label className="block text-[11px] uppercase tracking-[0.28em] text-black/55 mb-2">Reytinq</label>
             <StarRating value={rating} onChange={setRating} size="lg" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Rəyiniz</label>
+            <label className="block text-[11px] uppercase tracking-[0.28em] text-black/55 mb-2">Rəyiniz</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              rows={3}
+              rows={4}
               maxLength={500}
               placeholder="Məhsul haqqında fikrinizi yazın..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm bg-white resize-none"
+              className="w-full px-3 py-3 border border-black/20 focus:border-black outline-none text-[14px] bg-white resize-none transition-colors"
               data-testid="review-comment-input"
             />
-            <p className="text-[10px] text-gray-400 mt-0.5">{comment.length}/500</p>
+            <p className="text-[10px] text-black/40 mt-1 text-right">{comment.length}/500</p>
           </div>
           <div className="flex gap-2 justify-end">
             <button
@@ -263,14 +262,14 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
                 setComment('');
               }}
               disabled={submitting}
-              className="px-3 py-2 text-sm bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 disabled:opacity-60"
+              className="px-5 py-2.5 text-[11px] uppercase tracking-[0.28em] font-medium border border-black/20 text-black hover:bg-black hover:text-white transition-colors disabled:opacity-60"
             >
               Ləğv et
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white text-[11px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60"
               data-testid="review-submit-btn"
             >
               {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
@@ -281,41 +280,42 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-5 w-5 animate-spin text-black/40" />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          Hələ rəy yoxdur. İlk rəyi siz yazın!
+        <div className="text-center py-16 border border-dashed border-black/15">
+          <Star className="w-8 h-8 mx-auto mb-3 text-black/15" strokeWidth={1.5} />
+          <p className="text-[14px] text-black/55">Hələ rəy yoxdur. İlk rəyi siz yazın.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="divide-y divide-black/10">
           {reviews.map((r) => (
-            <div key={r.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0" data-testid={`review-${r.id}`}>
-              <div className="flex items-start justify-between gap-3 mb-1.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0">
+            <div key={r.id} className="py-6 first:pt-0" data-testid={`review-${r.id}`}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center text-[12px] font-medium flex-shrink-0">
                     {r.userName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.userName}</p>
+                    <p className="text-[14px] font-medium text-black truncate">{r.userName}</p>
                     <div className="flex items-center gap-2">
                       <StarRating value={r.rating} size="sm" />
-                      <span className="text-[11px] text-gray-400">{formatDate(r.createdAt)}</span>
+                      <span className="text-[11px] text-black/40">{formatDate(r.createdAt)}</span>
                     </div>
                   </div>
                 </div>
                 {(isAdmin || r.userId === userId) && (
                   <button
                     onClick={() => handleDelete(r.id!)}
-                    className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg flex-shrink-0"
+                    className="text-black/40 hover:text-[#D14545] hover:bg-black/[0.04] p-1.5 transition-colors flex-shrink-0"
                     title="Sil"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed pl-10">{r.comment}</p>
+              <p className="text-[14px] text-black/75 leading-relaxed pl-12">{r.comment}</p>
             </div>
           ))}
         </div>
