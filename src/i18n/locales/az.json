@@ -30,11 +30,13 @@
     "shopNow": "İNDİ ALIŞVERIŞ ET"
   },
   "bestSellers": {
-    "title": "Ən çox satılanlar",
+    "title": "ƏN ÇOX SATILANLAR",
     "subtitle": "Müştərilərimizin ən çox seçdiyi məhsullar",
     "eyebrow": "De Valeur'da kəşfə çıxın",
     "prevProducts": "Əvvəlki məhsullar",
-    "nextProducts": "Növbəti məhsullar"
+    "nextProducts": "Növbəti məhsullar",
+    "personalize": "PERSONALİZƏ",
+    "sale": "ENDİRİM"
   },
   "homeBanners": {
     "eyebrow": "Seçilmiş Kolleksiya"
@@ -90,11 +92,11 @@
   "cart": {
     "title": "Səbət",
     "empty": "Səbətiniz boşdur",
-    "emptyCart": "Səbət boşdur",
-    "noProducts": "Məhsul əlavə etməmisiniz",
+    "emptyCart": "Səbət",
+    "noProducts": "Səbətiniz boşdur",
     "viewProducts": "Məhsullara bax",
     "continueShopping": "Alış-verişə davam et",
-    "subtotal": "Ara Cəm",
+    "subtotal": "Cəmi",
     "shipping": "Çatdırılma",
     "total": "Toplam",
     "totalAmount": "Ümumi Məbləğ",
@@ -111,7 +113,7 @@
     "discount": "Endirim",
     "completeOrder": "Sifarişi tamamla",
     "sending": "Göndərilir...",
-    "buyWithCredit": "Kreditlə Al",
+    "buyWithCredit": "Kreditlə al",
     "orderSent": "Sifariş göndərildi!",
     "b2bOrderSuccess": "B2B sifarişiniz uğurla qeydə alındı. Tezliklə sizinlə əlaqə saxlanılacaq.",
     "b2bOrderSentSuccess": "B2B sifarişiniz uğurla göndərildi!",
@@ -123,7 +125,8 @@
     "emailNotFound": "İstifadəçi email tapılmadı",
     "addedToCart": "Səbətə əlavə edildi!",
     "outOfStock": "Məhsul stokda bitib!",
-    "limitedStockAvailable": "Stokda yalnız {{stock}} ədəd var!"
+    "limitedStockAvailable": "Stokda yalnız {{stock}} ədəd var!",
+    "checkOut": "ÖDƏNİŞ ET"
   },
   "category": {
     "all": "Hamısı",
@@ -471,7 +474,6 @@
     "residenceType": "Yaşayış növü",
     "own": "Şəxsi",
     "rent": "Kirayə",
-    "relative": "Əlaqəlilik",
     "addressSection": "Ünvan məlumatları",
     "city": "Şəhər",
     "district": "Rayon",
@@ -488,5 +490,39 @@
     "monthlyPayment": "Aylıq ödəniş",
     "sendWhatsapp": "WhatsApp-a göndər",
     "cancel": "Ləğv et"
+  },
+  "checkout": {
+    "back": "Geri",
+    "expressCheckout": "Sürətli ödəniş",
+    "cardPay": "Kartla",
+    "gpay": "Google Pay",
+    "applePay": "Apple Pay",
+    "or": "VƏ YA",
+    "contact": "Əlaqə",
+    "signIn": "Daxil ol",
+    "email": "E-poçt",
+    "emailOptIn": "Yeniliklər və təkliflər haqqında məlumat almaq istəyirəm",
+    "delivery": "Çatdırılma",
+    "countryRegion": "Ölkə/region",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "streetHouse": "Küçə və ev nömrəsi",
+    "phone": "Telefon (+994)",
+    "phonePlaceholder": "50 123 45 67",
+    "shippingMethod": "Çatdırılma üsulu",
+    "pickupBranch": "Filial",
+    "noteOptional": "Qeyd (istəyə bağlı)",
+    "discountCode": "Endirim kodu",
+    "apply": "Tətbiq",
+    "remove": "Sil",
+    "subtotal": "Cəmi",
+    "shipping": "Çatdırılma",
+    "free": "Pulsuz",
+    "total": "Yekun",
+    "enterShippingAddress": "Çatdırılma ünvanını daxil edin",
+    "payNow": "İndi ödə",
+    "redirecting": "Yönləndirilir...",
+    "securePayment": "Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.",
+    "loadingMethods": "Yüklənir..."
   }
 }

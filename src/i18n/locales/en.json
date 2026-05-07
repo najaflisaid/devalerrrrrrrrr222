@@ -30,11 +30,13 @@
     "shopNow": "SHOP NOW"
   },
   "bestSellers": {
-    "title": "Best Sellers",
+    "title": "BEST SELLERS",
     "subtitle": "Most chosen products by our customers",
     "eyebrow": "Discover at De Valeur",
     "prevProducts": "Previous products",
-    "nextProducts": "Next products"
+    "nextProducts": "Next products",
+    "personalize": "PERSONALIZE",
+    "sale": "SALE"
   },
   "homeBanners": {
     "eyebrow": "Signature Selection"
@@ -90,10 +92,10 @@
   "cart": {
     "title": "Cart",
     "empty": "Your cart is empty",
-    "emptyCart": "Cart is empty",
-    "noProducts": "You haven't added any products",
-    "viewProducts": "View Products",
-    "continueShopping": "Continue Shopping",
+    "emptyCart": "Cart",
+    "noProducts": "Your cart is empty",
+    "viewProducts": "View products",
+    "continueShopping": "Continue shopping",
     "subtotal": "Subtotal",
     "shipping": "Shipping",
     "total": "Total",
@@ -101,7 +103,7 @@
     "finalTotal": "Final Total",
     "checkout": "Checkout",
     "remove": "Remove",
-    "removeAll": "Remove All",
+    "removeAll": "Remove all",
     "free": "Free",
     "backButton": "Go Back",
     "cartItems": "Cart",
@@ -111,7 +113,7 @@
     "discount": "Discount",
     "completeOrder": "Complete Order",
     "sending": "Sending...",
-    "buyWithCredit": "Buy with Credit",
+    "buyWithCredit": "Buy with credit",
     "orderSent": "Order Sent!",
     "b2bOrderSuccess": "Your B2B order has been successfully registered. We will contact you soon.",
     "b2bOrderSentSuccess": "Your B2B order has been successfully sent!",
@@ -123,7 +125,8 @@
     "emailNotFound": "User email not found",
     "addedToCart": "Added to cart!",
     "outOfStock": "Product is out of stock!",
-    "limitedStockAvailable": "Only {{stock}} pieces available in stock!"
+    "limitedStockAvailable": "Only {{stock}} pieces available in stock!",
+    "checkOut": "CHECK OUT"
   },
   "category": {
     "all": "All",
@@ -459,7 +462,6 @@
     "residenceType": "Residence type",
     "own": "Own",
     "rent": "Rent",
-    "relative": "Contact Person",
     "addressSection": "Address information",
     "city": "City",
     "district": "District",
@@ -476,5 +478,39 @@
     "monthlyPayment": "Monthly payment",
     "sendWhatsapp": "Send to WhatsApp",
     "cancel": "Cancel"
+  },
+  "checkout": {
+    "back": "Back",
+    "expressCheckout": "Express checkout",
+    "cardPay": "Card",
+    "gpay": "Google Pay",
+    "applePay": "Apple Pay",
+    "or": "OR",
+    "contact": "Contact",
+    "signIn": "Sign in",
+    "email": "Email",
+    "emailOptIn": "Email me with news and offers",
+    "delivery": "Delivery",
+    "countryRegion": "Country/region",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "streetHouse": "Street and house number",
+    "phone": "Phone (+994)",
+    "phonePlaceholder": "50 123 45 67",
+    "shippingMethod": "Shipping method",
+    "pickupBranch": "Pickup branch",
+    "noteOptional": "Note (optional)",
+    "discountCode": "Discount code",
+    "apply": "Apply",
+    "remove": "Remove",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "free": "Free",
+    "total": "Total",
+    "enterShippingAddress": "Enter shipping address",
+    "payNow": "Pay now",
+    "redirecting": "Redirecting...",
+    "securePayment": "Payment is processed securely via Epoint.",
+    "loadingMethods": "Loading..."
   }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Minus, ChevronDown, Check } from 'lucide-react';
+import { X, Plus, Minus, ChevronDown, Check, CreditCard, Apple } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc as fsDoc } from 'firebase/firestore';
@@ -452,15 +452,15 @@ const CartPage: React.FC = () => {
         <div className="min-h-screen bg-white flex items-center justify-center px-6">
           <div className="text-center max-w-md mx-auto">
             <h2 className="text-2xl md:text-3xl font-light text-black tracking-tight mb-3">
-              {t('cart.emptyCart', { defaultValue: 'Cart' })}
+              {t('cart.emptyCart')}
             </h2>
-            <p className="text-black/55 text-sm font-light mb-8">{t('cart.noProducts', { defaultValue: 'Səbətiniz boşdur' })}</p>
+            <p className="text-black/55 text-sm font-light mb-8">{t('cart.noProducts')}</p>
             <button
               onClick={() => navigate('/products')}
               className="inline-flex items-center justify-center px-8 py-3.5 bg-black text-white text-[12px] uppercase tracking-[0.25em] font-medium hover:bg-black/85 transition-colors"
               data-testid="cart-empty-shop-btn"
             >
-              {t('cart.viewProducts', { defaultValue: 'Alış-verişə davam et' })}
+              {t('cart.viewProducts')}
             </button>
           </div>
         </div>
@@ -514,7 +514,7 @@ const CartPage: React.FC = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-[26px] md:text-[28px] font-normal text-black" data-testid="cart-title">
-              Cart
+              {t('cart.emptyCart')}
             </h1>
             <button
               onClick={() => navigate(-1)}
@@ -535,7 +535,7 @@ const CartPage: React.FC = () => {
               return (
                 <div key={item.product.id} className="flex gap-5" data-testid={`cart-item-${item.product.id}`}>
                   {/* Image tile */}
-                  <div className="w-[110px] h-[140px] flex-shrink-0 bg-[#F5EAE2] flex items-center justify-center overflow-hidden">
+                  <div className="w-[110px] h-[140px] flex-shrink-0 bg-white border border-black/10 flex items-center justify-center overflow-hidden">
                     <img
                       src={item.product.images?.[0]}
                       alt={productName}
@@ -551,7 +551,7 @@ const CartPage: React.FC = () => {
                           {productName}
                         </h3>
                         <p className="text-[14px] text-black/80 mt-1.5">
-                          ${(price * item.quantity).toFixed(2)}
+                          {(price * item.quantity).toFixed(2)} AZN
                         </p>
                       </div>
                       <button
@@ -598,9 +598,9 @@ const CartPage: React.FC = () => {
 
           {/* Subtotal */}
           <div className="flex items-center justify-between py-7">
-            <span className="text-[15px] text-black">Subtotal</span>
+            <span className="text-[15px] text-black">{t('checkout.subtotal')}</span>
             <span className="text-[15px] text-black tabular-nums" data-testid="cart-subtotal">
-              ${subtotal.toFixed(2)}
+              {subtotal.toFixed(2)} AZN
             </span>
           </div>
 
@@ -611,7 +611,7 @@ const CartPage: React.FC = () => {
             className="w-full h-14 bg-black text-white text-[13px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="cart-checkout-btn"
           >
-            {loading ? 'Sending...' : isB2BUser ? t('cart.completeOrder', { defaultValue: 'COMPLETE ORDER' }) : 'CHECK OUT'}
+            {loading ? t('cart.sending') : isB2BUser ? t('cart.completeOrder') : t('cart.checkOut')}
           </button>
 
           {/* Secondary actions */}
@@ -621,14 +621,14 @@ const CartPage: React.FC = () => {
               className="text-black/60 hover:text-black underline-offset-4 hover:underline transition-colors"
               data-testid="cart-continue-shopping"
             >
-              Continue shopping
+              {t('cart.continueShopping')}
             </button>
             <button
               onClick={() => clearCart()}
               className="text-black/60 hover:text-black underline-offset-4 hover:underline transition-colors"
               data-testid="cart-clear-all"
             >
-              Remove all
+              {t('cart.removeAll')}
             </button>
           </div>
 
@@ -638,7 +638,7 @@ const CartPage: React.FC = () => {
               className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 text-[11px] uppercase tracking-[0.25em] font-medium text-black/70 hover:text-black border border-black/20 hover:border-black transition-colors"
               data-testid="cart-credit-btn"
             >
-              {t('cart.buyWithCredit', { defaultValue: 'Buy with credit' })}
+              {t('cart.buyWithCredit')}
             </button>
           )}
 
@@ -686,7 +686,7 @@ const CartPage: React.FC = () => {
                 className="text-[12px] uppercase tracking-[0.2em] text-black hover:opacity-60 transition-opacity"
                 data-testid="inline-checkout-close"
               >
-                ← Back
+                ← {t('checkout.back')}
               </button>
               <img
                 src="https://i.hizliresim.com/tmu65g6.png"
@@ -700,23 +700,27 @@ const CartPage: React.FC = () => {
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-12">
             {/* LEFT — form */}
             <div className="px-5 sm:px-8 lg:pl-12 lg:pr-6 py-8 md:py-12 lg:border-r lg:border-black/10">
-              {/* Express checkout */}
+              {/* Express checkout — Card / Google Pay / Apple Pay */}
               <div className="mb-8 text-center">
-                <p className="text-[12px] text-black/55 mb-3">Express checkout</p>
-                <div className="grid grid-cols-2 gap-3">
+                <p className="text-[12px] text-black/55 mb-3">{t('checkout.expressCheckout')}</p>
+                <div className="grid grid-cols-3 gap-2.5">
                   <button
                     type="button"
-                    disabled
-                    className="h-11 bg-[#FFC439] text-[#003087] font-bold text-sm flex items-center justify-center disabled:cursor-not-allowed hover:opacity-90"
-                    data-testid="checkout-paypal-btn"
+                    onClick={handleEpointCheckout}
+                    disabled={loading}
+                    className="h-12 bg-white border border-black text-black text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    data-testid="checkout-card-btn"
                   >
-                    <span className="italic">Pay</span><span className="italic font-extrabold">Pal</span>
+                    <CreditCard className="w-4 h-4" strokeWidth={1.6} />
+                    <span>{t('checkout.cardPay')}</span>
                   </button>
                   <button
                     type="button"
-                    disabled
-                    className="h-11 bg-black text-white text-sm flex items-center justify-center gap-1.5 disabled:cursor-not-allowed hover:opacity-90"
+                    onClick={handleEpointCheckout}
+                    disabled={loading}
+                    className="h-12 bg-black text-white text-[12px] font-medium flex items-center justify-center gap-1.5 hover:opacity-85 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                     data-testid="checkout-gpay-btn"
+                    aria-label={t('checkout.gpay')}
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -724,28 +728,39 @@ const CartPage: React.FC = () => {
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"/>
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
                     </svg>
-                    <span className="font-medium">Pay</span>
+                    <span>Pay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEpointCheckout}
+                    disabled={loading}
+                    className="h-12 bg-black text-white text-[12px] font-medium flex items-center justify-center gap-1.5 hover:opacity-85 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                    data-testid="checkout-applepay-btn"
+                    aria-label={t('checkout.applePay')}
+                  >
+                    <Apple className="w-4 h-4 fill-white" strokeWidth={0} />
+                    <span>Pay</span>
                   </button>
                 </div>
               </div>
 
               <div className="flex items-center gap-4 mb-8">
                 <div className="flex-1 h-px bg-black/15" />
-                <span className="text-[12px] text-black/55">OR</span>
+                <span className="text-[12px] text-black/55">{t('checkout.or')}</span>
                 <div className="flex-1 h-px bg-black/15" />
               </div>
 
               {/* Contact */}
               <div className="mb-8">
                 <div className="flex items-end justify-between mb-4">
-                  <h2 className="text-[20px] font-normal text-black">Contact</h2>
+                  <h2 className="text-[20px] font-normal text-black">{t('checkout.contact')}</h2>
                   {!isLoggedIn && (
                     <button
                       onClick={() => navigate('/admin-login')}
                       className="text-[13px] text-black underline underline-offset-2 hover:opacity-70"
                       data-testid="checkout-signin-btn"
                     >
-                      Sign in
+                      {t('checkout.signIn')}
                     </button>
                   )}
                 </div>
@@ -757,7 +772,7 @@ const CartPage: React.FC = () => {
                 ) : (
                   <RFInput
                     type="email"
-                    label="Email"
+                    label={t('checkout.email')}
                     required
                     value={guestEmail}
                     onChange={(v) => setGuestEmail(v)}
@@ -777,18 +792,18 @@ const CartPage: React.FC = () => {
                     checked={emailOptIn}
                     onChange={(e) => setEmailOptIn(e.target.checked)}
                   />
-                  <span className="text-[13px] text-black/70">Email me with news and offers</span>
+                  <span className="text-[13px] text-black/70">{t('checkout.emailOptIn')}</span>
                 </label>
               </div>
 
               {/* Delivery */}
               <div className="mb-8">
-                <h2 className="text-[20px] font-normal text-black mb-4">Delivery</h2>
+                <h2 className="text-[20px] font-normal text-black mb-4">{t('checkout.delivery')}</h2>
 
                 {/* Country (read-only Azerbaijan) */}
                 <div className="relative mb-3">
                   <RFInput
-                    label="Country/region"
+                    label={t('checkout.countryRegion')}
                     required
                     value="Azerbaijan"
                     onChange={() => undefined}
@@ -800,15 +815,15 @@ const CartPage: React.FC = () => {
 
                 {!isLoggedIn && (
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <RFInput label="First name" required value={guestName} onChange={setGuestName} testId="checkout-first-name" />
-                    <RFInput label="Last name" required value={guestLastName} onChange={setGuestLastName} testId="checkout-last-name" />
+                    <RFInput label={t('checkout.firstName')} required value={guestName} onChange={setGuestName} testId="checkout-first-name" />
+                    <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={setGuestLastName} testId="checkout-last-name" />
                   </div>
                 )}
 
                 {!isPickupFlow && (
                   <div className="mb-3">
                     <RFInput
-                      label="Street and house number"
+                      label={t('checkout.streetHouse')}
                       required
                       value={customerAddress}
                       onChange={setCustomerAddress}
@@ -821,23 +836,23 @@ const CartPage: React.FC = () => {
                 {!(isLoggedIn && phoneDigits.length === 9) && (
                   <div className="mb-3">
                     <RFInput
-                      label="Phone (+994)"
+                      label={t('checkout.phone')}
                       required
                       value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
                       onChange={(v) => setPhoneDigits(v.replace(/\D/g, '').slice(0, 9))}
                       testId="checkout-phone-input"
                       inputMode="numeric"
-                      placeholder="50 123 45 67"
+                      placeholder={t('checkout.phonePlaceholder')}
                     />
                   </div>
                 )}
 
                 {/* Delivery methods */}
                 <div className="mt-5">
-                  <p className="text-[13px] text-black mb-2">Shipping method</p>
+                  <p className="text-[13px] text-black mb-2">{t('checkout.shippingMethod')}</p>
                   {deliveryMethods.length === 0 ? (
                     <div className="px-3 py-2.5 border border-black/15 bg-black/[0.02] text-[12px] text-black/60">
-                      Yüklənir...
+                      {t('checkout.loadingMethods')}
                     </div>
                   ) : (
                     <div className="border border-black/15 divide-y divide-black/15" data-testid="delivery-method-list">
@@ -861,7 +876,7 @@ const CartPage: React.FC = () => {
                               {m.estimatedDays && <p className="text-[11px] text-black/55">{m.estimatedDays}</p>}
                             </div>
                             <span className="text-[13px] text-black tabular-nums">
-                              {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Free'}
+                              {m.price > 0 ? `${m.price.toFixed(2)} AZN` : t('checkout.free')}
                             </span>
                           </button>
                         );
@@ -871,7 +886,7 @@ const CartPage: React.FC = () => {
 
                   {isPickupFlow && selectedDelivery?.branches && selectedDelivery.branches.length > 0 && (
                     <div className="mt-3" data-testid="pickup-branch-selector">
-                      <p className="text-[13px] text-black mb-2">Pickup branch</p>
+                      <p className="text-[13px] text-black mb-2">{t('checkout.pickupBranch')}</p>
                       <div className="border border-black/15 divide-y divide-black/15">
                         {selectedDelivery.branches.map((b) => {
                           const selected = b.id === selectedBranchId;
@@ -903,7 +918,7 @@ const CartPage: React.FC = () => {
                 {/* Note */}
                 <div className="mt-5">
                   <RFInput
-                    label="Note (optional)"
+                    label={t('checkout.noteOptional')}
                     value={customerNote}
                     onChange={(v) => setCustomerNote(v.slice(0, 200))}
                     testId="checkout-note-input"
@@ -918,10 +933,10 @@ const CartPage: React.FC = () => {
                 className="w-full h-14 bg-black text-white text-[13px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 data-testid="checkout-pay-btn"
               >
-                {loading ? 'Yönləndirilir...' : 'Pay now'}
+                {loading ? t('checkout.redirecting') : t('checkout.payNow')}
               </button>
               <p className="text-[11px] text-black/45 text-center mt-3">
-                Ödəniş təhlükəsiz şəkildə Epoint vasitəsi ilə həyata keçirilir.
+                {t('checkout.securePayment')}
               </p>
             </div>
 
@@ -934,7 +949,7 @@ const CartPage: React.FC = () => {
                   const productName = item.product.name[i18n.language as 'az' | 'ru' | 'en'] || item.product.name.en || item.product.name.az;
                   return (
                     <div key={item.product.id} className="flex items-center gap-4">
-                      <div className="relative w-[64px] h-[64px] flex-shrink-0 bg-[#F5EAE2] flex items-center justify-center overflow-hidden">
+                      <div className="relative w-[64px] h-[64px] flex-shrink-0 bg-white border border-black/10 flex items-center justify-center overflow-hidden">
                         <img src={item.product.images?.[0]} alt={productName} className="max-w-full max-h-full object-contain p-1.5" />
                         <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black text-white text-[11px] flex items-center justify-center">
                           {item.quantity}
@@ -944,7 +959,7 @@ const CartPage: React.FC = () => {
                         <p className="text-[13px] text-black truncate">{productName}</p>
                       </div>
                       <span className="text-[13px] text-black tabular-nums">
-                        ${(price * item.quantity).toFixed(2)}
+                        {(price * item.quantity).toFixed(2)} AZN
                       </span>
                     </div>
                   );
@@ -969,7 +984,7 @@ const CartPage: React.FC = () => {
                       className="text-[12px] text-black underline underline-offset-2 hover:opacity-70"
                       data-testid="promo-remove-btn"
                     >
-                      Remove
+                      {t('checkout.remove')}
                     </button>
                   </div>
                 ) : (
@@ -982,7 +997,7 @@ const CartPage: React.FC = () => {
                         setPromoInput(e.target.value.replace(/\D/g, '').slice(0, 6));
                         if (promoError) setPromoError('');
                       }}
-                      placeholder="Discount code"
+                      placeholder={t('checkout.discountCode')}
                       maxLength={6}
                       className="flex-1 px-3 py-3 text-[13px] bg-transparent outline-none placeholder:text-black/40"
                       data-testid="promo-code-input"
@@ -994,7 +1009,7 @@ const CartPage: React.FC = () => {
                       className="px-5 text-[12px] uppercase tracking-[0.18em] text-black/70 disabled:text-black/30 hover:text-black transition-colors"
                       data-testid="promo-apply-btn"
                     >
-                      {promoLoading ? '...' : 'Apply'}
+                      {promoLoading ? '...' : t('checkout.apply')}
                     </button>
                   </div>
                 )}
@@ -1004,37 +1019,36 @@ const CartPage: React.FC = () => {
               {/* Totals */}
               <div className="space-y-3 text-[14px] py-4 border-t border-black/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-black/70">Subtotal</span>
-                  <span className="text-black tabular-nums">${getTotalPrice().toFixed(2)}</span>
+                  <span className="text-black/70">{t('checkout.subtotal')}</span>
+                  <span className="text-black tabular-nums">{getTotalPrice().toFixed(2)} AZN</span>
                 </div>
                 {userDiscount > 0 && (
                   <div className="flex items-center justify-between text-emerald-700">
-                    <span>Discount ({userDiscount}%)</span>
-                    <span className="tabular-nums">−${getDiscountAmount().toFixed(2)}</span>
+                    <span>{t('cart.discount')} ({userDiscount}%)</span>
+                    <span className="tabular-nums">−{getDiscountAmount().toFixed(2)} AZN</span>
                   </div>
                 )}
                 {promoApplied && (
                   <div className="flex items-center justify-between text-emerald-700">
-                    <span>Promo ({promoApplied.discount}%)</span>
-                    <span className="tabular-nums">−${getPromoDiscountAmount().toFixed(2)}</span>
+                    <span>{t('checkout.discountCode')} ({promoApplied.discount}%)</span>
+                    <span className="tabular-nums">−{getPromoDiscountAmount().toFixed(2)} AZN</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-black/70">Shipping</span>
+                  <span className="text-black/70">{t('checkout.shipping')}</span>
                   <span className="text-black/55 text-[13px]">
                     {selectedDelivery
-                      ? deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free'
-                      : 'Enter shipping address'}
+                      ? deliveryFee > 0 ? `${deliveryFee.toFixed(2)} AZN` : t('checkout.free')
+                      : t('checkout.enterShippingAddress')}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-end justify-between py-4 border-t border-black/10">
-                <span className="text-[18px] font-medium text-black">Total</span>
+                <span className="text-[18px] font-medium text-black">{t('checkout.total')}</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[12px] text-black/50">USD</span>
                   <span className="text-[22px] font-medium text-black tabular-nums" data-testid="checkout-total">
-                    ${(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)}
+                    {(getItemsAfterAllDiscounts() + deliveryFee).toFixed(2)} AZN
                   </span>
                 </div>
               </div>

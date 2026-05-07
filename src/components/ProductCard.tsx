@@ -68,7 +68,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
     <div className="group relative">
       <Link to={`/product/${product.id}`} className="cursor-pointer block">
         <div
-          className={`relative bg-gray-50 aspect-square rounded-lg overflow-hidden ${compact ? 'mb-2' : 'mb-4'} shadow-sm hover:shadow-lg transition-shadow duration-300`}
+          className={`relative bg-white border border-black/10 aspect-square rounded-lg overflow-hidden ${compact ? 'mb-2' : 'mb-4'} shadow-sm hover:shadow-lg transition-shadow duration-300`}
         >
           <img
             src={product.images[0]}

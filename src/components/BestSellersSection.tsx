@@ -99,7 +99,7 @@ const BestSellersSection: React.FC = () => {
                       onSale ? 'text-[#D14545]' : 'text-black/80'
                     }`}
                   >
-                    {onSale ? 'SALE' : 'PERSONALIZE'}
+                    {onSale ? t('bestSellers.sale') : t('bestSellers.personalize')}
                   </span>
 
                   <img

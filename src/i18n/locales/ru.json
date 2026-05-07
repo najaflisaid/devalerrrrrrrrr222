@@ -30,11 +30,13 @@
     "shopNow": "ПОКУПАТЬ СЕЙЧАС"
   },
   "bestSellers": {
-    "title": "Бестселлеры",
+    "title": "ХИТЫ ПРОДАЖ",
     "subtitle": "Самые выбираемые товары нашими клиентами",
     "eyebrow": "Откройте для себя De Valeur",
     "prevProducts": "Предыдущие товары",
-    "nextProducts": "Следующие товары"
+    "nextProducts": "Следующие товары",
+    "personalize": "ПЕРСОНАЛИЗАЦИЯ",
+    "sale": "СКИДКА"
   },
   "homeBanners": {
     "eyebrow": "Избранная Коллекция"
@@ -90,8 +92,8 @@
   "cart": {
     "title": "Корзина",
     "empty": "Ваша корзина пуста",
-    "emptyCart": "Корзина пуста",
-    "noProducts": "Вы не добавили товары",
+    "emptyCart": "Корзина",
+    "noProducts": "Ваша корзина пуста",
     "viewProducts": "Посмотреть товары",
     "continueShopping": "Продолжить покупки",
     "subtotal": "Промежуточный итог",
@@ -101,7 +103,7 @@
     "finalTotal": "Итого",
     "checkout": "Оформить заказ",
     "remove": "Удалить",
-    "removeAll": "Удалить все",
+    "removeAll": "Удалить всё",
     "free": "Бесплатно",
     "backButton": "Назад",
     "cartItems": "Корзина",
@@ -123,7 +125,8 @@
     "emailNotFound": "Email пользователя не найден",
     "addedToCart": "Добавлено в корзину!",
     "outOfStock": "Товар закончился на складе!",
-    "limitedStockAvailable": "На складе только {{stock}} шт.!"
+    "limitedStockAvailable": "На складе только {{stock}} шт.!",
+    "checkOut": "ОФОРМИТЬ ЗАКАЗ"
   },
   "category": {
     "all": "Все",
@@ -471,7 +474,6 @@
     "residenceType": "Тип жилья",
     "own": "Собственное",
     "rent": "Аренда",
-    "relative": "Контактное лицо",
     "addressSection": "Адресная информация",
     "city": "Город",
     "district": "Район",
@@ -488,5 +490,39 @@
     "monthlyPayment": "Ежемесячный платеж",
     "sendWhatsapp": "Отправить в WhatsApp",
     "cancel": "Отменить"
+  },
+  "checkout": {
+    "back": "Назад",
+    "expressCheckout": "Быстрая оплата",
+    "cardPay": "Картой",
+    "gpay": "Google Pay",
+    "applePay": "Apple Pay",
+    "or": "ИЛИ",
+    "contact": "Контакты",
+    "signIn": "Войти",
+    "email": "Эл. почта",
+    "emailOptIn": "Получать новости и предложения",
+    "delivery": "Доставка",
+    "countryRegion": "Страна/регион",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "streetHouse": "Улица и номер дома",
+    "phone": "Телефон (+994)",
+    "phonePlaceholder": "50 123 45 67",
+    "shippingMethod": "Способ доставки",
+    "pickupBranch": "Пункт самовывоза",
+    "noteOptional": "Комментарий (необязательно)",
+    "discountCode": "Промокод",
+    "apply": "Применить",
+    "remove": "Удалить",
+    "subtotal": "Сумма",
+    "shipping": "Доставка",
+    "free": "Бесплатно",
+    "total": "Итого",
+    "enterShippingAddress": "Укажите адрес доставки",
+    "payNow": "Оплатить",
+    "redirecting": "Перенаправление...",
+    "securePayment": "Оплата осуществляется безопасно через Epoint.",
+    "loadingMethods": "Загрузка..."
   }
 }
