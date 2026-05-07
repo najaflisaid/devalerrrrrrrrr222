@@ -65,7 +65,7 @@ const toNum = (v: any): number => {
 };
 
 // ───── Şablon yükləmə ─────
-const downloadTemplate = () => {
+const downloadTemplate = (format: 'xlsx' | 'xls' = 'xlsx') => {
   const headers = [
     COL.category,
     COL.brand,
@@ -115,7 +115,11 @@ const downloadTemplate = () => {
   const infoWs = XLSX.utils.aoa_to_sheet(info);
   (infoWs as any)['!cols'] = [{ wch: 95 }];
   XLSX.utils.book_append_sheet(wb, infoWs, 'Təlimat');
-  XLSX.writeFile(wb, 'devaleur-mehsul-sablonu.xlsx');
+  if (format === 'xls') {
+    XLSX.writeFile(wb, 'devaleur-mehsul-sablonu.xls', { bookType: 'biff8' });
+  } else {
+    XLSX.writeFile(wb, 'devaleur-mehsul-sablonu.xlsx');
+  }
 };
 
 // ───── Fayl parse ─────
@@ -367,14 +371,25 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             </p>
           </div>
         </div>
-        <button
-          onClick={downloadTemplate}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
-          data-testid="product-import-template-btn"
-        >
-          <Download className="h-4 w-4" />
-          Şablonu yüklə (.xlsx)
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => downloadTemplate('xlsx')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
+            data-testid="product-import-template-btn"
+          >
+            <Download className="h-4 w-4" />
+            Şablonu yüklə (.xlsx)
+          </button>
+          <button
+            onClick={() => downloadTemplate('xls')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
+            data-testid="product-import-template-xls-btn"
+            title="Köhnə Excel versiyası (.xls) — bəzən .xlsx açılmayanda işə yarayır"
+          >
+            <Download className="h-4 w-4" />
+            (.xls)
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
