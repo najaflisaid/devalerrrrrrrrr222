@@ -75,7 +75,7 @@ const BestSellersSection: React.FC = () => {
         {/* Track */}
         <div
           ref={trackRef}
-          className="rf-track flex gap-4 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
+          className="rf-track flex gap-2.5 sm:gap-3.5 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
           style={{ scrollbarWidth: 'none' }}
         >
           {products.map((product) => {
@@ -90,12 +90,12 @@ const BestSellersSection: React.FC = () => {
                 data-rf-card
                 data-testid={`bestseller-card-${product.id}`}
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="group flex-none snap-start text-left w-[60vw] sm:w-[40vw] md:w-[28vw] lg:w-[20vw] xl:w-[18vw] max-w-[300px]"
+                className="group flex-none snap-start text-left w-[29vw] sm:w-[30vw] md:w-[24vw] lg:w-[18vw] xl:w-[16vw] max-w-[260px]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#F5EAE2]">
+                <div className="relative aspect-[3/4] overflow-hidden bg-white border border-black/10 transition-colors duration-300 group-hover:border-[#C9A24A]">
                   {/* Top label */}
                   <span
-                    className={`absolute top-3 left-3 z-[2] text-[11px] tracking-[0.22em] uppercase font-medium ${
+                    className={`absolute top-2.5 left-2.5 z-[2] text-[10px] md:text-[11px] tracking-[0.22em] uppercase font-medium ${
                       onSale ? 'text-[#D14545]' : 'text-black/80'
                     }`}
                   >
@@ -107,7 +107,7 @@ const BestSellersSection: React.FC = () => {
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-contain p-6 md:p-8 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                    className="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 md:p-7 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                   />
 
                   {product.images?.[1] && (
@@ -117,19 +117,19 @@ const BestSellersSection: React.FC = () => {
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain p-6 md:p-8 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
+                      className="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 md:p-7 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
                     />
                   )}
                 </div>
 
-                <div className="pt-4">
-                  <h3 className="text-[14px] md:text-[15px] text-black font-normal tracking-tight truncate">
+                <div className="pt-3 md:pt-4">
+                  <h3 className="text-[12px] sm:text-[13px] md:text-[15px] text-black font-normal tracking-tight truncate">
                     {name}
                   </h3>
-                  <p className="mt-1 text-[14px] md:text-[15px] text-black tabular-nums">
+                  <p className="mt-0.5 md:mt-1 text-[12px] sm:text-[13px] md:text-[15px] text-black tabular-nums">
                     {onSale ? (
                       <>
-                        <span className="text-black/40 line-through mr-2">
+                        <span className="text-black/40 line-through mr-1.5">
                           {product.price.toFixed(0)} AZN
                         </span>
                         <span className="text-[#D14545] font-medium">
