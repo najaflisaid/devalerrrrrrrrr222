@@ -92,7 +92,7 @@ const BestSellersSection: React.FC = () => {
                 onClick={() => navigate(`/product/${product.id}`)}
                 className="group flex-none snap-start text-left w-[29vw] sm:w-[30vw] md:w-[24vw] lg:w-[18vw] xl:w-[16vw] max-w-[260px]"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-white border border-black/10 transition-colors duration-300 group-hover:border-[#C9A24A]">
+                <div className="relative aspect-[3/4] overflow-hidden bg-white border border-black/10 transition-colors duration-300 group-hover:border-white">
                   {/* Sale label only */}
                   {onSale && (
                     <span className="absolute top-2.5 left-2.5 z-[2] text-[10px] md:text-[11px] tracking-[0.22em] uppercase font-medium text-[#D14545]">
