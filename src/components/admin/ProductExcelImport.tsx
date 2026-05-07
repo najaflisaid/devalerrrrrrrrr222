@@ -18,7 +18,25 @@ const COL = {
   price: 'Qiymət (AZN)',
   stock: 'Miqdar',
   gender: 'Cins',
+  visibility: 'Görünür kim?',
 } as const;
+
+// Görünürlük (visibleTo) qısa kodları — Excel-də sadə yazmaq üçün:
+//   a → all      (qonaq + müştəri + B2B — defolt)
+//   b → b2b      (yalnız B2B müştərilər)
+//   c → customer (yalnız adi müştərilər: qeydiyyatsız + normal)
+// Tam adlar da qəbul olunur (all / b2b / customer).
+type VisibleTo = 'all' | 'b2b' | 'customer';
+const parseVisibility = (raw: any): VisibleTo | null => {
+  const v = String(raw ?? '').toLowerCase().trim();
+  if (!v) return null;
+  if (v === 'a' || v === 'all' || v === 'hamı' || v === 'hami' || v === 'hamısı' || v === 'hamisi') return 'all';
+  if (v === 'b' || v === 'b2b') return 'b2b';
+  if (v === 'c' || v === 'customer' || v === 'müştəri' || v === 'musteri') return 'customer';
+  return null;
+};
+const visibilityLabel = (v: VisibleTo): string =>
+  v === 'all' ? 'Hamı' : v === 'b2b' ? 'Yalnız B2B' : 'Yalnız müştəri';
 
 interface ParsedRow {
   category: string;
@@ -27,11 +45,13 @@ interface ParsedRow {
   price: number;
   stock: number;
   gender: string;
+  visibility: VisibleTo | null; // null → toxunma (mövcud məhsul üçün) / yeni məhsul üçün 'all' qəbul olunur
+  visibilityRaw: string;        // istifadəçi nə yazıb (xəta üçün)
   __row: number;
 }
 
 interface ImportResult {
-  updated: { product: Product; oldStock: number; newStock: number; row: ParsedRow; categoryMismatch: boolean }[];
+  updated: { product: Product; oldStock: number; newStock: number; row: ParsedRow; categoryMismatch: boolean; oldVisibility: VisibleTo; visibilityChanged: boolean }[];
   created: ParsedRow[];
   skipped: { row: ParsedRow; reason: string }[];
   errors: string[];
@@ -53,13 +73,14 @@ const downloadTemplate = () => {
     COL.price,
     COL.stock,
     COL.gender,
+    COL.visibility,
   ];
   const sampleRows = [
-    { [COL.category]: '', [COL.brand]: '', [COL.name]: '', [COL.price]: '', [COL.stock]: '', [COL.gender]: '' },
+    { [COL.category]: '', [COL.brand]: '', [COL.name]: '', [COL.price]: '', [COL.stock]: '', [COL.gender]: '', [COL.visibility]: '' },
   ];
   const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });
   (ws as any)['!cols'] = [
-    { wch: 18 }, { wch: 22 }, { wch: 50 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
+    { wch: 18 }, { wch: 22 }, { wch: 50 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 16 },
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Məhsullar');
@@ -71,19 +92,25 @@ const downloadTemplate = () => {
     ['1. Yuxarıdakı sütun başlıqlarını DƏYİŞMƏYİN. Sıra da eynilə qalsın.'],
     ['2. Hər sətir 1 məhsul. Boş sətir atlanır.'],
     ['3. Məhsul ad-a görə tapılır (case-insensitive). Məhsul kodu adın içində olmalıdır, məs: "Casio LTP-1094E-7ARDF".'],
-    ['4. Sistemdə həmin ad ilə məhsul varsa, YALNIZ miqdar yenilənir. Kateqoriya, brend, qiymət DƏYİŞMİR (köhnə məlumatlar qalır).'],
+    ['4. Sistemdə həmin ad ilə məhsul varsa, miqdar yenilənir. Kateqoriya, brend və qiymət DƏYİŞMİR (köhnə məlumatlar qalır).'],
+    ['   "Görünür kim?" sütunu doldurulubsa — mövcud məhsulun görünürlüyü də yenilənir; boşdursa toxunulmur.'],
     ['5. Sistemdə məhsul yoxdursa yeni yaradılır. Amma bu halda:'],
     ['   • "Kateqoriya" sistemdə artıq mövcud olmalıdır (əks halda sətir atlanır).'],
     ['   • "Brend" sistemdə artıq mövcud olmalıdır (əks halda sətir atlanır).'],
     ['   Yeni kateqoriya/brend yaratmaq üçün admin panelinə keçin → Kateqoriyalar / Brendlər.'],
     ['6. "Cins" sütununda: men / women / unisex (boşdursa unisex qəbul olunur).'],
-    ['7. Qiymət yalnız rəqəm: məsələn 280 və ya 280.50'],
-    ['8. Şəkillər şablona daxil deyil — yeni məhsullar üçün sonradan admin panelindən əlavə edirsiniz.'],
+    ['7. "Görünür kim?" sütunu — qısa kodla yazın:'],
+    ['     a  →  Hamı görür: qonaq + müştəri + B2B (defolt — boş qoymaq olar)'],
+    ['     b  →  Yalnız B2B müştərilər'],
+    ['     c  →  Yalnız adi müştərilər (qeydiyyatsız + normal)'],
+    ['   Tam adlar da qəbul olunur: all / b2b / customer.'],
+    ['8. Qiymət yalnız rəqəm: məsələn 280 və ya 280.50'],
+    ['9. Şəkillər şablona daxil deyil — yeni məhsullar üçün sonradan admin panelindən əlavə edirsiniz.'],
     [''],
     ['Stok yenilənməsi nümunəsi:'],
-    ['  Saytda: "Casio LTP-1094E-7ARDF" stoku 3 ədəd'],
-    ['  Faylda eyni ad ilə miqdar: 4'],
-    ['  Nəticə: stok avtomatik 4 olur. Başqa heç nə dəyişmir.'],
+    ['  Saytda: "Casio LTP-1094E-7ARDF" stoku 3 ədəd, görünürlük: hamı'],
+    ['  Faylda: miqdar 4, "Görünür kim?" = b'],
+    ['  Nəticə: stok 4 olur, məhsul artıq yalnız B2B müştəriləri üçün görünür.'],
   ];
   const infoWs = XLSX.utils.aoa_to_sheet(info);
   (infoWs as any)['!cols'] = [{ wch: 95 }];
@@ -117,6 +144,7 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
     price: findCol(COL.price),
     stock: findCol(COL.stock),
     gender: findCol(COL.gender),
+    visibility: findCol(COL.visibility),
   };
 
   const missing = Object.entries(map)
@@ -132,6 +160,7 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
     const name = map.name ? String(r[map.name] || '').trim() : '';
     const stock = map.stock ? toNum(r[map.stock]) : 0;
     if (!name) return;
+    const visibilityRaw = map.visibility ? String(r[map.visibility] || '').trim() : '';
     rows.push({
       category: map.category ? String(r[map.category] || '').trim() : '',
       brand: map.brand ? String(r[map.brand] || '').trim() : '',
@@ -139,6 +168,8 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
       price: map.price ? toNum(r[map.price]) : 0,
       stock,
       gender: (map.gender ? String(r[map.gender] || '').trim().toLowerCase() : '') || 'unisex',
+      visibility: parseVisibility(visibilityRaw),
+      visibilityRaw,
       __row: idx + 2,
     });
   });
@@ -197,6 +228,12 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       const skipped: ImportResult['skipped'] = [];
 
       for (const row of rows) {
+        // Görünürlük yazılıb amma tanınmırsa atla
+        if (row.visibilityRaw && row.visibility === null) {
+          skipped.push({ row, reason: `"Görünür kim?" sütunu tanınmır: "${row.visibilityRaw}". Qəbul olunan: a / b / c (və ya all / b2b / customer).` });
+          continue;
+        }
+
         // Match ƏSL: YALNIZ AD-A görə (case-insensitive)
         const found = products.find((p) => {
           const pname = norm(p.name?.az || p.name?.en || '');
@@ -208,12 +245,16 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           const fileCatNorm = norm(row.category);
           const productCatNorm = norm(found.category);
           const categoryMismatch = !!row.category && fileCatNorm !== productCatNorm;
+          const oldVisibility: VisibleTo = ((found as any).visibleTo as VisibleTo) || 'all';
+          const visibilityChanged = row.visibility !== null && row.visibility !== oldVisibility;
           updated.push({
             product: found,
             oldStock: typeof found.stock === 'number' ? found.stock : 0,
             newStock: row.stock,
             row,
             categoryMismatch,
+            oldVisibility,
+            visibilityChanged,
           });
         } else {
           // Yeni məhsul — kateqoriya və brend sistemdə olmalıdır
@@ -256,11 +297,16 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
     if (!result) return;
     setApplying(true);
     try {
-      // 1) Stok yenilənməsi — köhnə məlumatlar qorunur, yalnız `stock` dəyişir
+      // 1) Stok yenilənməsi — köhnə məlumatlar qorunur, yalnız `stock`
+      //    (və faylda göstərilibsə `visibleTo`) dəyişir
       await Promise.all(
-        result.updated.map((m) =>
-          updateDoc(doc(db, 'products', m.product.id), { stock: Math.max(0, m.newStock) })
-        )
+        result.updated.map((m) => {
+          const patch: Record<string, any> = { stock: Math.max(0, m.newStock) };
+          if (m.row.visibility !== null) {
+            patch.visibleTo = m.row.visibility;
+          }
+          return updateDoc(doc(db, 'products', m.product.id), patch);
+        })
       );
 
       // 2) Yeni məhsullar
@@ -280,7 +326,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           isEnabled: true,
           isBestseller: false,
           stock: Math.max(0, r.stock),
-          visibleTo: 'all',
+          visibleTo: r.visibility ?? 'all',
           createdAt: new Date(),
         });
       }
@@ -309,8 +355,15 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             <h3 className="font-semibold text-gray-900">Excel ilə məhsul miqrasiyası</h3>
             <p className="text-xs text-gray-600 mt-0.5 max-w-2xl">
               Hazır şablonu yükləyin, doldurun, faylı əlavə edin. Məhsul <strong>ad-a görə</strong> tapılır —
-              tapılsa <strong>yalnız miqdar yenilənir</strong> (kateqoriya/qiymət dəyişmir). Yoxdursa yeni yaradılır,
-              amma kateqoriya və brend sistemdə olmalıdır.
+              tapılsa <strong>stok</strong> (və faylda göstərilibsə <strong>görünürlük</strong>) yenilənir,
+              qiymət/kateqoriya dəyişmir. Yoxdursa yeni yaradılır.
+            </p>
+            <p className="text-[11px] text-gray-500 mt-1">
+              <span className="font-semibold">Görünür kim?</span> sütunu üçün qısa kodlar:
+              <span className="ml-1.5 inline-block px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono">a</span> = Hamı,
+              <span className="ml-1 inline-block px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono">b</span> = Yalnız B2B,
+              <span className="ml-1 inline-block px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono">c</span> = Yalnız müştəri.
+              Boş qalsa: yeni məhsul üçün defolt &quot;a&quot;, mövcud məhsulda dəyişmir.
             </p>
           </div>
         </div>
@@ -375,6 +428,11 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                         Fayldakı kateqoriya iqnor edildi
                       </span>
                     )}
+                    {m.visibilityChanged && m.row.visibility && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200" data-testid={`import-update-vis-${i}`}>
+                        Görünür: {visibilityLabel(m.oldVisibility)} → <b>{visibilityLabel(m.row.visibility)}</b>
+                      </span>
+                    )}
                     <span className="font-mono tabular-nums">
                       {m.oldStock} → <span className={m.newStock !== m.oldStock ? 'text-amber-700 font-bold' : ''}>{m.newStock}</span>
                     </span>
@@ -396,6 +454,9 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                   <div key={i} className="px-3 py-2 text-xs flex items-center gap-3" data-testid={`import-create-${i}`}>
                     <span className="flex-1 truncate">{r.name}</span>
                     <span className="text-gray-500 text-[11px]">{r.category} · {r.brand}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
+                      {visibilityLabel(r.visibility ?? 'all')}
+                    </span>
                     <span className="font-mono tabular-nums">{r.price} AZN · stok: {r.stock}</span>
                   </div>
                 ))}
