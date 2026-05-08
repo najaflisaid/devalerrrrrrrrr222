@@ -1058,12 +1058,12 @@ const CartPage: React.FC = () => {
                     <div key={item.product.id} className="flex items-center gap-4">
                       <div className="relative w-[64px] h-[64px] flex-shrink-0 bg-white border border-black/10 flex items-center justify-center overflow-hidden">
                         <img src={item.product.images?.[0]} alt={productName} className="max-w-full max-h-full object-contain p-1.5" />
-                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black text-white text-[11px] flex items-center justify-center">
-                          {item.quantity}
-                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] text-black truncate">{productName}</p>
+                        <p className="text-[12px] text-black/55 mt-0.5">
+                          Miqdar: <span className="text-black font-medium">{item.quantity}</span>
+                        </p>
                       </div>
                       <span className="text-[13px] text-black tabular-nums">
                         {(price * item.quantity).toFixed(2)} AZN
