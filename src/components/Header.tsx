@@ -427,13 +427,22 @@ const Header: React.FC = () => {
 
             {/* Desktop Navigation - Left aligned */}
             <nav className="hidden md:flex items-center space-x-5">
+              <Link
+                to="/gift-cards"
+                className="inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-medium text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
+                data-testid="header-gift-cards-link"
+              >
+                <Gift className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
+              </Link>
+
               {/* Brendlər Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
               <div
                 className="relative py-[22px] -my-[22px] px-3 -mx-3"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="dv-navlink flex items-center text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-brands-link">
+                <button className="dv-navlink flex items-center text-black hover:text-gray-700 font-semibold text-sm whitespace-nowrap" data-testid="header-brands-link">
                   {t('header.brands', { defaultValue: 'Brendlər' })}
                 </button>
 
@@ -574,14 +583,6 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              <Link
-                to="/gift-cards"
-                className="inline-flex items-center gap-2 border border-black/80 px-4 py-1.5 text-[12px] uppercase tracking-[0.18em] font-medium text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
-                data-testid="header-gift-cards-link"
-              >
-                <Gift className="h-4 w-4" strokeWidth={1.5} />
-                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
-              </Link>
               {isLoggedIn && userRole === 'customer' && (
                 <Link to="/my-orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-my-orders-link">
                   Sifarişlərim
