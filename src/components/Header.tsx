@@ -427,18 +427,14 @@ const Header: React.FC = () => {
 
             {/* Desktop Navigation - Centered */}
             <nav className="hidden md:flex flex-1 items-center justify-center space-x-6">
-              <Link to="/" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                {t('header.home')}
-              </Link>
-
-              {/* Products Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
+              {/* Brendlər Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
               <div
                 className="relative py-[22px] -my-[22px] px-3 -mx-3"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="dv-navlink flex items-center text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                  {t('header.products')}
+                <button className="dv-navlink flex items-center text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-brands-link">
+                  {t('header.brands', { defaultValue: 'Brendlər' })}
                 </button>
 
                 {showDropdown && (
@@ -578,20 +574,8 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              <Link to="/about" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                {t('header.about')}
-              </Link>
               <Link to="/gift-cards" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-gift-cards-link">
-                {t('header.giftCards', { defaultValue: 'Gift Kart' })}
-              </Link>
-              <Link to="/blog" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                {t('header.blog')}
-              </Link>
-              <Link to="/partners" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                {t('header.partners')}
-              </Link>
-              <Link to="/contact" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
-                {t('header.contact')}
+                {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
               </Link>
               {isLoggedIn && userRole === 'customer' && (
                 <Link to="/my-orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-my-orders-link">
@@ -762,24 +746,14 @@ const Header: React.FC = () => {
 
               <div className="flex flex-col h-[calc(100%-80px)] overflow-y-auto">
                 <nav className="flex-1 p-6 space-y-1">
+                  {/* Mobile "Brendlər" akardeonu — yalnız kateqoriyalar görünür, hər kateqoriyanın altında brendlər (və varsa alt-kateqoriyalar) genişlənir */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
-                  <Link
-                    to="/"
-                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    {t('header.home')}
-                  </Link>
-                  </div>
-
-                  {/* Mobile "Məhsullar" akardeonu — yalnız kateqoriyalar görünür, hər kateqoriyanın altında brendlər (və varsa alt-kateqoriyalar) genişlənir */}
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
                     <button
                       onClick={() => setMobileProductsOpen(v => !v)}
                       className="dv-mobile-nav-link w-full flex items-center justify-between px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors text-left"
                       data-testid="mobile-products-toggle"
                     >
-                      <span>{t('header.products')}</span>
+                      <span>{t('header.brands', { defaultValue: 'Brendlər' })}</span>
                       <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
                     </button>
                     {mobileProductsOpen && (
@@ -880,40 +854,14 @@ const Header: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 4 }}>
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
                   <Link
-                    to="/about"
+                    to="/gift-cards"
                     className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
                     onClick={closeMobileMenu}
+                    data-testid="mobile-gift-cards-link"
                   >
-                    {t('header.about')}
-                  </Link>
-                  </div>
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 5 }}>
-                  <Link
-                    to="/blog"
-                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    {t('header.blog')}
-                  </Link>
-                  </div>
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 6 }}>
-                  <Link
-                    to="/partners"
-                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    {t('header.partners')}
-                  </Link>
-                  </div>
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 7 }}>
-                  <Link
-                    to="/contact"
-                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    {t('header.contact')}
+                    {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                   </Link>
                   </div>
 
