@@ -343,8 +343,10 @@ const ProductsPage: React.FC = () => {
         getCategoryTree('az'),
       ]);
       setCategoryTree(tree);
-      setProducts(data);
-      setFilteredProducts(data);
+      // Exclude gift cards from products listing/filter
+      const visibleData = data.filter(p => !p.isGiftCard && p.category !== 'gift-card');
+      setProducts(visibleData);
+      setFilteredProducts(visibleData);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
