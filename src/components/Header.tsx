@@ -632,7 +632,7 @@ const Header: React.FC = () => {
                   <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
                 </button>
                 {showLangDropdown && (
-                  <div className="absolute right-0 top-full mt-2 bg-white border border-black/10 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
                     {(['az', 'ru', 'en'] as const)
                       .filter((lng) => lng !== i18n.language)
                       .map((lng) => (
@@ -642,7 +642,7 @@ const Header: React.FC = () => {
                             i18n.changeLanguage(lng);
                             setShowLangDropdown(false);
                           }}
-                          className="block w-full text-left px-4 py-2 text-[12px] uppercase text-black/70 hover:bg-black/[0.04] hover:text-black transition-colors"
+                          className="block w-full text-center px-4 py-2 text-[12px] uppercase text-black/70 hover:bg-black/[0.04] hover:text-black transition-colors"
                           data-testid={`lang-option-${lng}`}
                         >
                           {lng}
@@ -728,13 +728,13 @@ const Header: React.FC = () => {
                     <User className="h-5 w-5" strokeWidth={1.25} />
                   </button>
                   {showLoginDropdown && (
-                    <div className="absolute right-0 top-full mt-2 bg-white border border-black/10 shadow-lg min-w-[160px] z-50" data-testid="account-dropdown">
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[160px] z-50" data-testid="account-dropdown">
                       <button
                         onClick={() => {
                           setShowLoginDropdown(false);
                           setShowLoginModal(true);
                         }}
-                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors"
+                        className="block w-full text-center px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors"
                         data-testid="account-customer-login"
                       >
                         Giriş
@@ -742,7 +742,7 @@ const Header: React.FC = () => {
                       <Link
                         to="/b2b-login"
                         onClick={() => setShowLoginDropdown(false)}
-                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
+                        className="block w-full text-center px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
                         data-testid="account-b2b-login"
                       >
                         B2B Giriş
