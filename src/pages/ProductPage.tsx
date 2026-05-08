@@ -164,19 +164,19 @@ const ProductPage: React.FC = () => {
               )}
             </div>
 
-            {/* Thumbnails */}
+            {/* Thumbnails — Tissot-style: larger, evenly distributed below the main image */}
             {product.images?.length > 1 && (
-              <div className="flex gap-2.5 mt-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {product.images.map((img, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
                     aria-label={`Image ${index + 1}`}
-                    className={`flex-none w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] border bg-white overflow-hidden transition-colors ${
+                    className={`flex-1 min-w-[100px] sm:min-w-[120px] aspect-square border bg-white overflow-hidden transition-colors ${
                       currentImageIndex === index ? 'border-black' : 'border-black/15 hover:border-black/40'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-contain p-1.5" />
+                    <img src={img} alt="" className="w-full h-full object-contain p-2.5" />
                   </button>
                 ))}
               </div>
