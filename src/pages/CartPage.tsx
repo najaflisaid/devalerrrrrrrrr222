@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Minus, ChevronDown, Check, CreditCard } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -18,6 +18,7 @@ import { validatePromoCode, redeemPromoCode } from '../services/promoCodeService
 
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, i18n } = useTranslation();
   const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice, getDiscountAmount, getDiscountedTotal, getUserDiscount } = useCart();
   const [isB2BUser] = useState(() => localStorage.getItem('userRole') === 'b2b');
@@ -74,6 +75,14 @@ const CartPage: React.FC = () => {
   useEffect(() => {
     if (showCheckout) setIsLoggedIn(!!localStorage.getItem('userId'));
   }, [showCheckout]);
+
+  // Auto-open checkout if redirected from cart drawer with ?checkout=1
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('checkout') === '1' && items.length > 0 && !isB2BUser) {
+      setShowCheckout(true);
+    }
+  }, [location.search, items.length, isB2BUser]);
   const loggedInName = localStorage.getItem('userName') || '';
   const loggedInEmail = localStorage.getItem('userEmail') || '';
 

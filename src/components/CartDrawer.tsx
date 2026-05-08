@@ -43,7 +43,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
 
   const handleCheckout = () => {
     onClose();
-    navigate('/cart');
+    navigate('/cart?checkout=1');
   };
 
   return (
