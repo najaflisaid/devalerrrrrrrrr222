@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -414,8 +414,8 @@ const Header: React.FC = () => {
               <Menu className="h-6 w-6" strokeWidth={1.25} />
             </button>
 
-            {/* Logo - Always centered on mobile, left on desktop */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 md:static md:transform-none">
+            {/* Logo - Always centered (mobile + desktop) */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
               <Link to="/">
                 <img
                   src="https://i.hizliresim.com/tmu65g6.png"
@@ -425,8 +425,8 @@ const Header: React.FC = () => {
               </Link>
             </div>
 
-            {/* Desktop Navigation - Centered */}
-            <nav className="hidden md:flex flex-1 items-center justify-center space-x-6">
+            {/* Desktop Navigation - Left aligned */}
+            <nav className="hidden md:flex items-center space-x-5">
               {/* Brendlər Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
               <div
                 className="relative py-[22px] -my-[22px] px-3 -mx-3"
@@ -574,8 +574,13 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              <Link to="/gift-cards" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-gift-cards-link">
-                {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
+              <Link
+                to="/gift-cards"
+                className="inline-flex items-center gap-2 border border-black/80 px-4 py-1.5 text-[12px] uppercase tracking-[0.18em] font-medium text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
+                data-testid="header-gift-cards-link"
+              >
+                <Gift className="h-4 w-4" strokeWidth={1.5} />
+                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
               </Link>
               {isLoggedIn && userRole === 'customer' && (
                 <Link to="/my-orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-my-orders-link">
