@@ -258,27 +258,35 @@ const ProductPage: React.FC = () => {
                 <button
                   onClick={handleAddToCart}
                   disabled={!inStock}
-                  className="w-full h-11 bg-black text-white text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-black/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="dv-cta dv-cta-primary group relative w-full h-11 bg-black text-white text-[11px] uppercase tracking-[0.22em] font-medium overflow-hidden transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)] active:scale-[0.98]"
                   data-testid="product-add-to-cart"
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  {t('product.addToCart')}
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-120%] group-hover:translate-x-[120%] transition-transform duration-700 ease-out pointer-events-none" />
+                  <ShoppingBag className="w-3.5 h-3.5 transition-transform duration-300 group-hover:-translate-y-[1px] group-hover:scale-110" strokeWidth={1.5} />
+                  <span className="relative">{t('product.addToCart')}</span>
                 </button>
                 <button
                   onClick={handleBuyNow}
                   disabled={!inStock}
-                  className="w-full h-11 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="dv-cta group relative w-full h-11 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] font-medium overflow-hidden transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                   data-testid="product-buy-now"
                 >
-                  {t('product.buyNow')}
+                  <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
+                  <span className="relative transition-colors duration-300 group-hover:text-white">
+                    {t('product.buyNow')}
+                  </span>
                 </button>
                 {!isB2BUser && (
                   <button
                     onClick={() => setShowCreditForm(true)}
-                    className="w-full h-11 bg-emerald-600 text-white text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-emerald-700 transition-colors"
+                    className="dv-cta dv-cta-credit group relative w-full h-11 bg-emerald-600 text-white text-[11px] uppercase tracking-[0.22em] font-medium overflow-hidden transition-all duration-300 hover:bg-emerald-700 hover:shadow-[0_8px_24px_-8px_rgba(5,150,105,0.55)] active:scale-[0.98] flex items-center justify-center gap-2"
                     data-testid="product-credit-btn"
                   >
-                    {t('product.buyWithCredit')}
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-120%] group-hover:translate-x-[120%] transition-transform duration-700 ease-out pointer-events-none" />
+                    <span className="relative inline-flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" aria-hidden="true" />
+                      {t('product.buyWithCredit')}
+                    </span>
                   </button>
                 )}
               </div>
@@ -301,9 +309,14 @@ const ProductPage: React.FC = () => {
                 { icon: ShieldCheck, label: t('product.warranty', { defaultValue: 'Rəsmi zəmanət' }) },
                 { icon: RotateCcw, label: t('product.returns', { defaultValue: '14 gün ərzində qaytarılma' }) },
               ].map((b, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5 px-1 py-3 border border-black/10">
-                  <b.icon className="w-4 h-4 text-black/70" strokeWidth={1.5} />
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-black/65 leading-tight">{b.label}</span>
+                <div
+                  key={i}
+                  className="group flex flex-col items-center gap-1.5 px-1 py-3 border border-black/10 hover:border-black/40 hover:bg-black/[0.02] transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  <b.icon className="w-4 h-4 text-black/70 transition-all duration-300 group-hover:text-black group-hover:scale-110" strokeWidth={1.5} />
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-black/65 group-hover:text-black leading-tight transition-colors">
+                    {b.label}
+                  </span>
                 </div>
               ))}
             </div>
