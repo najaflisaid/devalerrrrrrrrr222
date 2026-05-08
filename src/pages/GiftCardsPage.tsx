@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, ShoppingBag, Gift, Check } from 'lucide-react';
+import { Gift, ShoppingBag, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import {
   buildCustomGiftCardProduct,
@@ -9,80 +9,154 @@ import {
   GIFT_CARD_MAX_AMOUNT,
 } from '../utils/giftCard';
 
-const QUICK_AMOUNTS = [100, 200, 500, 1000, 2000];
+type Step = 1 | 2 | 3 | 4;
+
+const STEP_LABELS: Record<Step, string> = {
+  1: 'Hədiyyə kartınızı seçin',
+  2: 'Kart məlumatları',
+  3: 'Çatdırılma məlumatları',
+  4: 'Sifariş məbləği',
+};
 
 const GiftCardsPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const { addToCart, addNotification } = useCart();
 
-  const [amount, setAmount] = useState<number>(QUICK_AMOUNTS[0]);
-  // Free-input field — istifadəçi açıq mətn yaza bilsin (boş, 0, 99 və s. də olacaq).
-  // Yalnız `amount` rəqəmi tətbiq olunur, `inputValue` UX üçündür.
-  const [inputValue, setInputValue] = useState<string>(String(QUICK_AMOUNTS[0]));
+  const [step, setStep] = useState<Step>(1);
 
-  const error = useMemo(() => {
-    if (amount < GIFT_CARD_MIN_AMOUNT) {
-      return `Minimum məbləğ: ${GIFT_CARD_MIN_AMOUNT} AZN`;
-    }
-    if (amount > GIFT_CARD_MAX_AMOUNT) {
-      return `Maksimum məbləğ: ${GIFT_CARD_MAX_AMOUNT} AZN`;
+  // Step 1
+  const [amount, setAmount] = useState<number>(GIFT_CARD_MIN_AMOUNT);
+  const [amountInput, setAmountInput] = useState<string>(String(GIFT_CARD_MIN_AMOUNT));
+  const [quantity, setQuantity] = useState<number>(1);
+
+  // Step 2
+  const [senderName, setSenderName] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [message, setMessage] = useState('');
+
+  // Step 3
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+
+  const total = useMemo(() => amount * quantity, [amount, quantity]);
+
+  const step1Error = useMemo(() => {
+    if (amount < GIFT_CARD_MIN_AMOUNT) return `Minimal məbləğ: ${GIFT_CARD_MIN_AMOUNT} AZN`;
+    if (amount > GIFT_CARD_MAX_AMOUNT) return `Maksimum məbləğ: ${GIFT_CARD_MAX_AMOUNT} AZN`;
+    if (quantity < 1) return 'Kart sayı 1-dən az ola bilməz';
+    return null;
+  }, [amount, quantity]);
+
+  const step2Error = useMemo(() => {
+    if (!senderName.trim()) return 'Göndərənin adını daxil edin';
+    if (!recipientName.trim()) return 'Alıcının adını daxil edin';
+    return null;
+  }, [senderName, recipientName]);
+
+  const step3Error = useMemo(() => {
+    if (!recipientEmail.trim() || !/^\S+@\S+\.\S+$/.test(recipientEmail)) {
+      return 'Düzgün e-poçt daxil edin';
     }
     return null;
-  }, [amount]);
+  }, [recipientEmail]);
 
-  const setBoth = (n: number) => {
-    setAmount(n);
-    setInputValue(String(n));
-  };
-
-  const handleInput = (v: string) => {
-    // Yalnız rəqəm
+  const handleAmountInput = (v: string) => {
     const cleaned = v.replace(/[^\d]/g, '').slice(0, 5);
-    setInputValue(cleaned);
+    setAmountInput(cleaned);
     const n = parseInt(cleaned, 10);
-    if (!isNaN(n)) setAmount(n);
-    else setAmount(0);
+    setAmount(isNaN(n) ? 0 : n);
   };
 
-  const handleBuy = () => {
-    if (error) return;
+  const goNext = () => {
+    if (step === 1 && step1Error) return;
+    if (step === 2 && step2Error) return;
+    if (step === 3 && step3Error) return;
+    if (step < 4) setStep((step + 1) as Step);
+  };
+
+  const goPrev = () => {
+    if (step > 1) setStep((step - 1) as Step);
+  };
+
+  const handleCheckout = () => {
+    if (step1Error || step2Error || step3Error) return;
     const product = buildCustomGiftCardProduct(amount);
-    addToCart(product, 1);
-    addNotification(`Hədiyyə Kartı (${amount} AZN) səbətə əlavə olundu`, 'success');
+    // Store metadata so checkout/email flow can use it later
+    try {
+      sessionStorage.setItem(
+        'giftCardMeta',
+        JSON.stringify({
+          amount,
+          quantity,
+          senderName,
+          recipientName,
+          message,
+          recipientEmail,
+          recipientPhone,
+        })
+      );
+    } catch {
+      /* noop */
+    }
+    addToCart(product, quantity);
+    addNotification(`Hədiyyə Kartı (${amount} AZN × ${quantity}) səbətə əlavə olundu`, 'success');
     navigate('/cart');
   };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <section className="relative bg-[#F5EAE2] py-14 md:py-20 px-5 sm:px-8">
-        <div className="max-w-[1100px] mx-auto text-center">
-          <div className="inline-flex items-center gap-2 mb-4 text-[11px] uppercase tracking-[0.32em] text-black/60">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>De Valeur</span>
-            <Sparkles className="w-3.5 h-3.5" />
+      {/* Stepper */}
+      <section className="px-5 sm:px-8 pt-12 md:pt-16 pb-6">
+        <div className="max-w-[980px] mx-auto">
+          <div className="flex items-start justify-between relative">
+            {/* progress line */}
+            <div className="absolute left-0 right-0 top-5 md:top-6 h-px bg-black/15 mx-[10%]" aria-hidden />
+            {([1, 2, 3, 4] as Step[]).map((s) => {
+              const active = step === s;
+              const done = step > s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    // allow navigating only to completed/current steps
+                    if (s <= step) setStep(s);
+                  }}
+                  className="relative z-10 flex flex-col items-center gap-2 sm:gap-3 flex-1 group"
+                  data-testid={`gift-step-${s}`}
+                >
+                  <span
+                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center text-[14px] md:text-[16px] font-light transition-all bg-white ${
+                      active
+                        ? 'border-black text-black scale-110 shadow-sm'
+                        : done
+                          ? 'border-black bg-black text-white'
+                          : 'border-black/25 text-black/45'
+                    }`}
+                  >
+                    {done ? <Check className="w-4 h-4" strokeWidth={2} /> : s}
+                  </span>
+                  <span
+                    className={`text-[10px] md:text-[12px] uppercase tracking-[0.18em] text-center leading-tight px-1 ${
+                      active ? 'text-black' : 'text-black/45'
+                    }`}
+                  >
+                    {STEP_LABELS[s]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <h1
-            className="text-[32px] md:text-[44px] leading-[1.05] tracking-tight text-black font-normal mb-4"
-            data-testid="gift-cards-title"
-          >
-            {t('giftCards.title', { defaultValue: 'Hədiyyə Kartı' })}
-          </h1>
-          <p className="text-[14px] md:text-[16px] text-black/65 max-w-2xl mx-auto leading-relaxed">
-            Sevdiklərinizə De Valeur kolleksiyalarından dilədiyini seçmək azadlığını verin.
-            Məbləği siz təyin edin — minimum {GIFT_CARD_MIN_AMOUNT} AZN, yuxarı limit yoxdur.
-          </p>
         </div>
       </section>
 
-      {/* Configurator */}
-      <section className="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-          {/* Visual preview */}
-          <div className="order-1 lg:order-1">
-            <div className="relative aspect-[16/10] bg-gradient-to-br from-[#1a1410] via-black to-[#2a2218] overflow-hidden rounded-sm shadow-2xl">
-              {/* Texture / grain */}
+      {/* Main content */}
+      <section className="px-5 sm:px-8 pb-16">
+        <div className="max-w-[820px] mx-auto">
+          {/* Big card visual (always shown) */}
+          <div className="mb-10 md:mb-14">
+            <div className="relative max-w-[480px] mx-auto aspect-[16/10] bg-gradient-to-br from-[#1a1410] via-black to-[#2a2218] overflow-hidden rounded-sm shadow-2xl">
               <div
                 className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
                 style={{
@@ -109,122 +183,278 @@ const GiftCardsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-              {[
-                { n: '01', t: 'Məbləği seç', d: '100 AZN-dən yuxarı istənilən rəqəm' },
-                { n: '02', t: 'Ödə', d: 'Təhlükəsiz onlayn ödəniş' },
-                { n: '03', t: 'Hədiyyə et', d: 'Promo kod e-poçtuna çatır' },
-              ].map((s) => (
-                <div key={s.n}>
-                  <p className="text-[10px] tracking-[0.32em] text-black/40 mb-1.5">{s.n}</p>
-                  <p className="text-[12px] text-black mb-0.5">{s.t}</p>
-                  <p className="text-[10px] text-black/50 leading-relaxed">{s.d}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Configurator */}
-          <div className="order-2 lg:order-2" data-testid="gift-card-configurator">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-black/50 mb-3">
-              Məbləği seçin
-            </p>
+          {/* Step content */}
+          {step === 1 && (
+            <div data-testid="gift-step-1-content">
+              <h2 className="text-center text-[26px] md:text-[34px] font-light tracking-tight text-black mb-3">
+                Hədiyyə kartınızı seçin
+              </h2>
+              <p className="text-center text-[11px] md:text-[12px] uppercase tracking-[0.22em] text-black/55 mb-10 max-w-xl mx-auto">
+                De Valeur hədiyyə kartının məbləğini seçin. Hər bir kart xüsusi diqqətlə hazırlanır.
+              </p>
 
-            {/* Quick picks */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-5">
-              {QUICK_AMOUNTS.map((n) => {
-                const active = n === amount;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setBoth(n)}
-                    className={`h-12 border text-[13px] font-medium tabular-nums transition-all ${
-                      active
-                        ? 'bg-black text-white border-black shadow-md'
-                        : 'bg-white text-black/80 border-black/15 hover:border-black/45 hover:bg-black/[0.02]'
+              <div className="max-w-[520px] mx-auto space-y-7">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Hədiyyə kartının məbləği
+                  </label>
+                  <div
+                    className={`relative flex items-center border bg-white transition-all ${
+                      step1Error
+                        ? 'border-red-500'
+                        : 'border-black/25 focus-within:border-black'
                     }`}
-                    data-testid={`gift-card-quick-${n}`}
                   >
-                    {n}
-                  </button>
-                );
-              })}
-            </div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={amountInput}
+                      onChange={(e) => handleAmountInput(e.target.value)}
+                      placeholder={`Min ${GIFT_CARD_MIN_AMOUNT}`}
+                      className="flex-1 h-14 px-4 outline-none text-[20px] font-light tabular-nums bg-transparent"
+                      data-testid="gift-card-amount-input"
+                    />
+                    <span className="px-4 text-[14px] tracking-wider text-black/55 border-l border-black/15">
+                      AZN
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11px] text-black/55">
+                    Minimal məbləğ: {GIFT_CARD_MIN_AMOUNT} AZN
+                  </p>
+                </div>
 
-            {/* Free input */}
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-[0.28em] text-black/50">
-                Və ya öz məbləğinizi yazın
-              </span>
-              <div
-                className={`mt-2 relative flex items-center border bg-white transition-all ${
-                  error
-                    ? 'border-red-500 ring-2 ring-red-500/25'
-                    : 'border-black/25 focus-within:border-black'
-                }`}
-              >
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={inputValue}
-                  onChange={(e) => handleInput(e.target.value)}
-                  placeholder={`Min ${GIFT_CARD_MIN_AMOUNT}`}
-                  className="flex-1 h-14 px-4 outline-none text-[20px] font-medium tabular-nums bg-transparent"
-                  data-testid="gift-card-amount-input"
-                  aria-label="Gift card məbləği"
-                />
-                <span className="px-4 text-[14px] tracking-wider text-black/55 border-l border-black/15">
-                  AZN
-                </span>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Kartların sayı
+                  </label>
+                  <div className="inline-flex items-center border border-black/25">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-12 h-12 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
+                      data-testid="gift-card-qty-minus"
+                      aria-label="Azalt"
+                    >
+                      −
+                    </button>
+                    <span className="w-14 text-center text-[16px] tabular-nums" data-testid="gift-card-qty">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.min(50, quantity + 1))}
+                      className="w-12 h-12 flex items-center justify-center hover:bg-black/[0.04] transition-colors"
+                      data-testid="gift-card-qty-plus"
+                      aria-label="Artır"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {step1Error && (
+                  <p className="text-[12px] text-red-600" data-testid="gift-card-step1-error">
+                    {step1Error}
+                  </p>
+                )}
               </div>
-              {error ? (
-                <p className="mt-2 text-[12px] text-red-600" data-testid="gift-card-error">
-                  {error}
-                </p>
-              ) : (
-                <p className="mt-2 text-[11px] text-black/50">
-                  Minimum {GIFT_CARD_MIN_AMOUNT} AZN. Yuxarı limit yoxdur — istəkli məbləği yazın.
-                </p>
-              )}
-            </label>
+            </div>
+          )}
 
-            {/* Inclusive features list */}
-            <ul className="mt-7 space-y-2.5">
-              {[
-                'Bütün De Valeur məhsullarında istifadə oluna bilər',
-                'Unikal promo kod ödənişdən dərhal sonra e-poçtla göndərilir',
-                'Müddətsizdir — istənilən vaxt aktivləşdirilə bilər',
-              ].map((line) => (
-                <li key={line} className="flex items-start gap-2.5 text-[13px] text-black/75">
-                  <span className="mt-0.5 w-4 h-4 flex-shrink-0 rounded-full bg-black/[0.06] flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-black" strokeWidth={2.5} />
+          {step === 2 && (
+            <div data-testid="gift-step-2-content">
+              <h2 className="text-center text-[26px] md:text-[34px] font-light tracking-tight text-black mb-3">
+                Kart məlumatları
+              </h2>
+              <p className="text-center text-[11px] md:text-[12px] uppercase tracking-[0.22em] text-black/55 mb-10 max-w-xl mx-auto">
+                Hədiyyə kartı üzərində görünəcək məlumatları daxil edin.
+              </p>
+
+              <div className="max-w-[520px] mx-auto space-y-5">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Göndərənin adı
+                  </label>
+                  <input
+                    type="text"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    className="w-full h-12 px-4 border border-black/25 focus:border-black outline-none bg-white text-[14px]"
+                    placeholder="Adınız"
+                    data-testid="gift-sender-name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Alıcının adı
+                  </label>
+                  <input
+                    type="text"
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                    className="w-full h-12 px-4 border border-black/25 focus:border-black outline-none bg-white text-[14px]"
+                    placeholder="Hədiyyə alacaq şəxsin adı"
+                    data-testid="gift-recipient-name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Şəxsi mesaj <span className="text-black/40 normal-case tracking-normal">(opsional)</span>
+                  </label>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value.slice(0, 240))}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-black/25 focus:border-black outline-none bg-white text-[14px] resize-none"
+                    placeholder="Sevdiyiniz şəxsə xüsusi mesaj yazın..."
+                    data-testid="gift-message"
+                  />
+                  <p className="mt-1 text-[11px] text-black/45 text-right">{message.length}/240</p>
+                </div>
+
+                {step2Error && (
+                  <p className="text-[12px] text-red-600" data-testid="gift-card-step2-error">
+                    {step2Error}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div data-testid="gift-step-3-content">
+              <h2 className="text-center text-[26px] md:text-[34px] font-light tracking-tight text-black mb-3">
+                Çatdırılma məlumatları
+              </h2>
+              <p className="text-center text-[11px] md:text-[12px] uppercase tracking-[0.22em] text-black/55 mb-10 max-w-xl mx-auto">
+                Hədiyyə kartı və promo kod alıcının e-poçtuna göndəriləcək.
+              </p>
+
+              <div className="max-w-[520px] mx-auto space-y-5">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Alıcının e-poçtu
+                  </label>
+                  <input
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    className="w-full h-12 px-4 border border-black/25 focus:border-black outline-none bg-white text-[14px]"
+                    placeholder="example@mail.com"
+                    data-testid="gift-recipient-email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.24em] text-black/55 mb-2">
+                    Telefon <span className="text-black/40 normal-case tracking-normal">(opsional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(e.target.value)}
+                    className="w-full h-12 px-4 border border-black/25 focus:border-black outline-none bg-white text-[14px]"
+                    placeholder="+994 ..."
+                    data-testid="gift-recipient-phone"
+                  />
+                </div>
+
+                {step3Error && (
+                  <p className="text-[12px] text-red-600" data-testid="gift-card-step3-error">
+                    {step3Error}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div data-testid="gift-step-4-content">
+              <h2 className="text-center text-[26px] md:text-[34px] font-light tracking-tight text-black mb-3">
+                Sifariş məbləği
+              </h2>
+              <p className="text-center text-[11px] md:text-[12px] uppercase tracking-[0.22em] text-black/55 mb-10 max-w-xl mx-auto">
+                Sifarişinizi yoxlayın və ödənişə keçin.
+              </p>
+
+              <div className="max-w-[520px] mx-auto border border-black/15 bg-white">
+                <Row label="Bir kartın məbləği" value={`${amount.toLocaleString('az-AZ')} AZN`} />
+                <Row label="Kartların sayı" value={String(quantity)} />
+                <Row label="Göndərən" value={senderName || '—'} />
+                <Row label="Alıcı" value={recipientName || '—'} />
+                <Row label="E-poçt" value={recipientEmail || '—'} />
+                {recipientPhone && <Row label="Telefon" value={recipientPhone} />}
+                {message && <Row label="Mesaj" value={message} multiline />}
+                <div className="flex items-center justify-between px-5 py-5 bg-black text-white">
+                  <span className="text-[12px] uppercase tracking-[0.22em] opacity-80">Cəmi</span>
+                  <span className="text-[24px] font-light tabular-nums" data-testid="gift-total">
+                    {total.toLocaleString('az-AZ')} AZN
                   </span>
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
-            {/* CTA */}
-            <button
-              onClick={handleBuy}
-              disabled={!!error || amount <= 0}
-              className="mt-7 w-full h-14 bg-black text-white text-[12px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 disabled:bg-black/40 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
-              data-testid="gift-card-add-to-cart"
-            >
-              <ShoppingBag className="w-4 h-4" strokeWidth={1.5} />
-              <span>
-                Səbətə əlavə et —{' '}
-                <span className="tabular-nums">
-                  {amount > 0 ? amount.toLocaleString('az-AZ') : '—'} AZN
-                </span>
-              </span>
-            </button>
+          {/* Navigation buttons */}
+          <div className="max-w-[520px] mx-auto mt-10 flex items-center gap-3">
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={goPrev}
+                className="h-14 px-5 border border-black/25 text-black hover:border-black text-[12px] uppercase tracking-[0.22em] inline-flex items-center gap-2 transition-colors"
+                data-testid="gift-prev-btn"
+              >
+                <ChevronLeft className="w-4 h-4" strokeWidth={1.5} /> Geri
+              </button>
+            )}
+            {step < 4 ? (
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={
+                  (step === 1 && !!step1Error) ||
+                  (step === 2 && !!step2Error) ||
+                  (step === 3 && !!step3Error)
+                }
+                className="flex-1 h-14 bg-black text-white text-[12px] uppercase tracking-[0.22em] hover:bg-black/85 disabled:bg-black/40 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+                data-testid="gift-next-btn"
+              >
+                Növbəti <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCheckout}
+                className="flex-1 h-14 bg-black text-white text-[12px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors inline-flex items-center justify-center gap-2"
+                data-testid="gift-checkout-btn"
+              >
+                <ShoppingBag className="w-4 h-4" strokeWidth={1.5} />
+                Səbətə əlavə et
+              </button>
+            )}
           </div>
         </div>
       </section>
     </div>
   );
 };
+
+const Row: React.FC<{ label: string; value: string; multiline?: boolean }> = ({
+  label,
+  value,
+  multiline,
+}) => (
+  <div className="flex items-start justify-between gap-4 px-5 py-3.5 border-b border-black/10 last:border-0">
+    <span className="text-[12px] uppercase tracking-[0.18em] text-black/55 flex-shrink-0">
+      {label}
+    </span>
+    <span
+      className={`text-[14px] text-black text-right ${multiline ? 'whitespace-pre-wrap' : ''}`}
+    >
+      {value}
+    </span>
+  </div>
+);
 
 export default GiftCardsPage;
