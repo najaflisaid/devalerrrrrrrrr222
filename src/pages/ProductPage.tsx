@@ -213,13 +213,15 @@ const ProductPage: React.FC = () => {
               )}
             </div>
 
-            {/* Stock */}
-            <div className="flex items-center gap-2 mb-6">
-              <span className={`w-1.5 h-1.5 rounded-full ${inStock ? 'bg-emerald-600' : 'bg-red-500'}`} />
-              <span className="text-[12px] uppercase tracking-[0.18em] text-black/65">
-                {inStock ? t('product.inStock', { defaultValue: 'Stokda' }) : t('product.outOfStock', { defaultValue: 'Bitdi' })}
-              </span>
-            </div>
+            {/* Stock — show only when out of stock */}
+            {!inStock && (
+              <div className="flex items-center gap-2 mb-6" data-testid="product-stock-status">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span className="text-[12px] uppercase tracking-[0.18em] text-red-600">
+                  {t('product.outOfStock', { defaultValue: 'Bitdi' })}
+                </span>
+              </div>
+            )}
 
             <div className="border-t border-black/10 pt-6 space-y-5">
               {/* Quantity selector */}
