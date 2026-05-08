@@ -34,6 +34,7 @@ const Header: React.FC = () => {
   const [isDropdownClosing, setIsDropdownClosing] = useState(false);
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showMobileLangDropdown, setShowMobileLangDropdown] = useState(false);
+  const [showLoginDropdown, setShowLoginDropdown] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.
@@ -431,7 +432,7 @@ const Header: React.FC = () => {
             <nav className="hidden md:flex items-center space-x-5">
               <Link
                 to="/gift-cards"
-                className="inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-medium text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
                 data-testid="header-gift-cards-link"
               >
                 <Gift className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -444,7 +445,7 @@ const Header: React.FC = () => {
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="flex items-center text-black hover:text-gray-700 font-semibold text-sm tracking-wide whitespace-nowrap transition-colors" style={{ textTransform: 'uppercase' }} data-testid="header-brands-link">
+                <button className="flex items-center text-black hover:text-gray-700 font-normal text-sm tracking-wide whitespace-nowrap transition-colors" style={{ textTransform: 'uppercase' }} data-testid="header-brands-link">
                   {t('header.brands', { defaultValue: 'Brendlər' })}
                 </button>
 
@@ -604,14 +605,24 @@ const Header: React.FC = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
-              {/* Language Hover Dropdown (desktop) */}
+              {/* Search — FIRST */}
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-1 -m-1"
+                aria-label="Search"
+                data-testid="header-search-btn"
+              >
+                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
+              </button>
+
+              {/* Language Hover Dropdown (desktop) — bridge prevents gap-flicker */}
               <div
                 className="relative hidden md:block py-[22px] -my-[22px]"
                 onMouseEnter={() => setShowLangDropdown(true)}
                 onMouseLeave={() => setShowLangDropdown(false)}
               >
                 <button
-                  className="text-sm font-medium text-gray-900 hover:text-gray-600 uppercase flex items-center gap-1"
+                  className="text-sm font-normal text-gray-900 hover:text-gray-600 uppercase flex items-center gap-1"
                   data-testid="header-lang-btn"
                   aria-haspopup="menu"
                 >
@@ -619,7 +630,7 @@ const Header: React.FC = () => {
                   <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
                 </button>
                 {showLangDropdown && (
-                  <div className="absolute right-0 top-full mt-2 bg-white border border-gray-100 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
+                  <div className="absolute right-0 top-full bg-white border border-gray-100 shadow-lg min-w-[64px] z-50" data-testid="lang-dropdown">
                     {(['az', 'ru', 'en'] as const).map((lng) => (
                       <button
                         key={lng}
@@ -627,7 +638,7 @@ const Header: React.FC = () => {
                           i18n.changeLanguage(lng);
                           setShowLangDropdown(false);
                         }}
-                        className={`block w-full text-left px-4 py-2 text-sm uppercase hover:bg-gray-50 transition-colors ${
+                        className={`block w-full text-left px-3 py-1.5 text-[12px] uppercase hover:bg-gray-50 transition-colors ${
                           i18n.language === lng ? 'font-semibold text-black' : 'text-gray-700'
                         }`}
                         data-testid={`lang-option-${lng}`}
@@ -638,15 +649,6 @@ const Header: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={() => setShowSearch(true)}
-                className="p-1 -m-1"
-                aria-label="Search"
-                data-testid="header-search-btn"
-              >
-                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
-              </button>
 
               {/* B2B Bildiriş İkonu */}
               {isLoggedIn && (userRole === 'b2b' || userRole === 'admin') && (
@@ -711,21 +713,44 @@ const Header: React.FC = () => {
               )}
 
               {!isLoggedIn ? (
-                <>
+                <div
+                  className="relative hidden md:block py-[22px] -my-[22px]"
+                  onMouseEnter={() => setShowLoginDropdown(true)}
+                  onMouseLeave={() => setShowLoginDropdown(false)}
+                >
                   <button
-                    onClick={() => setShowLoginModal(true)}
-                    className="hidden md:flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                    className="p-1 -m-1 text-gray-700 hover:text-gray-900"
+                    aria-label="Account"
+                    data-testid="header-account-btn"
                   >
-                    <User className="h-5 w-5 mr-1" strokeWidth={1.25} />
-                    <span>{t('header.login')}</span>
+                    <User className="h-5 w-5" strokeWidth={1.25} />
                   </button>
-                  <Link to="/b2b-login" className="hidden md:block text-sm font-medium text-gray-700 hover:text-gray-900">
-                    B2B
-                  </Link>
-                </>
+                  {showLoginDropdown && (
+                    <div className="absolute right-0 top-full bg-white border border-gray-100 shadow-lg min-w-[180px] z-50" data-testid="account-dropdown">
+                      <button
+                        onClick={() => {
+                          setShowLoginDropdown(false);
+                          setShowLoginModal(true);
+                        }}
+                        className="block w-full text-left px-4 py-2.5 text-[13px] text-gray-800 hover:bg-gray-50 transition-colors"
+                        data-testid="account-customer-login"
+                      >
+                        Müştəri Girişi
+                      </button>
+                      <Link
+                        to="/b2b-login"
+                        onClick={() => setShowLoginDropdown(false)}
+                        className="block w-full text-left px-4 py-2.5 text-[13px] text-gray-800 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                        data-testid="account-b2b-login"
+                      >
+                        B2B Girişi
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="hidden md:flex items-center space-x-3">
-                  <span className="text-sm text-gray-700 font-medium">{userName}</span>
+                  <span className="text-sm text-gray-700 font-normal">{userName}</span>
                   <button onClick={handleLogout} className="text-gray-600 hover:text-gray-900">
                     <LogOut className="h-5 w-5" strokeWidth={1.25} />
                   </button>
