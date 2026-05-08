@@ -94,14 +94,14 @@
     "lowStock": "Az qalıb",
     "returnHome": "Ana səhifəyə qayıt",
     "linkCopied": "Link köçürüldü",
-    "freeDelivery": "Pulsuz çatdırılma",
+    "freeDelivery": "Ödənişsiz çatdırılma",
     "warranty": "Rəsmi zəmanət",
-    "returns": "14 gün qaytarma",
+    "returns": "14 gün ərzində qaytarılma",
     "genderMen": "Kişi",
     "genderWomen": "Qadın",
     "genderUnisex": "Unisex",
     "shippingReturns": "Çatdırılma və qaytarma",
-    "shippingInfo": "Bakı daxilində 1-2 iş günündə pulsuz çatdırılma. 14 gün ərzində qaytarma hüququ. Bütün məhsullar rəsmi zəmanətlə."
+    "shippingInfo": "Şəhər daxili gün ərzində ödənişsiz çatdırılma. Bölgələrə poçtla çatdırılma."
   },
   "cart": {
     "title": "Səbət",

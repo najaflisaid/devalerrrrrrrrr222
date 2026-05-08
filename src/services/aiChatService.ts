@@ -94,7 +94,7 @@ Cavab verməzdən ƏVVƏL hər zaman bunları zehnində aydınlaşdır (yazma, s
 - Müştəri qərarsızdırsa → sadələşdir, 1 təklif ver
 - Büdcə aşağıdırsa → "dəyər/qiymət balansı" və "sərfəli seçim"
 - Büdcə yüksəkdirsə → "ekskluziv", "premium hisslər" vurğula
-- Tərəddüddə → "BESTSELLER" etiketli məhsulları və "AZ QALIB" olanları önə çıxar (təcili hiss yarat)
+- Tərəddüddə → "BESTSELLER" etiketli məhsulları önə çıxar (sosial-proof)
 - Endirimli məhsullar üçün "-X% endirim" vurğula
 
 🔥 SONLANDIRMA:
@@ -114,7 +114,7 @@ Hər cavabın sonunda yumşaq satış sualı:
 
 📦 MƏHSUL KATALOQU İSTİFADƏSİ:
 Aşağıda saytın TAM məhsul kataloqu veriləcək (bütün məhsullar — yüzdən çox ola bilər).
-Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/AZ QALIB/STOKDA YOX), və əksər hallarda qısa təsviri var.
+Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/STOKDA YOX), və əksər hallarda qısa təsviri var.
 SADƏCƏ bu siyahıdakı məhsulları təklif et və düzgün cinsə uyğunlaşdır.
 Olmayan məhsul ad/brend uydurma.
 
@@ -171,7 +171,6 @@ const formatProducts = (products: ChatProductLite[], limit = 500): string => {
     const badges: string[] = [];
     if (p.stock != null) {
       if (p.stock <= 0) badges.push('STOKDA YOX');
-      else if (p.stock <= 2) badges.push('AZ QALIB');
     }
     if (p.isBestseller) badges.push('BESTSELLER');
     const badgeStr = badges.length ? ' · ' + badges.join(' · ') : '';

@@ -217,7 +217,7 @@ const ProductPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-6">
               <span className={`w-1.5 h-1.5 rounded-full ${inStock ? 'bg-emerald-600' : 'bg-red-500'}`} />
               <span className="text-[12px] uppercase tracking-[0.18em] text-black/65">
-                {inStock ? (product.stock !== undefined && product.stock <= 3 ? t('product.lowStock', { defaultValue: 'Az qalıb' }) : t('product.inStock', { defaultValue: 'Stokda' })) : t('product.outOfStock', { defaultValue: 'Stokda yoxdur' })}
+                {inStock ? t('product.inStock', { defaultValue: 'Stokda' }) : t('product.outOfStock', { defaultValue: 'Stokda yoxdur' })}
               </span>
             </div>
 
@@ -294,9 +294,9 @@ const ProductPage: React.FC = () => {
             {/* Trust badges */}
             <div className="mt-8 grid grid-cols-3 gap-3 text-center">
               {[
-                { icon: Truck, label: t('product.freeDelivery', { defaultValue: 'Pulsuz çatdırılma' }) },
+                { icon: Truck, label: t('product.freeDelivery', { defaultValue: 'Ödənişsiz çatdırılma' }) },
                 { icon: ShieldCheck, label: t('product.warranty', { defaultValue: 'Rəsmi zəmanət' }) },
-                { icon: RotateCcw, label: t('product.returns', { defaultValue: '14 gün qaytarma' }) },
+                { icon: RotateCcw, label: t('product.returns', { defaultValue: '14 gün ərzində qaytarılma' }) },
               ].map((b, i) => (
                 <div key={i} className="flex flex-col items-center gap-1.5 px-1 py-3 border border-black/10">
                   <b.icon className="w-4 h-4 text-black/70" strokeWidth={1.5} />
@@ -329,7 +329,7 @@ const ProductPage: React.FC = () => {
                   id: 'shipping',
                   title: t('product.shippingReturns', { defaultValue: 'Çatdırılma və qaytarma' }),
                   content: t('product.shippingInfo', {
-                    defaultValue: 'Bakı daxilində 1-2 iş günündə pulsuz çatdırılma. 14 gün ərzində qaytarma hüququ. Bütün məhsullar rəsmi zəmanətlə.',
+                    defaultValue: 'Şəhər daxili gün ərzində ödənişsiz çatdırılma. Bölgələrə poçtla çatdırılma.',
                   }),
                 },
               ].map((s) => (

@@ -88,7 +88,7 @@ Cavab verməzdən ƏVVƏL hər zaman bunları zehnində aydınlaşdır (yazma, s
 - Müştəri qərarsızdırsa → sadələşdir, 1 təklif ver
 - Büdcə aşağıdırsa → "dəyər/qiymət balansı" və "sərfəli seçim"
 - Büdcə yüksəkdirsə → "ekskluziv", "premium hisslər" vurğula
-- Tərəddüddə → "BESTSELLER" etiketli məhsulları və "AZ QALIB" olanları önə çıxar (təcili hiss yarat)
+- Tərəddüddə → "BESTSELLER" etiketli məhsulları önə çıxar (sosial-proof)
 - Endirimli məhsullar üçün "-X% endirim" vurğula
 
 🔥 SONLANDIRMA:
@@ -108,7 +108,7 @@ Hər cavabın sonunda yumşaq satış sualı:
 
 📦 MƏHSUL KATALOQU İSTİFADƏSİ:
 Aşağıda saytın TAM məhsul kataloqu veriləcək (bütün məhsullar — yüzdən çox ola bilər).
-Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/AZ QALIB/STOKDA YOX), və əksər hallarda qısa təsviri var.
+Hər məhsulun: ID, brend, ad, [cins], [kateqoriya], qiymət, etiket (BESTSELLER/STOKDA YOX), və əksər hallarda qısa təsviri var.
 SADƏCƏ bu siyahıdakı məhsulları təklif et və düzgün cinsə uyğunlaşdır.
 Olmayan məhsul ad/brend uydurma.
 
@@ -205,8 +205,6 @@ def _format_products(products: List[ChatProduct], limit: int = 500) -> str:
         if p.stock is not None:
             if p.stock <= 0:
                 badges.append("STOKDA YOX")
-            elif p.stock <= 2:
-                badges.append("AZ QALIB")
         if p.isBestseller:
             badges.append("BESTSELLER")
         badge_str = " · " + " · ".join(badges) if badges else ""
