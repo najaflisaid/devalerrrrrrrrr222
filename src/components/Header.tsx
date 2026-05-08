@@ -810,27 +810,33 @@ const Header: React.FC = () => {
             ></div>
 
             <div
-              className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
-              style={{ boxShadow: '8px 0 32px -8px rgba(0,0,0,0.18)' }}
+              className={`fixed top-0 left-0 h-full w-[88%] max-w-[400px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              style={{ boxShadow: '12px 0 48px -12px rgba(0,0,0,0.22)' }}
             >
-              <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-10" />
-                <button onClick={closeMobileMenu} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <X className="h-6 w-6" strokeWidth={1.25} />
+              {/* Top header — luxurious */}
+              <div className="relative flex items-center justify-between px-6 py-6 border-b border-black/[0.06]">
+                <button
+                  onClick={closeMobileMenu}
+                  className="p-1.5 -m-1.5 hover:bg-black/[0.04] rounded-full transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" strokeWidth={1.25} />
                 </button>
+                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-9 absolute left-1/2 -translate-x-1/2" />
+                <div className="w-7" aria-hidden="true" />
               </div>
 
-              <div className="flex flex-col h-[calc(100%-80px)] overflow-y-auto">
-                <nav className="flex-1 p-6 space-y-1">
-                  {/* Mobile "Brendlər" akardeonu — yalnız kateqoriyalar görünür, hər kateqoriyanın altında brendlər (və varsa alt-kateqoriyalar) genişlənir */}
+              <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto">
+                <nav className="flex-1 p-6 space-y-1.5">
+                  {/* Mobile "Brendlər" akardeonu */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
                     <button
                       onClick={() => setMobileProductsOpen(v => !v)}
-                      className="dv-mobile-nav-link w-full flex items-center justify-between px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors text-left"
+                      className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
                       data-testid="mobile-products-toggle"
                     >
-                      <span>{t('header.brands', { defaultValue: 'Brendlər' })}</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
+                      <span className="text-[12px] uppercase tracking-[0.18em] text-black font-normal">{t('header.brands', { defaultValue: 'Brendlər' })}</span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileProductsOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
                     </button>
                     {mobileProductsOpen && (
                       <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
@@ -931,24 +937,29 @@ const Header: React.FC = () => {
                   </div>
 
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
-                  <Link
-                    to="/gift-cards"
-                    className="dv-mobile-nav-link block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={closeMobileMenu}
-                    data-testid="mobile-gift-cards-link"
-                  >
-                    {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
-                  </Link>
+                    <Link
+                      to="/gift-cards"
+                      className="group flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
+                      onClick={closeMobileMenu}
+                      data-testid="mobile-gift-cards-link"
+                    >
+                      <span className="inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-black font-normal">
+                        <Gift className="h-4 w-4 text-black/70 group-hover:text-black transition-colors" strokeWidth={1.5} />
+                        {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
+                      </span>
+                      <span className="text-black/40 group-hover:text-black transition-colors text-sm">→</span>
+                    </Link>
                   </div>
 
                   {isLoggedIn && userRole === 'customer' && (
                     <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
                     <Link
                       to="/my-orders"
-                      className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex items-center justify-between px-4 py-4 text-[12px] uppercase tracking-[0.18em] text-black hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
                       onClick={closeMobileMenu}
                     >
-                      Sifarişlərim
+                      <span>Sifarişlərim</span>
+                      <span className="text-black/40 text-sm">→</span>
                     </Link>
                     </div>
                   )}
@@ -957,10 +968,11 @@ const Header: React.FC = () => {
                     <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
                     <Link
                       to="/b2b/orders"
-                      className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex items-center justify-between px-4 py-4 text-[12px] uppercase tracking-[0.18em] text-black hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
                       onClick={closeMobileMenu}
                     >
-                      {t('header.myOrders')}
+                      <span>{t('header.myOrders')}</span>
+                      <span className="text-black/40 text-sm">→</span>
                     </Link>
                     </div>
                   )}
@@ -969,88 +981,77 @@ const Header: React.FC = () => {
                     <div className="dv-menu-item" style={{ ['--dv-i' as any]: 9 }}>
                     <Link
                       to="/admin"
-                      className="block px-4 py-3 font-medium hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex items-center justify-between px-4 py-4 text-[12px] uppercase tracking-[0.18em] text-black hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
                       onClick={closeMobileMenu}
                     >
-                      {t('header.admin')}
+                      <span>{t('header.admin')}</span>
+                      <span className="text-black/40 text-sm">→</span>
                     </Link>
                     </div>
                   )}
                 </nav>
 
-                {/* Mobile Menu Footer */}
-                <div className="border-t border-gray-100 p-6 space-y-3">
-                  {/* Language Switcher with dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowMobileLangDropdown((v) => !v)}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                      data-testid="mobile-lang-btn"
-                    >
-                      <span className="font-medium text-gray-700">{t('header.language')}</span>
-                      <span className="flex items-center gap-1 text-sm font-bold text-gray-900 uppercase">
-                        {getLanguageLabel()}
-                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMobileLangDropdown ? 'rotate-180' : ''}`} strokeWidth={1.5} />
-                      </span>
-                    </button>
-                    {showMobileLangDropdown && (
-                      <div className="mt-2 border border-gray-100 rounded-lg overflow-hidden bg-white" data-testid="mobile-lang-dropdown">
-                        {(['az', 'ru', 'en'] as const).map((lng) => (
-                          <button
-                            key={lng}
-                            onClick={() => {
-                              i18n.changeLanguage(lng);
-                              setShowMobileLangDropdown(false);
-                            }}
-                            className={`block w-full text-left px-4 py-2.5 text-sm uppercase hover:bg-gray-50 transition-colors ${
-                              i18n.language === lng ? 'font-semibold text-black bg-gray-50' : 'text-gray-700'
-                            }`}
-                            data-testid={`mobile-lang-option-${lng}`}
-                          >
-                            {lng}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                {/* Mobile Menu Footer — luxe */}
+                <div className="border-t border-black/[0.06] p-6 space-y-4">
+                  {/* Language Switcher minimal pill */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-black/45 mb-2.5">{t('header.language')}</p>
+                    <div className="flex gap-1.5">
+                      {(['az', 'ru', 'en'] as const).map((lng) => (
+                        <button
+                          key={lng}
+                          onClick={() => i18n.changeLanguage(lng)}
+                          className={`flex-1 h-9 text-[11px] uppercase tracking-[0.18em] border transition-all ${
+                            i18n.language === lng
+                              ? 'bg-black text-white border-black'
+                              : 'bg-white text-black/60 border-black/15 hover:border-black/45 hover:text-black'
+                          }`}
+                          data-testid={`mobile-lang-option-${lng}`}
+                        >
+                          {lng}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Login/Logout */}
+                  {/* Login/Logout — luxe */}
                   {!isLoggedIn ? (
-                    <>
+                    <div className="space-y-2">
                       <button
                         onClick={() => {
                           setShowLoginModal(true);
                           closeMobileMenu();
                         }}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 bg-white hover:bg-white border border-black transition-colors"
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors"
+                        data-testid="mobile-customer-login"
                       >
-                        <User className="h-5 w-5" strokeWidth={1.25} />
-                        <span className="font-medium">{t('header.login')}</span>
+                        <User className="h-4 w-4" strokeWidth={1.5} />
+                        <span>Giriş</span>
                       </button>
                       <Link
                         to="/b2b-login"
                         onClick={closeMobileMenu}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-gray-900 bg-white hover:bg-white border border-black transition-colors"
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white transition-colors"
+                        data-testid="mobile-b2b-login"
                       >
-                        <User className="h-5 w-5" strokeWidth={1.25} />
-                        <span className="font-medium">B2B {t('header.login')}</span>
+                        <span>B2B Giriş</span>
                       </Link>
-                    </>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
-                      <div className="px-4 py-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-500">{t('header.welcomeUser')}</p>
-                        <p className="font-medium text-gray-900">{userName}</p>
+                    <div className="space-y-2">
+                      <div className="px-4 py-3 border border-black/[0.08] bg-black/[0.02]">
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-black/55">{t('header.welcomeUser')}</p>
+                        <p className="text-[14px] text-black mt-0.5">{userName}</p>
                       </div>
                       <button
                         onClick={() => {
                           handleLogout();
                           closeMobileMenu();
                         }}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
                       >
-                        <LogOut className="h-5 w-5" strokeWidth={1.25} />
-                        <span className="font-medium">{t('header.logout')}</span>
+                        <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                        <span>{t('header.logout')}</span>
                       </button>
                     </div>
                   )}
