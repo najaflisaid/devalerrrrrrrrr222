@@ -32,6 +32,8 @@ const Header: React.FC = () => {
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isDropdownClosing, setIsDropdownClosing] = useState(false);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [showMobileLangDropdown, setShowMobileLangDropdown] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.
@@ -442,7 +444,7 @@ const Header: React.FC = () => {
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="dv-navlink flex items-center text-black hover:text-gray-700 font-semibold text-sm whitespace-nowrap" data-testid="header-brands-link">
+                <button className="flex items-center text-black hover:text-gray-700 font-semibold text-sm tracking-wide whitespace-nowrap transition-colors" style={{ textTransform: 'uppercase' }} data-testid="header-brands-link">
                   {t('header.brands', { defaultValue: 'Brendlər' })}
                 </button>
 
@@ -602,12 +604,40 @@ const Header: React.FC = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
-              <button
-                onClick={toggleLanguage}
-                className="hidden md:block text-sm font-medium text-gray-900 hover:text-gray-600 uppercase"
+              {/* Language Hover Dropdown (desktop) */}
+              <div
+                className="relative hidden md:block py-[22px] -my-[22px]"
+                onMouseEnter={() => setShowLangDropdown(true)}
+                onMouseLeave={() => setShowLangDropdown(false)}
               >
-                {getLanguageLabel()}
-              </button>
+                <button
+                  className="text-sm font-medium text-gray-900 hover:text-gray-600 uppercase flex items-center gap-1"
+                  data-testid="header-lang-btn"
+                  aria-haspopup="menu"
+                >
+                  {getLanguageLabel()}
+                  <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
+                </button>
+                {showLangDropdown && (
+                  <div className="absolute right-0 top-full mt-2 bg-white border border-gray-100 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
+                    {(['az', 'ru', 'en'] as const).map((lng) => (
+                      <button
+                        key={lng}
+                        onClick={() => {
+                          i18n.changeLanguage(lng);
+                          setShowLangDropdown(false);
+                        }}
+                        className={`block w-full text-left px-4 py-2 text-sm uppercase hover:bg-gray-50 transition-colors ${
+                          i18n.language === lng ? 'font-semibold text-black' : 'text-gray-700'
+                        }`}
+                        data-testid={`lang-option-${lng}`}
+                      >
+                        {lng}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => setShowSearch(true)}
@@ -910,16 +940,39 @@ const Header: React.FC = () => {
 
                 {/* Mobile Menu Footer */}
                 <div className="border-t border-gray-100 p-6 space-y-3">
-                  {/* Language Switcher */}
-                  <button
-                    onClick={() => {
-                      toggleLanguage();
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <span className="font-medium text-gray-700">{t('header.language')}</span>
-                    <span className="text-sm font-bold text-gray-900 uppercase">{getLanguageLabel()}</span>
-                  </button>
+                  {/* Language Switcher with dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMobileLangDropdown((v) => !v)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                      data-testid="mobile-lang-btn"
+                    >
+                      <span className="font-medium text-gray-700">{t('header.language')}</span>
+                      <span className="flex items-center gap-1 text-sm font-bold text-gray-900 uppercase">
+                        {getLanguageLabel()}
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMobileLangDropdown ? 'rotate-180' : ''}`} strokeWidth={1.5} />
+                      </span>
+                    </button>
+                    {showMobileLangDropdown && (
+                      <div className="mt-2 border border-gray-100 rounded-lg overflow-hidden bg-white" data-testid="mobile-lang-dropdown">
+                        {(['az', 'ru', 'en'] as const).map((lng) => (
+                          <button
+                            key={lng}
+                            onClick={() => {
+                              i18n.changeLanguage(lng);
+                              setShowMobileLangDropdown(false);
+                            }}
+                            className={`block w-full text-left px-4 py-2.5 text-sm uppercase hover:bg-gray-50 transition-colors ${
+                              i18n.language === lng ? 'font-semibold text-black bg-gray-50' : 'text-gray-700'
+                            }`}
+                            data-testid={`mobile-lang-option-${lng}`}
+                          >
+                            {lng}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Login/Logout */}
                   {!isLoggedIn ? (
