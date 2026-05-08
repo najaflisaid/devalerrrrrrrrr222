@@ -5,6 +5,7 @@ import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { productService } from '../services/productService';
 import type { Product } from '../types';
+import { isCustomGiftCardId, buildCustomGiftCardProduct } from '../utils/giftCard';
 
 interface CartItem {
   product: Product;
@@ -105,13 +106,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const snap = await getDoc(doc(db, 'customer_carts', user.uid));
         if (!snap.exists()) return;
         const data = snap.data() as any;
-        const remoteItems: { productId: string; quantity: number }[] = (data.items || []).map(
-          (it: any) => ({ productId: it.productId, quantity: it.quantity })
+        const remoteItems: { productId: string; quantity: number; price?: number }[] = (data.items || []).map(
+          (it: any) => ({ productId: it.productId, quantity: it.quantity, price: typeof it.price === 'number' ? it.price : undefined })
         );
         if (remoteItems.length === 0) return;
-        // Fetch full product data for each remote item
+        // Fetch full product data for each remote item — sintetik gift-card ID-ləri üçün
+        // Firestore axtarışı atılır, lokal sintetik məhsul qurulur.
         const products = await Promise.all(
-          remoteItems.map((it) => productService.getById(it.productId).catch(() => null))
+          remoteItems.map((it) => {
+            if (isCustomGiftCardId(it.productId)) {
+              const amt = it.price && it.price > 0
+                ? it.price
+                : Number(it.productId.replace(/^gift-card-custom-/, '')) || 0;
+              return Promise.resolve(buildCustomGiftCardProduct(amt));
+            }
+            return productService.getById(it.productId).catch(() => null);
+          })
         );
         const remoteCart: CartItem[] = remoteItems
           .map((it, idx) => {

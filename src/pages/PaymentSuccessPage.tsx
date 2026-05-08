@@ -7,6 +7,7 @@ import { db } from '../lib/firebase';
 import { useCart } from '../context/CartContext';
 import { createGiftCardPromoCode } from '../services/promoCodeService';
 import { getEpointSettings } from '../services/epointPaymentService';
+import { isCustomGiftCardId } from '../utils/giftCard';
 
 const BACKEND_URL =
   (import.meta as any).env?.VITE_BACKEND_URL ||
@@ -45,18 +46,33 @@ const PaymentSuccessPage: React.FC = () => {
         if (!orderItems.length) return;
 
         // Look up each product to find isGiftCard==true
+        // Sintetik gift-card-custom-* ID-ləri Firestore-da yoxdur — onları
+        // ID prefiksinə görə birbaşa gift-card kimi qəbul edirik.
         const issued: IssuedGiftCode[] = [];
         for (const it of orderItems) {
           if (!it?.productId) continue;
           try {
-            const prodSnap = await getDoc(doc(db, 'products', it.productId));
-            if (!prodSnap.exists()) continue;
-            const pData: any = prodSnap.data();
-            if (!pData.isGiftCard) continue;
+            let isGift = false;
+            let amount = Number(it.price || 0);
+
+            if (isCustomGiftCardId(it.productId)) {
+              isGift = true;
+              if (!amount) {
+                amount = Number(it.productId.replace(/^gift-card-custom-/, '')) || 0;
+              }
+            } else {
+              const prodSnap = await getDoc(doc(db, 'products', it.productId));
+              if (!prodSnap.exists()) continue;
+              const pData: any = prodSnap.data();
+              if (!pData.isGiftCard) continue;
+              isGift = true;
+              if (!amount) amount = Number(pData.price || 0);
+            }
+
+            if (!isGift || !amount) continue;
 
             // Generate one promo code per quantity
             const qty = Number(it.quantity || 1);
-            const amount = Number(it.price || pData.price || 0);
             for (let q = 0; q < qty; q++) {
               const created = await createGiftCardPromoCode(amount, 'gift-card-purchase', orderData.userId
                 ? { userId: orderData.userId, userEmail: orderData.customerEmail, userName: orderData.customerName }
