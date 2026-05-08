@@ -8,6 +8,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import CustomerLogin from './auth/CustomerLogin';
+import CartDrawer from './CartDrawer';
 import { productService } from '../services/productService';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
@@ -35,6 +36,7 @@ const Header: React.FC = () => {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showMobileLangDropdown, setShowMobileLangDropdown] = useState(false);
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
+  const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.
@@ -757,7 +759,7 @@ const Header: React.FC = () => {
                 </div>
               )}
 
-              <button onClick={() => navigate('/cart')} className="relative p-1 -m-1" aria-label="Cart">
+              <button onClick={() => setShowCartDrawer(true)} className="relative p-1 -m-1" aria-label="Cart" data-testid="header-cart-btn">
                 <ShoppingCart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
@@ -1045,6 +1047,8 @@ const Header: React.FC = () => {
           </>
         )}
       </header>
+
+      <CartDrawer open={showCartDrawer} onClose={() => setShowCartDrawer(false)} />
 
       {showLoginModal && <CustomerLogin onClose={() => setShowLoginModal(false)} />}
 
