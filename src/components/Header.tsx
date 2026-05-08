@@ -37,6 +37,16 @@ const Header: React.FC = () => {
   const [showMobileLangDropdown, setShowMobileLangDropdown] = useState(false);
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
+
+  // Reopen cart drawer if user came back from checkout
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('reopenCartDrawer') === '1') {
+        sessionStorage.removeItem('reopenCartDrawer');
+        setShowCartDrawer(true);
+      }
+    } catch { /* noop */ }
+  }, []);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.

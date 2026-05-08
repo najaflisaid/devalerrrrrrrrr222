@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Share2, ShoppingBag, Truck, ShieldCheck, RotateCcw, Plus, Minus, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2, ShoppingBag, PackageCheck, ShieldCheck, RotateCcw, Plus, Minus, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
@@ -164,17 +164,18 @@ const ProductPage: React.FC = () => {
               )}
             </div>
 
-            {/* Thumbnails — Tissot-style: larger, evenly distributed below the main image */}
+            {/* Thumbnails — show OTHER images (not the currently displayed main image) */}
             {product.images?.length > 1 && (
               <div className="grid grid-cols-2 gap-2 mt-3 pb-1" data-testid="product-thumbnails">
-                {product.images.map((img, index) => (
+                {product.images
+                  .map((img, originalIndex) => ({ img, originalIndex }))
+                  .filter(({ originalIndex }) => originalIndex !== currentImageIndex)
+                  .map(({ img, originalIndex }) => (
                   <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    aria-label={`Image ${index + 1}`}
-                    className={`aspect-square border bg-white overflow-hidden transition-colors ${
-                      currentImageIndex === index ? 'border-black' : 'border-black/15 hover:border-black/40'
-                    }`}
+                    key={originalIndex}
+                    onClick={() => setCurrentImageIndex(originalIndex)}
+                    aria-label={`Image ${originalIndex + 1}`}
+                    className="aspect-square border border-black/[0.06] hover:border-black/30 bg-white overflow-hidden transition-colors"
                   >
                     <img src={img} alt="" className="w-full h-full object-contain p-2.5" />
                   </button>
@@ -257,16 +258,16 @@ const ProductPage: React.FC = () => {
                 <button
                   onClick={handleAddToCart}
                   disabled={!inStock}
-                  className="w-full h-14 bg-black text-white text-[12px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full h-11 bg-black text-white text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-black/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   data-testid="product-add-to-cart"
                 >
-                  <ShoppingBag className="w-4 h-4" strokeWidth={1.5} />
+                  <ShoppingBag className="w-3.5 h-3.5" strokeWidth={1.5} />
                   {t('product.addToCart')}
                 </button>
                 <button
                   onClick={handleBuyNow}
                   disabled={!inStock}
-                  className="w-full h-14 bg-white text-black border border-black text-[12px] uppercase tracking-[0.28em] font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="product-buy-now"
                 >
                   {t('product.buyNow')}
@@ -274,7 +275,7 @@ const ProductPage: React.FC = () => {
                 {!isB2BUser && (
                   <button
                     onClick={() => setShowCreditForm(true)}
-                    className="w-full h-12 bg-[#0E0E0E] text-white text-[11px] uppercase tracking-[0.28em] font-medium hover:opacity-90 transition-opacity border border-[#C9A24A]/40"
+                    className="w-full h-10 bg-[#0E0E0E] text-white text-[10px] uppercase tracking-[0.22em] font-medium hover:opacity-90 transition-opacity border border-[#C9A24A]/40"
                     data-testid="product-credit-btn"
                   >
                     {t('product.buyWithCredit')}
@@ -296,7 +297,7 @@ const ProductPage: React.FC = () => {
             {/* Trust badges */}
             <div className="mt-8 grid grid-cols-3 gap-3 text-center">
               {[
-                { icon: Truck, label: t('product.freeDelivery', { defaultValue: 'Ödənişsiz çatdırılma' }) },
+                { icon: PackageCheck, label: t('product.freeDelivery', { defaultValue: 'Ödənişsiz çatdırılma' }) },
                 { icon: ShieldCheck, label: t('product.warranty', { defaultValue: 'Rəsmi zəmanət' }) },
                 { icon: RotateCcw, label: t('product.returns', { defaultValue: '14 gün ərzində qaytarılma' }) },
               ].map((b, i) => (

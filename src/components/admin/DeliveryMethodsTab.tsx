@@ -509,7 +509,7 @@ const DeliveryMethodsTab: React.FC = () => {
                 {m.description && <p className="text-sm text-gray-600">{m.description}</p>}
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
                   <span className="font-semibold text-gray-900">
-                    {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Pulsuz'}
+                    {m.price > 0 ? `${m.price.toFixed(2)} AZN` : 'Ödənişsiz'}
                   </span>
                   {m.estimatedDays && <span>· {m.estimatedDays}</span>}
                   <span>· Sıra: {m.order ?? 0}</span>

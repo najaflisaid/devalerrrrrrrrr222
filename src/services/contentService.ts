@@ -521,7 +521,7 @@ export const DEFAULT_DELIVERY_POLICY: PrivacyPolicy = {
     intro:
       'DE VALEUR sifarişlərinizi sürətli və təhlükəsiz şəkildə çatdırır. Bakı şəhəri daxilində eyni gün, regionlara isə 1-3 iş günü ərzində məhsul ünvanınıza təslim olunur.',
     badgeLeft: 'Bakı daxili eyni gün çatdırılma',
-    badgeRight: '200 AZN-dən yuxarı sifarişlərə pulsuz',
+    badgeRight: '200 AZN-dən yuxarı sifarişlərə ödənişsiz',
     lastUpdated: '28.04.2026',
   },
   signature: '— DE VALEUR MMC —',
