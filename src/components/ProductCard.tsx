@@ -95,20 +95,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           {!compact && !isB2BUser && (
             <button
               onClick={handleToggleFavorite}
-              className={`absolute top-3 right-3 p-2 rounded-full shadow-md transition-all ${
-                fav ? 'bg-red-500 text-white' : 'bg-white/90 hover:bg-white text-gray-700'
+              className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-sm transition-all duration-300 ease-out hover:scale-110 active:scale-95 ${
+                fav
+                  ? 'bg-red-500 text-white shadow-[0_4px_12px_-2px_rgba(239,68,68,0.5)]'
+                  : 'bg-white/85 hover:bg-white text-gray-700 opacity-0 group-hover:opacity-100 shadow-md'
               }`}
               title={fav ? 'Wishlist-dən çıxar' : 'Wishlist-ə əlavə et'}
               data-testid={`wishlist-toggle-${product.id}`}
             >
-              <Heart className={`h-4 w-4 ${fav ? 'fill-current' : ''}`} />
+              <Heart className={`h-4 w-4 transition-transform ${fav ? 'fill-current scale-110' : ''}`} />
             </button>
           )}
 
           {!isOutOfStock && !compact && (
             <button
               onClick={handleAddToCart}
-              className="absolute bottom-4 right-4 bg-black text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-gray-800 shadow-lg"
+              className="absolute bottom-4 right-4 bg-black text-white p-3 rounded-full opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-400 ease-out hover:bg-gray-800 hover:scale-110 active:scale-95 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.45)]"
               title={t('product.addToCartTitle')}
             >
               <ShoppingCart className="h-5 w-5" />
@@ -117,7 +119,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
         </div>
 
         <div className="text-center space-y-1">
-          <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
+          <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'} transition-colors duration-300 group-hover:text-black`}>
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
           <div className="flex items-center justify-center space-x-2">

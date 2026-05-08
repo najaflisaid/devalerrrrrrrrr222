@@ -444,11 +444,14 @@ const Header: React.FC = () => {
             <nav className="hidden md:flex items-center space-x-5">
               <Link
                 to="/gift-cards"
-                className="inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-black hover:bg-black hover:text-white transition-colors whitespace-nowrap"
+                className="group relative inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-black overflow-hidden transition-all duration-300 hover:shadow-[0_6px_16px_-6px_rgba(0,0,0,0.35)] active:scale-[0.98] whitespace-nowrap"
                 data-testid="header-gift-cards-link"
               >
-                <Gift className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
+                <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
+                <Gift className="relative h-3.5 w-3.5 transition-all duration-300 group-hover:rotate-[-8deg] group-hover:text-white" strokeWidth={1.5} />
+                <span className="relative transition-colors duration-300 group-hover:text-white">
+                  {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
+                </span>
               </Link>
 
               {/* Brendlər Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
