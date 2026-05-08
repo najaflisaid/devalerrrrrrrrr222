@@ -155,7 +155,7 @@ const ProductMiniCard: React.FC<ProductCardProps> = ({ product, lang, onClick, o
               <ShoppingBag className="h-3.5 w-3.5" /> Səbətə əlavə et
             </>
           ) : (
-            <>Stokda yoxdur</>
+            <>Bitdi</>
           )}
         </button>
         <button

@@ -76,7 +76,7 @@
     "notFound": "Məhsul tapılmadı",
     "backToHome": "Ana səhifəyə qayıt",
     "backToProducts": "Geri qayıt",
-    "outOfStock": "Stokda yoxdur",
+    "outOfStock": "Bitdi",
     "limitedStock": "Məhdud stok",
     "stock": "Stok",
     "pieces": "ədəd",
@@ -100,7 +100,7 @@
     "genderMen": "Kişi",
     "genderWomen": "Qadın",
     "genderUnisex": "Unisex",
-    "shippingReturns": "Çatdırılma və qaytarma",
+    "shippingReturns": "Çatdırılma",
     "shippingInfo": "Şəhər daxili gün ərzində ödənişsiz çatdırılma. Bölgələrə poçtla çatdırılma."
   },
   "cart": {

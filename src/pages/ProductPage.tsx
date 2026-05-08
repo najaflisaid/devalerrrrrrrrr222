@@ -217,7 +217,7 @@ const ProductPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-6">
               <span className={`w-1.5 h-1.5 rounded-full ${inStock ? 'bg-emerald-600' : 'bg-red-500'}`} />
               <span className="text-[12px] uppercase tracking-[0.18em] text-black/65">
-                {inStock ? t('product.inStock', { defaultValue: 'Stokda' }) : t('product.outOfStock', { defaultValue: 'Stokda yoxdur' })}
+                {inStock ? t('product.inStock', { defaultValue: 'Stokda' }) : t('product.outOfStock', { defaultValue: 'Bitdi' })}
               </span>
             </div>
 
@@ -327,7 +327,7 @@ const ProductPage: React.FC = () => {
                 },
                 {
                   id: 'shipping',
-                  title: t('product.shippingReturns', { defaultValue: 'Çatdırılma və qaytarma' }),
+                  title: t('product.shippingReturns', { defaultValue: 'Çatdırılma' }),
                   content: t('product.shippingInfo', {
                     defaultValue: 'Şəhər daxili gün ərzində ödənişsiz çatdırılma. Bölgələrə poçtla çatdırılma.',
                   }),
