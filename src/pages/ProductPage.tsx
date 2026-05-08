@@ -275,7 +275,7 @@ const ProductPage: React.FC = () => {
                 {!isB2BUser && (
                   <button
                     onClick={() => setShowCreditForm(true)}
-                    className="w-full h-10 bg-[#0E0E0E] text-white text-[10px] uppercase tracking-[0.22em] font-medium hover:opacity-90 transition-opacity border border-[#C9A24A]/40"
+                    className="w-full h-11 bg-emerald-600 text-white text-[11px] uppercase tracking-[0.22em] font-medium hover:bg-emerald-700 transition-colors"
                     data-testid="product-credit-btn"
                   >
                     {t('product.buyWithCredit')}
