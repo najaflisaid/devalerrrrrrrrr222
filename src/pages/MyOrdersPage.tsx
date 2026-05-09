@@ -12,14 +12,15 @@ import {
   PenLine,
   RotateCcw,
   Bike,
-  Mail,
   Phone,
   ChevronDown,
   ChevronUp,
   Tag,
   Ticket,
+  MessageCircle,
+  Headphones,
 } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
   getUserOrders,
@@ -207,7 +208,7 @@ const SignaturePad: React.FC<SigPadProps> = ({ onConfirm, onClose, loading }) =>
 
 interface CustomerProfile {
   name: string;
-  email: string;
+  surname: string;
   phone: string;
   discountPercentage?: number;
   discountExpiresAt?: any;
@@ -228,6 +229,7 @@ const MyOrdersPage: React.FC = () => {
   }>({});
   const [assignedCodes, setAssignedCodes] = useState<PromoCode[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [supportPhone, setSupportPhone] = useState<string>('+994777577277');
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -238,6 +240,16 @@ const MyOrdersPage: React.FC = () => {
     }
     void load(userId);
     void loadProfileExtra(userId);
+    // Load support phone from siteSettings/whatsapp.sender_display (or fall back to default)
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'siteSettings', 'whatsapp'));
+        if (snap.exists()) {
+          const data: any = snap.data();
+          if (data.sender_display) setSupportPhone(String(data.sender_display));
+        }
+      } catch { /* ignore — default kept */ }
+    })();
     // Müştəriyə təyin olunmuş hələ istifadə edilməmiş promo kodları yüklə
     getUserAssignedCodes(userId)
       .then(setAssignedCodes)
@@ -302,8 +314,8 @@ const MyOrdersPage: React.FC = () => {
     const latest = orders[0];
     return {
       name: localStorage.getItem('userName') || latest?.customerName || 'Hörmətli müştəri',
-      email: localStorage.getItem('userEmail') || latest?.customerEmail || '',
-      phone: latest?.customerPhone || '',
+      surname: localStorage.getItem('userSurname') || '',
+      phone: localStorage.getItem('userPhone') || latest?.customerPhone || '',
       discountPercentage: profileExtra.discountPercentage,
       discountExpiresAt: profileExtra.discountExpiresAt,
       discountUsed: profileExtra.discountUsed,
@@ -347,17 +359,12 @@ const MyOrdersPage: React.FC = () => {
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
               <div className="mb-4">
                 <p className="text-base font-semibold text-gray-900 truncate" data-testid="profile-name">
-                  {profile.name}
+                  {[profile.name, profile.surname].filter(Boolean).join(' ') || 'Hörmətli müştəri'}
                 </p>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-gray-400 mt-1">Şəxsi məlumatlar</p>
               </div>
 
               <div className="space-y-2.5 text-sm">
-                {profile.email && (
-                  <div className="flex items-start gap-2 text-gray-700">
-                    <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <span className="break-all" data-testid="profile-email">{profile.email}</span>
-                  </div>
-                )}
                 {profile.phone && (
                   <div className="flex items-start gap-2 text-gray-700">
                     <Phone className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -365,6 +372,42 @@ const MyOrdersPage: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Support / contact card — always shown */}
+            <div
+              className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-2xl p-5 shadow-sm"
+              data-testid="profile-support-card"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Headphones className="h-4 w-4 text-emerald-700" />
+                <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 font-bold">Bizimlə əlaqə</p>
+              </div>
+              <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                Sualınız varsa? Komandamız sizə kömək etməkdən məmnun olar.
+              </p>
+              <div className="flex items-center gap-2 mb-3">
+                <Phone className="h-4 w-4 text-emerald-700 flex-shrink-0" />
+                <a
+                  href={`tel:${supportPhone.replace(/\s/g, '')}`}
+                  className="text-sm font-mono font-semibold text-gray-900 hover:text-emerald-700 transition-colors"
+                  data-testid="profile-support-phone"
+                >
+                  {supportPhone}
+                </a>
+              </div>
+              <a
+                href={`https://wa.me/${supportPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                  `Salam, ${[profile.name, profile.surname].filter(Boolean).join(' ') || 'müştəri'} olaraq DE VALEUR-dan dəstək almaq istəyirəm.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+                data-testid="profile-whatsapp-support-btn"
+              >
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp ilə yaz
+              </a>
             </div>
 
             {/* Personal discount card — only shown when admin has set an active discount */}
