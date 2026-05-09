@@ -221,6 +221,20 @@ export interface HomepageSections {
     maxBrands: number;
     brandCovers?: { [brandName: string]: string };
   };
+  collectionTiles?: {
+    enabled: boolean;
+    eyebrow?: { az: string; ru: string; en: string };
+    title?: { az: string; ru: string; en: string };
+    subtitle?: { az: string; ru: string; en: string };
+    tiles: Array<{
+      id: string;
+      title_az: string;
+      title_ru: string;
+      title_en: string;
+      image_url: string;
+      link_url: string;
+    }>;
+  };
 }
 
 const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
@@ -283,6 +297,17 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     maxBrands: 6,
     brandCovers: {},
   },
+  collectionTiles: {
+    enabled: true,
+    eyebrow: { az: 'Premium kolleksiya', ru: 'Премиум коллекция', en: 'Premium collection' },
+    title: { az: 'Bölmələrimiz', ru: 'Наши категории', en: 'Our collections' },
+    subtitle: {
+      az: 'Hər bir bölmə diqqətlə seçilmiş kolleksiya ilə təqdim olunur.',
+      ru: 'Каждая категория представлена тщательно подобранной коллекцией.',
+      en: 'Each section is presented with a carefully curated collection.',
+    },
+    tiles: [],
+  },
 };
 
 export const getHomepageSections = async (): Promise<HomepageSections> => {
@@ -295,6 +320,7 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
         quote: { ...DEFAULT_HOMEPAGE_SECTIONS.quote, ...(data.quote || {}) },
         signature: { ...DEFAULT_HOMEPAGE_SECTIONS.signature, ...(data.signature || {}) },
         brandShowcase: { ...DEFAULT_HOMEPAGE_SECTIONS.brandShowcase, ...(data.brandShowcase || {}) },
+        collectionTiles: { ...DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!, ...(data.collectionTiles || {}) },
       };
     }
   } catch (err) {

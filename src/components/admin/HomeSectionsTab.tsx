@@ -492,6 +492,278 @@ const HomeSectionsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* ==================== Collection Tiles ==================== */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5" data-testid="home-sections-collection-tiles">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Kateqoriya kartları (2 sütun grid)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Ana səhifədə 2 sütunda görünən kateqoriya kartlarını idarə edin (məs: Qol saatları, Gümüş aksesuarlar, Dəri).
+              Hər birinin adı, şəkili və linki sizin tərəfinizdən təyin olunur.
+            </p>
+          </div>
+          <Toggle
+            on={data.collectionTiles?.enabled !== false}
+            onChange={(v) =>
+              setData({
+                ...data,
+                collectionTiles: {
+                  ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                  enabled: v,
+                },
+              })
+            }
+          />
+        </div>
+
+        {/* Eyebrow / Title / Subtitle */}
+        <MultiLangField
+          label="Üst yazı (eyebrow)"
+          value={(data.collectionTiles?.eyebrow || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.eyebrow!) as any}
+          onChange={(v) =>
+            setData({
+              ...data,
+              collectionTiles: {
+                ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                eyebrow: v,
+              },
+            })
+          }
+        />
+        <MultiLangField
+          label="Başlıq"
+          value={(data.collectionTiles?.title || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.title!) as any}
+          onChange={(v) =>
+            setData({
+              ...data,
+              collectionTiles: {
+                ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                title: v,
+              },
+            })
+          }
+        />
+        <MultiLangField
+          label="Alt başlıq"
+          textarea
+          value={(data.collectionTiles?.subtitle || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.subtitle!) as any}
+          onChange={(v) =>
+            setData({
+              ...data,
+              collectionTiles: {
+                ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                subtitle: v,
+              },
+            })
+          }
+        />
+
+        {/* Tile list */}
+        <div className="border-t border-gray-100 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <Label>Kartlar</Label>
+            <button
+              type="button"
+              onClick={() => {
+                const newTile = {
+                  id: `tile_${Date.now()}`,
+                  title_az: '',
+                  title_ru: '',
+                  title_en: '',
+                  image_url: '',
+                  link_url: '',
+                };
+                setData({
+                  ...data,
+                  collectionTiles: {
+                    ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                    tiles: [...(data.collectionTiles?.tiles || []), newTile],
+                  },
+                });
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-md text-xs hover:bg-gray-800"
+              data-testid="add-collection-tile-btn"
+            >
+              + Yeni kart
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {(data.collectionTiles?.tiles || []).length === 0 && (
+              <p className="text-xs text-gray-400 italic">Hələ kart yoxdur. Yuxarıdakı "+ Yeni kart" düyməsi ilə əlavə edin.</p>
+            )}
+
+            {(data.collectionTiles?.tiles || []).map((t, idx) => {
+              const updateTile = (patch: Partial<typeof t>) => {
+                const next = [...(data.collectionTiles?.tiles || [])];
+                next[idx] = { ...next[idx], ...patch };
+                setData({
+                  ...data,
+                  collectionTiles: {
+                    ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const removeTile = () => {
+                const next = (data.collectionTiles?.tiles || []).filter((_, i) => i !== idx);
+                setData({
+                  ...data,
+                  collectionTiles: {
+                    ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const moveUp = () => {
+                if (idx === 0) return;
+                const next = [...(data.collectionTiles?.tiles || [])];
+                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                setData({
+                  ...data,
+                  collectionTiles: {
+                    ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const moveDown = () => {
+                const len = (data.collectionTiles?.tiles || []).length;
+                if (idx >= len - 1) return;
+                const next = [...(data.collectionTiles?.tiles || [])];
+                [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                setData({
+                  ...data,
+                  collectionTiles: {
+                    ...(data.collectionTiles || DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const handleUpload = async (file: File) => {
+                try {
+                  const ext = file.name.split('.').pop() || 'jpg';
+                  const filename = `collection_tile_${Date.now()}.${ext}`;
+                  const sref = storageRef(storage, `homepage_collection_tiles/${filename}`);
+                  await uploadBytes(sref, file);
+                  const url = await getDownloadURL(sref);
+                  updateTile({ image_url: url });
+                } catch (err) {
+                  alert('Şəkil yüklənmədi: ' + (err as Error).message);
+                }
+              };
+
+              return (
+                <div
+                  key={t.id || idx}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50/50"
+                  data-testid={`collection-tile-row-${idx}`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-mono text-gray-400">#{idx + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={moveUp} disabled={idx === 0} className="px-2 py-1 text-xs text-gray-500 hover:text-black disabled:opacity-30" aria-label="Yuxarı">↑</button>
+                      <button type="button" onClick={moveDown} disabled={idx >= (data.collectionTiles?.tiles || []).length - 1} className="px-2 py-1 text-xs text-gray-500 hover:text-black disabled:opacity-30" aria-label="Aşağı">↓</button>
+                      <button type="button" onClick={removeTile} className="px-2 py-1 text-xs text-red-500 hover:text-red-700" aria-label="Sil" data-testid={`remove-collection-tile-${idx}`}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Image */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Şəkil</label>
+                      <div className="aspect-[4/5] bg-white border border-gray-200 rounded overflow-hidden relative">
+                        {t.image_url ? (
+                          <img src={t.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                            <ImageIcon className="h-7 w-7 mb-1" />
+                            <span className="text-[10px] uppercase tracking-wider">Şəkil yoxdur</span>
+                          </div>
+                        )}
+                      </div>
+                      <label className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 border border-dashed border-gray-300 text-xs text-gray-700 hover:border-gray-700 hover:text-gray-900 rounded-md cursor-pointer">
+                        <Upload className="h-3.5 w-3.5" />
+                        {t.image_url ? 'Yenilə' : 'Şəkil yüklə'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(f);
+                            e.currentTarget.value = '';
+                          }}
+                          data-testid={`collection-tile-upload-${idx}`}
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={t.image_url}
+                        onChange={(e) => updateTile({ image_url: e.target.value })}
+                        placeholder="və ya URL yapışdırın"
+                        className="mt-1 w-full px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* Fields */}
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Başlıq (AZ)</label>
+                        <input
+                          type="text"
+                          value={t.title_az}
+                          onChange={(e) => updateTile({ title_az: e.target.value })}
+                          placeholder="məs: Qol saatları"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          data-testid={`collection-tile-title-az-${idx}`}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">RU</label>
+                          <input
+                            type="text"
+                            value={t.title_ru}
+                            onChange={(e) => updateTile({ title_ru: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">EN</label>
+                          <input
+                            type="text"
+                            value={t.title_en}
+                            onChange={(e) => updateTile({ title_en: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Link</label>
+                        <input
+                          type="text"
+                          value={t.link_url}
+                          onChange={(e) => updateTile({ link_url: e.target.value })}
+                          placeholder="məs: /products?category=qol-saati"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none font-mono"
+                          data-testid={`collection-tile-link-${idx}`}
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          Daxili: <code>/products</code>, <code>/brand/casio</code> və s. Xarici URL də qoymaq olar.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end">
         <button
           onClick={save}

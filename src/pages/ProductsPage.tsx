@@ -1,11 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Filter } from 'lucide-react';
+import { Filter, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import type { Product } from '../types';
+
+/** Collapsible filter section — header is always visible, body toggles open on click. */
+const FilterSection: React.FC<{
+  title: string;
+  defaultOpen?: boolean;
+  action?: React.ReactNode;
+  testId?: string;
+  children: React.ReactNode;
+}> = ({ title, defaultOpen = false, action, testId, children }) => {
+  const [open, setOpen] = useState<boolean>(defaultOpen);
+  return (
+    <div className="border-t border-gray-200 pt-3" data-testid={testId}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between text-left py-1.5 group"
+        aria-expanded={open}
+      >
+        <span className="font-medium text-gray-900 group-hover:text-black transition-colors">{title}</span>
+        <ChevronDown
+          className={`h-4 w-4 text-gray-500 group-hover:text-black transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open && (
+        <div className="mt-3 pl-0.5">
+          {action && <div className="mb-2">{action}</div>}
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -530,8 +563,7 @@ const ProductsPage: React.FC = () => {
                 <h2 className="font-semibold text-lg">{t('common.filter')}</h2>
               </div>
 
-              <div>
-                <h3 className="font-medium mb-3">{t('common.priceRange')}</h3>
+              <FilterSection title={t('common.priceRange')} defaultOpen testId="filter-section-price">
                 <div className="space-y-3">
                   <div className="relative pt-2 pb-2">
                     <div className="relative h-2 bg-gray-200 rounded-lg">
@@ -576,12 +608,11 @@ const ProductsPage: React.FC = () => {
                     <span className="font-semibold text-gray-900">{currentMaxPrice} AZN</span>
                   </div>
                 </div>
-              </div>
+              </FilterSection>
 
               {/* Stock Filter - Only for B2B users */}
               {isB2BUser && (
-                <div className="border-t border-gray-200 pt-4">
-                  <h3 className="font-medium mb-3">Stok</h3>
+                <FilterSection title="Stok" testId="filter-section-stock">
                   <div className="space-y-2">
                     <label className="flex items-center cursor-pointer">
                       <input
@@ -606,11 +637,10 @@ const ProductsPage: React.FC = () => {
                       <span className="text-sm">Mövcud məhsullar</span>
                     </label>
                   </div>
-                </div>
+                </FilterSection>
               )}
 
-              <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium mb-3">{t('product.category')}</h3>
+              <FilterSection title={t('product.category')} testId="filter-section-category">
                 <div className="space-y-2">
                   {categories.filter(c => c !== 'all').map((category) => (
                     <label key={category} className="flex items-center cursor-pointer">
@@ -627,10 +657,9 @@ const ProductsPage: React.FC = () => {
                     </label>
                   ))}
                 </div>
-              </div>
+              </FilterSection>
 
-              <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium mb-3">{t('product.brand')}</h3>
+              <FilterSection title={t('product.brand')} testId="filter-section-brand">
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {brands.filter(b => b !== 'all').map((brand) => (
                     <label key={brand} className="flex items-center cursor-pointer">
@@ -646,12 +675,13 @@ const ProductsPage: React.FC = () => {
                     </label>
                   ))}
                 </div>
-              </div>
+              </FilterSection>
 
-              <div className="border-t border-gray-200 pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">{t('category.filterByGender')}</h3>
-                  {selectedGender !== 'all' && (
+              <FilterSection
+                title={t('category.filterByGender')}
+                testId="filter-section-gender"
+                action={
+                  selectedGender !== 'all' && (
                     <button
                       onClick={() => handleGenderChange('all')}
                       className="text-xs text-gray-500 hover:text-gray-900 underline"
@@ -659,8 +689,9 @@ const ProductsPage: React.FC = () => {
                     >
                       Sıfırla
                     </button>
-                  )}
-                </div>
+                  )
+                }
+              >
                 <div className="space-y-2">
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -696,7 +727,7 @@ const ProductsPage: React.FC = () => {
                     <span className="text-sm">{t('category.unisex')}</span>
                   </label>
                 </div>
-              </div>
+              </FilterSection>
 
               <div className="border-t border-gray-200 pt-4">
                 <label className="flex items-center cursor-pointer">

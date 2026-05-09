@@ -10,6 +10,7 @@ import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
 import StatsBand from './components/StatsBand';
 import BrandShowcase from './components/BrandShowcase';
+import CollectionTiles from './components/CollectionTiles';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
 import B2BRequestForm from './components/auth/B2BRequestForm';
@@ -54,6 +55,7 @@ const HomePage: React.FC = () => {
     <>
       <Hero />
       <BestSellersSection />
+      <CollectionTiles />
       <BrandShowcase />
       <HomeProductBanners />
       <StatsBand />
