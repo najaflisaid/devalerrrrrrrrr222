@@ -219,6 +219,7 @@ export interface HomepageSections {
     enabled: boolean;
     selectedBrands: string[];
     maxBrands: number;
+    brandCovers?: { [brandName: string]: string };
   };
 }
 
@@ -279,7 +280,8 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
   brandShowcase: {
     enabled: true,
     selectedBrands: [],
-    maxBrands: 8,
+    maxBrands: 6,
+    brandCovers: {},
   },
 };
 

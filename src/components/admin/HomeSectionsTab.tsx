@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Loader2, Save, ToggleLeft, ToggleRight, Image as ImageIcon, Upload, X } from 'lucide-react';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../lib/firebase';
 import {
   getHomepageSections,
   updateHomepageSections,
@@ -275,13 +277,17 @@ const HomeSectionsTab: React.FC = () => {
                 ...data,
                 brandShowcase: {
                   ...data.brandShowcase,
-                  maxBrands: Math.max(1, Math.min(12, Number(e.target.value) || 8)),
+                  maxBrands: Math.max(1, Math.min(12, Number(e.target.value) || 6)),
                 },
               })
             }
             className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
             data-testid="home-sections-brand-max"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Hazırda ana səhifədə həmişə dəqiq <strong>6 brend</strong> göstərilir (3 sütunda 2 sıra).
+            Bu sahə yalnız avtomatik seçim üçün top-N saymağa təsir edir.
+          </p>
         </div>
 
         <div>
@@ -357,6 +363,130 @@ const HomeSectionsTab: React.FC = () => {
                   )}
                 </div>
               </>
+            );
+          })()}
+        </div>
+
+        {/* Brand cover images — admin uploads/sets a cover for each brand */}
+        <div className="border-t border-gray-100 pt-6">
+          <Label>Brendlərin qabaq şəkilləri</Label>
+          <p className="text-xs text-gray-500 mb-3">
+            Hər brend üçün ana səhifədə görünəcək şəkili buradan yükləyin. Şəkil qoyulmayan brendlər üçün avtomatik
+            olaraq həmin brendin məhsul şəkili istifadə olunacaq.
+          </p>
+
+          {(() => {
+            const allBrands = Array.from(
+              new Set(products.map((p) => (p as any).brand).filter(Boolean))
+            ).sort((a: string, b: string) => a.localeCompare(b, 'az'));
+            const selected = data.brandShowcase.selectedBrands || [];
+            // Show ONLY selected brands (or top-N if none selected)
+            const display = selected.length > 0
+              ? selected
+              : allBrands.slice(0, data.brandShowcase.maxBrands);
+            const covers = data.brandShowcase.brandCovers || {};
+
+            const setCover = (brand: string, url: string) => {
+              setData({
+                ...data,
+                brandShowcase: {
+                  ...data.brandShowcase,
+                  brandCovers: { ...(data.brandShowcase.brandCovers || {}), [brand]: url },
+                },
+              });
+            };
+
+            const removeCover = (brand: string) => {
+              const next = { ...(data.brandShowcase.brandCovers || {}) };
+              delete next[brand];
+              setData({
+                ...data,
+                brandShowcase: { ...data.brandShowcase, brandCovers: next },
+              });
+            };
+
+            const handleUpload = async (brand: string, file: File) => {
+              try {
+                const ext = file.name.split('.').pop() || 'jpg';
+                const filename = `brand_cover_${brand.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
+                const sref = storageRef(storage, `homepage_brand_covers/${filename}`);
+                await uploadBytes(sref, file);
+                const url = await getDownloadURL(sref);
+                setCover(brand, url);
+              } catch (err) {
+                console.error('Brand cover upload failed:', err);
+                alert('Şəkil yüklənmədi: ' + (err as Error).message);
+              }
+            };
+
+            if (display.length === 0) {
+              return (
+                <p className="text-xs text-gray-400 italic px-2">
+                  Yuxarıda heç bir brend seçilməyib. Cover şəkili əlavə etmək üçün əvvəlcə brend seçin.
+                </p>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {display.map((b: string) => {
+                  const url = covers[b] || '';
+                  return (
+                    <div key={b} className="border border-gray-200 rounded-lg p-3 bg-white" data-testid={`brand-cover-card-${b}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-900 truncate">{b}</span>
+                        {url && (
+                          <button
+                            type="button"
+                            onClick={() => removeCover(b)}
+                            className="text-gray-400 hover:text-red-600"
+                            title="Şəkili sil"
+                            aria-label={`${b} cover sil`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="aspect-[4/5] bg-gray-50 rounded-md overflow-hidden border border-gray-100 relative">
+                        {url ? (
+                          <img src={url} alt={b} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                            <ImageIcon className="h-7 w-7 mb-1" />
+                            <span className="text-[10px] uppercase tracking-wider">Şəkil yoxdur</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <label className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 border border-dashed border-gray-300 text-xs text-gray-700 hover:border-gray-700 hover:text-gray-900 rounded-md cursor-pointer">
+                        <Upload className="h-3.5 w-3.5" />
+                        {url ? 'Yenilə' : 'Şəkil yüklə'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(b, f);
+                            e.currentTarget.value = '';
+                          }}
+                          data-testid={`brand-cover-upload-${b}`}
+                        />
+                      </label>
+
+                      <input
+                        type="text"
+                        value={url}
+                        onChange={(e) => setCover(b, e.target.value)}
+                        placeholder="və ya URL yapışdırın"
+                        className="mt-1 w-full px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-gray-900 outline-none"
+                        data-testid={`brand-cover-url-${b}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             );
           })()}
         </div>
