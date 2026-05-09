@@ -519,8 +519,23 @@ const CartPage: React.FC = () => {
     return item.product.salePrice || item.product.price;
   };
 
-  // Empty cart
-  if (items.length === 0) {
+  // Show a full-screen "preparing payment" loader if checkout is in progress
+  // AND the cart is empty (post-order, pre-redirect). Avoids the brief
+  // "cart is empty" flash on slow mobile connections before Epoint opens.
+  if (loading && items.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6" data-testid="checkout-redirect-loader">
+        <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mb-5" />
+        <p className="text-sm font-medium text-gray-900">Ödəniş səhifəsi açılır...</p>
+        <p className="text-xs text-gray-500 mt-1">Zəhmət olmasa gözləyin</p>
+      </div>
+    );
+  }
+
+  // Empty cart — but DON'T show this while a checkout/payment is in progress
+  // (items can briefly be empty between order-creation and the Epoint redirect
+  // on slow mobile connections, causing a flash of the empty-cart screen).
+  if (items.length === 0 && !loading) {
     return (
       <>
         {showSuccess && (

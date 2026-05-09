@@ -1030,7 +1030,6 @@ const Header: React.FC = () => {
                 <div className="border-t border-black/[0.06] p-6 space-y-4">
                   {/* Language Switcher minimal pill */}
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-black/45 mb-2.5">{t('header.language')}</p>
                     <div className="flex gap-1.5">
                       {(['az', 'ru', 'en'] as const).map((lng) => (
                         <button
