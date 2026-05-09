@@ -82,6 +82,7 @@ const AppContent: React.FC = () => {
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/b2b-request" element={<B2BRequestForm />} />
           <Route path="/b2b-login" element={<B2BLogin />} />
+          <Route path="/delivery" element={<DeliveryPage />} />
           <Route path="/*" element={
             <>
               <Header />
@@ -106,7 +107,6 @@ const AppContent: React.FC = () => {
                   <Route path="/b2b/orders" element={<B2BOrdersPage />} />
                   <Route path="/my-orders" element={<MyOrdersPage />} />
                   <Route path="/change-password" element={<ChangePasswordPage />} />
-                  <Route path="/delivery" element={<DeliveryPage />} />
                   <Route path="/payment/success" element={<PaymentSuccessPage />} />
                   <Route path="/payment/error" element={<PaymentErrorPage />} />
                   <Route path="/payment/result" element={<PaymentResultPage />} />

@@ -58,6 +58,15 @@ export interface CustomerOrder {
   epointTransaction?: string;
   epointCode?: string;
   customerSignature?: string; // base64 PNG of customer signature
+  // Courier-captured receiver signature (used when delivery is taken by a
+  // person other than the account holder — e.g., a family member at home,
+  // shop assistant for a B2B-style retail flow, etc.)
+  receiverName?: string;
+  receiverSurname?: string;
+  receiverPosition?: string;
+  receiverPhone?: string;
+  receiverSignature?: string; // base64 PNG
+  receiverSignedAt?: any;
   createdAt?: any;
   paidAt?: any;
   courierHandoverAt?: any;
@@ -164,4 +173,114 @@ export const STATUS_LABELS_AZ: Record<CustomerOrderStatus, string> = {
   on_the_way: 'Çatdırılma xidmətində',
   delivered: 'Təhvil verildi',
   cancelled: 'Ləğv olundu',
+};
+
+// =====================================================================
+// Delivery-flow (courier captures receiver signature for retail orders
+// when somebody other than the customer takes delivery).
+// =====================================================================
+
+export interface CustomerReceiverSignaturePayload {
+  receiverName: string;
+  receiverSurname: string;
+  receiverPosition: string;
+  receiverSignature: string; // base64 dataURL
+  receiverPhone?: string;
+}
+
+export const saveCustomerReceiverSignature = async (
+  orderId: string,
+  payload: CustomerReceiverSignaturePayload
+): Promise<void> => {
+  const ref = doc(db, COLLECTION, orderId);
+  await updateDoc(ref, {
+    receiverName: payload.receiverName.trim(),
+    receiverSurname: payload.receiverSurname.trim(),
+    receiverPosition: payload.receiverPosition.trim(),
+    receiverPhone: payload.receiverPhone?.trim() || '',
+    receiverSignature: payload.receiverSignature,
+    receiverSignedAt: Timestamp.now(),
+    status: 'delivered',
+    deliveredAt: Timestamp.now(),
+  });
+};
+
+/** All retail orders for a given customer (by email) that are currently
+ * "on_the_way" and have NOT yet been signed by a receiver. */
+export const getRetailOrdersAwaitingReceiverSignature = async (customerEmail: string) => {
+  const e = (customerEmail || '').trim().toLowerCase();
+  const snapshot = await getDocs(collection(db, COLLECTION));
+  const list: any[] = [];
+  snapshot.forEach((d) => {
+    const data = d.data() as any;
+    const email = (data.customerEmail || '').trim().toLowerCase();
+    if (email !== e) return;
+    if (data.receiverSignature) return;
+    if (data.status !== 'on_the_way') return;
+    list.push({ id: d.id, ...data });
+  });
+  list.sort((a, b) => {
+    const ta = a.createdAt?.toMillis?.() || 0;
+    const tb = b.createdAt?.toMillis?.() || 0;
+    return tb - ta;
+  });
+  return list;
+};
+
+/** Retail customers (deduplicated) that currently have at least one
+ * order in "on_the_way" status awaiting receiver signature. */
+export const getRetailCustomersWithPendingDeliveries = async () => {
+  const snapshot = await getDocs(
+    query(collection(db, COLLECTION), where('status', '==', 'on_the_way'))
+  );
+  const map = new Map<string, {
+    email: string;
+    name: string;
+    phone: string;
+    address: string;
+    pendingCount: number;
+    latestCreatedAt: number;
+  }>();
+  snapshot.forEach((d) => {
+    const data = d.data() as any;
+    if (data.receiverSignature) return;
+    const email = (data.customerEmail || '').trim().toLowerCase();
+    if (!email) return;
+    const ts = data.createdAt?.toMillis?.() || 0;
+    const existing = map.get(email);
+    if (existing) {
+      existing.pendingCount += 1;
+      if (ts > existing.latestCreatedAt) existing.latestCreatedAt = ts;
+    } else {
+      map.set(email, {
+        email,
+        name: data.customerName || '',
+        phone: data.customerPhone || '',
+        address: data.customerAddress || '',
+        pendingCount: 1,
+        latestCreatedAt: ts,
+      });
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
+};
+
+/** Retail orders signed by the courier in the last `days` days. */
+export const getRecentlySignedRetailOrders = async (days = 3) => {
+  const snapshot = await getDocs(collection(db, COLLECTION));
+  const cutoff = Date.now() - days * 86400000;
+  const list: any[] = [];
+  snapshot.forEach((d) => {
+    const data = d.data() as any;
+    const t = data.receiverSignedAt?.toMillis?.() || 0;
+    if (data.receiverSignature && t >= cutoff) {
+      list.push({ id: d.id, ...data });
+    }
+  });
+  list.sort((a, b) => {
+    const ta = a.receiverSignedAt?.toMillis?.() || 0;
+    const tb = b.receiverSignedAt?.toMillis?.() || 0;
+    return tb - ta;
+  });
+  return list;
 };

@@ -519,6 +519,10 @@ const MyOrdersPage: React.FC = () => {
                   const idx = stageIndex(order.status);
                   const inDelivery =
                     order.status === 'on_the_way' || order.status === 'courier_handover';
+                  // Even after a courier captured a receiver's signature on the customer's
+                  // behalf, the actual account holder may still want to add their own
+                  // signature later.
+                  const canSelfSignLater = !!order.receiverSignature && !order.customerSignature;
 
                   return (
                     <div
@@ -690,7 +694,7 @@ const MyOrdersPage: React.FC = () => {
                                 {order.totalAmount.toFixed(2)} AZN
                               </span>
                             </div>
-                            {inDelivery && (
+                            {(inDelivery || canSelfSignLater) && (
                               <button
                                 onClick={() => setSignOrderId(order.id!)}
                                 disabled={confirmingId === order.id}
@@ -698,7 +702,7 @@ const MyOrdersPage: React.FC = () => {
                                 data-testid={`my-order-confirm-${order.id}`}
                               >
                                 <PenLine className="h-4 w-4" />
-                                Təhvil aldım (imza)
+                                {canSelfSignLater ? 'Mən də öz imzamı atıram' : 'Təhvil aldım (imza)'}
                               </button>
                             )}
                           </div>
@@ -713,6 +717,33 @@ const MyOrdersPage: React.FC = () => {
                             </div>
                           )}
 
+                          {!order.customerSignature && order.receiverSignature && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1">
+                                <Bike className="h-3 w-3" /> Sifarişi sizdən başqası təhvil aldı:
+                              </p>
+                              <p className="text-xs text-gray-800 mb-1">
+                                <span className="font-semibold">
+                                  {order.receiverName} {order.receiverSurname}
+                                </span>
+                                {order.receiverPosition && (
+                                  <span className="text-gray-500"> — {order.receiverPosition}</span>
+                                )}
+                              </p>
+                              {order.receiverSignedAt?.toDate && (
+                                <p className="text-[10px] text-gray-500 mb-1">
+                                  {order.receiverSignedAt.toDate().toLocaleString('az-AZ')}
+                                </p>
+                              )}
+                              <img
+                                src={order.receiverSignature}
+                                alt="receiver signature"
+                                className="h-20 bg-white rounded-lg border border-gray-200 px-2"
+                                data-testid={`my-order-receiver-only-${order.id}`}
+                              />
+                            </div>
+                          )}
+
                           {order.customerSignature && (
                             <div className="mt-3 pt-3 border-t border-gray-200">
                               <p className="text-xs text-gray-500 mb-2 inline-flex items-center gap-1">
@@ -724,6 +755,32 @@ const MyOrdersPage: React.FC = () => {
                                 className="h-20 bg-white rounded-lg border border-gray-200 px-2"
                                 data-testid={`my-order-signature-${order.id}`}
                               />
+                              {order.receiverSignature && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <p className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1">
+                                    <Bike className="h-3 w-3" /> Sifarişi sizdən başqası təhvil aldı:
+                                  </p>
+                                  <p className="text-xs text-gray-800 mb-1">
+                                    <span className="font-semibold">
+                                      {order.receiverName} {order.receiverSurname}
+                                    </span>
+                                    {order.receiverPosition && (
+                                      <span className="text-gray-500"> — {order.receiverPosition}</span>
+                                    )}
+                                  </p>
+                                  {order.receiverSignedAt?.toDate && (
+                                    <p className="text-[10px] text-gray-500 mb-1">
+                                      {order.receiverSignedAt.toDate().toLocaleString('az-AZ')}
+                                    </p>
+                                  )}
+                                  <img
+                                    src={order.receiverSignature}
+                                    alt="receiver signature"
+                                    className="h-20 bg-white rounded-lg border border-gray-200 px-2"
+                                    data-testid={`my-order-receiver-signature-${order.id}`}
+                                  />
+                                </div>
+                              )}
                               <div
                                 className="mt-3 bg-gradient-to-r from-emerald-50 to-[#FBF7EF] border border-emerald-200 rounded-lg p-3 flex items-start gap-2.5"
                                 data-testid={`my-order-delivery-notice-${order.id}`}

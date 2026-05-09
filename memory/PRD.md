@@ -1,59 +1,44 @@
 # DE VALEUR — PRD
 
-## Original problem statement
-DE VALEUR e-commerce sayt (Vite + React + TypeScript + Firebase + FastAPI). User uploaded existing project. Iterative changes requested via Azerbaijani.
+## Original Problem Statement
+Kuryer-lərin B2B və pərakəndə müştəri sifarişlərini təhvil verən digər
+işçilərə (anbardar, menecer, mağaza müdiri, qonşu və s.) imzalatması üçün
+`devaleur.az/delivery` paneli yaradılması.
 
-## What's implemented (running log)
+## Architecture
+- Frontend: Vite + React 18 + TypeScript + Tailwind
+- Backend: FastAPI (mövcud, dəyişdirilmədi)
+- DB: Firebase Firestore (couriers, b2bOrders, customer_orders kolleksiyaları)
+- Hosting: Vercel/Netlify (production)
 
-### Iteration 1 — Phone-based auth (May 2026)
-- Replaced email login/registration with phone-only flow
-- Synthetic email format: `phone994XXXXXXXXX@devaleur.az` (Firebase Auth requires email)
-- +994 prefix automatic, user enters 9 digits
-- Cart guest checkout: removed email field, only Name + Surname + Address + Phone
-- Backward-compat fallback for legacy users registered with real email
+## Core Requirements (DONE)
+- [x] Kuryer email + şifrə ilə login (admin idarə edir)
+- [x] Müştəri / B2B tabları
+- [x] B2B-də yalnız "Çatdırılmadadır" statuslu müştərilər görünür
+- [x] Pərakəndədə yalnız "on_the_way" statuslu müştərilər görünür
+- [x] Sonuncu imzalanmamış sifariş avtomatik açılır
+- [x] Tehvil alanın Ad/Soyad/Vəzifə manual daxil edilir + canvas imza
+- [x] İmza müştəri B2B/MyOrders panelində + admin paneldə görünür
+- [x] Müştəri sonradan öz imzasını da əlavə edə bilir
+- [x] 3 gündən sonra kuryer tarixçəsindən avtomatik yox olur
+- [x] Admin paneldə "Çatdırılma — Kuryerlər" tabı (CRUD + son 30 günün imzaları)
 
-### Iteration 2 — WhatsApp password-reset infrastructure (May 2026)
-**Backend (`/app/backend/server.py`):**
-- Firebase Admin SDK initialised (graceful — endpoints return 503 if service-account JSON missing)
-- WhatsApp Cloud API service: `whatsapp_send_text`, `whatsapp_send_template`
-- Endpoints:
-  - `POST /api/auth/forgot-password` — customer self-serve reset
-  - `POST /api/admin/customers/reset-password` — admin trigger (returns temp password)
-  - `GET/POST /api/admin/whatsapp-config` — admin reads/writes credentials in Firestore `siteSettings/whatsapp`
-  - `POST /api/admin/whatsapp-test` — send a test message
-- Admin endpoints protected by `X-Admin-Secret` header (default `devaleur-admin-2026`)
-- New temp password generator: format `XX-NNNN` (avoids ambiguous chars)
-- Password resets logged to Firestore `passwordResets` collection
+## Files Touched
+### New
+- src/services/courierService.ts
+- src/components/admin/CourierManagementTab.tsx
 
-**Frontend:**
-- `CustomerLogin.tsx` — added: 3rd "forgot" mode, password confirm field on register, terms checkbox + privacy/policy links
-- `ChangePasswordPage` (new at `/change-password`) — re-auth + update Firebase Auth password
-- `Header.tsx` — logged-in account dropdown now has Sifarişlərim / Şifrəni dəyiş / Çıxış
-- `WhatsAppSettingsTab` (new admin tab) — phone_id, access_token (masked), business_account_id, api_version, sender_display, test send
-- AdminPanel customers list — green WhatsApp icon: "Şifrəni sıfırla və WhatsApp-a göndər" → backend → modal showing temp password
+### Modified
+- src/pages/DeliveryPage.tsx (tamamilə yenidən yazıldı)
+- src/pages/MyOrdersPage.tsx
+- src/pages/B2BOrdersPage.tsx
+- src/services/b2bOrderService.ts
+- src/services/customerOrderService.ts
+- src/components/admin/AdminPanel.tsx
+- src/components/admin/CustomerOrdersTab.tsx
+- src/App.tsx
 
-## Pending — needs user to provide credentials
-
-1. **Meta WhatsApp Cloud API credentials** (set via `/admin` → WhatsApp tab):
-   - WHATSAPP_PHONE_ID
-   - WHATSAPP_ACCESS_TOKEN (Permanent system-user token)
-   - WHATSAPP_BUSINESS_ACCOUNT_ID
-2. **Firebase Service Account JSON** for password reset:
-   - Download from Firebase Console → Project Settings → Service Accounts → Generate new private key
-   - Place at `/app/backend/firebase-service-account.json` OR set `FIREBASE_SERVICE_ACCOUNT_JSON` env
-   - Without it: forgot-password and admin reset endpoints return 503
-
-## Tech stack
-- Frontend: Vite 5 + React 18 + TypeScript + Tailwind + Firebase JS SDK
-- Backend: FastAPI + httpx + emergentintegrations + firebase-admin
-- DB: Firestore (Firebase) — backend uses Admin SDK
-- Auth: Firebase Auth (synthetic emails for phone auth)
-
-## Backlog / Future
-- WhatsApp message templates (currently uses free-form text; for first-contact transactional outside 24h window, Meta requires approved templates — `password_reset_otp` template should be created in WhatsApp Manager)
-- SMS fallback if WhatsApp delivery fails (deferred per user request)
-- B2B request flow still uses email-based auth (intentional — kept)
-- Password reset rate limiting (in-memory or Redis)
-
-## Test credentials
-See `/app/memory/test_credentials.md`
+## Backlog / Next
+- P2: Kuryerin imza atdıqdan sonra müştəriyə avtomatik bildiriş (SMS/Email)
+- P2: Kuryerlər üçün gündəlik təhvil verilmiş sifarişlər statistikası
+- P2: 3 günlük "history" üçün cron-job (frontend-də filtrlənir, gərək yox)

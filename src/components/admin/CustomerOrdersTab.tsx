@@ -337,6 +337,35 @@ const CustomerOrdersTab: React.FC = () => {
                   />
                 </div>
               )}
+
+              {order.receiverSignature && (
+                <div className="mt-3 pt-3 border-t border-gray-100" data-testid={`admin-customer-receiver-${order.id}`}>
+                  <p className="text-xs text-gray-500 mb-1 inline-flex items-center gap-1">
+                    <Bike className="h-3 w-3" /> Kuryer imzası (digər şəxs təhvil aldı):
+                  </p>
+                  <p className="text-xs text-gray-800 mb-1">
+                    <span className="font-semibold">
+                      {order.receiverName} {order.receiverSurname}
+                    </span>
+                    {order.receiverPosition && (
+                      <span className="text-gray-500"> — {order.receiverPosition}</span>
+                    )}
+                    {order.receiverPhone && (
+                      <span className="text-gray-500"> · {order.receiverPhone}</span>
+                    )}
+                  </p>
+                  {order.receiverSignedAt?.toDate && (
+                    <p className="text-[10px] text-gray-500 mb-1">
+                      {order.receiverSignedAt.toDate().toLocaleString('az-AZ')}
+                    </p>
+                  )}
+                  <img
+                    src={order.receiverSignature}
+                    alt="receiver signature"
+                    className="h-20 bg-gray-50 rounded border border-gray-200"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -285,7 +285,8 @@ export const saveReceiverSignature = async (
 };
 
 /** All orders for a given B2B customer (by email) that have NOT yet been
- * signed by a delivery receiver. Sorted newest first. */
+ * signed by a delivery receiver AND are currently in "delivering" status.
+ * Sorted newest first. */
 export const getOrdersAwaitingReceiverSignature = async (customerEmail: string) => {
   const ordersRef = collection(db, 'b2bOrders');
   const q = query(ordersRef, where('customerEmail', '==', customerEmail));
@@ -293,7 +294,7 @@ export const getOrdersAwaitingReceiverSignature = async (customerEmail: string) 
   const list: any[] = [];
   snap.forEach((d) => {
     const data = d.data() as any;
-    if (!data.receiverSignature) {
+    if (!data.receiverSignature && data.status === 'delivering') {
       list.push({ id: d.id, ...data });
     }
   });
@@ -306,10 +307,15 @@ export const getOrdersAwaitingReceiverSignature = async (customerEmail: string) 
 };
 
 /** All B2B customers that currently have at least one order awaiting
- * receiver signature. Returns deduplicated list. */
+ * receiver signature AND in "delivering" status. Returns deduplicated list.
+ *
+ * Confidentiality: ONLY orders explicitly set to status='delivering' (Çatdırılmadadır)
+ * by the admin appear in the courier's view. */
 export const getCustomersWithPendingDeliveries = async () => {
   const ordersRef = collection(db, 'b2bOrders');
-  const snap = await getDocs(ordersRef);
+  // Filter directly by status to keep payload smaller
+  const q = query(ordersRef, where('status', '==', 'delivering'));
+  const snap = await getDocs(q);
   const map = new Map<string, {
     email: string;
     name: string;
@@ -342,6 +348,29 @@ export const getCustomersWithPendingDeliveries = async () => {
     }
   });
   return Array.from(map.values()).sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
+};
+
+/** B2B orders that the courier has signed in the last `days` days.
+ * Used by the courier panel to show a short history that auto-disappears
+ * after 3 days. */
+export const getRecentlySignedB2BOrders = async (days = 3) => {
+  const ordersRef = collection(db, 'b2bOrders');
+  const snap = await getDocs(ordersRef);
+  const cutoff = Date.now() - days * 86400000;
+  const list: any[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    const t = data.receiverSignedAt?.toMillis?.() || 0;
+    if (data.receiverSignature && t >= cutoff) {
+      list.push({ id: d.id, ...data });
+    }
+  });
+  list.sort((a, b) => {
+    const ta = a.receiverSignedAt?.toMillis?.() || 0;
+    const tb = b.receiverSignedAt?.toMillis?.() || 0;
+    return tb - ta;
+  });
+  return list;
 };
 
 

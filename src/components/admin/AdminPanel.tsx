@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -34,6 +34,7 @@ import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
+import CourierManagementTab from './CourierManagementTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
@@ -1317,6 +1318,7 @@ const AdminPanel: React.FC = () => {
         { id: 'giftCards', label: 'Hədiyyə Kartları', icon: Ticket },
         { id: 'promoCodes', label: 'Promo Kodlar', icon: Ticket },
         { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
+        { id: 'courierManagement', label: 'Çatdırılma — Kuryerlər', icon: Truck },
       ],
     },
     {
@@ -3172,6 +3174,12 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'deliveryMethods' && (
           <PasswordProtectedSection sectionName="deliveryMethods">
             <DeliveryMethodsTab />
+          </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'courierManagement' && (
+          <PasswordProtectedSection sectionName="deliveryMethods">
+            <CourierManagementTab />
           </PasswordProtectedSection>
         )}
 

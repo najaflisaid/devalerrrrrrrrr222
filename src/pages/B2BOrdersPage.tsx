@@ -629,7 +629,7 @@ const B2BOrdersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {order.status === 'delivering' && !order.deliveredAt && (
+                    {(order.status === 'delivering' || (order.receiverSignature && !order.signature)) && !order.signature && (
                       <div className="border-t border-gray-200 mt-4 pt-4">
                         <p className="text-xs font-bold text-red-600 mb-3 leading-relaxed">
                           {t('b2b.receiveWarning')}
@@ -637,9 +637,10 @@ const B2BOrdersPage: React.FC = () => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleConfirmDelivery(order.id); }}
                           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                          data-testid={`b2b-self-sign-${order.id}`}
                         >
                           <CheckCircle className="h-4 w-4" />
-                          {t('b2b.receiveButton')}
+                          {order.receiverSignature ? 'Mən də öz imzamı atıram' : t('b2b.receiveButton')}
                         </button>
                       </div>
                     )}
