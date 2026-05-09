@@ -244,19 +244,34 @@ const Header: React.FC = () => {
     // Clear any in-flight timers first
     if (dropdownTimersRef.current.outer) clearTimeout(dropdownTimersRef.current.outer);
     if (dropdownTimersRef.current.inner) clearTimeout(dropdownTimersRef.current.inner);
-    // Müştəri tələbi: menyu çox tez bağlanmasın — hover-i itirəndən sonra
-    // 500ms gözlə, sonra bağlama animasiyasına başla. Bu, miskanın azacıq
-    // sürüşməsi (Məhsullar düyməsi ilə dropdown arasında) ilə bağlı problemi həll edir.
+    // Mouse panelden çıxan kimi bağlamaq üçün qısa gecikmə (yanlış toxunmaları
+    // önləmək üçün). Click-əsaslı açılışda bu daha aqressiv ola bilər.
     dropdownTimersRef.current.outer = setTimeout(() => {
       setIsDropdownClosing(true);
       dropdownTimersRef.current.inner = setTimeout(() => {
         setShowDropdown(false);
         setIsDropdownClosing(false);
         dropdownTimersRef.current.inner = null;
-      }, 320);
+      }, 280);
       dropdownTimersRef.current.outer = null;
-    }, 500);
+    }, 180);
   };
+
+  // Close brands dropdown when clicking outside header
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't close on clicks inside the trigger button or the megamenu panel
+      if (target.closest('.dv-megamenu') || target.closest('[data-testid="header-brands-link"]')) {
+        return;
+      }
+      handleDropdownLeave();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDropdown]);
 
   const closeMobileMenu = () => {
     if (mobileMenuCloseTimeout) {
@@ -454,13 +469,24 @@ const Header: React.FC = () => {
                 </span>
               </Link>
 
-              {/* Brendlər Dropdown - wrapper fills entire header height so there's no dead-zone before the megamenu */}
+              {/* Brendlər Dropdown — opens on click, auto-closes when mouse leaves the panel */}
               <div
                 className="relative py-[22px] -my-[22px] px-3 -mx-3"
-                onMouseEnter={handleDropdownEnter}
-                onMouseLeave={handleDropdownLeave}
               >
-                <button className="flex items-center text-black hover:text-gray-700 font-normal text-sm tracking-wide whitespace-nowrap transition-colors" style={{ textTransform: 'uppercase' }} data-testid="header-brands-link">
+                <button
+                  onClick={() => {
+                    if (showDropdown) {
+                      handleDropdownLeave();
+                    } else {
+                      handleDropdownEnter();
+                    }
+                  }}
+                  className="flex items-center text-black hover:text-gray-700 font-normal text-sm tracking-wide whitespace-nowrap transition-colors"
+                  style={{ textTransform: 'uppercase' }}
+                  data-testid="header-brands-link"
+                  aria-expanded={showDropdown}
+                  aria-haspopup="menu"
+                >
                   {t('header.brands', { defaultValue: 'Brendlər' })}
                 </button>
 
@@ -601,11 +627,6 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              {isLoggedIn && userRole === 'customer' && (
-                <Link to="/my-orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap" data-testid="header-my-orders-link">
-                  Sifarişlərim
-                </Link>
-              )}
               {isLoggedIn && userRole === 'b2b' && (
                 <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
                   {t('header.myOrders')}
