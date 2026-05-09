@@ -1,29 +1,21 @@
-# Test Credentials - İşçi İdarəetmə Sistemi
+# Test credentials
 
-## Admin Credentials (Firebase Auth-da yaradılmalı)
-- **Email:** rasimgasimzade@gmail.com
-- **Password:** Rasim2323
-- **URL:** /workers/admin-login
+## Admin API secret (X-Admin-Secret header)
+Default: `devaleur-admin-2026`
+Override via env `ADMIN_API_SECRET` in `/app/backend/.env`.
+Frontend admin panel reads from `localStorage.adminApiSecret` (set via WhatsApp Settings tab).
 
-## Admin Hesabı Yaratma Təlimatı
-1. Firebase Console-a daxil olun: https://console.firebase.google.com
-2. "devaleur-11742" layihəsini seçin
-3. Sol menyudan "Authentication" → "Users" bölməsinə keçin
-4. "Add user" düyməsinə basın
-5. Email: rasimgasimzade@gmail.com, Password: Rasim2323 daxil edin
-6. "Add user" ilə təsdiqləyin
+## WhatsApp Cloud API
+NOT YET CONFIGURED — owner will provide:
+- WHATSAPP_PHONE_ID
+- WHATSAPP_ACCESS_TOKEN
+- WHATSAPP_BUSINESS_ACCOUNT_ID
+- Display sender number: +994777577277 (changeable via admin panel)
 
-## QR Kod Sistemi
-- Admin paneldə "Real Vaxt İzləmə" tabında QR kod yaradılır
-- QR kod hər 1 saat keçərlidir
-- İşçilər QR skan edərək giriş/çıxış edirlər
-- Eyni QR ilə eyni işçi 2 dəfə giriş edə bilmir
+## Firebase Service Account
+NOT YET CONFIGURED — owner needs to download from Firebase Console
+(Project Settings → Service Accounts → Generate new private key)
+and save as `/app/backend/firebase-service-account.json`.
 
-## İşçi Test Credentials
-İşçilər admin panel vasitəsilə yaradılır. Yaradıldıqda Firebase Auth-da da avtomatik hesab yaranır.
-
-## Linkler
-- İşçi Girişi: /workers
-- Admin Girişi: /workers/admin-login
-- Admin Panel: /workers/admin
-- İşçi Dashboard: /workers/dashboard
+## Customer test accounts
+- None pre-seeded; create via the registration flow (phone + name + surname + password + accept terms).

@@ -764,11 +764,46 @@ const Header: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="hidden md:flex items-center space-x-3">
-                  <span className="text-sm text-gray-700 font-normal">{userName}</span>
-                  <button onClick={handleLogout} className="text-gray-600 hover:text-gray-900">
-                    <LogOut className="h-5 w-5" strokeWidth={1.25} />
+                <div
+                  className="relative hidden md:block py-[22px] -my-[22px]"
+                  onMouseEnter={() => setShowLoginDropdown(true)}
+                  onMouseLeave={() => setShowLoginDropdown(false)}
+                >
+                  <button
+                    className="p-1 -m-1 text-gray-700 hover:text-gray-900 flex items-center gap-1.5"
+                    aria-label="Account"
+                    data-testid="header-account-loggedin-btn"
+                  >
+                    <User className="h-5 w-5" strokeWidth={1.25} />
+                    <span className="text-sm text-gray-700 font-normal max-w-[140px] truncate">{userName}</span>
                   </button>
+                  {showLoginDropdown && (
+                    <div className="absolute right-0 top-full bg-white border border-black/10 shadow-lg min-w-[180px] z-50" data-testid="account-loggedin-dropdown">
+                      <Link
+                        to="/my-orders"
+                        onClick={() => setShowLoginDropdown(false)}
+                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors"
+                        data-testid="account-my-orders"
+                      >
+                        Sifarişlərim
+                      </Link>
+                      <Link
+                        to="/change-password"
+                        onClick={() => setShowLoginDropdown(false)}
+                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
+                        data-testid="account-change-password"
+                      >
+                        Şifrəni dəyiş
+                      </Link>
+                      <button
+                        onClick={() => { setShowLoginDropdown(false); handleLogout(); }}
+                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
+                        data-testid="account-logout"
+                      >
+                        Çıxış
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1043,6 +1078,14 @@ const Header: React.FC = () => {
                         <p className="text-[10px] uppercase tracking-[0.22em] text-black/55">{t('header.welcomeUser')}</p>
                         <p className="text-[14px] text-black mt-0.5">{userName}</p>
                       </div>
+                      <Link
+                        to="/change-password"
+                        onClick={closeMobileMenu}
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
+                        data-testid="mobile-change-password"
+                      >
+                        <span>Şifrəni dəyiş</span>
+                      </Link>
                       <button
                         onClick={() => {
                           handleLogout();

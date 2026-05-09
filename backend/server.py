@@ -5,13 +5,19 @@ Endpoints:
 - POST /api/chat          – De Valeur AI sales assistant (Claude Sonnet 4.5 via emergent LLM key)
 - POST /api/epoint/create-payment – Server-side Epoint payment-request (matches official WooCommerce plugin spec)
 - POST /api/epoint/verify-callback – Verify a redirect/result-url payload signature
+- POST /api/auth/forgot-password – customer self-serve: reset password & send via WhatsApp
+- POST /api/admin/customers/reset-password – admin: reset a customer's password & send via WhatsApp
+- GET/POST /api/admin/whatsapp-config – admin: view/update WhatsApp credentials in Firestore
+- POST /api/admin/whatsapp-test – admin: send a test WhatsApp message
 """
 import os
 import json
 import base64
 import hashlib
 import logging
-from typing import List, Optional
+import secrets
+import string
+from typing import List, Optional, Dict, Any
 
 import httpx
 from dotenv import load_dotenv
@@ -21,10 +27,46 @@ from pydantic import BaseModel, Field
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
+# Firebase Admin SDK (used for password reset operations)
+import firebase_admin
+from firebase_admin import credentials, auth as fb_auth, firestore as fb_firestore
+
 load_dotenv()
 
 logger = logging.getLogger("devaleur")
 logging.basicConfig(level=logging.INFO)
+
+# ---------------------------------------------------------------------------
+# Firebase Admin SDK initialization (graceful – endpoints check `firebase_ready`
+# before performing privileged operations, so the API stays online even if the
+# service-account JSON has not yet been provided.)
+# ---------------------------------------------------------------------------
+firebase_ready = False
+fb_db = None
+try:
+    sa_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH", "/app/backend/firebase-service-account.json")
+    sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if sa_json:
+        cred = credentials.Certificate(json.loads(sa_json))
+    elif os.path.exists(sa_path):
+        cred = credentials.Certificate(sa_path)
+    else:
+        cred = None
+    if cred is not None:
+        firebase_admin.initialize_app(cred)
+        fb_db = fb_firestore.client()
+        firebase_ready = True
+        logger.info("Firebase Admin SDK initialised (service account loaded).")
+    else:
+        logger.warning(
+            "Firebase Admin SDK NOT initialised – service account missing. "
+            "Set FIREBASE_SERVICE_ACCOUNT_JSON env or place file at %s. "
+            "Password-reset endpoints will return 503 until then.", sa_path,
+        )
+except Exception as fb_init_err:
+    logger.exception("Firebase Admin SDK init failed: %s", fb_init_err)
+    firebase_ready = False
+
 
 app = FastAPI(title="DE VALEUR API")
 
@@ -616,3 +658,472 @@ async def epoint_verify_callback(req: EpointVerifyRequest):
         return EpointVerifyResponse(valid=True, payload=payload)
     except Exception:
         return EpointVerifyResponse(valid=False)
+
+
+# ===========================================================================
+# WhatsApp Cloud API (Meta) — transactional messaging for password-reset flows
+# ===========================================================================
+#
+# Configuration is read from Firestore `siteSettings/whatsapp` (so the admin
+# panel can change phone-number/token at runtime) with a fallback to backend
+# .env environment variables. Admin must populate one or the other.
+#
+# Required keys (any source):
+#   - phone_id            (Meta WhatsApp Phone Number ID — numeric)
+#   - access_token        (Permanent system-user access token)
+#   - business_account_id (WhatsApp Business Account ID)
+#   - api_version         (default v22.0)
+#   - sender_display      (Optional; what we show admins, e.g. "+994777577277")
+#
+# All credentials are stored in Firestore (via admin panel) — backend only
+# reads them, never returns the raw token to the frontend.
+# ---------------------------------------------------------------------------
+
+WHATSAPP_GRAPH_BASE = "https://graph.facebook.com"
+
+
+def _wa_config_from_env() -> Dict[str, str]:
+    return {
+        "phone_id": os.environ.get("WHATSAPP_PHONE_ID", "") or "",
+        "access_token": os.environ.get("WHATSAPP_ACCESS_TOKEN", "") or "",
+        "business_account_id": os.environ.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "") or "",
+        "api_version": os.environ.get("WHATSAPP_API_VERSION", "v22.0") or "v22.0",
+        "sender_display": os.environ.get("WHATSAPP_SENDER_DISPLAY", "+994777577277") or "+994777577277",
+    }
+
+
+def get_whatsapp_config() -> Dict[str, str]:
+    """Read WhatsApp config from Firestore, fall back to env."""
+    env_cfg = _wa_config_from_env()
+    if not (firebase_ready and fb_db is not None):
+        return env_cfg
+    try:
+        snap = fb_db.collection("siteSettings").document("whatsapp").get()
+        if snap.exists:
+            data = snap.to_dict() or {}
+            return {
+                "phone_id": (data.get("phone_id") or env_cfg["phone_id"]).strip(),
+                "access_token": (data.get("access_token") or env_cfg["access_token"]).strip(),
+                "business_account_id": (data.get("business_account_id") or env_cfg["business_account_id"]).strip(),
+                "api_version": (data.get("api_version") or env_cfg["api_version"]).strip(),
+                "sender_display": (data.get("sender_display") or env_cfg["sender_display"]).strip(),
+            }
+    except Exception as e:
+        logger.warning("WhatsApp config read failed (using env): %s", e)
+    return env_cfg
+
+
+def _wa_normalize_phone(phone: str) -> str:
+    """Normalize to E.164 without leading + (Meta API expects '994...')."""
+    cleaned = "".join(c for c in (phone or "") if c.isdigit())
+    if cleaned.startswith("00"):
+        cleaned = cleaned[2:]
+    return cleaned
+
+
+async def whatsapp_send_text(to_phone: str, text: str) -> Dict[str, Any]:
+    """Send a plain text WhatsApp message (works inside the 24h customer
+    service window OR when the recipient has previously messaged us).
+
+    Note: For first-contact transactional messages outside that window,
+    Meta requires an *approved template* — see whatsapp_send_template.
+    """
+    cfg = get_whatsapp_config()
+    if not (cfg["phone_id"] and cfg["access_token"]):
+        return {"success": False, "error": "whatsapp_not_configured", "message": "WhatsApp credentials not set"}
+
+    to = _wa_normalize_phone(to_phone)
+    if len(to) < 9:
+        return {"success": False, "error": "invalid_phone", "message": "Invalid phone"}
+
+    url = f"{WHATSAPP_GRAPH_BASE}/{cfg['api_version']}/{cfg['phone_id']}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "text",
+        "text": {"preview_url": False, "body": text},
+    }
+    headers = {
+        "Authorization": f"Bearer {cfg['access_token']}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.post(url, json=payload, headers=headers)
+            body = r.json() if r.text else {}
+        if r.status_code in (200, 201):
+            msg_id = (body.get("messages") or [{}])[0].get("id")
+            return {"success": True, "message_id": msg_id, "raw": body}
+        err = (body.get("error") or {})
+        return {
+            "success": False,
+            "error": err.get("type") or f"http_{r.status_code}",
+            "code": err.get("code"),
+            "message": err.get("message") or "WhatsApp send failed",
+            "raw": body,
+        }
+    except httpx.HTTPError as e:
+        logger.exception("WhatsApp send error: %s", e)
+        return {"success": False, "error": "network", "message": str(e)}
+
+
+async def whatsapp_send_template(
+    to_phone: str,
+    template_name: str,
+    body_params: Optional[List[str]] = None,
+    language_code: str = "az",
+) -> Dict[str, Any]:
+    """Send an approved template (auth/utility category)."""
+    cfg = get_whatsapp_config()
+    if not (cfg["phone_id"] and cfg["access_token"]):
+        return {"success": False, "error": "whatsapp_not_configured", "message": "WhatsApp credentials not set"}
+
+    to = _wa_normalize_phone(to_phone)
+    if len(to) < 9:
+        return {"success": False, "error": "invalid_phone", "message": "Invalid phone"}
+
+    components: List[Dict[str, Any]] = []
+    if body_params:
+        components.append({
+            "type": "body",
+            "parameters": [{"type": "text", "text": p} for p in body_params],
+        })
+
+    url = f"{WHATSAPP_GRAPH_BASE}/{cfg['api_version']}/{cfg['phone_id']}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": language_code},
+            "components": components,
+        },
+    }
+    headers = {"Authorization": f"Bearer {cfg['access_token']}", "Content-Type": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.post(url, json=payload, headers=headers)
+            body = r.json() if r.text else {}
+        if r.status_code in (200, 201):
+            return {"success": True, "message_id": (body.get("messages") or [{}])[0].get("id"), "raw": body}
+        err = body.get("error") or {}
+        return {
+            "success": False,
+            "error": err.get("type") or f"http_{r.status_code}",
+            "code": err.get("code"),
+            "message": err.get("message") or "WhatsApp template send failed",
+            "raw": body,
+        }
+    except httpx.HTTPError as e:
+        return {"success": False, "error": "network", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Password-reset orchestration
+# ---------------------------------------------------------------------------
+
+def _generate_temp_password(length: int = 9) -> str:
+    """Memorable but secure: 2-3 letters + dash + 4 alphanum.
+    Avoids ambiguous chars (0/O, 1/l/I) so users can read it from WhatsApp."""
+    alphabet_letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    alphabet_alnum = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    head = "".join(secrets.choice(alphabet_letters) for _ in range(2))
+    tail = "".join(secrets.choice(alphabet_alnum) for _ in range(max(4, length - 3)))
+    return f"{head}-{tail}"
+
+
+def _wa_message_for_reset(name: str, temp_password: str) -> str:
+    name_safe = (name or "müştəri").strip().split(" ")[0] or "müştəri"
+    return (
+        f"Salam, {name_safe}!\n\n"
+        f"DE VALEUR hesabınız üçün yeni müvəqqəti şifrəniz:\n"
+        f"🔐  *{temp_password}*\n\n"
+        f"Saytımıza daxil olduqdan sonra profil bölməsindən şifrəni dəyişməyi unutmayın.\n\n"
+        f"Əgər bu sıfırlamanı siz tələb etməmisinizsə, dərhal bizimlə əlaqə saxlayın."
+    )
+
+
+async def _reset_user_password_and_notify(
+    *,
+    full_phone: str,
+    triggered_by: str,
+) -> Dict[str, Any]:
+    """Core flow: lookup user by phone → generate temp pw → update Firebase Auth
+    → log to Firestore → send WhatsApp.
+
+    `triggered_by` should be 'self' (customer) or 'admin' for audit.
+    """
+    if not firebase_ready or fb_db is None:
+        raise HTTPException(status_code=503, detail="Firebase Admin SDK aktiv deyil. Admin xidməti hesabını backend-ə əlavə edin.")
+
+    # 1) Find the Firestore user record by phone
+    users_ref = fb_db.collection("users")
+    matches = list(users_ref.where("phone", "==", full_phone).limit(1).stream())
+    if not matches:
+        raise HTTPException(status_code=404, detail="Bu nömrə ilə qeydiyyatdan keçmiş müştəri tapılmadı.")
+    user_doc = matches[0]
+    user_data = user_doc.to_dict() or {}
+    user_id = user_data.get("id") or user_doc.id
+    user_name = user_data.get("name") or ""
+
+    # 2) Generate new temporary password
+    temp_password = _generate_temp_password()
+
+    # 3) Update Firebase Auth password using Admin SDK
+    try:
+        fb_auth.update_user(user_id, password=temp_password)
+    except fb_auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail="Firebase Auth-da istifadəçi tapılmadı (Firestore qeydi köhnə ola bilər).")
+    except Exception as e:
+        logger.exception("Auth password update failed for %s: %s", user_id, e)
+        raise HTTPException(status_code=500, detail=f"Şifrə yenilənmədi: {e}")
+
+    # 4) Audit log in Firestore (passwordResets collection)
+    try:
+        from datetime import datetime, timezone
+        fb_db.collection("passwordResets").add({
+            "userId": user_id,
+            "phone": full_phone,
+            "triggeredBy": triggered_by,
+            "createdAt": datetime.now(timezone.utc),
+        })
+        # Also flag user document
+        user_doc.reference.update({
+            "lastPasswordResetAt": datetime.now(timezone.utc),
+            "lastPasswordResetBy": triggered_by,
+            "mustChangePassword": True,
+        })
+    except Exception as e:
+        logger.warning("passwordResets audit log failed: %s", e)
+
+    # 5) Send the new password to user via WhatsApp
+    text = _wa_message_for_reset(user_name, temp_password)
+    wa_result = await whatsapp_send_text(full_phone, text)
+
+    return {
+        "success": True,
+        "userId": user_id,
+        "temp_password_sent": wa_result.get("success", False),
+        "whatsapp": wa_result,
+        # NOTE: temp_password is also returned so admins can read it in their
+        # panel as a fallback in case WhatsApp delivery fails (rare).
+        # The customer-self endpoint must NOT echo this back — see below.
+        "temp_password": temp_password,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Endpoints — customer self-serve
+# ---------------------------------------------------------------------------
+
+class ForgotPasswordRequest(BaseModel):
+    phone: str = Field(..., min_length=8, max_length=20, description="+994XXXXXXXXX or 994XXXXXXXXX")
+
+
+class ForgotPasswordResponse(BaseModel):
+    success: bool
+    delivered: bool
+    sender_display: Optional[str] = None
+    message: Optional[str] = None
+
+
+@app.post("/api/auth/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(req: ForgotPasswordRequest):
+    """Customer self-serve password reset.
+    Always returns success=true to avoid revealing whether a phone is
+    registered, EXCEPT when the phone format is plainly invalid (400).
+    """
+    digits = _wa_normalize_phone(req.phone)
+    if len(digits) < 11:
+        raise HTTPException(status_code=400, detail="Telefon nömrəsi düzgün deyil. Məs: +994501234567")
+    full_phone = "+" + digits
+
+    cfg = get_whatsapp_config()
+    try:
+        result = await _reset_user_password_and_notify(full_phone=full_phone, triggered_by="self")
+    except HTTPException as e:
+        # Map "user not found" (404) back to generic success to avoid enumeration
+        if e.status_code == 404:
+            return ForgotPasswordResponse(
+                success=True,
+                delivered=False,
+                sender_display=cfg.get("sender_display") or None,
+                message="Əgər bu nömrə ilə hesab varsa, WhatsApp-a yeni şifrə göndəriləcək.",
+            )
+        raise
+
+    return ForgotPasswordResponse(
+        success=True,
+        delivered=bool(result.get("temp_password_sent")),
+        sender_display=cfg.get("sender_display") or None,
+        message=(
+            "Yeni şifrə WhatsApp nömrənizə göndərildi."
+            if result.get("temp_password_sent")
+            else "Şifrəniz yeniləndi, lakin WhatsApp göndərilməsi uğursuz oldu. Zəhmət olmasa dəstəklə əlaqə saxlayın."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoints — admin
+# ---------------------------------------------------------------------------
+# NOTE: These endpoints rely on a simple shared admin secret header until a
+# proper JWT/role-based auth layer is added. The frontend reads
+# `localStorage.adminApiSecret` (set via WhatsApp config tab) and sends it
+# as `X-Admin-Secret`. This is intentionally simple — same pattern that was
+# already used for /api/admin/* in this project.
+#
+# Default secret (override via env var): use ADMIN_API_SECRET.
+
+ADMIN_API_SECRET = os.environ.get("ADMIN_API_SECRET", "devaleur-admin-2026")
+
+
+def _check_admin_secret(provided: Optional[str]) -> None:
+    if not provided or provided != ADMIN_API_SECRET:
+        raise HTTPException(status_code=401, detail="Admin icazəsi yoxdur.")
+
+
+from fastapi import Header  # noqa: E402  (imported here to keep diff minimal)
+
+
+class AdminResetCustomerRequest(BaseModel):
+    phone: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+class AdminResetCustomerResponse(BaseModel):
+    success: bool
+    delivered: bool
+    temp_password: str
+    user_id: str
+    whatsapp_error: Optional[str] = None
+
+
+@app.post("/api/admin/customers/reset-password", response_model=AdminResetCustomerResponse)
+async def admin_reset_customer_password(
+    req: AdminResetCustomerRequest,
+    x_admin_secret: Optional[str] = Header(default=None, alias="X-Admin-Secret"),
+):
+    _check_admin_secret(x_admin_secret)
+    if not firebase_ready or fb_db is None:
+        raise HTTPException(status_code=503, detail="Firebase Admin SDK aktiv deyil.")
+
+    full_phone: Optional[str] = None
+    if req.phone:
+        digits = _wa_normalize_phone(req.phone)
+        if len(digits) < 11:
+            raise HTTPException(status_code=400, detail="Telefon formatı yanlışdır.")
+        full_phone = "+" + digits
+    elif req.user_id:
+        snap = fb_db.collection("users").document(req.user_id).get()
+        if not snap.exists:
+            # Try alternate: query by id field
+            q = list(fb_db.collection("users").where("id", "==", req.user_id).limit(1).stream())
+            if not q:
+                raise HTTPException(status_code=404, detail="Müştəri tapılmadı.")
+            data = q[0].to_dict() or {}
+            full_phone = data.get("phone")
+        else:
+            data = snap.to_dict() or {}
+            full_phone = data.get("phone")
+        if not full_phone:
+            raise HTTPException(status_code=400, detail="Müştəridə qeydiyyatda olan WhatsApp nömrəsi yoxdur.")
+    else:
+        raise HTTPException(status_code=400, detail="`phone` və ya `user_id` göstərin.")
+
+    result = await _reset_user_password_and_notify(full_phone=full_phone, triggered_by="admin")
+    return AdminResetCustomerResponse(
+        success=True,
+        delivered=bool(result.get("temp_password_sent")),
+        temp_password=result["temp_password"],
+        user_id=result["userId"],
+        whatsapp_error=(None if result.get("temp_password_sent") else (result.get("whatsapp", {}) or {}).get("message")),
+    )
+
+
+# ---- WhatsApp config (admin) ----------------------------------------------
+
+class WhatsAppConfigDTO(BaseModel):
+    phone_id: str = ""
+    access_token: str = ""
+    business_account_id: str = ""
+    api_version: str = "v22.0"
+    sender_display: str = "+994777577277"
+
+
+class WhatsAppConfigPublic(BaseModel):
+    phone_id: str
+    access_token_masked: str
+    has_token: bool
+    business_account_id: str
+    api_version: str
+    sender_display: str
+    firebase_ready: bool
+
+
+@app.get("/api/admin/whatsapp-config", response_model=WhatsAppConfigPublic)
+async def admin_get_whatsapp_config(
+    x_admin_secret: Optional[str] = Header(default=None, alias="X-Admin-Secret"),
+):
+    _check_admin_secret(x_admin_secret)
+    cfg = get_whatsapp_config()
+    tok = cfg["access_token"] or ""
+    return WhatsAppConfigPublic(
+        phone_id=cfg["phone_id"],
+        access_token_masked=("•" * 6 + tok[-4:]) if tok else "",
+        has_token=bool(tok),
+        business_account_id=cfg["business_account_id"],
+        api_version=cfg["api_version"],
+        sender_display=cfg["sender_display"],
+        firebase_ready=firebase_ready,
+    )
+
+
+@app.post("/api/admin/whatsapp-config", response_model=WhatsAppConfigPublic)
+async def admin_update_whatsapp_config(
+    body: WhatsAppConfigDTO,
+    x_admin_secret: Optional[str] = Header(default=None, alias="X-Admin-Secret"),
+):
+    _check_admin_secret(x_admin_secret)
+    if not firebase_ready or fb_db is None:
+        raise HTTPException(status_code=503, detail="Firebase Admin SDK aktiv deyil. Service account əlavə edin.")
+    update: Dict[str, str] = {
+        "phone_id": body.phone_id.strip(),
+        "business_account_id": body.business_account_id.strip(),
+        "api_version": (body.api_version or "v22.0").strip(),
+        "sender_display": body.sender_display.strip(),
+    }
+    # Only update token if a non-empty / non-masked value is provided
+    if body.access_token and "•" not in body.access_token:
+        update["access_token"] = body.access_token.strip()
+    fb_db.collection("siteSettings").document("whatsapp").set(update, merge=True)
+    return await admin_get_whatsapp_config(x_admin_secret)
+
+
+class WhatsAppTestRequest(BaseModel):
+    to_phone: str
+    message: str = "DE VALEUR test mesajı – əgər bunu görürsünüzsə, inteqrasiya işləyir."
+
+
+class WhatsAppTestResponse(BaseModel):
+    success: bool
+    error: Optional[str] = None
+    message_id: Optional[str] = None
+    detail: Optional[str] = None
+
+
+@app.post("/api/admin/whatsapp-test", response_model=WhatsAppTestResponse)
+async def admin_whatsapp_test(
+    req: WhatsAppTestRequest,
+    x_admin_secret: Optional[str] = Header(default=None, alias="X-Admin-Secret"),
+):
+    _check_admin_secret(x_admin_secret)
+    res = await whatsapp_send_text(req.to_phone, req.message)
+    return WhatsAppTestResponse(
+        success=bool(res.get("success")),
+        message_id=res.get("message_id"),
+        error=res.get("error"),
+        detail=res.get("message"),
+    )

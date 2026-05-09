@@ -33,6 +33,7 @@ import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
+import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
@@ -316,6 +317,14 @@ const AdminPanel: React.FC = () => {
   // Generic confirm-delete state
   const [deleteUserTarget, setDeleteUserTarget] = useState<{
     userId: string; userName: string;
+  } | null>(null);
+  // Reset password (WhatsApp) state
+  const [resetPwTarget, setResetPwTarget] = useState<{
+    userId: string; userName: string; phone: string;
+  } | null>(null);
+  const [resetPwLoading, setResetPwLoading] = useState(false);
+  const [resetPwResult, setResetPwResult] = useState<{
+    tempPassword: string; delivered: boolean; error?: string;
   } | null>(null);
   // Sayt-içi toast bildirişi (browser alert əvəzinə)
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
@@ -1367,6 +1376,7 @@ const AdminPanel: React.FC = () => {
       items: [
         { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Settings },
         { id: 'epointSettings', label: 'Epoint Açarları', icon: Lock },
+        { id: 'whatsappSettings', label: 'WhatsApp', icon: MessageSquare },
         { id: 'passwords', label: 'Şifrələr', icon: Lock },
       ],
     },
@@ -3153,6 +3163,12 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
 
+        {activeTab === 'whatsappSettings' && (
+          <PasswordProtectedSection sectionName="whatsappSettings">
+            <WhatsAppSettingsTab />
+          </PasswordProtectedSection>
+        )}
+
         {activeTab === 'deliveryMethods' && (
           <PasswordProtectedSection sectionName="deliveryMethods">
             <DeliveryMethodsTab />
@@ -3421,6 +3437,24 @@ const AdminPanel: React.FC = () => {
                       }`}>
                         {user.role === 'admin' ? 'Admin' : 'Müştəri'}
                       </span>
+                      {user.role !== 'admin' && (
+                        <button
+                          onClick={() => {
+                            setResetPwTarget({
+                              userId: user.id,
+                              userName: `${user.name || ''} ${user.surname || ''}`.trim() || user.email || '',
+                              phone: user.phone || '',
+                            });
+                            setResetPwResult(null);
+                          }}
+                          title={user.phone ? 'Şifrəni sıfırla və WhatsApp-a göndər' : 'Müştəridə nömrə yoxdur — sıfırlama mümkün deyil'}
+                          disabled={!user.phone}
+                          className="p-2 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          data-testid={`reset-pw-${user.id}`}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleToggleAdmin(
                           user.id,
@@ -3472,6 +3506,93 @@ const AdminPanel: React.FC = () => {
         onClose={() => setDeleteUserTarget(null)}
         onConfirm={confirmDeleteUser}
       />
+
+      {/* Reset password & send via WhatsApp modal */}
+      {resetPwTarget && (
+        <div className="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center p-4" data-testid="reset-pw-modal">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Şifrəni sıfırla</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              <span className="font-medium">{resetPwTarget.userName}</span> üçün yeni müvəqqəti şifrə yaradılacaq və{' '}
+              <span className="font-mono text-gray-900">{resetPwTarget.phone || '(nömrə yoxdur)'}</span> nömrəsinə WhatsApp ilə göndəriləcək.
+            </p>
+            {!resetPwResult ? (
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => { setResetPwTarget(null); setResetPwResult(null); }}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                  disabled={resetPwLoading}
+                  data-testid="reset-pw-cancel"
+                >
+                  Ləğv et
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!resetPwTarget) return;
+                    setResetPwLoading(true);
+                    setResetPwResult(null);
+                    try {
+                      const apiUrl = (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
+                      const adminSecret = localStorage.getItem('adminApiSecret') || 'devaleur-admin-2026';
+                      const res = await fetch(`${apiUrl}/api/admin/customers/reset-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
+                        body: JSON.stringify({ user_id: resetPwTarget.userId, phone: resetPwTarget.phone }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        showToast(data.detail || 'Sıfırlama uğursuz oldu', 'error');
+                        setResetPwTarget(null);
+                        return;
+                      }
+                      setResetPwResult({
+                        tempPassword: data.temp_password,
+                        delivered: !!data.delivered,
+                        error: data.whatsapp_error || undefined,
+                      });
+                    } catch (e: any) {
+                      showToast(e?.message || 'Şəbəkə xətası', 'error');
+                      setResetPwTarget(null);
+                    } finally {
+                      setResetPwLoading(false);
+                    }
+                  }}
+                  disabled={resetPwLoading || !resetPwTarget.phone}
+                  className="px-5 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+                  data-testid="reset-pw-confirm"
+                >
+                  {resetPwLoading ? 'Göndərilir...' : 'Sıfırla və WhatsApp-a göndər'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className={`p-3 rounded-lg text-sm mb-3 ${
+                  resetPwResult.delivered
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-amber-50 text-amber-900 border border-amber-200'
+                }`}>
+                  {resetPwResult.delivered
+                    ? '✓ WhatsApp ilə müştəriyə yeni şifrə göndərildi.'
+                    : `⚠ Şifrə yeniləndi, lakin WhatsApp göndərilmədi: ${resetPwResult.error || 'naməlum xəta'}. Şifrəni müştəriyə əl ilə çatdırın.`}
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Müvəqqəti şifrə</p>
+                  <p className="text-2xl font-mono font-semibold text-gray-900 select-all" data-testid="reset-pw-result-temp">
+                    {resetPwResult.tempPassword}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setResetPwTarget(null); setResetPwResult(null); }}
+                  className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                  data-testid="reset-pw-close"
+                >
+                  Bağla
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* In-app toast */}
       {toast && (

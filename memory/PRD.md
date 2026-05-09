@@ -1,497 +1,59 @@
-# De Valeur — Premium Saatlar və Aksesuarlar Saytı
+# DE VALEUR — PRD
 
-## Original problem statement (May 2026 iteration — Group A+B+C)
-"Rəy/ulduz vermək istəyəndə avtomatik qeydiyyat. Filterdən 'Hamısı' silinsin. USPA URL. Google-da DE VALEUR caps. Stok 0 olanda müştəri əlavə edə bilməsin. Login/logout zamanı səbət təmizlənsin. Safari/B2B düymə donma problemi. AI köməkçi salamlama. Real-time search analitika. Daily visitors qrafiki. Anonim user tracking. Excel məhsul miqrasiyası. Worker bölməsi default tab Satış planı."
+## Original problem statement
+DE VALEUR e-commerce sayt (Vite + React + TypeScript + Firebase + FastAPI). User uploaded existing project. Iterative changes requested via Azerbaijani.
 
-## What was done — May 4, 2026 iteration #5 — Group B + C
+## What's implemented (running log)
 
-### Group B (cart/auth flow)
+### Iteration 1 — Phone-based auth (May 2026)
+- Replaced email login/registration with phone-only flow
+- Synthetic email format: `phone994XXXXXXXXX@devaleur.az` (Firebase Auth requires email)
+- +994 prefix automatic, user enters 9 digits
+- Cart guest checkout: removed email field, only Name + Surname + Address + Phone
+- Backward-compat fallback for legacy users registered with real email
 
-#### #2 Safari donma + B2B login düyməsi düzəldi
-- **Root cause**: `B2BLogin.tsx` Hooks Rules pozulmuşdu — `useState` çağırışları `if (isLoggedIn) return null` early return-dan sonra idi. Bu Safari və bəzi React versiyalarında "Rendered more hooks than..." xətası verirdi.
-- **Fix**: Bütün hooks komponent başında, redirect `useEffect`-də edilir. Login submit düyməsinə `disabled` + spinner əlavə edildi (ikiqat klikləməyin qarşısı).
+### Iteration 2 — WhatsApp password-reset infrastructure (May 2026)
+**Backend (`/app/backend/server.py`):**
+- Firebase Admin SDK initialised (graceful — endpoints return 503 if service-account JSON missing)
+- WhatsApp Cloud API service: `whatsapp_send_text`, `whatsapp_send_template`
+- Endpoints:
+  - `POST /api/auth/forgot-password` — customer self-serve reset
+  - `POST /api/admin/customers/reset-password` — admin trigger (returns temp password)
+  - `GET/POST /api/admin/whatsapp-config` — admin reads/writes credentials in Firestore `siteSettings/whatsapp`
+  - `POST /api/admin/whatsapp-test` — send a test message
+- Admin endpoints protected by `X-Admin-Secret` header (default `devaleur-admin-2026`)
+- New temp password generator: format `XX-NNNN` (avoids ambiguous chars)
+- Password resets logged to Firestore `passwordResets` collection
 
-#### #3 Login/logout zamanı səbət təmizlənməsi
-- `Header.tsx`: `previousRole !== newRole` yoxlanışı (əvvəl `previousRole && ...` idi) — guest → login keçidində də səbəti təmizləyir.
-- `B2BLogin.tsx`: B2B login zamanı `previousRole !== 'b2b'` olduqda səbət təmizlənir.
+**Frontend:**
+- `CustomerLogin.tsx` — added: 3rd "forgot" mode, password confirm field on register, terms checkbox + privacy/policy links
+- `ChangePasswordPage` (new at `/change-password`) — re-auth + update Firebase Auth password
+- `Header.tsx` — logged-in account dropdown now has Sifarişlərim / Şifrəni dəyiş / Çıxış
+- `WhatsAppSettingsTab` (new admin tab) — phone_id, access_token (masked), business_account_id, api_version, sender_display, test send
+- AdminPanel customers list — green WhatsApp icon: "Şifrəni sıfırla və WhatsApp-a göndər" → backend → modal showing temp password
 
-#### #10 AI köməkçi salamlama
-- `AiChatWidget.tsx`: yeni "salamlama bubble" — sayta giriş edəndən 4.5 saniyə sonra avtomatik açılır, "Salam! 👋 Sizə uyğun saat və ya aksesuar seçməkdə kömək edə bilərəm" mesajı göstərir.
-- Sessiya başına 1 dəfə (sessionStorage flag), 12 saniyədən sonra avtomatik gizlənir, X düyməsi ilə bağlanır, klik açır chat panelini.
+## Pending — needs user to provide credentials
 
-### Group C (analytics / admin features)
+1. **Meta WhatsApp Cloud API credentials** (set via `/admin` → WhatsApp tab):
+   - WHATSAPP_PHONE_ID
+   - WHATSAPP_ACCESS_TOKEN (Permanent system-user token)
+   - WHATSAPP_BUSINESS_ACCOUNT_ID
+2. **Firebase Service Account JSON** for password reset:
+   - Download from Firebase Console → Project Settings → Service Accounts → Generate new private key
+   - Place at `/app/backend/firebase-service-account.json` OR set `FIREBASE_SERVICE_ACCOUNT_JSON` env
+   - Without it: forgot-password and admin reset endpoints return 503
 
-#### #4 Real-time search analytics
-- `Header.tsx`: axtarış input-da 1.2 saniyə yazma debounce-undan sonra `trackSearch()` çağırılır. İstifadəçi Enter basmadan da hər yazılan söz analitikaya düşür (5 saniyə throttle ilə eyni sözün təkrarlanması bloklanır).
+## Tech stack
+- Frontend: Vite 5 + React 18 + TypeScript + Tailwind + Firebase JS SDK
+- Backend: FastAPI + httpx + emergentintegrations + firebase-admin
+- DB: Firestore (Firebase) — backend uses Admin SDK
+- Auth: Firebase Auth (synthetic emails for phone auth)
 
-#### #5 Günlük ziyarətçi qrafiki
-- `analyticsService.ts`: yeni `daily_visits` Firestore koleksiyası — sessiya başına 1 dəfə artırılır.
-- `App.tsx`: ilk render-də `trackDailyVisit()` çağırışı.
-- `AnalyticsTab.tsx`: yeni "Günlük ziyarətçilər" tab-ı — son 30 günün SVG bar chart-ı + son 7 gün vs əvvəlki 7 gün artma/azalma %-i + son 10 günün card view-i.
-
-#### #6 Qeydiyyatsız user cart/wishlist tracking
-- `analyticsService.ts`: yeni `anon_product_interest` Firestore koleksiyası — `productId_kind` formasında ID, count + lastEvent.
-- `CartContext.addToCart`: qeydiyyatsız user üçün `trackAnonProductInterest(productId, 'cart', meta)` (5 dəq throttle).
-- `WishlistContext.toggleFavorite`: qeydiyyatsız user üçün eyni — wishlist-ə əlavə zamanı.
-- `AnalyticsTab.tsx`: yeni "Qeydiyyatsız maraq" tab-ı — hansı məhsullara maraq var, brand/şəkil/ad ilə.
-
-#### #7 Excel/xlsx ilə məhsul miqrasiyası + hazır şablon + auto stock update
-- Yeni komponent: `src/components/admin/ProductExcelImport.tsx` (lazy-loaded, 437KB ayrı chunk).
-- **Hazır şablon**: "Şablonu yüklə (.xlsx)" düyməsi — 2 vərəqli Excel faylı verir:
-  - **Məhsullar** vərəqi: sample 3 sətir + boş sətir. Sütunlar: `Kateqoriya, Brend, Məhsul kodu (SKU), Məhsul adı, Qiymət (AZN), B2B qiymət (AZN), Miqdar, Cins`.
-  - **Təlimat** vərəqi: istifadə qaydaları azərbaycan dilində.
-- **Dəqiq uyğunlaşdırma**: Yalnız şablonun sütun adlarına uyğun faylları qəbul edir. Tələb olunan sütunlar (`Məhsul adı`, `Miqdar`) yoxdursa xəta göstərir.
-- **Match prioriteti**: 1) SKU, 2) Ad+Kateqoriya. Uyğun tapıldıqda **yalnız stok yenilənir** (Product type-ə `sku?: string` əlavə olundu).
-- **Yeni məhsul yaradarkən**: `Kateqoriya + Ad` məcburidir. Tam SKU, qiymət, b2bPrice, cins, marka saxlanılır. Şəkil boş buraxılır — sonra admin əlavə edir. Kateqoriya/brend yoxdursa avtomatik yaradılır.
-- Preview: yenilənəcək (emerald), yaradılacaq (blue), atlandı (amber) — hamısı ayrı siyahıda.
-- .xlsx, .xls, .csv formatları dəstəklənir.
-
-#### #13 Worker bölməsi yenidən sıralandı
-- `WorkersTab.tsx` `WorkerDetail`: default tab `info` → `total` (Satış planı) dəyişdirildi.
-- Tab sırası: **Satış planı** → Cərimələr → Mükafatlar → Məzuniyyət → Bildiriş → Məlumat (axırda).
-- Header-də "Redaktə" düyməsi əlavə edildi (Edit ikonu) — yalnız klikləndikdə "Məlumat" tab-ına keçir; əvvəl avtomatik açılırdı.
-
-## Architecture
-- React 18 + TypeScript + Vite
-- Firebase Firestore + Auth
-- Supabase (qalıqlar)
-- Epoint payments
-- OpenAI gpt-4o-mini chat
-
-## Backlog
-- P2: Excel migrasiya üçün xls/xlsx native dəstəyi (hazırda yalnız CSV; Excel-də "Save As → CSV UTF-8" kifayətdir)
-- P2: Daily visits-də unikal IP/user-id ayrımı (hazırda sessiya bazlı)
-- P3: Anonim user-lərin telefon/email collection (cart abandonment recovery üçün)
-- P3: Worker info edit-i avtomatik açıq yox, password protected modal şəklində
-
-
-
-## What was done — May 4, 2026 iteration #4 — Group A (təhlükəsiz UI/SEO/data fixes)
-
-### 1. Rəy/Ulduz → avtomatik qeydiyyat modal (#1)
-- `src/components/ProductReviews.tsx`: `alert()` əvəzinə `CustomerLogin` modalı qeydiyyat modunda (`initialMode="register"`) açılır.
-- Qeydiyyatsız istifadəçi üçün "Bu məhsulu qiymətləndirin" başlıqlı interaktiv ulduz blok əlavə olundu — istənilən ulduza/Qeydiyyat linkinə klik qeydiyyat modalını açır.
-- `src/components/auth/CustomerLogin.tsx`: yeni opsional prop `initialMode?: 'login' | 'register'`.
-
-### 2. Filtrdən "Hamısı" seçimi silindi (#9)
-- `src/pages/ProductsPage.tsx`:
-  - Stock filter: radio `Hamısı / Mövcud məhsullar` → tək checkbox "Yalnız mövcud məhsullar".
-  - Brand list: 'all' option silindi (yalnız real brendlər radio kimi).
-  - Gender: "Hamısı" radio silindi (men / women / unisex).
-- Hər filtrin yanına kiçik "Sıfırla" düyməsi əlavə olundu — yalnız filter aktiv olduqda görünür, sıfırlamağa imkan verir.
-
-### 3. Stok 0 → bütün istifadəçilər üçün "Mövcud deyil" + əlavə bloklanır (#8)
-- `src/components/ProductCard.tsx`: `isOutOfStock = product.stock === 0` (əvvəl yalnız B2B üçün idi).
-- Bütün istifadəçilər üçün "Bitdi" yerinə "Mövcud deyil" yazısı, səbətə əlavə düyməsi gizlədilir, müştəri klikləsə notification göstərilir.
-- `src/pages/ProductDetailsPage.tsx`: addToCart, buyNow düymələri stok 0 olarsa hamı üçün bloklanır.
-
-### 4. US Polo Assn → URL `/brand/USPA` (#11)
-- Yeni utility: `src/utils/brandSlug.ts` — `toBrandSlug()` və `fromBrandSlug()`.
-- Xüsusi alias map: "U.S. Polo Assn." → `USPA`. Digər brendlər avtomatik (nöqtə/boşluq sil → CAPS).
-- `src/components/Header.tsx`: mega menyuda kategoriya seçilməyibsə brend kliki `/brand/USPA` formatında URL-ə gedir (kategoriya seçilibsə əvvəlki kimi `?brand=...&category=...`).
-- `src/components/Footer.tsx`: brendlər `/brand/${slug}` formatına yönləndirilir.
-- `src/pages/BrandPage.tsx`: brendi həm tam ad ilə, həm də slug ilə resolve edir; başlıqda tam ad göstərilir ("U.S. Polo Assn.").
-
-### 5. Google-da `DE VALEUR` böyük hərf (#12)
-- `index.html`: title, description, og:title, og:site_name, twitter:title, schema.org Organization/Store/WebSite name field-ləri "De Valeur" → "DE VALEUR" olaraq dəyişdirildi.
-- `Organization.alternateName` siyahısına "De Valeur" backup üçün qaldırıldı (köhnə backlinks/bookmark-lar üçün).
-
-## Architecture
-- **Frontend**: React 18 + TypeScript + Vite (root: `/app`, served via supervisor on :3000).
-- **Backend**: FastAPI on :8001 (`/api/health`, `/api/chat`).
-- **Database**: Firebase Firestore (məhsullar, users, kategoriyalar, sifarişlər, işçi məlumatları və s.) + Supabase qalıqları.
-- **Auth**: Firebase Auth (admin, B2B, customer, worker).
-- **Payments**: Epoint.
-- **AI Chat**: OpenAI gpt-4o-mini, frontend-dən direkt çağırılır.
-
-## Backlog — Group B (orta risk: cart/auth flow)
-- **#3** Login/logout zamanı səbət təmizlənsin (B2B vs normal session)
-- **#2** Safari donma + B2B login button issue
-- **#10** AI köməkçi salamlama (satış mütəxəssisi kimi)
-
-## Backlog — Group C (analytics / admin features)
-- **#4** Real-time search analytics (yazılanlar hamısı, Enter basmadan)
-- **#5** Daily visitors qrafiki (artma/azalma)
-- **#6** Anonim user cart/wishlist tracking
-- **#7** Excel məhsul miqrasiyası + stok auto-update
-- **#13** Worker bölməsi yenidən qurma (email tetikleyicisi gec, satış planı sıralama)
-
-
-
-## What was done — Apr 30, 2026 iteration #3 — Mobil menyu + alt-kateqoriya
-
-### 1. Mobil menyu tamamən yenidən quruldu (akardeon hierarxiyası)
-- `src/components/Header.tsx`: əvvəlki "Məhsullar" linki + ayrıca "Kategoriyalar" + ayrıca "Brendlər" sxemi **tamamilə dəyişdirildi**.
-- İndi yalnız bir "Məhsullar" akardeonu var:
-  - Açıldıqda yalnız **kategoriyalar** görünür (ox aşağı)
-  - Hər kategoriyaya basıldıqda akardeon açılır → **brendlər** + (varsa) **alt-kateqoriyalar** görünür
-  - Hər alt-kategori də öz akardeonuna malikdir → açıldıqda həmin alt-kategorinin brendləri görünür
-  - Ayrıca "Brendlər" menyusu silindi (artıq kategoriya altında qruplaşır)
-- "Bütün [kateqoriya adı]" düyməsi əlavə edildi — kategorinin bütün məhsullarını birbaşa açır.
-
-### 2. Alt-kateqoriya (subcategory) tam dəstəyi
-- Yeni service: `src/services/categoryService.ts` — `getCategoryTree(lang)` Firestore-dan parent → children hierarxiyasını qurur.
-- `categories` Firestore koleksiyasına yeni field: **`parentId: string | null`**.
-- AdminPanel "Yeni Kategori" və "Redaktə" formlarına **"Ana kateqoriya seç"** dropdown əlavə edildi.
-- AdminPanel kateqoriya siyahısında alt-kategoriyalarda "↳ [Parent ad] altında" badge görünür.
-- ProductsPage filterində: **parent kategori seçildikdə alt-larındakı məhsullar da göstərilir** (məs: "Dəri Aksesuarlar" → "Çantalar" + "Pul qabıları" məhsulları daxil olur).
-- Desktop mega menyu: kategoriyaya hover edəndə alt-kateqoriyalar (varsa) yuxarıda + brendlər aşağıda göstərilir. Parent kategori brendləri = onun alt-larının brendlərinin birləşməsi.
-
-### Necə istifadə olunmalıdır
-1. AdminPanel → Kategoriyalar → "Dəri Aksesuarlar" yarat (Ana kateqoriya boş qoy).
-2. "Yeni kateqoriya əlavə et" → ad: "Çantalar", **Ana kateqoriya: Dəri Aksesuarlar**.
-3. Eyni şəkildə "Pul qabıları" → Ana kateqoriya: "Dəri Aksesuarlar".
-4. Məhsul yaradılarkən, çantalı məhsullara `category = "Çantalar"`, pul qabısına `category = "Pul qabıları"` ver.
-5. Mobil/desktop menyuda və filtrdə "Dəri Aksesuarlar"-a bassanız → Çantalar + Pul qabıları + brendlər görünəcək.
-
-## What was done — Apr 30, 2026 iteration #2
-
-### 1. "Ən çox satılanlar" 3 sıra
-- `src/components/BestSellersSection.tsx`: 24 məhsul → 36 məhsul yüklənir, 3 sıra (sol↔sağ↔sol marquee).
-
-### 2. SEO — Google sitelinks üçün strukturlaşdırılmış məlumat
-- `index.html`: zəngin meta tags (azərbaycanca title/description/keywords), hreflang (az/ru/en), Open Graph + Twitter cards.
-- 5 ayrı JSON-LD schema: Organization, Store, WebSite (SearchAction), ItemList (SiteNavigationElement — sitelinks üçün), BreadcrumbList.
-- `public/sitemap.xml`: bütün vacib səhifələr + brendlər siyahısı.
-- `public/robots.txt`: index/follow + admin/private route disallow + sitemap referansı.
-
-### 3. Admin paneldə "Sürətli qiymət yeniləmə" paneli
-- `src/components/admin/DeliveryMethodsTab.tsx`: yuxarıda yeni inline panel.
-- Hər çatdırılma üsulu üçün cari qiymət göstərilir + yeni qiymət inputu + ✓ saxla düyməsi.
-- Enter ilə dərhal saxlayır, Escape ilə imtina, dəyişdirildikdə amber highlight.
-- Cart-da `deliveryFee` dəyişdikdə total avtomatik yenilənir (artıq belə işləyirdi).
-
-## What was done — Apr 30, 2026 iteration #1
-
-### 1. Məhsul filtrindən "Hamısı" kateqoriya seçimi silindi
-- `src/pages/ProductsPage.tsx`: `categories.filter(c => c !== 'all')` ilə yalnız real kateqoriyalar göstərilir.
-- Brand filterində "Hamısı" qalır (user istəyi). Default məhsul siyahısı dəyişməz qalır.
-
-### 2. Mega menyu — kateqoriya hover edildikdə həmin kateqoriyanın brendləri görünür
-- `src/components/Header.tsx`: 2 sütunlu yeni layout — sol: kateqoriyalar, sağ: brendlər.
-- `productsByCategory` map qurulur (məhsulların kategoriyasına görə brendlər qruplaşır).
-- Hover edildikdə həmin kateqoriyanın brendləri sağda göstərilir; yoxsa bütün brendlər. Brend kliklədikdə kategori filtri də avtomatik tətbiq olunur.
-
-### 3. Aylıq hədəf üçün gizli ay seçici
-- `src/components/admin/WorkersTab.tsx` — `MonthlyTotalPanel`: 12 ay (cari + 2 növbəti + 11 keçmiş) seçimi əlavə edildi.
-- Yeni Firestore field: `targetsHistory: Record<string, number>` (məs: `{"2026-04": 5000}`).
-- UI-də sadəcə "Aylıq hədəf" yazılır — ay etiketi heç bir display-də göstərilmir (admin və işçi panellərində).
-
-### 4. İşçi məlumatlarının saxlanmaması bug fix
-- Səbəb: `WorkersTab` refresh-dən sonra `editing` state-i köhnə Worker objekti saxlayırdı, WorkerDetail komponenti yenilənmiş data ilə re-render olmurdu.
-- Düzəliş: `refresh()` funksiyasında `setEditing(prev => prev ? (w.find(x => x.id === prev.id) || prev) : prev)` ilə yenilənmiş worker obyektinə bağlanır.
-
-### 5. Cart ödəniş tam ekran loading overlay
-- `src/pages/CartPage.tsx`: ödəniş zamanı (loading=true) tam ekran backdrop blur + spinner + "Ödəniş hazırlanır..." mesajı.
-- İstifadəçi prosesin getdiyini aydın görür, "donmuş" hissi aradan qalxır.
-
-### 6. AI chatbot — Səbətə əlavə et düyməsi
-- `src/components/AiChatWidget.tsx`: hər `ProductMiniCard` indi 2 düymə təklif edir — "Səbətə əlavə et" və "Bax →".
-- `useCart` hook-u inteqrasiya edilib. Stokda olmayan məhsullar üçün düymə deaktiv olur. Əlavə olunduqda "✓ Əlavə olundu" görünür 2 saniyə.
-- `updateFine` import edildi (TS səhvi düzəldildi).
-
-## Important notes / Known limitations
-- **AI chat preview ortamında "Failed to fetch" verə bilər** — bu OpenAI API-yə birbaşa çağırışla bağlıdır və preview konteynerindən bəzən olmur. Production-da işləməlidir.
-- **`<input type="date">` brauzerin lokalına görə göstərir** — bütün display çıxışları `'az-AZ'` ilə DD.MM.YYYY formatında verir, amma native date picker-i tarayıcı seçir.
-- **Sub-category dəstəyi (Dəri aksesuarlar → Çantalar → Pul qabıları)** — backlog-a qoyuldu (aşağıda).
-
-## Backlog / next ideas
-- **P1: Alt-kateqoriya (subCategory) tam dəstəyi**
-  - `categories` Firestore koleksiyasına `parentId` field əlavə et
-  - AdminPanel "Yeni kateqoriya" formuna "Ana kateqoriya seç" dropdown
-  - `Product` type-a `subCategory: string` (optional)
-  - Mega menyuda hierarxik göstərmə (kateqoriya → alt-kateqoriya → brendlər)
-  - ProductsPage filterdə alt-kateqoriya radio seçimi
-- **P2**: Custom DD.MM.YYYY date input komponenti (native picker tarayıcı dilinə bağlı qalmasın deyə).
-- **P2**: AI chat üçün lightweight backend proxy (key brauzerdə görünməsin, rate-limit, retry).
-- **P3**: AI chat streaming responses (token-by-token sürət üçün).
-- **P3**: Hər ay üçün ayrıca işçi performans tarixçəsi qrafiki.
+## Backlog / Future
+- WhatsApp message templates (currently uses free-form text; for first-contact transactional outside 24h window, Meta requires approved templates — `password_reset_otp` template should be created in WhatsApp Manager)
+- SMS fallback if WhatsApp delivery fails (deferred per user request)
+- B2B request flow still uses email-based auth (intentional — kept)
+- Password reset rate limiting (in-memory or Redis)
 
 ## Test credentials
-Bax: `/app/memory/test_credentials.md`
-
-## What was done — Jan 6, 2026 iteration
-
-### Filter "gah var, gah yox" problemi — root-cause fix
-- **Problem**: İstifadəçi qeyd etdi ki, hər rolla (qonaq, müştəri, B2B) məhsullara baxanda filter itir, sonra qayıdır. Screenshot brend səhifəsində (`/brand/zippo`) filter olmadığını göstərdi.
-- **Root cause**: `BrandPage.tsx` və `CategoryPage.tsx` filter sidebar olmadan göstərilirdi — yalnız `/products` səhifəsində filter var idi. Naviqasiya zamanı filter "yoxa çıxırdı".
-- **Fix**: `BrandPage.tsx` və `CategoryPage.tsx` müstəqil layout əvəzinə `/products?brand=<canonicalName>` və `/products?category=<name>` ünvanlarına `<Navigate replace />` ilə yönləndirilir. Brend slug-ı (`ZIPPO`, `USPA`) məhsul siyahısından `fromBrandSlug` ilə həqiqi brend adına çevrilib göndərilir.
-- **Nəticə**: Bütün məhsul siyahı səhifələri (məhsullar, kateqoriya, brend) eyni `ProductsPage` filter UI-ı paylaşır — filter HƏMİŞƏ görünür və davranış identikdir.
-- Files: `src/pages/BrandPage.tsx`, `src/pages/CategoryPage.tsx`
-
-## What was done — Jan 6, 2026 iteration #2
-
-### Admin bildiriş sistemi — qlobal səs + TTS "Yeni sifariş daxil oldu"
-- **Problem (1)**: Admin başqa səhifədə (`/products` və s.) olarkən yeni sifariş gələndə səs gəlmirdi — listener yalnız `AdminPanel` mount olduqda işləyirdi.
-- **Problem (2)**: Müştəri sifarişləri üçün bildiriş bəzən tətiklənmirdi (B2B işləyirdi).
-- **Problem (3)**: Bildiriş səsi default beep idi — istifadəçi "YENİ Sifariş daxil oldu" səsi istəyirdi.
-- **Fix**:
-  - Yeni komponent: `src/components/AdminGlobalNotifications.tsx` — App.tsx-də həmişə render olunur, `userRole === 'admin'` olduqda Firestore real-time listener-ləri başladır (customer_orders + b2bOrders). Bu listener admin hansı route-da olursa olsun işləyir.
-  - Yeni utility: `src/utils/notificationSound.ts` — üstünlük sırası: (1) `/sounds/new-order.mp3` (gələcəkdə custom yükləmə üçün), (2) `window.speechSynthesis` ilə `"Yeni sifariş daxil oldu"` (az/tr/ru voice fallback), (3) WebAudio iki-tonlu beep.
-  - `AdminPanel.tsx`: artıq özü səs çalmır, yalnız badge sayğacını izləyir (qlobal listener çalır → ikiqat səsi qarşısı). `acknowledgeXxx` çağırışlarında `adminOrdersAcknowledged` event göndərilir ki, qlobal listener prev count-u sıfırlaya bilsin.
-  - `CustomerOrdersTab.tsx`: test/preview düyməsi də artıq eyni TTS səsini çalır.
-
-### Axtarış analytics — onBlur + close tracking
-- **İstək**: Müştəri Enter/OK basmasa belə yazdığı söz analitikaya düşsün (dropdown-dakı məhsula klik etmədən modal-dan çıxsa belə).
-- **Fix** (`Header.tsx`):
-  - Search input-a `onBlur` tracking — input fokusu itirəndə yazılmış sözü trackSearch-ə göndərir (≥2 simvol)
-  - `closeSearchModal` daxilində də track çağırışı (X düyməsi və ya backdrop ilə bağlananda)
-  - Mövcud 1.2s debounce və product-click tracking saxlanılıb.
-
-### e-Pos checkout sağlamlığı
-- **İstək**: e-Point bəzən açılmır və ya gec açılır; uğursuz olsa müştəriyə dəqiq bildiriş gəlsin.
-- **Fix** (`CartPage.tsx → handleEpointCheckout`):
-  - `buildSignedPayment` xəta atarsa, yeni yaranmış orphan sifariş `payment_failed` kimi qeyd olunur (admin panelində `pending_payment` siyahısında qalmasın).
-  - **Watchdog timer (8 san)**: Əgər `redirectToEpoint` form submit-i səssizcə uğursuz olarsa (brauzer bloku, şəbəkə problemi), 8 saniyədən sonra istifadəçiyə "Ödəniş səhifəsi açıla bilmədi" xətası göstərilir, sifariş `payment_failed` qeyd olunur. `beforeunload`/`pagehide` event-lərində timer ləğv olunur (uğurlu yönləndirmədə təkrar bildiriş çıxmasın).
-  - Mövcud "Ödəniş hazırlanır..." overlay saxlanılıb (donmuş hissini aradan qaldırır).
-
-### Files
-- `src/utils/notificationSound.ts` (yeni)
-- `src/components/AdminGlobalNotifications.tsx` (yeni)
-- `src/App.tsx` (qlobal komponent əlavə olundu)
-- `src/components/admin/AdminPanel.tsx` (səs qlobala köçürüldü; ack event dispatch)
-- `src/components/admin/CustomerOrdersTab.tsx` (preview səsi TTS-ə keçdi)
-- `src/components/Header.tsx` (search analytics genişləndi)
-- `src/pages/CartPage.tsx` (epoint watchdog + orphan order cleanup)
-
-## Jan 6, 2026 — iteration #3 — Admin məhsul filterinə "Görünürlük" filteri
-- Admin panel → Məhsullar bölməsinə yeni "Görünür kim?" filteri əlavə olundu (kateqoriya/brend/stok yanında 4-cü filter olaraq).
-- Seçimlər: **Hamısı** (default), **Hamı görür** (`visibleTo === 'all'`), **Yalnız müştəri** (`visibleTo === 'customer'` — qonaq + normal müştəri), **Yalnız B2B** (`visibleTo === 'b2b'`).
-- Filter həm məhsul siyahısı grid-ində, həm başlıqdakı məhsul sayğacında tətbiq olunur. Müştəri qruplarına xüsusi məhsulların idarəsi üçün admin tez-tez B2B-yə xüsusi və ya yalnız adi müştəriyə görünən məhsulları izləməyə kömək edir.
-- Layout `md:grid-cols-3` → `md:grid-cols-2 lg:grid-cols-4`-ə dəyişdi ki, mobil/tablet ekrana sığsın.
-- File: `src/components/admin/AdminPanel.tsx`
-
-## Jan 6, 2026 — iteration #4 — Visibility badge, English voice, customer notification root-fix, user-assigned promo codes
-
-### #1 Visibility badge per məhsul kartı (admin)
-Admin → Məhsullar siyahısında hər məhsul kartında stok badge-inin yanında kiçik vizual badge:
-- 👁 yaşıl emerald = `visibleTo === 'all'` (hamı görür)
-- mavi **B2B** = `visibleTo === 'b2b'`
-- narıncı **C** = `visibleTo === 'customer'`
-Hover-ə açıqlama tooltip-i. Filterdən asılı olmayaraq bir baxışdan səhv konfiqurasiyalanmış məhsulları aşkar etmək asanlaşdı.
-
-### #2 Bildiriş səsi ingilis dilinə keçdi
-`notificationSound.ts`: `SPEECH_TEXT = 'New order received'`, `lang = 'en-US'`, voice picker → en-US > en-GB > any English. TTS keyfiyyəti yüksək (bütün modern brauzerlər en-US səs ilə gəlir). Gələcəkdə `/sounds/new-order.mp3` faylı qoyulsa avtomatik üstün tutulur (custom yazı).
-
-### #3 Müştəri sifariş bildirişi tətiklənmirdi — ROOT FIX
-- **Problem**: Müştəri sifarişi `pending_payment` statusu ilə yaranır (`createdAt` o anda qoyulur). Admin bu vaxt tab-ı açıb `lastSeen=now` etmiş ola bilər. Sonra ödəniş uğurlu olduqda status `preparing` olur, AMMA `createdAt` köhnə qalır → `createdAt < lastSeen` → sayğac artmır → səs gəlmir, badge yoxdur.
-- **Fix**: `AdminPanel.tsx` və `AdminGlobalNotifications.tsx` müştəri sifariş listener-lərində `ms = max(paidAt, createdAt)` istifadə olunur. `paidAt` `PaymentSuccessPage`-də ödəniş uğurla bitəndə qoyulur, deməli yeni dəyər həmişə `lastSeen`-dan böyük olacaq (ödənişdən sonra admin tab-ı açana qədər) → düzgün sayılır. B2B sifarişlər toxunulmadı (orada `pending_payment` mərhələsi yoxdur).
-
-### #4 Müştəriyə təyin olunmuş promo kodlar
-Admin müəyyən bir müştəriyə xüsusi promo kod yarada bilər; müştəri "Sifarişlərim" sidebar-ında həmin kodu görür və köçürə bilər.
-- `promoCodeService.ts`:
-  - `PromoCode` interface-inə `assignedTo: { userId, userEmail, userName }` (optional) əlavə olundu
-  - `createPromoCode(discount, createdBy, assignedTo?)` — yeni opsional parametr
-  - `validatePromoCode(code, userId?)` — assigned kod yalnız həmin userId üçün etibarlıdır
-  - Yeni `getUserAssignedCodes(userId)` — istifadə edilməmiş təyin olunmuş kodları qaytarır
-- `PromoCodesTab.tsx`: yuxarıda müştəri seçim paneli (axtarışlı, max 30 nəticə). Seçilibsə badge görünür, "Sil" düyməsi ilə təmizlənir. Cədvəlin "İstifadəçi" sütunu "Təyinat / İstifadə"-yə dəyişdi — kim üçün təyin olunduğunu və kim istifadə etdiyini ayırd edir.
-- `MyOrdersPage.tsx`: profil sidebar-ına yeni "Sizə hədiyyə kodlar" kartı — kodu, faiz, "Köçür" düyməsi və qısa təlimat. Admin kod yaradan kimi avtomatik görünür.
-- `CartPage.tsx`: `validatePromoCode(code, userId)` çağırılır — başqa müştəriyə təyin olunmuş kodu istifadəyə çalışan müştəri "Bu promo kod sizə təyin olunmayıb" xətası alır.
-
-### Files
-- `src/utils/notificationSound.ts` (en-US speech)
-- `src/components/AdminGlobalNotifications.tsx` (paidAt fix)
-- `src/components/admin/AdminPanel.tsx` (paidAt fix + visibility badge + Eye icon)
-- `src/services/promoCodeService.ts` (assignedTo + getUserAssignedCodes)
-- `src/components/admin/PromoCodesTab.tsx` (user picker UI)
-- `src/pages/MyOrdersPage.tsx` (assigned codes card)
-- `src/pages/CartPage.tsx` (userId-aware validation)
-
-## Jan 6, 2026 — iteration #5 — AI Chat reliability + mobile auto-zoom fix
-
-### #1 AI chat-bot tez-tez cavab vermir — multi-fix
-**Kök problemlər**:
-- `/app/.env` faylı yox idi (Vite root `/app`-dədir), `VITE_OPENAI_API_KEY` yüklənmirdi → fallback işləmirdi
-- Backend proxy bəzən gec/502 cavab verirdi, timeout yox idi → bütün istək asılıb qalırdı
-- OpenAI 429/5xx olduqda heç bir retry yox idi → bir-iki saniyəlik network glitch tam uğursuzluq verirdi
-- catch silent idi, debugging mümkün deyildi
-
-**Fix-lər** (`aiChatService.ts`, `AiChatWidget.tsx`):
-- `/app/frontend/.env` → `/app/.env`-ə kopyalandı (Vite-ın .env-i tapması üçün)
-- Backend proxy üçün **6 saniyəlik AbortController timeout** — uğursuzluqda dərhal OpenAI fallback
-- OpenAI istəyi üçün **25 saniyəlik timeout** + **1 dəfə avtomatik retry** (network/abort xətasında 600ms gözləmə)
-- 429/5xx response üçün **1 dəfə əlavə retry** (800ms gözləmə) — keyfiyyətli rate-limit/transient handling
-- AiChatWidget catch-də `console.warn(err)` — istifadəçi şikayət edəndə browser console-da real səbəb görünür
-- Production deploy-da (Netlify/Vercel) admin öz dashboard-ında `VITE_OPENAI_API_KEY` qoymalıdır (deploy-time var)
-
-### #2 Mobil avtomatik yaxınlaşdırma
-**Kök səbəb**: iOS Safari font-size < 16px olan input-a fokus düşəndə avtomatik zoom edir.
-**Fix**:
-- `index.html` viewport: `maximum-scale=1.0, user-scalable=no` əlavə olundu (zoom tam dayandırıldı)
-- `index.css` defansiv: mobildə (`max-width: 767px`) bütün `input/textarea/select` üçün `font-size: 16px !important` — viewport meta uyğunsuzluğu olsa belə zoom baş vermir
-
-### Files
-- `/app/.env` (yeni — frontend-dən kopyalandı)
-- `src/services/aiChatService.ts` (timeout + retry + fallback)
-- `src/components/AiChatWidget.tsx` (error log)
-- `index.html` (viewport)
-- `src/index.css` (mobile font-size guard)
-
-## Jan 6, 2026 — iteration #6 — Ana səhifə vizual harmonizasiya
-- **Header naviqasiya** — `Ana Səhifə`, `Məhsullar`, `Haqqımızda`, `Bloq`, `Tərəfdaşlarımız`, `Əlaqə` artıq UPPERCASE + `letter-spacing: 0.06em`. Həm desktop (`.dv-navlink`), həm mobil (`.dv-mobile-nav-link`) üçün CSS qaydaları əlavə olundu — yeni Link-lərə avtomatik tətbiq olunur.
-- **"Ən çox satılanlar"** (`BestSellersSection`) — uppercase + `tracking-[0.18em]`, ölçü `text-base sm:text-lg md:text-xl lg:text-2xl` → `text-sm sm:text-base md:text-lg lg:text-xl`-ə kiçildildi (istifadəçi tələbi).
-- **"Seçilmiş Kolleksiya" → subtitle** (`HomeProductBanners`):
-  - Yuxarı boşluq `pt-10 md:pt-28` → `pt-6 md:pt-12` (yarıdan az)
-  - Heading-bottom margin `mb-6 md:mb-16` → `mb-5 md:mb-8`
-  - Eyebrow `text-[10px] tracking-[0.4em]` → `text-xs sm:text-sm tracking-[0.22em] sm:tracking-[0.28em]` (BestSellers ilə eyni)
-  - h2 ("Hər detalında dəyərini qoruyan orijinal seçimlər") → BestSellers-ün h2-i ilə **eyni stil** (uppercase, font-playfair, tracking-[0.18em], eyni ölçü) → vizual harmoniya
-- **"Bizim Öhdəliyimiz"** (`Features`) — eyebrow ölçüsü/stili BestSellers ilə eyniləşdirildi; bottom margin `mb-8 md:mb-20` → `mb-6 md:mb-12` (digər bölmələrlə tarazlıq).
-
-### Files
-- `src/index.css` (uppercase nav qaydaları)
-- `src/components/Header.tsx` (mobil nav class əlavə olundu)
-- `src/components/BestSellersSection.tsx` (uppercase title + kiçildilmiş ölçü)
-- `src/components/HomeProductBanners.tsx` (spacing + uniform heading)
-- `src/components/Features.tsx` (uniform eyebrow + spacing)
-
-## Jan 6, 2026 — iteration #7 — Vizual incəlik (uppercase ölçü + spacing)
-- **Header nav uppercase kobud görünürdü** — `.dv-navlink` üçün `font-size: 0.78rem` təyin edildi və letter-spacing `0.06em → 0.08em` çəkildi. Mövcud `text-sm` class override olunur — naviqasiya daha incə və luxury hissini verir.
-- **"Ən çox satılanlar" və "Prestijinizə dəyər qatan detallar"** — h2 ölçüsü bir pillə də kiçildildi (`text-sm/base/lg/xl` → `text-xs/sm/base/lg`), `tracking-[0.18em]` → `tracking-[0.22em]`. İki bölmə arasında vizual ölçü sinxronu.
-- **SignaturePiece3D ↔ HomeProductBanners boşluğu** — `SignaturePiece3D` bölməsinin `pb-20 md:pb-32` (8rem desktop) → `pb-10 md:pb-14` (3.5rem desktop). Yığılmış `pt-12 + pb-14 = 6.5rem` üçün rahat oxunaqlı tarazlıq.
-
-### Files
-- `src/index.css` (.dv-navlink font-size + letter-spacing)
-- `src/components/SignaturePiece3D.tsx` (pb azaldıldı)
-- `src/components/BestSellersSection.tsx` (h2 kiçildildi)
-- `src/components/HomeProductBanners.tsx` (h2 kiçildildi)
-
-## Jan 6, 2026 — iteration #8 — Sticky condensed header + nav incəliyi
-- **Header scroll-condensed effekt** (`Header.tsx`):
-  - Yeni `isHeaderCondensed` state (`scrollY > 24`-də aktiv)
-  - Aktiv olduqda: `bg-white/85 backdrop-blur-md border-gray-200/70 shadow-[0_1px_12px_rgba(0,0,0,0.04)]`, hündürlük `h-16 → h-12`, loqo `h-10 → h-8`
-  - 300ms `transition-[background,backdrop-filter,box-shadow,border-color,height]` — yumşaq keçid
-  - Mega-menyu top offset-i də dinamik (`64 → 48`) ki, açıq olduqda boşluq qalmasın
-  - Modern luxury saytlardakı pattern (Tag Heuer, Breitling) — engagement artırır
-- **Nav letter/word spacing** — `.dv-navlink` və `.dv-mobile-nav-link` üçün `letter-spacing: 0.04em` (əvvəl 0.06-0.08), `word-spacing: -0.04em` əlavə olundu. "ANA SƏHIFƏ" kimi iki-sözlü maddələr daha sıx görünür, "kobud" hissi azalır.
-- **H2 başlıqlar** — BestSellers və HomeProductBanners-də `tracking-[0.22em] → tracking-[0.1em]` + `wordSpacing: -0.05em`. "ƏN ÇOX SATILANLAR" və "PRESTIJINIZƏ DƏYƏR QATAN DETALLAR" daha incə, balanslı görünür.
-
-### Files
-- `src/components/Header.tsx` (scroll detection + dynamic classes)
-- `src/index.css` (.dv-navlink letter/word spacing)
-- `src/components/BestSellersSection.tsx` (h2 tracking + wordSpacing)
-- `src/components/HomeProductBanners.tsx` (h2 tracking + wordSpacing)
-
-## Jan 6, 2026 — iteration #9 — Eyebrow uniformlaşma + nav daha sıx + mobil bug fix
-
-### Eyebrow ölçüləri uniformlaşdırıldı
-- 4 home eyebrow indi tam eyni ölçüdədir: `text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold` + `mx-2.5` margin + `w-6 h-[1px]` xəttlər
-- `StatsBand.tsx` ("Bir Baxışda") — əvvəl `text-sm sm:text-base tracking-[0.4em]` idi, indi BestSellers ilə eyni
-- "BİZİM ÖHDƏLİYİMİZ", "De Valeur'da kəşfə çıxın", "Seçilmiş Kolleksiya", "Bir Baxışda" — hamısı eyni ölçü, eyni xətt eni
-
-### Nav letter/word spacing daha sıx
-`.dv-navlink` və `.dv-mobile-nav-link`:
-- `letter-spacing: 0.02em` (əvvəl 0.04em — yarı qədər sıx)
-- `word-spacing: -0.06em` (əvvəl -0.04em — daha sıxılmış sözlər arası)
-- `font-size: 0.72rem` (əvvəl 0.78rem — kiçilmiş)
-- "ANA SƏHIFƏ" və s. daha incə, daha az "kobud"
-
-### Mobil responsive bug fix
-- **Bug**: Scroll edildikdə mobildə hamburger menu açılmırdı
-- **Kök səbəb**: Header kondensasiya effekti (backdrop-blur, h-12) mobildə də tətbiq olunurdu və z-index/click target düzgün işləmirdi
-- **Fix**:
-  - Kondensasiya effekti yalnız `md:` (768px+) breakpoint-də işləyir — mobildə header həmişə sabit (`bg-white border-b`, h-16, full logo)
-  - Hamburger button `p-1` → `p-2` (16px → 24px click target), `-ml-1` → `-ml-2`, `relative z-[51]` (header z-50-dən bir pillə yuxarı), `data-testid="mobile-menu-toggle"`
-  - Mega-menu top offset hesablanması `window.innerWidth >= 768` qoruması ilə: mobildə `64px` qalır
-- **Doğrulama**: Playwright iPhone 14 Pro viewport-unda scroll → click → "menu-open" panel state təsdiqləndi; screenshot-da bütün nav link-ləri uppercase + tighter görünür.
-
-### Files
-- `src/components/StatsBand.tsx` (eyebrow uniform)
-- `src/index.css` (nav letter/word/font tightening)
-- `src/components/Header.tsx` (md-only condense + bigger hamburger + z-fix + testid)
-
----
-
-## 2026-01-06 — Mobil menyu animasiya fix + minimalist ikonlar
-
-### Mobil menyu açılış/bağlanma yaxşılaşdırıldı
-**Problem**: 3D `rotateY(-28deg)` rotation, `filter: blur(6px)`, və `backdrop-filter` keçidləri mobil cihazlarda lag yaradırdı. Animasiya 620ms (açılış) + 460ms (bağlanma) + per-item stagger ilə 800ms+ təsiri yaradırdı.
-
-**Fix** (`src/index.css`):
-- Panel: 3D rotateY + perspective + blur silindi → sadə `translateX(-100%)` slide-in, `320ms` (açılış) / `280ms` (bağlanma)
-- Backdrop: `backdrop-filter: blur(8px)` keçidi silindi → sadə opacity fade `220ms`
-- Item stagger: 520ms → 260ms duration; per-item delay 45ms → 28ms
-- `box-shadow` 40px → 8px (daha yüngül)
-- `setIsMobileMenuClosing` timeout 460ms → 280ms
-
-### Header ikonları minimalist
-Bütün Lucide ikonlarına `strokeWidth={1.5}` əlavə edildi (default 2-dən nazik):
-Menu, Search, Bell, ShoppingCart, Heart, User, LogOut, X (close), ChevronDown (×3 accordion).
-
-### Files
-- `src/index.css` (menu animation rewrite)
-- `src/components/Header.tsx` (strokeWidth=1.5 on all icons, lighter box-shadow, faster close timeout)
-
-## Update — Partners page hover + AI chat greeting (Jan 2026)
-- PartnersPage: partner tiles now use the same animated 4-line hover frame as the homepage BrandShowcase (dv-brand-line / dv-brand-tile classes, continuous sequential draw).
-- AiChatWidget: persistent greet bubble slides in from the left of the launcher with copy "Sizə necə kömək göstərə bilərik?" + "DE VALEUR AI" label and green status dot, so customers immediately recognise it as an AI chat.
-- Removed all zoom/scale animations from the AI chat launcher (dv-ai-pulse rings and sparkle scale removed, product card image scale-105 removed). Only a subtle rotation remains on the sparkle icon.
-
-## Update — Blog/About minimalist + Pickup branches (Jan 2026)
-**Blog & About pages**
-- BlogPage: rebuilt in minimalist editorial style (centred hero with gold hairlines, featured 2-column post, hairline grid for the rest, playfair font, no shadowy cards).
-- AboutPage: rebuilt to match Partners / Brand-showcase visual language — centred hero, numbered sections (01 Hekayəmiz, 02 Rəqəmlər, 03 Missiya), hairline stats grid with playfair numbers, no coloured boxes/circles.
-
-**Pickup-from-branch checkout flow**
-- `DeliveryMethod` extended with `isPickup: boolean` + `branches: PickupBranch[]` (id, name, address, mapUrl?, phone?).
-- Default seed now includes 3 branches on the `Filialdan götürmə` method: Sumqayıt–Sülh, Bakı–Azadlıq Prospekti, Sumqayıt–Karvan Mall.
-- Legacy pickup docs in Firestore are auto-upgraded on first load (in-memory + fire-and-forget persist) so the branch picker works without admin intervention.
-- CartPage: when the customer picks a pickup method, the "Çatdırılma ünvanı" textarea is hidden and replaced by a branch picker; submission requires a branch; saved order carries `isPickup / pickupBranchId / pickupBranchName / pickupBranchAddress`; `customerAddress` is auto-filled with the chosen branch string.
-- CustomerOrdersTab (admin): now shows the pickup branch name + address with a "Filialdan götürmə" label instead of the generic delivery-address block when `isPickup` is true.
-- DeliveryMethodsTab (admin): the form now has an "Filialdan götürmə" toggle. When enabled, the default 3 branches are prefilled and each branch can be edited (name, address, phone, map link) or deleted; new branches can be added. The list cards display the pickup badge + all branches inline so the admin sees everything at a glance.
-
-## 2026-01 — Rosefield-style UI restyle
-- BestSellersSection: cream/blush product tiles with PERSONALIZE/SALE badges, left-aligned heading with underline, chevron arrow scroll controls, name + price below cards
-- CartPage: drawer-style centered layout — "Cart" title + X close, cream image tiles, − 1 + quantity selector, subtotal row, big black CHECK OUT button, secondary "Continue shopping" / "Remove all" links
-- Checkout panel: two-column Rosefield layout with De Valeur logo header, Express checkout (PayPal/GPay placeholders, decorative — no real integration change), OR divider, Contact (email + opt-in), Delivery (country/name/address/phone), Shipping methods, Pickup branch, Note, Discount code on right column with order summary, Subtotal, Shipping, Total
-- All existing logic preserved: Epoint payment, B2B order flow, promo code validation, delivery methods from Firestore, guest auto-registration, credit application form
-
-## 2026-01 — Checkout/Auth fixes + Gift Cards
-- Sign in button in checkout now opens CustomerLogin modal (not admin login)
-- Express checkout: PayPal removed; device-aware buttons — Apple devices show **Kartla + Apple Pay**, others show **Kartla + Google Pay**
-- "Kreditlə al" button restyled: black bg + white text (clearly visible)
-- Apple Pay official mark SVG used
-- All express buttons trigger Epoint flow (which supports card / Apple Pay / Google Pay on its hosted page)
-
-### Gift Cards (NEW)
-- New public page `/gift-cards` with Rosefield-style hero + card grid + 3-step explainer
-- Header navigation: "Hədiyyə Kartı / Gift Cards / Подарочные карты" link added (3 languages)
-- Admin tab "Hədiyyə Kartları" — CRUD for gift card products (price, name 3-lang, image URL, description, active toggle)
-- Gift card stored as Product with `isGiftCard: true` flag
-- After successful Epoint payment, PaymentSuccessPage detects gift-card items and auto-generates unique 6-digit promo codes (one per quantity) with **fixed AZN amount** equal to gift card price
-- PromoCode service extended: `type: 'percent' | 'amount'`, `amountAZN`, `isGiftCard` fields; new `createGiftCardPromoCode()` function
-- CartPage promo validation/redemption supports both percent and fixed-amount codes
-- Gift codes shown prominently on payment success page with copy-to-clipboard buttons
-
-## 2026-01 — Epoint payment system — official spec compliance
-**Problem**: Old client-side direct fetch to `/api/1/checkout` and `/api/1/token/widget` did not match the official WooCommerce plugin contract (private key signature mismatch + browser CORS issues).
-
-**Fix — server-side flow matching official PHP plugin**:
-- New backend endpoints in `/app/backend/server.py`:
-  - `POST /api/epoint/create-payment` — builds the canonical payload, signs it with `base64(sha1(privateKey + base64(json) + privateKey, raw=true))`, POSTs to **`https://epoint.az/api/1/request`** (per official PDF), returns `redirect_url`.
-  - `POST /api/epoint/verify-callback` — verifies the redirect-back `data` + `signature` and decodes the payload.
-- Frontend `epointPaymentService.ts` rewritten to call these backend endpoints (no more browser-side direct calls / CORS issues).
-- JSON serialization uses `separators=(",", ":")` so Python output is byte-equivalent to PHP `json_encode` (signature stays valid).
-- `httpx` added to backend requirements.
-- Verified: backend now successfully reaches Epoint API and Epoint accepts the signature (test merchant key returned the expected `"Merchant not active"` error rather than a signature error — confirms format).
-
-**To go live**: Admin → Sayt Parametrləri → Epoint, save real `public_key` and `private_key` from epoint.az merchant panel + the success/error/result URLs.
-
-## 2026-01 — Epoint full payment system aligned with official OpenCart plugin
-**Reference**: Official OpenCart 3.x Epoint plugin uses `/api/1/payment-request` (not `/api/1/request`) and verifies callback via `/api/1/get-status`.
-
-**Backend changes** (`/app/backend/server.py`):
-- ✅ `/api/epoint/create-payment` — now hits **`https://epoint.az/api/1/payment-request`** first (canonical, matches both OpenCart + WooCommerce plugins), falls back to `/api/1/request` if needed
-- ✅ `/api/epoint/widget-url` — `https://epoint.az/api/1/token/widget` for Apple Pay / Google Pay iframe
-- ✅ NEW `/api/epoint/get-status` — `https://epoint.az/api/1/get-status` for server-side payment verification
-- All three endpoints use the exact PHP-equivalent signature: `base64(sha1(privateKey + base64(json) + privateKey, raw=true))`
-
-**Frontend changes**:
-- ✅ `PaymentSuccessPage` — now calls `/api/epoint/get-status` after Epoint redirect to verify the payment was actually completed (matches OpenCart `callback()` flow). Marks order as `payment_failed` if status is not 'success'.
-
-**Result**: All three payment methods now use the proper API contract:
-- 💳 **Card / İndi ödə** → `payment-request` → top-level redirect to Epoint hosted card form
-- 🍎 **Apple Pay** → `token/widget` → iframe modal (native Apple Pay sheet on iOS Safari)
-- 📱 **Google Pay** → `token/widget` → iframe modal (native Google Pay sheet on Android Chrome)
-- ✅ **Verification** → `get-status` → server-side double-check before marking order paid
-
-**To go fully live**: Save real merchant `public_key` + `private_key` in Admin → Sayt Parametrləri → Epoint. For Apple Pay / Google Pay native sheets to render inside the widget, request a Merchant ID from Epoint (provide screenshots of button placement per their Google Pay onboarding doc).
+See `/app/memory/test_credentials.md`
