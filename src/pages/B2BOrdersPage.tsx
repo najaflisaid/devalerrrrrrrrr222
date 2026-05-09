@@ -28,6 +28,13 @@ interface B2BOrder {
   adminNote?: string;
   signature?: string;
   signedAt?: any;
+  // Receiver (employee who received delivery on behalf of company)
+  receiverName?: string;
+  receiverSurname?: string;
+  receiverPosition?: string;
+  receiverPhone?: string;
+  receiverSignature?: string;
+  receiverSignedAt?: any;
   totalDebt?: number;
   totalDebtOverride?: number;
   paymentDeadline?: string;
@@ -591,6 +598,28 @@ const B2BOrdersPage: React.FC = () => {
                                     src={order.signature}
                                     alt="Customer Signature"
                                     className="border border-green-300 rounded-lg bg-white p-2 w-24 h-auto"
+                                  />
+                                </div>
+                              )}
+                              {order.receiverSignature && (
+                                <div className="mt-3 pt-3 border-t border-green-200">
+                                  <p className="text-xs font-semibold text-green-900 mb-1">
+                                    Təhvil alan əməkdaş:
+                                  </p>
+                                  <p className="text-xs text-green-800 mb-1">
+                                    <span className="font-semibold">{order.receiverName} {order.receiverSurname}</span>
+                                    {order.receiverPosition && <span className="text-green-700"> — {order.receiverPosition}</span>}
+                                  </p>
+                                  {order.receiverSignedAt?.toDate && (
+                                    <p className="text-[10px] text-green-700 mb-1">
+                                      {order.receiverSignedAt.toDate().toLocaleString('az-AZ')}
+                                    </p>
+                                  )}
+                                  <img
+                                    src={order.receiverSignature}
+                                    alt="Receiver Signature"
+                                    className="border border-green-300 rounded-lg bg-white p-2 w-24 h-auto"
+                                    data-testid={`receiver-signature-${order.id}`}
                                   />
                                 </div>
                               )}

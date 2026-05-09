@@ -33,6 +33,7 @@ import BrandPage from './pages/BrandPage';
 import B2BOrdersPage from './pages/B2BOrdersPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import DeliveryPage from './pages/DeliveryPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentErrorPage from './pages/PaymentErrorPage';
 import PaymentResultPage from './pages/PaymentResultPage';
@@ -99,12 +100,13 @@ const AppContent: React.FC = () => {
                   <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                   <Route path="/return-policy" element={<ReturnPolicyPage />} />
                   <Route path="/careers" element={<CareersPage />} />
-                  <Route path="/delivery" element={<DeliveryPolicyPage />} />
+                  <Route path="/delivery-policy" element={<DeliveryPolicyPage />} />
                   <Route path="/category/:category" element={<CategoryPage />} />
                   <Route path="/brand/:brand" element={<BrandPage />} />
                   <Route path="/b2b/orders" element={<B2BOrdersPage />} />
                   <Route path="/my-orders" element={<MyOrdersPage />} />
                   <Route path="/change-password" element={<ChangePasswordPage />} />
+                  <Route path="/delivery" element={<DeliveryPage />} />
                   <Route path="/payment/success" element={<PaymentSuccessPage />} />
                   <Route path="/payment/error" element={<PaymentErrorPage />} />
                   <Route path="/payment/result" element={<PaymentResultPage />} />

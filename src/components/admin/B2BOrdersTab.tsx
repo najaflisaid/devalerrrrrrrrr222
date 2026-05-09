@@ -20,6 +20,12 @@ interface B2BOrder {
   adminNote?: string;
   signature?: string;
   signedAt?: any;
+  receiverName?: string;
+  receiverSurname?: string;
+  receiverPosition?: string;
+  receiverPhone?: string;
+  receiverSignature?: string;
+  receiverSignedAt?: any;
   totalDebt?: number;
   totalDebtOverride?: number;
   paymentDeadline?: string;
@@ -1017,6 +1023,27 @@ const B2BOrdersTab: React.FC = () => {
                       />
                     </div>
                   )}
+                  {order.receiverSignature && (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-sm font-semibold text-green-900">
+                        Təhvil alan əməkdaş
+                      </p>
+                      <p className="text-sm text-green-800">
+                        <span className="font-medium">{order.receiverName} {order.receiverSurname}</span>
+                        {order.receiverPosition && <span className="text-green-700"> — {order.receiverPosition}</span>}
+                      </p>
+                      {order.receiverPhone && <p className="text-xs text-green-700">{order.receiverPhone}</p>}
+                      {order.receiverSignedAt && (
+                        <p className="text-xs text-green-700 mb-1">{formatDate(order.receiverSignedAt)}</p>
+                      )}
+                      <img
+                        src={order.receiverSignature}
+                        alt="Receiver Signature"
+                        className="border border-green-300 rounded-lg bg-white p-2 max-w-[200px]"
+                        data-testid={`admin-receiver-signature-${order.id}`}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1161,6 +1188,23 @@ const B2BOrdersTab: React.FC = () => {
                         <img
                           src={selectedOrder.signature}
                           alt="Customer Signature"
+                          className="border border-green-300 rounded-lg bg-white p-2 max-w-sm"
+                        />
+                      </div>
+                    )}
+                    {selectedOrder.receiverSignature && (
+                      <div className="mt-4 pt-4 border-t border-green-200">
+                        <p className="text-sm font-semibold text-green-900 mb-2">Təhvil alan əməkdaş</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm text-green-800 mb-2">
+                          <div><span className="text-green-600">Ad:</span> {selectedOrder.receiverName}</div>
+                          <div><span className="text-green-600">Soyad:</span> {selectedOrder.receiverSurname}</div>
+                          <div className="col-span-2"><span className="text-green-600">Vəzifə:</span> {selectedOrder.receiverPosition}</div>
+                          {selectedOrder.receiverPhone && <div className="col-span-2"><span className="text-green-600">Telefon:</span> {selectedOrder.receiverPhone}</div>}
+                          {selectedOrder.receiverSignedAt && <div className="col-span-2"><span className="text-green-600">İmza tarixi:</span> {formatDate(selectedOrder.receiverSignedAt)}</div>}
+                        </div>
+                        <img
+                          src={selectedOrder.receiverSignature}
+                          alt="Receiver Signature"
                           className="border border-green-300 rounded-lg bg-white p-2 max-w-sm"
                         />
                       </div>

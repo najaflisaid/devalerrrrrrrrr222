@@ -250,6 +250,100 @@ export const updateB2BOrderCheckedItems = async (orderId: string, checkedItems: 
   return { id: orderId, checkedItems };
 };
 
+// =====================================================================
+// Delivery-flow (courier captures a "receiver" signature on behalf of the
+// company employee actually present at delivery — separate from the
+// account holder's own signature in B2BOrdersPage).
+// =====================================================================
+
+export interface ReceiverSignaturePayload {
+  receiverName: string;
+  receiverSurname: string;
+  receiverPosition: string;
+  receiverSignature: string; // base64 dataURL
+  receiverPhone?: string;
+}
+
+export const saveReceiverSignature = async (
+  orderId: string,
+  payload: ReceiverSignaturePayload
+) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, {
+    receiverName: payload.receiverName.trim(),
+    receiverSurname: payload.receiverSurname.trim(),
+    receiverPosition: payload.receiverPosition.trim(),
+    receiverPhone: payload.receiverPhone?.trim() || '',
+    receiverSignature: payload.receiverSignature,
+    receiverSignedAt: Timestamp.now(),
+    // Mark order as delivered (receiver acknowledged delivery on behalf of company).
+    // The company account holder can still add their own signature later via B2BOrdersPage.
+    status: 'delivered',
+    deliveredAt: Timestamp.now(),
+  });
+  return { id: orderId };
+};
+
+/** All orders for a given B2B customer (by email) that have NOT yet been
+ * signed by a delivery receiver. Sorted newest first. */
+export const getOrdersAwaitingReceiverSignature = async (customerEmail: string) => {
+  const ordersRef = collection(db, 'b2bOrders');
+  const q = query(ordersRef, where('customerEmail', '==', customerEmail));
+  const snap = await getDocs(q);
+  const list: any[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    if (!data.receiverSignature) {
+      list.push({ id: d.id, ...data });
+    }
+  });
+  list.sort((a, b) => {
+    const ta = a.createdAt?.toMillis?.() || 0;
+    const tb = b.createdAt?.toMillis?.() || 0;
+    return tb - ta;
+  });
+  return list;
+};
+
+/** All B2B customers that currently have at least one order awaiting
+ * receiver signature. Returns deduplicated list. */
+export const getCustomersWithPendingDeliveries = async () => {
+  const ordersRef = collection(db, 'b2bOrders');
+  const snap = await getDocs(ordersRef);
+  const map = new Map<string, {
+    email: string;
+    name: string;
+    lastname: string;
+    company: string;
+    phone: string;
+    pendingCount: number;
+    latestCreatedAt: number;
+  }>();
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    if (data.receiverSignature) return; // already signed
+    const email = (data.customerEmail || '').toLowerCase();
+    if (!email) return;
+    const existing = map.get(email);
+    const ts = data.createdAt?.toMillis?.() || 0;
+    if (existing) {
+      existing.pendingCount += 1;
+      if (ts > existing.latestCreatedAt) existing.latestCreatedAt = ts;
+    } else {
+      map.set(email, {
+        email,
+        name: data.customerName || '',
+        lastname: data.customerLastname || '',
+        company: data.companyName || '',
+        phone: data.customerPhone || '',
+        pendingCount: 1,
+        latestCreatedAt: ts,
+      });
+    }
+  });
+  return Array.from(map.values()).sort((a, b) => b.latestCreatedAt - a.latestCreatedAt);
+};
+
 
 
 export const updateOrderItemQuantity = async (orderId: string, itemIndex: number, newQuantity: number, oldQuantity: number, productId: string) => {
