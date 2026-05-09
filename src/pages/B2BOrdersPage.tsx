@@ -214,11 +214,8 @@ const B2BOrdersPage: React.FC = () => {
           {/* Sol panel — Mənim məlumatlarım */}
           <aside className="lg:sticky lg:top-6 lg:self-start" data-testid="b2b-profile-sidebar">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-                <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center font-semibold text-sm">
-                  {(profile.company || profile.name || profile.email || '?').charAt(0).toUpperCase()}
-                </div>
-                <h3 className="text-sm font-bold text-gray-900">Mənim məlumatlarım</h3>
+              <div className="mb-4 pb-3 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900">Şirkət məlumatları</h3>
               </div>
 
               <ul className="space-y-3 text-sm">
