@@ -1,17 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, X, Bell, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, ChevronDown, ChevronUp, User, Mail, Phone, Building2 } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { productService } from '../services/productService';
 import SignaturePad from '../components/SignaturePad';
-import { 
-  subscribeToActiveNotifications, 
-  markNotificationAsRead,
-  B2BNotification,
-  NotificationType
-} from '../services/b2bNotificationService';
 
 interface B2BOrder {
   id: string;
@@ -57,10 +51,14 @@ const B2BOrdersPage: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<B2BNotification[]>([]);
-  const [dismissedNotifications, setDismissedNotifications] = useState<string[]>([]);
-  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
-  const notificationPanelRef = useRef<HTMLDivElement>(null);
+  // Profil məlumatları (sol sidebar üçün)
+  const [profile, setProfile] = useState<{
+    name?: string;
+    lastname?: string;
+    company?: string;
+    phone?: string;
+    email?: string;
+  }>({});
   // Sifarişlərin açılıb-bağlanma vəziyyəti — default bağlı (yığcam)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 
@@ -79,6 +77,7 @@ const B2BOrdersPage: React.FC = () => {
       if (user && user.email) {
         setUserEmail(user.email);
         loadOrders(user.email);
+        loadProfile(user.uid, user.email);
       } else {
         setLoading(false);
       }
@@ -87,40 +86,31 @@ const B2BOrdersPage: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  const loadProfile = async (uid: string, email: string) => {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (snap.exists()) {
+        const u: any = snap.data();
+        setProfile({
+          name: u.name || u.firstName || '',
+          lastname: u.lastname || u.lastName || u.surname || '',
+          company: u.companyName || u.company || '',
+          phone: u.phone || u.phoneNumber || '',
+          email,
+        });
+      } else {
+        setProfile({ email });
+      }
+    } catch (e) {
+      console.warn('profile load failed', e);
+      setProfile({ email });
+    }
+  };
+
   useEffect(() => {
     if (!userEmail) return;
-
-    const unsubscribe = subscribeToActiveNotifications(userEmail, (notifs) => {
-      setNotifications(notifs);
-    });
-
-    return () => unsubscribe();
+    return () => undefined;
   }, [userEmail]);
-
-  // Click outside to close notification panel
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationPanelRef.current && !notificationPanelRef.current.contains(event.target as Node)) {
-        setShowNotificationPanel(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowNotificationPanel(false);
-      }
-    };
-
-    if (showNotificationPanel) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [showNotificationPanel]);
 
   const loadProducts = async () => {
     try {
@@ -204,31 +194,6 @@ const B2BOrdersPage: React.FC = () => {
     }
   };
 
-  const getNotificationTypeConfig = (type: NotificationType) => {
-    switch (type) {
-      case 'success':
-        return { textColor: 'text-green-900' };
-      case 'warning':
-        return { textColor: 'text-yellow-900' };
-      case 'error':
-        return { textColor: 'text-red-900' };
-      default:
-        return { textColor: 'text-blue-900' };
-    }
-  };
-
-  const handleDismissNotification = async (notificationId: string) => {
-    setDismissedNotifications([...dismissedNotifications, notificationId]);
-    if (userEmail) {
-      await markNotificationAsRead(notificationId, userEmail);
-    }
-  };
-
-  const visibleNotifications = notifications.filter(n => !dismissedNotifications.includes(n.id || ''));
-  const unreadCount = userEmail 
-    ? visibleNotifications.filter(n => !n.readBy?.includes(userEmail)).length 
-    : 0;
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -241,144 +206,70 @@ const B2BOrdersPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8 md:py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Başlıq və Bildiriş İkonu */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">{t('b2b.myOrders')}</h1>
-          
-          {/* Bildiriş İkonu */}
-          <div className="relative" ref={notificationPanelRef}>
-            <button
-              onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-              className="relative p-3 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm z-50"
-            >
-              <Bell className="h-6 w-6 text-gray-700" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">{t('b2b.myOrders')}</h1>
 
-            {/* Boz Fon Overlay */}
-            {showNotificationPanel && (
-              <>
-                <div 
-                  className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 animate-fadeIn"
-                  onClick={() => setShowNotificationPanel(false)}
-                />
-                
-                {/* Bildiriş Paneli */}
-                <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col animate-slideDown">
-                {/* Başlıq */}
-                <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-base sm:text-lg text-gray-900">Bildirişlər</h3>
-                    {unreadCount > 0 && (
-                      <p className="text-xs text-gray-500 mt-0.5">{unreadCount} yeni bildiriş</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowNotificationPanel(false)}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="h-5 w-5 text-gray-500" />
-                  </button>
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+          {/* Sol panel — Mənim məlumatlarım */}
+          <aside className="lg:sticky lg:top-6 lg:self-start" data-testid="b2b-profile-sidebar">
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center font-semibold text-sm">
+                  {(profile.company || profile.name || profile.email || '?').charAt(0).toUpperCase()}
                 </div>
-
-                {/* Bildirişlər Siyahısı */}
-                <div className="overflow-y-auto flex-1 custom-scrollbar">
-                  {visibleNotifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-6">
-                      <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Bell className="h-10 w-10 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500 text-center font-medium">Bildiriş yoxdur</p>
-                      <p className="text-gray-400 text-sm text-center mt-1">Yeni bildirişlər burada görünəcək</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-100">
-                      {visibleNotifications.map((notification) => {
-                        const config = getNotificationTypeConfig(notification.type);
-                        const isUnread = userEmail ? !notification.readBy?.includes(userEmail) : true;
-                        
-                        return (
-                          <div
-                            key={notification.id}
-                            className={`px-4 sm:px-6 py-4 bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer ${
-                              isUnread ? 'border-l-4 border-blue-500' : ''
-                            }`}
-                            onClick={() => {
-                              if (isUnread && notification.id) {
-                                handleDismissNotification(notification.id);
-                              }
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              {/* Məzmun */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <h4 className={`font-semibold text-sm ${config.textColor}`}>
-                                    {notification.title}
-                                  </h4>
-                                  {isUnread && (
-                                    <span className="flex-shrink-0 h-2 w-2 bg-blue-500 rounded-full mt-1"></span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                                  {notification.message}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-gray-400">
-                                    {notification.createdAt?.toDate ? 
-                                      notification.createdAt.toDate().toLocaleDateString('az-AZ', {
-                                        day: '2-digit',
-                                        month: 'short',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      }) : '-'
-                                    }
-                                  </p>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDismissNotification(notification.id!);
-                                    }}
-                                    className="text-xs text-gray-400 hover:text-gray-600 font-medium"
-                                  >
-                                    Bağla
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Alt hissə */}
-                {visibleNotifications.length > 0 && (
-                  <div className="px-4 sm:px-6 py-3 border-t border-gray-100 bg-gray-50">
-                    <button
-                      onClick={() => {
-                        visibleNotifications.forEach(n => {
-                          if (n.id) handleDismissNotification(n.id);
-                        });
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium w-full text-center"
-                    >
-                      Hamısını oxunmuş kimi işarələ
-                    </button>
-                  </div>
-                )}
+                <h3 className="text-sm font-bold text-gray-900">Mənim məlumatlarım</h3>
               </div>
-              </>
-            )}
-          </div>
-        </div>
+
+              <ul className="space-y-3 text-sm">
+                {(profile.name || profile.lastname) && (
+                  <li className="flex items-start gap-2.5" data-testid="b2b-profile-name">
+                    <User className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Ad Soyad</p>
+                      <p className="text-gray-900 break-words">
+                        {[profile.name, profile.lastname].filter(Boolean).join(' ')}
+                      </p>
+                    </div>
+                  </li>
+                )}
+                {profile.company && (
+                  <li className="flex items-start gap-2.5" data-testid="b2b-profile-company">
+                    <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Şirkət</p>
+                      <p className="text-gray-900 break-words">{profile.company}</p>
+                    </div>
+                  </li>
+                )}
+                {profile.phone && (
+                  <li className="flex items-start gap-2.5" data-testid="b2b-profile-phone">
+                    <Phone className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Telefon</p>
+                      <a href={`tel:${profile.phone}`} className="text-gray-900 break-all hover:underline">
+                        {profile.phone}
+                      </a>
+                    </div>
+                  </li>
+                )}
+                {profile.email && (
+                  <li className="flex items-start gap-2.5" data-testid="b2b-profile-email">
+                    <Mail className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Email</p>
+                      <a href={`mailto:${profile.email}`} className="text-gray-900 break-all hover:underline">
+                        {profile.email}
+                      </a>
+                    </div>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </aside>
+
+          {/* Sağ panel — sifarişlər */}
+          <div>
 
         {orders.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
@@ -444,7 +335,7 @@ const B2BOrdersPage: React.FC = () => {
                   <div className="px-4 pb-4 sm:px-5 sm:pb-5 border-t border-gray-100 bg-gray-50/30">
                     <div className="pt-4 flex items-center justify-between mb-3 text-xs text-gray-500">
                       <span>{dateFormatted}</span>
-                      <span className="font-bold text-blue-600 text-lg">{order.totalAmount?.toFixed(2)} AZN</span>
+                      <span className="font-bold text-gray-900 text-lg">{order.totalAmount?.toFixed(2)} AZN</span>
                     </div>
                       <h3 className="font-semibold mb-3 text-sm">{t('b2b.products')}</h3>
                       <div className="space-y-3">
@@ -491,21 +382,23 @@ const B2BOrdersPage: React.FC = () => {
                           )}
                         </div>
                         <div className="text-right space-y-1.5 sm:border-l sm:border-gray-200 sm:pl-3">
-                          <div>
-                            <p className="text-[11px] text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
-                            <p className="text-sm text-gray-400">
-                              {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} AZN
-                            </p>
-                          </div>
                           {(order as any).discountAmount > 0 && (
-                            <div>
-                              <p className="text-[11px] text-green-600">{t('b2b.discount') || 'Endirim'}</p>
-                              <p className="text-sm font-medium text-green-600">-{(order as any).discountAmount?.toFixed(2)} AZN</p>
-                            </div>
+                            <>
+                              <div>
+                                <p className="text-[11px] text-gray-500">{t('b2b.subtotal') || 'Endirimsiz qiymət'}</p>
+                                <p className="text-sm text-gray-500 tabular-nums">
+                                  {((order as any).subtotal || order.items?.reduce((sum: number, item: any) => sum + (item.regularPrice * item.quantity), 0) || 0).toFixed(2)} AZN
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] text-gray-500">{t('b2b.discount') || 'Endirim'}</p>
+                                <p className="text-sm font-medium text-emerald-600 tabular-nums">−{(order as any).discountAmount?.toFixed(2)} AZN</p>
+                              </div>
+                            </>
                           )}
                           <div>
                             <p className="text-[11px] text-gray-500">{t('b2b.totalAmount')}</p>
-                            <p className="text-xl font-bold text-blue-600">{order.totalAmount?.toFixed(2)} AZN</p>
+                            <p className="text-xl font-bold text-gray-900 tabular-nums">{order.totalAmount?.toFixed(2)} AZN</p>
                           </div>
                         </div>
                       </div>
@@ -661,6 +554,8 @@ const B2BOrdersPage: React.FC = () => {
             }}
           />
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

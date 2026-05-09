@@ -808,14 +808,16 @@ const Header: React.FC = () => {
                       >
                         Sifarişlərim
                       </Link>
-                      <Link
-                        to="/change-password"
-                        onClick={() => setShowLoginDropdown(false)}
-                        className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
-                        data-testid="account-change-password"
-                      >
-                        Şifrəni dəyiş
-                      </Link>
+                      {userRole !== 'b2b' && (
+                        <Link
+                          to="/change-password"
+                          onClick={() => setShowLoginDropdown(false)}
+                          className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
+                          data-testid="account-change-password"
+                        >
+                          Şifrəni dəyiş
+                        </Link>
+                      )}
                       <button
                         onClick={() => { setShowLoginDropdown(false); handleLogout(); }}
                         className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
@@ -1101,7 +1103,7 @@ const Header: React.FC = () => {
                       <Link
                         to="/change-password"
                         onClick={closeMobileMenu}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
+                        className={`w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors ${userRole === 'b2b' ? 'hidden' : ''}`}
                         data-testid="mobile-change-password"
                       >
                         <span>Şifrəni dəyiş</span>

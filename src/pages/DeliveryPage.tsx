@@ -275,7 +275,7 @@ const DeliveryPage: React.FC = () => {
             </div>
           </div>
           <h1 className="text-2xl font-playfair text-center text-gray-900 mb-1">Çatdırılma paneli</h1>
-          <p className="text-sm text-gray-500 text-center mb-5">DE VALEUR — Kuryer girişi</p>
+          <p className="text-sm text-gray-500 text-center mb-5">DE VALEUR</p>
 
           {loginError && (
             <div className="bg-red-50 text-red-600 text-sm p-2.5 rounded-lg mb-3 text-center" data-testid="delivery-login-error">
