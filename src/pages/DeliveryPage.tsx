@@ -115,12 +115,18 @@ const DeliveryPage: React.FC = () => {
   const filteredCustomers = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return customers;
+    if (section === 'b2b') {
+      // B2B-də konfidensiallıq üçün yalnız şirkət adı üzrə axtarış
+      return customers.filter((c) =>
+        (c.company || '').toLowerCase().includes(term)
+      );
+    }
     return customers.filter((c) =>
-      [c.email, c.name, c.lastname, c.company, c.phone, c.address]
+      [c.email, c.name, c.lastname, c.phone, c.address]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(term))
     );
-  }, [customers, search]);
+  }, [customers, search, section]);
 
   // ───────────────────── Customer selected ─────────────────────
   const onSelectCustomer = async (c: PendingCustomer) => {
@@ -342,8 +348,7 @@ const DeliveryPage: React.FC = () => {
     );
     const headerTitle =
       section === 'b2b'
-        ? selectedCustomer.company ||
-          `${selectedCustomer.name || ''} ${selectedCustomer.lastname || ''}`.trim()
+        ? selectedCustomer.company || '—'
         : selectedCustomer.name || selectedCustomer.email;
 
     return (
@@ -399,10 +404,15 @@ const DeliveryPage: React.FC = () => {
               </span>
               <span className="text-gray-500">Məhsul sayı:</span>
               <span className="font-semibold text-gray-900 text-right">{totalItems}</span>
-              <span className="text-gray-500">Məbləğ:</span>
-              <span className="font-semibold text-gray-900 text-right">
-                {Number(selectedOrder.totalAmount || 0).toFixed(2)} AZN
-              </span>
+              {/* Məbləğ B2B-də göstərilmir (konfidensiallıq) */}
+              {section !== 'b2b' && (
+                <>
+                  <span className="text-gray-500">Məbləğ:</span>
+                  <span className="font-semibold text-gray-900 text-right">
+                    {Number(selectedOrder.totalAmount || 0).toFixed(2)} AZN
+                  </span>
+                </>
+              )}
               <span className="text-gray-500">Tarix:</span>
               <span className="text-gray-700 text-right">
                 {selectedOrder.createdAt?.toDate?.().toLocaleDateString('az-AZ') || '—'}
@@ -441,8 +451,8 @@ const DeliveryPage: React.FC = () => {
                 >
                   {allOrdersForCustomer.map((o) => (
                     <option key={o.id} value={o.id}>
-                      #{o.orderNumber || o.id.slice(0, 6)} —{' '}
-                      {Number(o.totalAmount || 0).toFixed(2)} AZN
+                      #{o.orderNumber || o.id.slice(0, 6)}
+                      {section !== 'b2b' && ` — ${Number(o.totalAmount || 0).toFixed(2)} AZN`}
                     </option>
                   ))}
                 </select>
@@ -619,7 +629,7 @@ const DeliveryPage: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={
               section === 'b2b'
-                ? 'Şirkət, ad, email, telefon ilə axtar...'
+                ? 'Şirkət adı ilə axtar...'
                 : 'Müştəri adı, email, telefon ilə axtar...'
             }
             className="w-full pl-9 pr-9 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
@@ -648,11 +658,13 @@ const DeliveryPage: React.FC = () => {
         ) : (
           <div className="space-y-2">
             {filteredCustomers.map((c) => {
-              const initial = (c.company || c.name || c.email || '?').charAt(0).toUpperCase();
-              const titleLine =
-                section === 'b2b'
-                  ? c.company || `${c.name || ''} ${c.lastname || ''}`.trim() || c.email
-                  : c.name || c.email;
+              const isB2B = section === 'b2b';
+              const initial = (
+                isB2B ? c.company || '?' : c.name || c.email || '?'
+              ).charAt(0).toUpperCase();
+              const titleLine = isB2B
+                ? c.company || c.email
+                : c.name || c.email;
               return (
                 <button
                   key={c.email}
@@ -665,10 +677,14 @@ const DeliveryPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{titleLine}</p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {c.email}
-                      {c.phone ? ` · ${c.phone}` : ''}
-                    </p>
+                    {/* B2B-də əlavə müştəri məlumatı (ad/telefon/email) gizlədilir;
+                        yalnız şirkət adı və əlçatımlı sifariş sayı görünür. */}
+                    {!isB2B && (
+                      <p className="text-xs text-gray-500 truncate">
+                        {c.email}
+                        {c.phone ? ` · ${c.phone}` : ''}
+                      </p>
+                    )}
                   </div>
                   <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full whitespace-nowrap">
                     {c.pendingCount} sifariş
@@ -700,7 +716,7 @@ const DeliveryPage: React.FC = () => {
                   : '';
                 const title =
                   section === 'b2b'
-                    ? o.companyName || `${o.customerName || ''} ${o.customerLastname || ''}`.trim()
+                    ? o.companyName || '—'
                     : o.customerName || o.customerEmail;
                 return (
                   <div
@@ -722,9 +738,6 @@ const DeliveryPage: React.FC = () => {
                 );
               })}
             </div>
-            <p className="text-[10px] text-gray-400 text-center mt-3">
-              İmzalandıqdan 3 gün sonra avtomatik silinir.
-            </p>
           </div>
         )}
       </div>
