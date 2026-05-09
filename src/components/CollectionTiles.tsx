@@ -18,9 +18,7 @@ const CollectionTiles: React.FC = () => {
   const { ref, inView } = useInView<HTMLElement>();
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [enabled, setEnabled] = useState<boolean>(true);
-  const [eyebrow, setEyebrow] = useState(DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.eyebrow!);
   const [title, setTitle] = useState(DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.title!);
-  const [subtitle, setSubtitle] = useState(DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.subtitle!);
 
   useEffect(() => {
     (async () => {
@@ -29,9 +27,7 @@ const CollectionTiles: React.FC = () => {
         const ct = sections.collectionTiles;
         if (!ct) return;
         setEnabled(ct.enabled !== false);
-        if (ct.eyebrow) setEyebrow(ct.eyebrow);
         if (ct.title) setTitle(ct.title);
-        if (ct.subtitle) setSubtitle(ct.subtitle);
         setTiles(ct.tiles || []);
       } catch (e) {
         console.error('CollectionTiles load error:', e);
@@ -45,28 +41,20 @@ const CollectionTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative py-12 md:py-20 bg-white overflow-hidden"
+      className="relative pt-4 pb-10 md:pt-6 md:pb-16 bg-white overflow-hidden"
       data-testid="dv-collection-tiles"
     >
       <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
-        {/* Heading */}
-        <div className={`text-center mb-8 md:mb-14 dv-reveal ${inView ? 'is-in' : ''}`}>
-          <div className="inline-flex items-center mb-4">
-            <span className="inline-block w-8 h-[1px]" style={{ background: '#b8914c' }} />
-            <span className="mx-3 text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-semibold whitespace-nowrap" style={{ color: '#8c6c34' }}>
-              {eyebrow[lang]}
-            </span>
-            <span className="inline-block w-8 h-[1px]" style={{ background: '#b8914c' }} />
-          </div>
-          <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] mb-3 text-black">
+        {/* Heading — only the main title, eyebrow + subtitle removed per request */}
+        <div className={`text-center mb-5 md:mb-8 dv-reveal ${inView ? 'is-in' : ''}`}>
+          <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] text-black">
             {title[lang]}
           </h2>
-          <p className="text-sm md:text-base font-light leading-relaxed max-w-xl mx-auto px-2 text-black/55">
-            {subtitle[lang]}
-          </p>
         </div>
 
-        {/* 2-column grid on ALL devices (mobile + desktop) — like the reference design */}
+        {/* 2-column grid on ALL devices. Mobile keeps the tall 4/5 ratio,
+            desktop uses a much shorter ratio (≈ half) so the tiles don't
+            stretch so far down. */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
           {tiles.map((tile, idx) => {
             const titleText =
@@ -75,8 +63,8 @@ const CollectionTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                className={`dv-collection-tile group relative block overflow-hidden bg-gray-100 ${inView ? 'dv-brand-in' : ''}`}
-                style={{ animationDelay: `${100 + idx * 90}ms`, aspectRatio: '4 / 5' }}
+                className={`dv-collection-tile group relative block overflow-hidden bg-gray-100 aspect-[4/5] md:aspect-[16/9] ${inView ? 'dv-brand-in' : ''}`}
+                style={{ animationDelay: `${100 + idx * 90}ms` }}
                 data-testid={`dv-collection-tile-${tile.id || idx}`}
               >
                 {tile.image_url ? (

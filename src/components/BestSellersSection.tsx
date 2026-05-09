@@ -37,19 +37,12 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative py-12 md:py-20 bg-white"
+      className="relative pt-4 pb-6 md:pt-6 md:pb-10 bg-white"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-8 md:mb-10">
-          <h2
-            className="text-[20px] md:text-[26px] font-semibold tracking-[0.18em] uppercase text-black inline-block pb-2 border-b border-black"
-            data-testid="bestsellers-heading"
-          >
-            {t('bestSellers.title', { defaultValue: 'BEST SELLERS' })}
-          </h2>
-
+        {/* Header — title removed per request, only nav arrows */}
+        <div className="flex items-center justify-end mb-3 md:mb-4">
           <div className="flex items-center gap-4">
             <button
               type="button"
