@@ -963,25 +963,9 @@ const CartPage: React.FC = () => {
                 {loading ? t('checkout.redirecting') : 'Ödənişə keç'}
               </button>
 
-              {/* Apple/Google Pay button */}
-              <div className="mt-2.5">
-                {deviceType === 'apple' ? (
-                  <button
-                    type="button"
-                    onClick={() => handleEpointCheckout('widget')}
-                    disabled={loading}
-                    className="w-full h-10 bg-black text-white flex items-center justify-center hover:opacity-85 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-                    data-testid="checkout-applepay-btn"
-                    aria-label={t('checkout.applePay')}
-                  >
-                    <svg viewBox="0 0 384 512" className="h-4 w-auto" aria-hidden="true">
-                      <path
-                        fill="#fff"
-                        d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM286.6 95.5c14.7-17.4 27.3-44.7 22.6-71.5-23.7 1.8-47.4 16.7-63.7 35.4-13.7 15.9-26.4 43.4-21 70.3 25.5 1.4 47.7-13.4 62.1-34.2z"
-                      />
-                    </svg>
-                  </button>
-                ) : (
+              {/* Google Pay button (Apple Pay removed per request) */}
+              {deviceType !== 'apple' && (
+                <div className="mt-2.5">
                   <button
                     type="button"
                     onClick={() => handleEpointCheckout('widget')}
@@ -998,8 +982,8 @@ const CartPage: React.FC = () => {
                     </svg>
                     <span className="text-[12px] font-medium">Pay</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               <p className="text-[11px] text-black/45 text-center mt-3">
                 {t('checkout.securePayment')}
