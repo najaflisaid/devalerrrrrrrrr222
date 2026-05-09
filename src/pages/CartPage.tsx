@@ -49,8 +49,7 @@ const CartPage: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [guestName, setGuestName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [emailOptIn, setEmailOptIn] = useState(false);
+  const [emailOptIn] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [promoApplied, setPromoApplied] = useState<
     | { code: string; type: 'percent'; discount: number }
@@ -214,18 +213,15 @@ const CartPage: React.FC = () => {
         flagMissing('checkout-last-name', 'Soyadınızı daxil edin.');
         return;
       }
-      if (!guestEmail.trim() || !/.+@.+\..+/.test(guestEmail)) {
-        flagMissing('checkout-guest-email', 'Düzgün e-poçt daxil edin.');
-        return;
-      }
     }
 
     const cleanPhone = phoneDigits.replace(/\D/g, '');
-    if (cleanPhone.length < 9) {
-      flagMissing('checkout-phone-input', 'Telefon nömrəsi düzgün deyil. Məs: 50 123 45 67');
+    if (cleanPhone.length !== 9) {
+      flagMissing('checkout-phone-input', 'Telefon nömrəsini tam daxil edin (9 rəqəm). Məs: 50 123 45 67');
       return;
     }
     const fullPhone = `+994${cleanPhone}`;
+    const syntheticEmail = `phone994${cleanPhone}@devaleur.az`;
 
     if (deliveryMethods.length > 0 && !selectedDeliveryId) {
       flagMissing('delivery-method-list', 'Çatdırılma üsulunu seçin.');
@@ -246,17 +242,33 @@ const CartPage: React.FC = () => {
     setLoading(true);
     try {
       if (!userId) {
+        // Check if this phone is already registered (login required in that case)
+        try {
+          const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+          const dupSnap = await getDocs(
+            query(collection(fsDb, 'users'), where('phone', '==', fullPhone), limit(1))
+          );
+          if (!dupSnap.empty) {
+            setErrorMessage('Bu nömrə artıq qeydiyyatdadır. Zəhmət olmasa "Daxil ol" düyməsindən giriş edin.');
+            setShowError(true);
+            setTimeout(() => setShowError(false), 6000);
+            setLoading(false);
+            return;
+          }
+        } catch { /* if rules block read, just continue and let auth handle duplicates */ }
+
         const autoPassword = `dv-${cleanPhone}-${Date.now().toString(36)}`;
         try {
-          const cred = await createUserWithEmailAndPassword(auth, guestEmail.trim(), autoPassword);
+          const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, autoPassword);
           userId = cred.user.uid;
           userName = (guestName.trim() + (guestLastName ? ' ' + guestLastName.trim() : '')).trim();
-          userEmail = guestEmail.trim();
+          userEmail = syntheticEmail;
 
           await setDoc(fsDoc(fsDb, 'users', userId), {
             id: userId,
-            email: userEmail,
+            email: syntheticEmail,
             name: userName,
+            surname: guestLastName.trim(),
             phone: fullPhone,
             role: 'customer',
             discountPercentage: 0,
@@ -274,12 +286,13 @@ const CartPage: React.FC = () => {
           localStorage.setItem('userPhone', fullPhone);
           localStorage.setItem('userData', JSON.stringify({
             id: userId, email: userEmail, name: userName, role: 'customer',
+            phone: fullPhone, surname: guestLastName.trim(),
             discountPercentage: 0, discountUsageType: 'unlimited', discountUsed: false,
           }));
           sessionStorage.setItem('dv_auto_pw', autoPassword);
         } catch (regErr: any) {
           if (regErr?.code === 'auth/email-already-in-use') {
-            setErrorMessage('Bu e-poçt artıq qeydiyyatdadır. Zəhmət olmasa "Daxil ol" düyməsindən giriş edin.');
+            setErrorMessage('Bu nömrə artıq qeydiyyatdadır. Zəhmət olmasa "Daxil ol" düyməsindən giriş edin.');
           } else {
             setErrorMessage('Qeydiyyat xətası: ' + (regErr?.message || 'naməlum'));
           }
@@ -824,15 +837,6 @@ const CartPage: React.FC = () => {
                 </h2>
                 {!isLoggedIn ? (
                   <div className="space-y-3 mb-3">
-                    <RFInput
-                      type="email"
-                      label={t('checkout.email')}
-                      required
-                      value={guestEmail}
-                      onChange={(v) => { setGuestEmail(v); if (missingField === 'checkout-guest-email') setMissingField(null); }}
-                      testId="checkout-guest-email"
-                      error={missingField === 'checkout-guest-email'}
-                    />
                     <div className="grid grid-cols-2 gap-3">
                       <RFInput label={t('checkout.firstName')} required value={guestName} onChange={(v) => { setGuestName(v); if (missingField === 'checkout-first-name') setMissingField(null); }} testId="checkout-first-name" error={missingField === 'checkout-first-name'} />
                       <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={(v) => { setGuestLastName(v); if (missingField === 'checkout-last-name') setMissingField(null); }} testId="checkout-last-name" error={missingField === 'checkout-last-name'} />
