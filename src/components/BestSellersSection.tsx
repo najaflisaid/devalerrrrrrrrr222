@@ -162,9 +162,9 @@ const BestSellersSection: React.FC = () => {
                       {/* Wishlist heart — top right */}
                       <span
                         aria-hidden="true"
-                        className="absolute top-2 right-2 md:top-2.5 md:right-2.5 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
+                        className="absolute top-1.5 right-1.5 md:top-2.5 md:right-2.5 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
                       >
-                        <Heart className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
+                        <Heart className="w-3 h-3 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
                       </span>
 
                       {/* Sale label — top left */}
@@ -174,14 +174,14 @@ const BestSellersSection: React.FC = () => {
                         </span>
                       )}
 
-                      {/* Compact product image — fits content tightly */}
-                      <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      {/* Compact product image — square on mobile, 4/3 on desktop */}
+                      <div className="relative aspect-square md:aspect-[4/3] w-full overflow-hidden">
                         <img
                           src={product.images?.[0]}
                           alt={name}
                           loading="lazy"
                           decoding="async"
-                          className="absolute inset-0 w-full h-full object-contain p-2 md:p-3 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                          className="absolute inset-0 w-full h-full object-contain p-1 md:p-3 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                         />
                         {product.images?.[1] && (
                           <img
@@ -190,22 +190,22 @@ const BestSellersSection: React.FC = () => {
                             aria-hidden="true"
                             loading="lazy"
                             decoding="async"
-                            className="absolute inset-0 w-full h-full object-contain p-2 md:p-3 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
+                            className="absolute inset-0 w-full h-full object-contain p-1 md:p-3 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
                           />
                         )}
                       </div>
 
                       {/* Info — brand uppercase, product name, price (NO category) */}
-                      <div className="mt-1.5 md:mt-2 px-1">
+                      <div className="mt-1 md:mt-2 px-0.5 md:px-1">
                         {brand && (
-                          <p className="text-[10px] sm:text-[11px] md:text-[12px] tracking-[0.04em] uppercase text-black font-medium leading-tight truncate">
+                          <p className="text-[9px] sm:text-[10px] md:text-[12px] tracking-[0.03em] uppercase text-black font-medium leading-tight truncate">
                             {brand}
                           </p>
                         )}
-                        <h3 className="text-[10px] sm:text-[11px] md:text-[12px] font-light text-black/70 leading-snug line-clamp-1 mt-0.5">
+                        <h3 className="text-[9px] sm:text-[10px] md:text-[12px] font-light text-black/70 leading-snug line-clamp-1 mt-0.5">
                           {name}
                         </h3>
-                        <p className="mt-0.5 md:mt-1 text-[11px] sm:text-[12px] md:text-[13px] text-black font-medium tabular-nums">
+                        <p className="mt-0.5 md:mt-1 text-[10px] sm:text-[11px] md:text-[13px] text-black font-medium tabular-nums">
                           {onSale ? (
                             <>
                               <span className="text-black/40 line-through mr-1 font-light">
