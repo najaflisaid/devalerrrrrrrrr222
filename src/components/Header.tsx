@@ -885,6 +885,79 @@ const Header: React.FC = () => {
               </div>
 
               <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto">
+                {/* Mobile Top — luxe (Lang + Login, ən üstdə asanlıqla əlçatan) */}
+                <div className="border-b border-black/[0.06] p-5 space-y-3">
+                  {/* Language Switcher minimal pill */}
+                  <div>
+                    <div className="flex gap-1.5">
+                      {(['az', 'ru', 'en'] as const).map((lng) => (
+                        <button
+                          key={lng}
+                          onClick={() => i18n.changeLanguage(lng)}
+                          className={`flex-1 h-9 text-[11px] uppercase tracking-[0.18em] border transition-all ${
+                            i18n.language === lng
+                              ? 'bg-black text-white border-black'
+                              : 'bg-white text-black/60 border-black/15 hover:border-black/45 hover:text-black'
+                          }`}
+                          data-testid={`mobile-lang-option-${lng}`}
+                        >
+                          {lng}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Login/Logout — luxe */}
+                  {!isLoggedIn ? (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => {
+                          setShowLoginModal(true);
+                          closeMobileMenu();
+                        }}
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors"
+                        data-testid="mobile-customer-login"
+                      >
+                        <User className="h-4 w-4" strokeWidth={1.5} />
+                        <span>Giriş</span>
+                      </button>
+                      <Link
+                        to="/b2b-login"
+                        onClick={closeMobileMenu}
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white transition-colors"
+                        data-testid="mobile-b2b-login"
+                      >
+                        <span>B2B Giriş</span>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="px-4 py-3 border border-black/[0.08] bg-black/[0.02]">
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-black/55">{t('header.welcomeUser')}</p>
+                        <p className="text-[14px] text-black mt-0.5">{userName}</p>
+                      </div>
+                      <Link
+                        to="/change-password"
+                        onClick={closeMobileMenu}
+                        className={`w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors ${userRole === 'b2b' ? 'hidden' : ''}`}
+                        data-testid="mobile-change-password"
+                      >
+                        <span>Şifrəni dəyiş</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          closeMobileMenu();
+                        }}
+                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
+                      >
+                        <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                        <span>{t('header.logout')}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <nav className="flex-1 p-6 space-y-1.5">
                   {/* Mobile "Brendlər" akardeonu */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
@@ -1048,79 +1121,6 @@ const Header: React.FC = () => {
                     </div>
                   )}
                 </nav>
-
-                {/* Mobile Menu Footer — luxe */}
-                <div className="border-t border-black/[0.06] p-6 space-y-4">
-                  {/* Language Switcher minimal pill */}
-                  <div>
-                    <div className="flex gap-1.5">
-                      {(['az', 'ru', 'en'] as const).map((lng) => (
-                        <button
-                          key={lng}
-                          onClick={() => i18n.changeLanguage(lng)}
-                          className={`flex-1 h-9 text-[11px] uppercase tracking-[0.18em] border transition-all ${
-                            i18n.language === lng
-                              ? 'bg-black text-white border-black'
-                              : 'bg-white text-black/60 border-black/15 hover:border-black/45 hover:text-black'
-                          }`}
-                          data-testid={`mobile-lang-option-${lng}`}
-                        >
-                          {lng}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Login/Logout — luxe */}
-                  {!isLoggedIn ? (
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          setShowLoginModal(true);
-                          closeMobileMenu();
-                        }}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors"
-                        data-testid="mobile-customer-login"
-                      >
-                        <User className="h-4 w-4" strokeWidth={1.5} />
-                        <span>Giriş</span>
-                      </button>
-                      <Link
-                        to="/b2b-login"
-                        onClick={closeMobileMenu}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white transition-colors"
-                        data-testid="mobile-b2b-login"
-                      >
-                        <span>B2B Giriş</span>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="px-4 py-3 border border-black/[0.08] bg-black/[0.02]">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-black/55">{t('header.welcomeUser')}</p>
-                        <p className="text-[14px] text-black mt-0.5">{userName}</p>
-                      </div>
-                      <Link
-                        to="/change-password"
-                        onClick={closeMobileMenu}
-                        className={`w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors ${userRole === 'b2b' ? 'hidden' : ''}`}
-                        data-testid="mobile-change-password"
-                      >
-                        <span>Şifrəni dəyiş</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          closeMobileMenu();
-                        }}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" strokeWidth={1.5} />
-                        <span>{t('header.logout')}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </>
