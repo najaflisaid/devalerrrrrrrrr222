@@ -49,6 +49,8 @@ const CartPage: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [guestName, setGuestName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
+  const [guestPassword, setGuestPassword] = useState('');
+  const [guestPassword2, setGuestPassword2] = useState('');
   const [emailOptIn] = useState(false);
   const [promoInput, setPromoInput] = useState('');
   const [promoApplied, setPromoApplied] = useState<
@@ -213,6 +215,14 @@ const CartPage: React.FC = () => {
         flagMissing('checkout-last-name', 'Soyadınızı daxil edin.');
         return;
       }
+      if (guestPassword.length < 6) {
+        flagMissing('checkout-password', 'Şifrə ən azı 6 simvol olmalıdır.');
+        return;
+      }
+      if (guestPassword !== guestPassword2) {
+        flagMissing('checkout-password2', 'Şifrələr uyğun gəlmir. Yenidən yoxlayın.');
+        return;
+      }
     }
 
     const cleanPhone = phoneDigits.replace(/\D/g, '');
@@ -257,7 +267,7 @@ const CartPage: React.FC = () => {
           }
         } catch { /* if rules block read, just continue and let auth handle duplicates */ }
 
-        const autoPassword = `dv-${cleanPhone}-${Date.now().toString(36)}`;
+        const autoPassword = guestPassword;
         try {
           const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, autoPassword);
           userId = cred.user.uid;
@@ -856,6 +866,30 @@ const CartPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <RFInput label={t('checkout.firstName')} required value={guestName} onChange={(v) => { setGuestName(v); if (missingField === 'checkout-first-name') setMissingField(null); }} testId="checkout-first-name" error={missingField === 'checkout-first-name'} />
                       <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={(v) => { setGuestLastName(v); if (missingField === 'checkout-last-name') setMissingField(null); }} testId="checkout-last-name" error={missingField === 'checkout-last-name'} />
+                    </div>
+                    <div className="px-3 py-2.5 bg-amber-50 border border-amber-200 text-[12px] text-amber-900 leading-relaxed">
+                      <b>Sürətli qeydiyyat:</b> Sifariş zamanı hesabınız avtomatik yaradılır. Sonradan hesabınıza yenidən daxil olmaq üçün özünüz şifrə təyin edin.
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <RFInput
+                        label="Şifrə"
+                        type="password"
+                        required
+                        value={guestPassword}
+                        onChange={(v) => { setGuestPassword(v); if (missingField === 'checkout-password') setMissingField(null); }}
+                        testId="checkout-password"
+                        placeholder="ən azı 6 simvol"
+                        error={missingField === 'checkout-password'}
+                      />
+                      <RFInput
+                        label="Şifrəni təkrarla"
+                        type="password"
+                        required
+                        value={guestPassword2}
+                        onChange={(v) => { setGuestPassword2(v); if (missingField === 'checkout-password2') setMissingField(null); }}
+                        testId="checkout-password2"
+                        error={missingField === 'checkout-password2'}
+                      />
                     </div>
                   </div>
                 ) : (
