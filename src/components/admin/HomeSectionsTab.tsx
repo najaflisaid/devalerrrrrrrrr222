@@ -981,6 +981,37 @@ const HomeSectionsTab: React.FC = () => {
                         </div>
                       </div>
                       <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Açıqlama (AZ)</label>
+                        <textarea
+                          value={(nt as any).description_az || ''}
+                          onChange={(e) => updateTile({ description_az: e.target.value } as any)}
+                          rows={2}
+                          placeholder="Qısa açıqlama (kart altında görünür)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none resize-y"
+                          data-testid={`news-tile-desc-az-${idx}`}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Açıqlama RU</label>
+                          <textarea
+                            value={(nt as any).description_ru || ''}
+                            onChange={(e) => updateTile({ description_ru: e.target.value } as any)}
+                            rows={2}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none resize-y"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Açıqlama EN</label>
+                          <textarea
+                            value={(nt as any).description_en || ''}
+                            onChange={(e) => updateTile({ description_en: e.target.value } as any)}
+                            rows={2}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none resize-y"
+                          />
+                        </div>
+                      </div>
+                      <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Link</label>
                         <input
                           type="text"

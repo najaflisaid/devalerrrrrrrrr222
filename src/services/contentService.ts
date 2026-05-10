@@ -243,6 +243,9 @@ export interface HomepageSections {
       title_az: string;
       title_ru: string;
       title_en: string;
+      description_az?: string;
+      description_ru?: string;
+      description_en?: string;
       image_url: string;
       link_url: string;
     }>;
@@ -329,6 +332,9 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
         title_az: 'Yeni qış kolleksiyası',
         title_ru: 'Новая зимняя коллекция',
         title_en: 'New winter collection',
+        description_az: 'Mövsümün ən eqzakt parçaları — incə kişi və qadın saatları, dəri aksesuarlar.',
+        description_ru: 'Самые изысканные модели сезона — мужские и женские часы и кожаные аксессуары.',
+        description_en: 'The most refined pieces of the season — men\'s and women\'s watches plus leather accessories.',
         image_url: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=900&q=80',
         link_url: '/products',
       },
@@ -337,6 +343,9 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
         title_az: 'Pierre Lannier yenilikləri',
         title_ru: 'Новинки Pierre Lannier',
         title_en: 'Pierre Lannier highlights',
+        description_az: 'Fransız zərifliyi və İsveçrə dəqiqliyi: yeni kolleksiyanın ən yaxşı modelləri.',
+        description_ru: 'Французская элегантность и швейцарская точность — лучшие модели новой коллекции.',
+        description_en: 'French elegance meets Swiss precision in the brand\'s latest collection.',
         image_url: 'https://images.unsplash.com/photo-1622434641406-a158123450f9?auto=format&fit=crop&w=900&q=80',
         link_url: '/products',
       },
@@ -345,6 +354,9 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
         title_az: 'Hədiyyə kartları',
         title_ru: 'Подарочные карты',
         title_en: 'Gift cards',
+        description_az: 'Sevdiklərinizə təqdim ediləcək ən gözəl seçim — sərbəst məbləğdə hədiyyə kartı.',
+        description_ru: 'Идеальный подарок для близких — карта на свободную сумму.',
+        description_en: 'The perfect gift for your loved ones — a flexible-amount gift card.',
         image_url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=900&q=80',
         link_url: '/gift-card',
       },
@@ -353,6 +365,9 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
         title_az: 'B2B tərəfdaşlıq',
         title_ru: 'B2B-партнёрство',
         title_en: 'B2B partnership',
+        description_az: 'Şirkətiniz üçün xüsusi şərtlər və fərdi qiymət təklifləri ilə B2B kabinetinə qoşulun.',
+        description_ru: 'Подключайтесь к B2B-кабинету: специальные условия и индивидуальные цены.',
+        description_en: 'Join our B2B portal for special pricing and dedicated account terms.',
         image_url: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=900&q=80',
         link_url: '/b2b-request',
       },
