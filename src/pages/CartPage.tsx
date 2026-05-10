@@ -1041,21 +1041,20 @@ const CartPage: React.FC = () => {
                   <div className="flex items-stretch border border-black/20 focus-within:border-black transition-colors">
                     <input
                       type="text"
-                      inputMode="numeric"
                       value={promoInput}
                       onChange={(e) => {
-                        setPromoInput(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        setPromoInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20));
                         if (promoError) setPromoError('');
                       }}
                       placeholder={t('checkout.discountCode')}
-                      maxLength={6}
-                      className="flex-1 px-3 py-3 text-[13px] bg-transparent outline-none placeholder:text-black/40"
+                      maxLength={20}
+                      className="flex-1 px-3 py-3 text-[13px] uppercase tracking-wider bg-transparent outline-none placeholder:text-black/40 placeholder:normal-case placeholder:tracking-normal"
                       data-testid="promo-code-input"
                     />
                     <button
                       type="button"
                       onClick={handleApplyPromo}
-                      disabled={promoLoading || promoInput.length !== 6}
+                      disabled={promoLoading || promoInput.length < 3}
                       className="px-5 text-[12px] uppercase tracking-[0.18em] text-black/70 disabled:text-black/30 hover:text-black transition-colors"
                       data-testid="promo-apply-btn"
                     >
