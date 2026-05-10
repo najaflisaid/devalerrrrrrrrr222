@@ -323,7 +323,40 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
   newsTiles: {
     enabled: true,
     title: { az: 'Yeniliklər', ru: 'Новости', en: 'News' },
-    tiles: [],
+    tiles: [
+      {
+        id: 'news_default_1',
+        title_az: 'Yeni qış kolleksiyası',
+        title_ru: 'Новая зимняя коллекция',
+        title_en: 'New winter collection',
+        image_url: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=900&q=80',
+        link_url: '/products',
+      },
+      {
+        id: 'news_default_2',
+        title_az: 'Pierre Lannier yenilikləri',
+        title_ru: 'Новинки Pierre Lannier',
+        title_en: 'Pierre Lannier highlights',
+        image_url: 'https://images.unsplash.com/photo-1622434641406-a158123450f9?auto=format&fit=crop&w=900&q=80',
+        link_url: '/products',
+      },
+      {
+        id: 'news_default_3',
+        title_az: 'Hədiyyə kartları',
+        title_ru: 'Подарочные карты',
+        title_en: 'Gift cards',
+        image_url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=900&q=80',
+        link_url: '/gift-card',
+      },
+      {
+        id: 'news_default_4',
+        title_az: 'B2B tərəfdaşlıq',
+        title_ru: 'B2B-партнёрство',
+        title_en: 'B2B partnership',
+        image_url: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=900&q=80',
+        link_url: '/b2b-request',
+      },
+    ],
   },
 };
 

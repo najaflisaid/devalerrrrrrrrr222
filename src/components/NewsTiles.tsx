@@ -23,6 +23,8 @@ const NewsTiles: React.FC = () => {
   const [tiles, setTiles] = useState<Tile[]>([]);
 
   const trackRef = useRef<HTMLDivElement>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -39,64 +41,96 @@ const NewsTiles: React.FC = () => {
     })();
   }, []);
 
+  // Recompute page count + active index on scroll / resize
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const compute = () => {
+      const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
+      const pages = Math.max(1, Math.ceil(tiles.length / visible));
+      setPageCount(pages);
+      const childWidth = track.firstElementChild
+        ? (track.firstElementChild as HTMLElement).getBoundingClientRect().width
+        : 0;
+      const pageWidth = childWidth * visible;
+      if (pageWidth > 0) {
+        setPageIndex(Math.round(track.scrollLeft / pageWidth));
+      }
+    };
+
+    compute();
+    track.addEventListener('scroll', compute, { passive: true });
+    window.addEventListener('resize', compute);
+    return () => {
+      track.removeEventListener('scroll', compute);
+      window.removeEventListener('resize', compute);
+    };
+  }, [tiles.length]);
+
   const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
 
   if (!enabled || tiles.length === 0) return null;
 
-  // Scroll one tile (= 1/visibleCount of the track) at a time
-  const scrollByOne = (dir: 1 | -1) => {
+  // Scroll one full page (visibleCount cards) at a time
+  const goToPage = (page: number) => {
     const track = trackRef.current;
     if (!track) return;
-    const firstChild = track.firstElementChild as HTMLElement | null;
-    if (!firstChild) return;
-    const step = firstChild.getBoundingClientRect().width;
-    track.scrollBy({ left: dir * step, behavior: 'smooth' });
+    const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
+    const childWidth = track.firstElementChild
+      ? (track.firstElementChild as HTMLElement).getBoundingClientRect().width
+      : 0;
+    const target = Math.max(0, Math.min(pageCount - 1, page)) * childWidth * visible;
+    track.scrollTo({ left: target, behavior: 'smooth' });
   };
 
   return (
     <section
       ref={ref}
-      className="relative pt-4 pb-10 md:pt-6 md:pb-16 bg-white overflow-hidden"
+      className="relative pt-6 pb-10 md:pt-10 md:pb-16 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
-        {/* Heading + arrows on desktop */}
-        <div className={`flex items-end justify-between mb-5 md:mb-8 dv-reveal ${inView ? 'is-in' : ''}`}>
-          <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] text-black">
-            {title[lang]}
-          </h2>
-          {tiles.length > 4 && (
-            <div className="hidden md:flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => scrollByOne(-1)}
-                aria-label="Previous"
-                className="p-2 text-black/40 hover:text-black transition-colors"
-                data-testid="news-tiles-prev"
-              >
-                <ChevronLeft className="w-7 h-7" strokeWidth={1.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollByOne(1)}
-                aria-label="Next"
-                className="p-2 text-black hover:opacity-70 transition-opacity"
-                data-testid="news-tiles-next"
-              >
-                <ChevronRight className="w-7 h-7" strokeWidth={1.5} />
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Centered title */}
+      <div className={`text-center mb-6 md:mb-10 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[34px] font-light tracking-tight text-black">
+          {title[lang]}
+        </h2>
+      </div>
+
+      {/* Tile track + side arrows */}
+      <div className="relative">
+        {/* Left arrow — desktop only */}
+        {tiles.length > 4 && pageIndex > 0 && (
+          <button
+            type="button"
+            onClick={() => goToPage(pageIndex - 1)}
+            aria-label="Previous"
+            className="hidden md:flex absolute left-2 lg:left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 lg:w-11 lg:h-11 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-black/10 shadow-md text-black/70 hover:text-black hover:bg-white transition-all"
+            data-testid="news-tiles-prev"
+          >
+            <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+        )}
+        {tiles.length > 4 && pageIndex < pageCount - 1 && (
+          <button
+            type="button"
+            onClick={() => goToPage(pageIndex + 1)}
+            aria-label="Next"
+            className="hidden md:flex absolute right-2 lg:right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 lg:w-11 lg:h-11 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-black/10 shadow-md text-black/70 hover:text-black hover:bg-white transition-all"
+            data-testid="news-tiles-next"
+          >
+            <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+        )}
 
         {/*
           Horizontal snap-scroll. Mobile = 3 tiles visible (33.333%),
           desktop (md+) = 4 tiles visible (25%). Tiles are joined together
-          (no gap) and use scroll-snap so swiping settles on a card edge.
+          (no gap) — true edge-to-edge as in the reference design.
         */}
         <div
           ref={trackRef}
-          className="dv-news-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6"
+          className="dv-news-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
           style={{ scrollbarWidth: 'none' }}
           data-testid="news-tiles-track"
         >
@@ -111,7 +145,7 @@ const NewsTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                className={`relative shrink-0 snap-start basis-1/3 md:basis-1/4 group block aspect-[4/5] md:aspect-[3/4] overflow-hidden bg-gray-100 ${inView ? 'dv-brand-in' : ''}`}
+                className={`relative shrink-0 snap-start basis-1/3 md:basis-1/4 group block aspect-[3/5] md:aspect-[1/2] overflow-hidden bg-gray-100 ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 70}ms` }}
                 data-testid={`dv-news-tile-${tile.id || idx}`}
               >
@@ -120,24 +154,45 @@ const NewsTiles: React.FC = () => {
                     src={tile.image_url}
                     alt={titleText}
                     loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   />
                 )}
-                {/* Gradient overlay so text stays legible */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
-                {/* Hairline divider on the right edge to suggest "joined" tiles */}
-                <span className="absolute top-0 right-0 h-full w-px bg-white/20 pointer-events-none" />
-                {/* Title */}
-                <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 md:p-5">
-                  <p className="text-white font-semibold text-xs sm:text-sm md:text-base leading-tight drop-shadow-sm line-clamp-2">
+                {/* Gradient overlay for text legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                {/* Hairline divider (joined-tiles look) */}
+                <span className="absolute top-0 right-0 h-full w-px bg-white/15 pointer-events-none" />
+                {/* Bottom content: title + Ətraflı CTA */}
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-6 flex flex-col gap-3">
+                  <p className="text-white font-playfair text-base sm:text-lg md:text-2xl leading-tight drop-shadow-sm line-clamp-2">
                     {titleText}
                   </p>
+                  <span className="self-start inline-flex items-center justify-center px-4 md:px-5 py-1.5 md:py-2 bg-white/0 border border-white/80 text-white text-[11px] md:text-xs uppercase tracking-[0.18em] backdrop-blur-[2px] hover:bg-white hover:text-black transition-colors">
+                    Ətraflı
+                  </span>
                 </div>
               </Link>
             );
           })}
         </div>
       </div>
+
+      {/* Pagination dots */}
+      {pageCount > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-5 md:mt-7" data-testid="news-tiles-pagination">
+          {Array.from({ length: pageCount }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => goToPage(i)}
+              aria-label={`Page ${i + 1}`}
+              className={`h-[3px] rounded-full transition-all duration-300 ${
+                i === pageIndex ? 'w-9 bg-black' : 'w-5 bg-black/20 hover:bg-black/40'
+              }`}
+              data-testid={`news-tiles-dot-${i}`}
+            />
+          ))}
+        </div>
+      )}
 
       <style>{`
         .dv-news-track::-webkit-scrollbar { display: none; }

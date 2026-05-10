@@ -195,7 +195,7 @@ const Footer: React.FC = () => {
 
           {/* Brendlər */}
           <FooterSection id="brands" title={t('header.brands')}>
-            <ul className="space-y-2.5 md:space-y-2.5">
+            <ul className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-3 md:gap-y-2.5">
               {brands.length === 0 && (
                 <li className="text-xs text-black/40">—</li>
               )}
