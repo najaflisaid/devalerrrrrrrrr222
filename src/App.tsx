@@ -56,8 +56,8 @@ const HomePage: React.FC = () => {
   return (
     <>
       <Hero />
-      <BestSellersSection />
       <CollectionTiles />
+      <BestSellersSection />
       <NewsTiles />
       <BrandShowcase />
       <HomeProductBanners />

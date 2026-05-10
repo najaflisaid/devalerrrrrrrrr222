@@ -1,21 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,200;9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Jost', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .font-playfair {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Jost', sans-serif;
 }
 
 * {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Jost', sans-serif;
 }
 
 /* Prevent iOS auto-zoom when focusing inputs / textareas / selects on mobile.

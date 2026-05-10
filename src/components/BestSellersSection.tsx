@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types';
@@ -10,7 +10,6 @@ const BestSellersSection: React.FC = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const trackRef = useRef<HTMLDivElement | null>(null);
 
   const getProductName = (product: Product): string => {
     if (typeof product.name === 'string') return product.name as unknown as string;
@@ -19,7 +18,8 @@ const BestSellersSection: React.FC = () => {
   };
 
   useEffect(() => {
-    productService.getBestSellers(24)
+    // Fetch top 12 best sellers — 4 columns × 3 rows grid
+    productService.getBestSellers(12)
       .then((data) => setProducts(data))
       .catch((e) => console.error('Error loading best sellers:', e))
       .finally(() => setLoading(false));
@@ -27,80 +27,60 @@ const BestSellersSection: React.FC = () => {
 
   if (loading || products.length === 0) return null;
 
-  const scrollByCard = (dir: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const card = el.querySelector<HTMLElement>('[data-rf-card]');
-    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.6;
-    el.scrollBy({ left: dir * step, behavior: 'smooth' });
-  };
-
   return (
     <section
-      className="relative py-6 md:py-8 bg-white"
+      className="relative py-8 md:py-12 bg-white"
       data-testid="dv-bestsellers"
     >
-      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12">
-        {/* Header — title removed per request, only nav arrows */}
-        <div className="flex items-center justify-end mb-3 md:mb-4">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => scrollByCard(-1)}
-              aria-label="Previous"
-              className="text-black/30 hover:text-black transition-colors"
-              data-testid="bestsellers-prev"
-            >
-              <ChevronLeft className="w-7 h-7 md:w-9 md:h-9" strokeWidth={1.5} />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollByCard(1)}
-              aria-label="Next"
-              className="text-black hover:opacity-70 transition-opacity"
-              data-testid="bestsellers-next"
-            >
-              <ChevronRight className="w-7 h-7 md:w-9 md:h-9" strokeWidth={1.5} />
-            </button>
-          </div>
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
+        {/* Section title — left-aligned, italdizain-style */}
+        <div className="mb-5 md:mb-7">
+          <h2 className="text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black">
+            {t('bestSellers.title') || 'Çox satılanlar'}
+          </h2>
         </div>
 
-        {/* Track */}
-        <div
-          ref={trackRef}
-          className="rf-track flex gap-2.5 sm:gap-3.5 md:gap-5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
-          style={{ scrollbarWidth: 'none' }}
-        >
+        {/* 2 cols mobile, 3 cols sm, 4 cols md+ — exactly like italdizain.az */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-black/8">
           {products.map((product) => {
             const onSale = !!product.salePrice && product.salePrice < product.price;
             const price = onSale ? product.salePrice! : product.price;
             const name = getProductName(product);
+            const brand = (product as any).brand || '';
+            const material = (product as any).material || (product as any).category || '';
 
             return (
               <button
                 key={product.id}
                 type="button"
-                data-rf-card
                 data-testid={`bestseller-card-${product.id}`}
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="group flex-none snap-start text-left w-[29vw] sm:w-[30vw] md:w-[24vw] lg:w-[18vw] xl:w-[16vw] max-w-[260px]"
+                className="group relative flex flex-col bg-white text-left p-3 sm:p-4 md:p-5 transition-colors duration-300 hover:bg-gray-50/40"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-white border border-black/10 transition-colors duration-300 group-hover:border-white">
-                  {/* Sale label only */}
-                  {onSale && (
-                    <span className="absolute top-2.5 left-2.5 z-[2] text-[10px] md:text-[11px] tracking-[0.22em] uppercase font-medium text-[#D14545]">
-                      {t('bestSellers.sale')}
-                    </span>
-                  )}
+                {/* Wishlist heart — top right */}
+                <span
+                  aria-hidden="true"
+                  className="absolute top-3 right-3 md:top-4 md:right-4 text-black/40 group-hover:text-black/70 transition-colors z-[2]"
+                >
+                  <Heart className="w-5 h-5" strokeWidth={1.4} />
+                </span>
 
+                {/* Sale label — top left */}
+                {onSale && (
+                  <span className="absolute top-3 left-3 md:top-4 md:left-4 z-[2] text-[10px] md:text-[11px] tracking-[0.18em] uppercase font-medium text-[#D14545]">
+                    {t('bestSellers.sale')}
+                  </span>
+                )}
+
+                {/* Product image — large, centered, contained, square-ish */}
+                <div className="relative aspect-[1/1.1] w-full overflow-hidden">
                   <img
                     src={product.images?.[0]}
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 md:p-7 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                    className="absolute inset-0 w-full h-full object-contain p-2 sm:p-4 md:p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                   />
-
                   {product.images?.[1] && (
                     <img
                       src={product.images[1]}
@@ -108,24 +88,33 @@ const BestSellersSection: React.FC = () => {
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 md:p-7 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
+                      className="absolute inset-0 w-full h-full object-contain p-2 sm:p-4 md:p-6 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
                     />
                   )}
                 </div>
 
-                <div className="pt-3 md:pt-4">
-                  <h3 className="text-[12px] sm:text-[13px] md:text-[15px] text-black font-normal tracking-tight truncate">
+                {/* Info block — brand uppercase, product name, material, price */}
+                <div className="mt-3 md:mt-4 space-y-1">
+                  {brand && (
+                    <p className="text-[11px] sm:text-[12px] md:text-[13px] tracking-[0.05em] uppercase text-black font-medium leading-tight truncate">
+                      {brand}
+                    </p>
+                  )}
+                  <h3 className="text-[13px] sm:text-[14px] md:text-[15px] font-light text-black/85 leading-snug line-clamp-1">
                     {name}
                   </h3>
-                  <p className="mt-0.5 md:mt-1 text-[12px] sm:text-[13px] md:text-[15px] text-black tabular-nums">
+                  {material && (
+                    <p className="text-[11px] sm:text-[12px] md:text-[13px] text-black/55 font-light leading-tight line-clamp-1">
+                      {material}
+                    </p>
+                  )}
+                  <p className="pt-1.5 md:pt-2 text-[14px] sm:text-[15px] md:text-[16px] text-black font-medium tabular-nums">
                     {onSale ? (
                       <>
-                        <span className="text-black/40 line-through mr-1.5">
+                        <span className="text-black/40 line-through mr-1.5 font-light">
                           {product.price.toFixed(0)} AZN
                         </span>
-                        <span className="text-[#D14545] font-medium">
-                          {price.toFixed(2)} AZN
-                        </span>
+                        <span className="text-[#D14545]">{price.toFixed(0)} AZN</span>
                       </>
                     ) : (
                       <span>{price.toFixed(0)} AZN</span>
@@ -137,10 +126,6 @@ const BestSellersSection: React.FC = () => {
           })}
         </div>
       </div>
-
-      <style>{`
-        .rf-track::-webkit-scrollbar { display: none; }
-      `}</style>
     </section>
   );
 };
