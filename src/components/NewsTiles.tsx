@@ -107,26 +107,26 @@ const NewsTiles: React.FC = () => {
           {title[lang]}
         </h2>
         {showArrows && (
-          <div className="absolute top-0 right-1.5 flex items-center gap-2">
+          <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
             <button
               type="button"
               onClick={() => goToPage(pageIndex - 1)}
               aria-label="Previous"
               disabled={!canPrev}
-              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
               data-testid="news-tiles-prev"
             >
-              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+              <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
             </button>
             <button
               type="button"
               onClick={() => goToPage(pageIndex + 1)}
               aria-label="Next"
               disabled={!canNext}
-              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
               data-testid="news-tiles-next"
             >
-              <ChevronRight className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+              <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
             </button>
           </div>
         )}
