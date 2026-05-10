@@ -53,12 +53,14 @@ const NewsTiles: React.FC = () => {
       const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
       const pages = Math.max(1, Math.ceil(tiles.length / visible));
       setPageCount(pages);
-      const childWidth = track.firstElementChild
-        ? (track.firstElementChild as HTMLElement).getBoundingClientRect().width
-        : 0;
-      const pageWidth = childWidth * visible;
-      if (pageWidth > 0) {
-        setPageIndex(Math.round(track.scrollLeft / pageWidth));
+      const child = track.firstElementChild as HTMLElement | null;
+      if (!child) return;
+      const childWidth = child.getBoundingClientRect().width;
+      const gap = parseFloat(getComputedStyle(track).gap || '0') || 0;
+      const stride = childWidth + gap;
+      const pageStride = stride * visible;
+      if (pageStride > 0) {
+        setPageIndex(Math.round(track.scrollLeft / pageStride));
       }
     };
 
@@ -80,12 +82,18 @@ const NewsTiles: React.FC = () => {
     const track = trackRef.current;
     if (!track) return;
     const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
-    const childWidth = track.firstElementChild
-      ? (track.firstElementChild as HTMLElement).getBoundingClientRect().width
-      : 0;
-    const target = Math.max(0, Math.min(pageCount - 1, page)) * childWidth * visible;
+    const child = track.firstElementChild as HTMLElement | null;
+    if (!child) return;
+    const childWidth = child.getBoundingClientRect().width;
+    const gap = parseFloat(getComputedStyle(track).gap || '0') || 0;
+    const stride = childWidth + gap;
+    const target = Math.max(0, Math.min(pageCount - 1, page)) * stride * visible;
     track.scrollTo({ left: target, behavior: 'smooth' });
   };
+
+  const showArrows = pageCount > 1;
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex < pageCount - 1;
 
   return (
     <section
@@ -101,39 +109,46 @@ const NewsTiles: React.FC = () => {
       </div>
 
       {/* Tile track + side arrows */}
-      <div className="relative">
-        {/* Left arrow — square, minimal (italdizain style) */}
-        {tiles.length > 4 && pageIndex > 0 && (
-          <button
-            type="button"
-            onClick={() => goToPage(pageIndex - 1)}
-            aria-label="Previous"
-            className="hidden md:flex absolute left-3 lg:left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/65 hover:text-black hover:border-black/40 transition-all"
-            data-testid="news-tiles-prev"
-          >
-            <ChevronLeft className="w-5 h-5" strokeWidth={1.4} />
-          </button>
-        )}
-        {tiles.length > 4 && pageIndex < pageCount - 1 && (
-          <button
-            type="button"
-            onClick={() => goToPage(pageIndex + 1)}
-            aria-label="Next"
-            className="hidden md:flex absolute right-3 lg:right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/65 hover:text-black hover:border-black/40 transition-all"
-            data-testid="news-tiles-next"
-          >
-            <ChevronRight className="w-5 h-5" strokeWidth={1.4} />
-          </button>
+      <div className="relative px-3 sm:px-5 md:px-10 lg:px-14">
+        {/* Left / Right arrows — square minimal, both always rendered while scrollable.
+            Visibility toggles by enabled state so users always see the navigation. */}
+        {showArrows && (
+          <>
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex - 1)}
+              disabled={!canPrev}
+              aria-label="Previous"
+              className={`hidden md:flex absolute left-1 lg:left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 transition-all ${
+                canPrev ? 'text-black/70 hover:text-black hover:border-black/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+              }`}
+              data-testid="news-tiles-prev"
+            >
+              <ChevronLeft className="w-5 h-5" strokeWidth={1.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex + 1)}
+              disabled={!canNext}
+              aria-label="Next"
+              className={`hidden md:flex absolute right-1 lg:right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 transition-all ${
+                canNext ? 'text-black/70 hover:text-black hover:border-black/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
+              }`}
+              data-testid="news-tiles-next"
+            >
+              <ChevronRight className="w-5 h-5" strokeWidth={1.4} />
+            </button>
+          </>
         )}
 
         {/*
           Horizontal snap-scroll. Mobile = 3 tiles visible (33.333%),
-          desktop (md+) = 4 tiles visible (25%). Tiles are joined together
-          (no gap) — true edge-to-edge as in the reference design.
+          desktop (md+) = 4 tiles visible (25%). Cards have small gaps
+          between them (italdizain-style breathing room).
         */}
         <div
           ref={trackRef}
-          className="dv-news-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+          className="dv-news-track flex gap-2 md:gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth"
           style={{ scrollbarWidth: 'none' }}
           data-testid="news-tiles-track"
         >
@@ -154,7 +169,8 @@ const NewsTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                className={`relative shrink-0 snap-start basis-1/3 md:basis-1/4 group block aspect-[3/5] md:aspect-[1/2] overflow-hidden bg-gray-100 ${inView ? 'dv-brand-in' : ''}`}
+                /* basis subtracts the gap so 4 cards + 3 gaps fit perfectly */
+                className={`relative shrink-0 snap-start group block aspect-[3/5] md:aspect-[2/3] overflow-hidden bg-gray-100 [flex-basis:calc((100%-1rem)/3)] md:[flex-basis:calc((100%-2.25rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 70}ms` }}
                 data-testid={`dv-news-tile-${tile.id || idx}`}
               >
@@ -166,22 +182,22 @@ const NewsTiles: React.FC = () => {
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   />
                 )}
-                {/* Stronger gradient at the bottom for content legibility */}
+                {/* Gradient for legibility */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-                {/* Hairline divider (joined-tiles look) */}
-                <span className="absolute top-0 right-0 h-full w-px bg-white/15 pointer-events-none" />
                 {/* Bottom content: title + description + Ətraflı CTA */}
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-6 flex flex-col gap-2.5 md:gap-3">
-                  <p className="text-white font-semibold text-base sm:text-lg md:text-2xl leading-tight drop-shadow-sm line-clamp-2">
+                  <p className="text-white font-semibold text-base sm:text-lg md:text-xl leading-tight drop-shadow-sm line-clamp-2">
                     {titleText}
                   </p>
                   {descText && (
-                    <p className="text-white/85 text-[11px] sm:text-xs md:text-[13px] leading-snug font-light line-clamp-3 hidden sm:block">
+                    <p className="text-white/85 text-[11px] sm:text-xs md:text-[12.5px] leading-snug font-light line-clamp-2 hidden sm:block">
                       {descText}
                     </p>
                   )}
-                  <span className="self-start inline-flex items-center justify-center px-5 md:px-6 py-1.5 md:py-2 bg-white text-black text-[11px] md:text-xs font-medium tracking-wide hover:bg-black hover:text-white transition-colors">
+                  {/* Elegant Ətraflı button — pill-rounded, white background, subtle shadow */}
+                  <span className="self-start inline-flex items-center justify-center gap-1.5 px-5 md:px-6 py-2 md:py-2.5 bg-white/95 backdrop-blur-sm text-black text-[11px] md:text-xs font-medium tracking-wide rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.15)] hover:bg-black hover:text-white transition-all duration-300">
                     Ətraflı
+                    <ChevronRight className="w-3 h-3" strokeWidth={2} />
                   </span>
                 </div>
               </Link>
