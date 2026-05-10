@@ -1,21 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Oswald', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .font-playfair {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Oswald', sans-serif;
 }
 
 * {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Oswald', sans-serif;
 }
 
 /* Prevent iOS auto-zoom when focusing inputs / textareas / selects on mobile.
