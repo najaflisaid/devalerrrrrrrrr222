@@ -1,35 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@200;300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* === FONT SYSTEM ===
-   Body / UI  → Neue Haas Grotesk (system) → Inter (Google fallback)
-   Headings   → Canela (system) → Fraunces (Google fallback, similar serif)
-   Note: Canela & Neue Haas Grotesk are commercial fonts. They will render
-   on systems where they are installed; otherwise the Google Fonts fallback
-   is used to keep the same visual feel. */
+   Single elegant serif everywhere: Canela (commercial) → Fraunces (Google fallback)
+   Canela renders on systems where it is installed; otherwise Fraunces is used. */
 
 body {
-  font-family: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk', 'Helvetica Neue', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .font-playfair {
   font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
-  font-weight: 300;
-  letter-spacing: -0.005em;
 }
 
 * {
-  font-family: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk', 'Helvetica Neue', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* Re-apply Canela to all explicit display headings */
-h1.font-playfair, h2.font-playfair, h3.font-playfair, h4.font-playfair,
-.font-playfair * {
   font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
 }
 
