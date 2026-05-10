@@ -101,41 +101,41 @@ const NewsTiles: React.FC = () => {
       className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
-      {/* Centered title */}
-      <div className={`text-center mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
-        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black">
+      {/* Heading row: title centered, arrows top-right */}
+      <div className={`relative px-1.5 mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
           {title[lang]}
         </h2>
+        {showArrows && (
+          <div className="absolute top-0 right-1.5 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex - 1)}
+              aria-label="Previous"
+              disabled={!canPrev}
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              data-testid="news-tiles-prev"
+            >
+              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex + 1)}
+              aria-label="Next"
+              disabled={!canNext}
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              data-testid="news-tiles-next"
+            >
+              <ChevronRight className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Tile track + side arrows
+      {/* Tile track
           Side padding (px-1.5) === inter-card gap (gap-1.5) so the spacing
           on the screen edges matches the gap between cards. */}
       <div className="relative px-1.5 md:px-1.5">
-        {/* Both arrows positioned on the LEFT side (side-by-side) per request.
-            Prev sits closer to the edge, Next sits right next to it. */}
-        {showArrows && canPrev && (
-          <button
-            type="button"
-            onClick={() => goToPage(pageIndex - 1)}
-            aria-label="Previous"
-            className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
-            data-testid="news-tiles-prev"
-          >
-            <ChevronLeft className="w-5 h-5" strokeWidth={1.4} />
-          </button>
-        )}
-        {showArrows && canNext && (
-          <button
-            type="button"
-            onClick={() => goToPage(pageIndex + 1)}
-            aria-label="Next"
-            className="hidden md:flex absolute left-14 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
-            data-testid="news-tiles-next"
-          >
-            <ChevronRight className="w-5 h-5" strokeWidth={1.4} />
-          </button>
-        )}
 
         {/*
           Horizontal snap-scroll. Mobile = 3 visible (33.3%), desktop = 4 visible (25%).
@@ -167,7 +167,7 @@ const NewsTiles: React.FC = () => {
                 /* basis = (100% - sum_of_gaps) / visibleCount.
                    Mobile (3 visible, 2 gaps): (100% - 0.75rem) / 3
                    Desktop (4 visible, 3 gaps): (100% - 1.125rem) / 4 */
-                className={`relative shrink-0 snap-start group block aspect-[3/5] md:aspect-[1/1.7] overflow-hidden bg-gray-100 [flex-basis:calc((100%-0.75rem)/3)] md:[flex-basis:calc((100%-1.125rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
+                className={`relative shrink-0 snap-start group block aspect-[3/4.6] md:aspect-[1/1.6] overflow-hidden bg-gray-100 [flex-basis:calc((100%-0.75rem)/3)] md:[flex-basis:calc((100%-1.125rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 70}ms` }}
                 data-testid={`dv-news-tile-${tile.id || idx}`}
               >

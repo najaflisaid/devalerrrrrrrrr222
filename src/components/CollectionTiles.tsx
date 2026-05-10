@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
 import { getHomepageSections, DEFAULT_HOMEPAGE_SECTIONS } from '../services/contentService';
 
@@ -20,6 +21,10 @@ const CollectionTiles: React.FC = () => {
   const [enabled, setEnabled] = useState<boolean>(true);
   const [title, setTitle] = useState(DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!.title!);
 
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+
   useEffect(() => {
     (async () => {
       try {
@@ -35,8 +40,55 @@ const CollectionTiles: React.FC = () => {
     })();
   }, []);
 
+  // Recompute page count + active index on scroll / resize
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const compute = () => {
+      // 2 visible per page on every breakpoint (matches the previous grid look)
+      const visible = 2;
+      const pages = Math.max(1, Math.ceil(tiles.length / visible));
+      setPageCount(pages);
+      const child = track.firstElementChild as HTMLElement | null;
+      if (!child) return;
+      const childWidth = child.getBoundingClientRect().width;
+      const gap = parseFloat(getComputedStyle(track).gap || '0') || 0;
+      const stride = childWidth + gap;
+      const pageStride = stride * visible;
+      if (pageStride > 0) {
+        setPageIndex(Math.round(track.scrollLeft / pageStride));
+      }
+    };
+
+    compute();
+    track.addEventListener('scroll', compute, { passive: true });
+    window.addEventListener('resize', compute);
+    return () => {
+      track.removeEventListener('scroll', compute);
+      window.removeEventListener('resize', compute);
+    };
+  }, [tiles.length]);
+
+  const goToPage = (page: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const visible = 2;
+    const child = track.firstElementChild as HTMLElement | null;
+    if (!child) return;
+    const childWidth = child.getBoundingClientRect().width;
+    const gap = parseFloat(getComputedStyle(track).gap || '0') || 0;
+    const stride = childWidth + gap;
+    const target = Math.max(0, Math.min(pageCount - 1, page)) * stride * visible;
+    track.scrollTo({ left: target, behavior: 'smooth' });
+  };
+
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
   if (!enabled || tiles.length === 0) return null;
+
+  const showArrows = pageCount > 1;
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex < pageCount - 1;
 
   return (
     <section
@@ -44,18 +96,47 @@ const CollectionTiles: React.FC = () => {
       className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-collection-tiles"
     >
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
-        {/* Heading — only the main title, eyebrow + subtitle removed per request */}
-        <div className={`text-center mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
-          <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] text-black">
-            {title[lang]}
-          </h2>
-        </div>
+      {/* Heading row: title centered, arrows top-right */}
+      <div className={`relative px-1.5 mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] text-black text-center">
+          {title[lang]}
+        </h2>
+        {showArrows && (
+          <div className="absolute top-0 right-1.5 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex - 1)}
+              aria-label="Previous"
+              disabled={!canPrev}
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              data-testid="collection-tiles-prev"
+            >
+              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(pageIndex + 1)}
+              aria-label="Next"
+              disabled={!canNext}
+              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              data-testid="collection-tiles-next"
+            >
+              <ChevronRight className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.4} />
+            </button>
+          </div>
+        )}
+      </div>
 
-        {/* 2-column grid on ALL devices. Mobile keeps the tall 4/5 ratio,
-            desktop uses a much shorter ratio (≈ half) so the tiles don't
-            stretch so far down. */}
-        <div className="grid grid-cols-2 gap-1.5">
+      {/* Horizontal scroll slider — 2 tiles visible per page on every breakpoint.
+          New tiles slide in from the right instead of wrapping to a new row.
+          Side padding (px-1.5) === inter-card gap (gap-1.5) for visual symmetry. */}
+      <div className="px-1.5">
+        <div
+          ref={trackRef}
+          className="dv-collection-track flex gap-1.5 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+          style={{ scrollbarWidth: 'none' }}
+          data-testid="collection-tiles-track"
+        >
           {tiles.map((tile, idx) => {
             const titleText =
               (tile as any)[`title_${lang}`] || tile.title_az || tile.title_en || tile.title_ru || '';
@@ -63,7 +144,8 @@ const CollectionTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                className={`dv-collection-tile group relative block overflow-hidden bg-gray-100 aspect-[4/5] md:aspect-[16/9] ${inView ? 'dv-brand-in' : ''}`}
+                /* basis = (100% - 1 gap) / 2 = (100% - 0.375rem) / 2 */
+                className={`dv-collection-tile shrink-0 snap-start group relative block overflow-hidden bg-gray-100 aspect-[4/4.6] md:aspect-[16/8.3] [flex-basis:calc((100%-0.375rem)/2)] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 90}ms` }}
                 data-testid={`dv-collection-tile-${tile.id || idx}`}
               >
@@ -95,6 +177,10 @@ const CollectionTiles: React.FC = () => {
           })}
         </div>
       </div>
+
+      <style>{`
+        .dv-collection-track::-webkit-scrollbar { display: none; }
+      `}</style>
     </section>
   );
 };
