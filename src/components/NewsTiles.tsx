@@ -98,57 +98,52 @@ const NewsTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative pt-6 pb-10 md:pt-10 md:pb-16 bg-white overflow-hidden"
+      className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
       {/* Centered title */}
-      <div className={`text-center mb-6 md:mb-9 dv-reveal ${inView ? 'is-in' : ''}`}>
+      <div className={`text-center mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
         <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black">
           {title[lang]}
         </h2>
       </div>
 
-      {/* Tile track + side arrows */}
-      <div className="relative px-3 sm:px-5 md:px-10 lg:px-14">
-        {/* Left / Right arrows — square minimal, both always rendered while scrollable.
-            Visibility toggles by enabled state so users always see the navigation. */}
-        {showArrows && (
-          <>
-            <button
-              type="button"
-              onClick={() => goToPage(pageIndex - 1)}
-              disabled={!canPrev}
-              aria-label="Previous"
-              className={`hidden md:flex absolute left-1 lg:left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 transition-all ${
-                canPrev ? 'text-black/70 hover:text-black hover:border-black/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
-              }`}
-              data-testid="news-tiles-prev"
-            >
-              <ChevronLeft className="w-5 h-5" strokeWidth={1.4} />
-            </button>
-            <button
-              type="button"
-              onClick={() => goToPage(pageIndex + 1)}
-              disabled={!canNext}
-              aria-label="Next"
-              className={`hidden md:flex absolute right-1 lg:right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 transition-all ${
-                canNext ? 'text-black/70 hover:text-black hover:border-black/40 cursor-pointer' : 'opacity-30 cursor-not-allowed'
-              }`}
-              data-testid="news-tiles-next"
-            >
-              <ChevronRight className="w-5 h-5" strokeWidth={1.4} />
-            </button>
-          </>
+      {/* Tile track + side arrows
+          Side padding (px-1.5) === inter-card gap (gap-1.5) so the spacing
+          on the screen edges matches the gap between cards. */}
+      <div className="relative px-1.5 md:px-1.5">
+        {/* Left arrow — only renders when there's previous page; sits on top
+            of the card with a small portion overlapping the side padding. */}
+        {showArrows && canPrev && (
+          <button
+            type="button"
+            onClick={() => goToPage(pageIndex - 1)}
+            aria-label="Previous"
+            className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
+            data-testid="news-tiles-prev"
+          >
+            <ChevronLeft className="w-5 h-5" strokeWidth={1.4} />
+          </button>
+        )}
+        {showArrows && canNext && (
+          <button
+            type="button"
+            onClick={() => goToPage(pageIndex + 1)}
+            aria-label="Next"
+            className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
+            data-testid="news-tiles-next"
+          >
+            <ChevronRight className="w-5 h-5" strokeWidth={1.4} />
+          </button>
         )}
 
         {/*
-          Horizontal snap-scroll. Mobile = 3 tiles visible (33.333%),
-          desktop (md+) = 4 tiles visible (25%). Cards have small gaps
-          between them (italdizain-style breathing room).
+          Horizontal snap-scroll. Mobile = 3 visible (33.3%), desktop = 4 visible (25%).
+          gap-1.5 = 0.375rem, so basis = (100% - N gaps) / visibleCount.
         */}
         <div
           ref={trackRef}
-          className="dv-news-track flex gap-2 md:gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+          className="dv-news-track flex gap-1.5 overflow-x-auto snap-x snap-mandatory scroll-smooth"
           style={{ scrollbarWidth: 'none' }}
           data-testid="news-tiles-track"
         >
@@ -169,8 +164,10 @@ const NewsTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                /* basis subtracts the gap so 4 cards + 3 gaps fit perfectly */
-                className={`relative shrink-0 snap-start group block aspect-[3/5] md:aspect-[2/3] overflow-hidden bg-gray-100 [flex-basis:calc((100%-1rem)/3)] md:[flex-basis:calc((100%-2.25rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
+                /* basis = (100% - sum_of_gaps) / visibleCount.
+                   Mobile (3 visible, 2 gaps): (100% - 0.75rem) / 3
+                   Desktop (4 visible, 3 gaps): (100% - 1.125rem) / 4 */
+                className={`relative shrink-0 snap-start group block aspect-[3/5] md:aspect-[1/1.7] overflow-hidden bg-gray-100 [flex-basis:calc((100%-0.75rem)/3)] md:[flex-basis:calc((100%-1.125rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 70}ms` }}
                 data-testid={`dv-news-tile-${tile.id || idx}`}
               >
@@ -185,7 +182,7 @@ const NewsTiles: React.FC = () => {
                 {/* Gradient for legibility */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 {/* Bottom content: title + description + Ətraflı CTA */}
-                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-6 flex flex-col gap-2.5 md:gap-3">
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-5 flex flex-col gap-2 md:gap-2.5">
                   <p className="text-white font-semibold text-base sm:text-lg md:text-xl leading-tight drop-shadow-sm line-clamp-2">
                     {titleText}
                   </p>
@@ -194,10 +191,9 @@ const NewsTiles: React.FC = () => {
                       {descText}
                     </p>
                   )}
-                  {/* Elegant Ətraflı button — pill-rounded, white background, subtle shadow */}
-                  <span className="self-start inline-flex items-center justify-center gap-1.5 px-5 md:px-6 py-2 md:py-2.5 bg-white/95 backdrop-blur-sm text-black text-[11px] md:text-xs font-medium tracking-wide rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.15)] hover:bg-black hover:text-white transition-all duration-300">
+                  {/* 4-corner (square) Ətraflı button — compact yet legible */}
+                  <span className="self-start inline-flex items-center justify-center px-3.5 md:px-4 py-1 md:py-1.5 bg-white text-black text-[10px] md:text-[11px] font-medium tracking-wide hover:bg-black hover:text-white transition-colors">
                     Ətraflı
-                    <ChevronRight className="w-3 h-3" strokeWidth={2} />
                   </span>
                 </div>
               </Link>
@@ -206,9 +202,9 @@ const NewsTiles: React.FC = () => {
         </div>
       </div>
 
-      {/* Pagination dots — thin underlines like italdizain */}
+      {/* Pagination dots — thin underlines */}
       {pageCount > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-5 md:mt-7" data-testid="news-tiles-pagination">
+        <div className="flex items-center justify-center gap-2 mt-4 md:mt-5" data-testid="news-tiles-pagination">
           {Array.from({ length: pageCount }).map((_, i) => (
             <button
               key={i}

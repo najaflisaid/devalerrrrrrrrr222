@@ -37,7 +37,7 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative pt-4 pb-6 md:pt-6 md:pb-10 bg-white"
+      className="relative py-6 md:py-8 bg-white"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12">

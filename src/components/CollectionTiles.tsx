@@ -41,12 +41,12 @@ const CollectionTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative pt-4 pb-10 md:pt-6 md:pb-16 bg-white overflow-hidden"
+      className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-collection-tiles"
     >
       <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
         {/* Heading — only the main title, eyebrow + subtitle removed per request */}
-        <div className={`text-center mb-5 md:mb-8 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <div className={`text-center mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
           <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] text-black">
             {title[lang]}
           </h2>
