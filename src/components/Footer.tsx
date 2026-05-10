@@ -151,16 +151,6 @@ const Footer: React.FC = () => {
 
       {/* ============== Main columns / accordion ============== */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-12">
-        {/* Logo + tag (desktop only) */}
-        <div className="hidden md:flex items-end justify-between mb-10">
-          <div>
-            <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-12 mb-4" />
-            <p className="text-xs text-black/55 max-w-sm">
-              Saatlar, dəri aksesuarlar və hədiyyələr — peşəkar seçim, orijinal zəmanət.
-            </p>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-0 md:gap-y-8">
           {/* DE VALEUR (about-style links) */}
           <FooterSection id="company" title="DE VALEUR">
@@ -186,7 +176,7 @@ const Footer: React.FC = () => {
 
           {/* Kateqoriyalar */}
           <FooterSection id="categories" title={t('header.categories')}>
-            <ul className="space-y-2.5 md:space-y-3 max-h-[300px] overflow-y-auto pr-2 scroll-smooth">
+            <ul className="space-y-2.5 md:space-y-2.5">
               {categories.length === 0 && (
                 <li className="text-xs text-black/40">—</li>
               )}
@@ -205,7 +195,7 @@ const Footer: React.FC = () => {
 
           {/* Brendlər */}
           <FooterSection id="brands" title={t('header.brands')}>
-            <ul className="space-y-2.5 md:space-y-3 max-h-[300px] overflow-y-auto pr-2 scroll-smooth">
+            <ul className="space-y-2.5 md:space-y-2.5">
               {brands.length === 0 && (
                 <li className="text-xs text-black/40">—</li>
               )}
@@ -252,37 +242,29 @@ const Footer: React.FC = () => {
           </FooterSection>
         </div>
 
-        {/* ============== Bottom: Logo (mobile) + Payment + Social ============== */}
+        {/* ============== Bottom: Payment + Social ============== */}
         <div className="mt-2 md:mt-12 pt-6 md:pt-10 border-t border-black/10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            {/* Logo on mobile */}
-            <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="md:hidden h-10 self-center" />
-
             {/* Payment cards */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/55 sm:after:content-['·'] sm:after:ml-3 sm:after:text-black/30">
-                Ödəniş
-              </span>
-              <div className="flex items-center gap-3 flex-wrap">
-                {settings.paymentCards.map((card) =>
-                  card.iconUrl ? (
-                    <img
-                      key={card.id}
-                      src={card.iconUrl}
-                      alt={card.name}
-                      className="h-5 md:h-6 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-                      title={card.name}
-                    />
-                  ) : (
-                    <span
-                      key={card.id}
-                      className="text-[11px] md:text-xs text-black/60 px-2 py-1 border border-black/10 rounded-md"
-                    >
-                      {card.name}
-                    </span>
-                  )
-                )}
-              </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {settings.paymentCards.map((card) =>
+                card.iconUrl ? (
+                  <img
+                    key={card.id}
+                    src={card.iconUrl}
+                    alt={card.name}
+                    className="h-5 md:h-6 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+                    title={card.name}
+                  />
+                ) : (
+                  <span
+                    key={card.id}
+                    className="text-[11px] md:text-xs text-black/60 px-2 py-1 border border-black/10 rounded-md"
+                  >
+                    {card.name}
+                  </span>
+                )
+              )}
             </div>
 
             {/* Social icons — circular */}
