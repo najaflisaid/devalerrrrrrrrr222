@@ -549,7 +549,7 @@ const AiChatWidget: React.FC = () => {
                 setOpen(true);
                 setShowGreetBubble(false);
               }}
-              className="dv-ai-greet mb-1 max-w-[260px] bg-white border border-black/10 pl-3 pr-7 py-2.5 text-left relative cursor-pointer hover:border-black/40 transition-colors shadow-[0_6px_24px_-12px_rgba(0,0,0,0.25)]"
+              className="dv-ai-greet mb-1.5 max-w-[200px] bg-white border border-black/10 pl-3 pr-6 py-1.5 text-left relative cursor-pointer hover:border-black/35 transition-colors shadow-[0_4px_18px_-10px_rgba(0,0,0,0.22)] rounded-full"
               data-testid="ai-greet-bubble"
               aria-label="AI satış mütəxəssisi ilə danış"
             >
@@ -558,15 +558,11 @@ const AiChatWidget: React.FC = () => {
                   e.stopPropagation();
                   setShowGreetBubble(false);
                 }}
-                className="absolute top-1.5 right-1.5 text-black/30 hover:text-black/70 p-0.5 cursor-pointer"
+                className="absolute top-1/2 -translate-y-1/2 right-2 text-black/30 hover:text-black/70 cursor-pointer leading-none"
               >
-                <X className="h-3 w-3" strokeWidth={1.25} />
+                <X className="h-2.5 w-2.5" strokeWidth={1.5} />
               </span>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-black/55 font-semibold mb-1 flex items-center gap-1.5">
-                <span className="dv-ai-pulse inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                DE VALEUR AI
-              </p>
-              <p className="text-[12.5px] text-black font-light leading-snug">
+              <p className="text-[11.5px] text-black/80 font-light leading-snug whitespace-nowrap">
                 Mütəxəssisdən tövsiyə al
               </p>
               {/* Tail pointing to the launcher */}
@@ -578,21 +574,27 @@ const AiChatWidget: React.FC = () => {
               setOpen(true);
               setShowGreetBubble(false);
             }}
-            className="dv-ai-launcher group relative flex items-center justify-center w-14 h-14 rounded-full bg-white border border-black/15 hover:border-black transition-all duration-300 shadow-[0_8px_28px_-10px_rgba(0,0,0,0.35)] overflow-visible"
+            className="dv-ai-launcher group relative flex items-center justify-center w-14 h-14 rounded-full bg-white transition-all duration-300 shadow-[0_8px_28px_-10px_rgba(0,0,0,0.35)] overflow-visible"
+            style={{
+              boxShadow:
+                '0 0 0 1.5px #c9a14a, 0 8px 28px -10px rgba(0,0,0,0.35)',
+            }}
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            {/* Logo */}
-            <img
-              src="https://i.hizliresim.com/tmu65g6.png"
-              alt="De Valeur"
-              className="w-9 h-9 object-contain rounded-full"
-              draggable={false}
-            />
+            {/* Logo — full image, contained inside the circle so D and R aren't clipped */}
+            <span className="absolute inset-[3px] rounded-full overflow-hidden flex items-center justify-center bg-white">
+              <img
+                src="https://i.hizliresim.com/tmu65g6.png"
+                alt="De Valeur"
+                className="w-[80%] h-[80%] object-contain"
+                draggable={false}
+              />
+            </span>
             {/* Pulsing online indicator (green light) */}
-            <span aria-hidden="true" className="dv-ai-online-dot absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
-            <span aria-hidden="true" className="dv-ai-online-pulse absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500" />
+            <span aria-hidden="true" className="dv-ai-online-dot absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white z-[2]" />
+            <span aria-hidden="true" className="dv-ai-online-pulse absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500 z-[1]" />
           </button>
         </div>
       )}
