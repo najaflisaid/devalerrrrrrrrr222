@@ -42,3 +42,27 @@ işçilərə (anbardar, menecer, mağaza müdiri, qonşu və s.) imzalatması ü
 - P2: Kuryerin imza atdıqdan sonra müştəriyə avtomatik bildiriş (SMS/Email)
 - P2: Kuryerlər üçün gündəlik təhvil verilmiş sifarişlər statistikası
 - P2: 3 günlük "history" üçün cron-job (frontend-də filtrlənir, gərək yox)
+
+## Recent Update — 2026-01 — Kampaniya Promo Kodları (Bloger/Influencer)
+Admin paneldə **PromoCodes tab**-a yeni "Kampaniya kodları" alt-bölməsi əlavə edildi.
+Bloger/influencer izləyiciləri eyni kodu istifadə edib endirim ala bilir.
+
+### Sahələr
+- **Kod**: alphanumeric, 3-20 simvol (məs: BLOGER10)
+- **Endirim faizi**: 5/10/15/20 sürətli seçim VƏ custom rəqəm (1-99%)
+- **Başlama / bitmə tarixi**: datetime-local picker
+- **İstifadə limiti**: max neçə dəfə (boş = limitsiz)
+- **Influencer adı**: qeyd üçün
+- **Aktiv/Deaktiv toggle**: admin manual idarə edə bilər
+- **Avtomatik silinmə**: müddəti bitmiş kodlar tab açılanda silinir
+
+### Statistika
+- Hər kodun istifadə sayı + progress bar (əgər limit var)
+- "İstifadə tarixçəsi" açılır panel: kim (ad/email), nə vaxt, hansı sifariş ilə
+
+### Dəyişən fayllar
+- src/services/promoCodeService.ts (campaign yardımçı funksiyalar, validate/redeem
+  alphanumeric kodları və müddət/limit yoxlamalarını dəstəkləyir)
+- src/components/admin/PromoCodesTab.tsx (sub-tab keçidi əlavə olundu)
+- src/pages/CartPage.tsx (regex `/^\d{6}$/` → `/^[A-Z0-9]{3,20}$/`)
+

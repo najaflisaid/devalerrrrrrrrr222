@@ -132,10 +132,10 @@ const CartPage: React.FC = () => {
   };
 
   const handleApplyPromo = async () => {
-    const code = promoInput.trim();
+    const code = promoInput.trim().toUpperCase();
     setPromoError('');
-    if (!/^\d{6}$/.test(code)) {
-      setPromoError('Promo kod 6 rəqəmli olmalıdır');
+    if (!/^[A-Z0-9]{3,20}$/.test(code)) {
+      setPromoError('Promo kod 3-20 simvol arası hərf və rəqəmlərdən ibarət olmalıdır');
       return;
     }
     setPromoLoading(true);
@@ -364,6 +364,7 @@ const CartPage: React.FC = () => {
         redeemPromoCode(promoApplied.code, {
           userId,
           userEmail,
+          userName,
           orderId,
         }).catch((e) => console.warn('Promo kod redeem xətası:', e));
       }
