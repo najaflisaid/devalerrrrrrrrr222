@@ -235,6 +235,18 @@ export interface HomepageSections {
       link_url: string;
     }>;
   };
+  newsTiles?: {
+    enabled: boolean;
+    title?: { az: string; ru: string; en: string };
+    tiles: Array<{
+      id: string;
+      title_az: string;
+      title_ru: string;
+      title_en: string;
+      image_url: string;
+      link_url: string;
+    }>;
+  };
 }
 
 const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
@@ -308,6 +320,11 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     },
     tiles: [],
   },
+  newsTiles: {
+    enabled: true,
+    title: { az: 'Yeniliklər', ru: 'Новости', en: 'News' },
+    tiles: [],
+  },
 };
 
 export const getHomepageSections = async (): Promise<HomepageSections> => {
@@ -321,6 +338,7 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
         signature: { ...DEFAULT_HOMEPAGE_SECTIONS.signature, ...(data.signature || {}) },
         brandShowcase: { ...DEFAULT_HOMEPAGE_SECTIONS.brandShowcase, ...(data.brandShowcase || {}) },
         collectionTiles: { ...DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!, ...(data.collectionTiles || {}) },
+        newsTiles: { ...DEFAULT_HOMEPAGE_SECTIONS.newsTiles!, ...(data.newsTiles || {}) },
       };
     }
   } catch (err) {

@@ -764,6 +764,242 @@ const HomeSectionsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* ==================== News Tiles (Yeniliklər) ==================== */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5" data-testid="home-sections-news-tiles">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Yeniliklər (üfüqi sürüşmə)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Ana səhifədə "Yeniliklər" bölməsi. Webdə eyni anda 4, mobildə 3 kart görünür — istifadəçi sağa-sola sürüşdürərək digərlərinə baxa bilir. Kartlar bir-birinə bitişikdir.
+            </p>
+          </div>
+          <Toggle
+            on={data.newsTiles?.enabled !== false}
+            onChange={(v) =>
+              setData({
+                ...data,
+                newsTiles: {
+                  ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                  enabled: v,
+                },
+              })
+            }
+          />
+        </div>
+
+        <MultiLangField
+          label="Başlıq"
+          value={(data.newsTiles?.title || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!.title!) as any}
+          onChange={(v) =>
+            setData({
+              ...data,
+              newsTiles: {
+                ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                title: v,
+              },
+            })
+          }
+        />
+
+        <div className="border-t border-gray-100 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <Label>Kartlar</Label>
+            <button
+              type="button"
+              onClick={() => {
+                const newTile = {
+                  id: `news_${Date.now()}`,
+                  title_az: '',
+                  title_ru: '',
+                  title_en: '',
+                  image_url: '',
+                  link_url: '',
+                };
+                setData({
+                  ...data,
+                  newsTiles: {
+                    ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                    tiles: [...(data.newsTiles?.tiles || []), newTile],
+                  },
+                });
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-md text-xs hover:bg-gray-800"
+              data-testid="add-news-tile-btn"
+            >
+              + Yeni kart
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {(data.newsTiles?.tiles || []).length === 0 && (
+              <p className="text-xs text-gray-400 italic">Hələ kart yoxdur.</p>
+            )}
+
+            {(data.newsTiles?.tiles || []).map((nt, idx) => {
+              const tilesArr = data.newsTiles?.tiles || [];
+              const updateTile = (patch: Partial<typeof nt>) => {
+                const next = [...tilesArr];
+                next[idx] = { ...next[idx], ...patch };
+                setData({
+                  ...data,
+                  newsTiles: {
+                    ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const removeTile = () => {
+                setData({
+                  ...data,
+                  newsTiles: {
+                    ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                    tiles: tilesArr.filter((_, i) => i !== idx),
+                  },
+                });
+              };
+              const moveUp = () => {
+                if (idx === 0) return;
+                const next = [...tilesArr];
+                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                setData({
+                  ...data,
+                  newsTiles: {
+                    ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const moveDown = () => {
+                if (idx >= tilesArr.length - 1) return;
+                const next = [...tilesArr];
+                [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                setData({
+                  ...data,
+                  newsTiles: {
+                    ...(data.newsTiles || DEFAULT_HOMEPAGE_SECTIONS.newsTiles!),
+                    tiles: next,
+                  },
+                });
+              };
+              const handleUpload = async (file: File) => {
+                try {
+                  const ext = file.name.split('.').pop() || 'jpg';
+                  const filename = `news_tile_${Date.now()}.${ext}`;
+                  const sref = storageRef(storage, `homepage_news_tiles/${filename}`);
+                  await uploadBytes(sref, file);
+                  const url = await getDownloadURL(sref);
+                  updateTile({ image_url: url });
+                } catch (err) {
+                  alert('Şəkil yüklənmədi: ' + (err as Error).message);
+                }
+              };
+
+              return (
+                <div
+                  key={nt.id || idx}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50/50"
+                  data-testid={`news-tile-row-${idx}`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-mono text-gray-400">#{idx + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={moveUp} disabled={idx === 0} className="px-2 py-1 text-xs text-gray-500 hover:text-black disabled:opacity-30" aria-label="Yuxarı">↑</button>
+                      <button type="button" onClick={moveDown} disabled={idx >= tilesArr.length - 1} className="px-2 py-1 text-xs text-gray-500 hover:text-black disabled:opacity-30" aria-label="Aşağı">↓</button>
+                      <button type="button" onClick={removeTile} className="px-2 py-1 text-xs text-red-500 hover:text-red-700" aria-label="Sil" data-testid={`remove-news-tile-${idx}`}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Şəkil</label>
+                      <div className="aspect-[4/5] bg-white border border-gray-200 rounded overflow-hidden relative">
+                        {nt.image_url ? (
+                          <img src={nt.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                            <ImageIcon className="h-7 w-7 mb-1" />
+                            <span className="text-[10px] uppercase tracking-wider">Şəkil yoxdur</span>
+                          </div>
+                        )}
+                      </div>
+                      <label className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 border border-dashed border-gray-300 text-xs text-gray-700 hover:border-gray-700 hover:text-gray-900 rounded-md cursor-pointer">
+                        <Upload className="h-3.5 w-3.5" />
+                        {nt.image_url ? 'Yenilə' : 'Şəkil yüklə'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUpload(f);
+                            e.currentTarget.value = '';
+                          }}
+                          data-testid={`news-tile-upload-${idx}`}
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={nt.image_url}
+                        onChange={(e) => updateTile({ image_url: e.target.value })}
+                        placeholder="və ya URL yapışdırın"
+                        className="mt-1 w-full px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-gray-900 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Başlıq (AZ)</label>
+                        <input
+                          type="text"
+                          value={nt.title_az}
+                          onChange={(e) => updateTile({ title_az: e.target.value })}
+                          placeholder="məs: Yeni qış kolleksiyası"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          data-testid={`news-tile-title-az-${idx}`}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">RU</label>
+                          <input
+                            type="text"
+                            value={nt.title_ru}
+                            onChange={(e) => updateTile({ title_ru: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">EN</label>
+                          <input
+                            type="text"
+                            value={nt.title_en}
+                            onChange={(e) => updateTile({ title_en: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Link</label>
+                        <input
+                          type="text"
+                          value={nt.link_url}
+                          onChange={(e) => updateTile({ link_url: e.target.value })}
+                          placeholder="məs: /blog/yeni-koleksiya"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 outline-none font-mono"
+                          data-testid={`news-tile-link-${idx}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end">
         <button
           onClick={save}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { Instagram, Mail, Phone, MapPin, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import { toBrandSlug } from '../utils/brandSlug';
@@ -17,6 +17,10 @@ const Footer: React.FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  // mobile accordion state
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const toggleSection = (key: string) =>
+    setOpenSection((prev) => (prev === key ? null : key));
   const [settings, setSettings] = useState<SiteSettings>({
     copyrightText: '© 2025 De Valeur. Bütün hüquqlar qorunur',
     paymentCards: [
@@ -106,11 +110,6 @@ const Footer: React.FC = () => {
             <h4 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">{t('footer.menu')}</h4>
             <ul className="space-y-1.5 md:space-y-2">
               <li>
-                <Link to="/" className="text-gray-600 hover:text-gray-900 transition-colors text-xs md:text-sm">
-                  {t('header.home')}
-                </Link>
-              </li>
-              <li>
                 <Link to="/products" className="text-gray-600 hover:text-gray-900 transition-colors text-xs md:text-sm">
                   {t('header.products')}
                 </Link>
@@ -139,8 +138,17 @@ const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">{t('header.categories')}</h4>
-            <ul className="space-y-1.5 md:space-y-2 max-h-44 md:max-h-72 overflow-y-auto pr-2">
+            <h4 className="font-semibold mb-3 md:mb-4 text-sm md:text-base hidden md:block">{t('header.categories')}</h4>
+            <button
+              type="button"
+              onClick={() => toggleSection('categories')}
+              className="md:hidden w-full flex items-center justify-between font-semibold mb-2 text-sm"
+              data-testid="footer-mobile-categories-toggle"
+            >
+              <span>{t('header.categories')}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${openSection === 'categories' ? 'rotate-180' : ''}`} />
+            </button>
+            <ul className={`space-y-1.5 md:space-y-2 md:max-h-72 md:overflow-y-auto md:pr-2 md:!block ${openSection === 'categories' ? 'block max-h-44 overflow-y-auto pr-2' : 'hidden'}`}>
               {categories.map((category) => (
                 <li key={category}>
                   <button
@@ -155,8 +163,17 @@ const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">{t('header.brands')}</h4>
-            <ul className="space-y-1.5 md:space-y-2 max-h-44 md:max-h-72 overflow-y-auto pr-2">
+            <h4 className="font-semibold mb-3 md:mb-4 text-sm md:text-base hidden md:block">{t('header.brands')}</h4>
+            <button
+              type="button"
+              onClick={() => toggleSection('brands')}
+              className="md:hidden w-full flex items-center justify-between font-semibold mb-2 text-sm"
+              data-testid="footer-mobile-brands-toggle"
+            >
+              <span>{t('header.brands')}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${openSection === 'brands' ? 'rotate-180' : ''}`} />
+            </button>
+            <ul className={`space-y-1.5 md:space-y-2 md:max-h-72 md:overflow-y-auto md:pr-2 md:!block ${openSection === 'brands' ? 'block max-h-44 overflow-y-auto pr-2' : 'hidden'}`}>
               {brands.map((brand) => (
                 <li key={brand}>
                   <button
