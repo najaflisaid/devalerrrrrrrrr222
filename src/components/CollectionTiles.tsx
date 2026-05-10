@@ -11,6 +11,7 @@ interface Tile {
   title_ru: string;
   title_en: string;
   image_url: string;
+  video_url?: string;
   link_url: string;
 }
 
@@ -144,7 +145,21 @@ const CollectionTiles: React.FC = () => {
                     style={{ animationDelay: `${100 + idx * 90}ms` }}
                     data-testid={`dv-collection-tile-${tile.id || idx}`}
                   >
-                    {tile.image_url ? (
+                    {tile.video_url ? (
+                      <video
+                        src={tile.video_url}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.2,0.6,0.2,1)] group-hover:scale-[1.06]"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        controls={false}
+                        disablePictureInPicture
+                        controlsList="nodownload noplaybackrate nofullscreen"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    ) : tile.image_url ? (
                       <img
                         src={tile.image_url}
                         alt={titleText}

@@ -17,8 +17,8 @@ const BestSellersSection: React.FC = () => {
     typeof window !== 'undefined' ? !window.matchMedia('(min-width: 1024px)').matches : false
   );
 
-  // Web: 4 cols × 2 rows = 8 per page · Mobile: 3 cols × 3 rows = 9 per page
-  const PER_PAGE_DESKTOP = 8;
+  // Web: 5 cols × 2 rows = 10 per page · Mobile: 3 cols × 3 rows = 9 per page
+  const PER_PAGE_DESKTOP = 10;
   const PER_PAGE_MOBILE = 9;
   const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
 
@@ -135,7 +135,7 @@ const BestSellersSection: React.FC = () => {
         <div className="px-1.5">
           <div
             ref={trackRef}
-            className="dv-bs-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+            className="dv-bs-scroll flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
             style={{ scrollbarWidth: 'none' }}
             data-testid="bestsellers-track"
           >
@@ -146,7 +146,7 @@ const BestSellersSection: React.FC = () => {
                 style={{
                   gridTemplateColumns: isMobile
                     ? 'repeat(3, minmax(0, 1fr))'
-                    : 'repeat(4, minmax(0, 1fr))',
+                    : 'repeat(5, minmax(0, 1fr))',
                 }}
                 data-testid={`bestsellers-page-${pIdx}`}
               >
@@ -238,7 +238,8 @@ const BestSellersSection: React.FC = () => {
       </div>
 
       <style>{`
-        .dv-bs-track::-webkit-scrollbar { display: none; }
+        .dv-bs-scroll { width: 100%; max-width: 100%; }
+        .dv-bs-scroll::-webkit-scrollbar { display: none; }
       `}</style>
     </section>
   );

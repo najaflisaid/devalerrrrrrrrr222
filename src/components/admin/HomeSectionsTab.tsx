@@ -403,6 +403,18 @@ const HomeSectionsTab: React.FC = () => {
                   alert('Şəkil yüklənmədi: ' + (err as Error).message);
                 }
               };
+              const handleVideoUpload = async (file: File) => {
+                try {
+                  const ext = file.name.split('.').pop() || 'mp4';
+                  const filename = `collection_tile_video_${Date.now()}.${ext}`;
+                  const sref = storageRef(storage, `homepage_collection_tiles/${filename}`);
+                  await uploadBytes(sref, file);
+                  const url = await getDownloadURL(sref);
+                  updateTile({ video_url: url } as any);
+                } catch (err) {
+                  alert('Video yüklənmədi: ' + (err as Error).message);
+                }
+              };
 
               return (
                 <div
@@ -456,6 +468,55 @@ const HomeSectionsTab: React.FC = () => {
                         placeholder="URL"
                         className="mt-1 w-full px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-gray-900 outline-none"
                       />
+
+                      {/* Video — istəyə bağlı; yerləşdirilərsə şəkilin yerinə oynayır */}
+                      <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+                        <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-1">Video (istəyə bağlı)</p>
+                        {(t as any).video_url && (
+                          <div className="aspect-[4/3] bg-black border border-gray-200 rounded overflow-hidden mb-1">
+                            <video
+                              src={(t as any).video_url}
+                              className="w-full h-full object-cover"
+                              muted
+                              autoPlay
+                              loop
+                              playsInline
+                            />
+                          </div>
+                        )}
+                        <label className="w-full inline-flex items-center justify-center gap-1 px-1.5 py-1 border border-dashed border-gray-300 text-[10px] text-gray-700 hover:border-gray-700 hover:text-gray-900 rounded cursor-pointer">
+                          <Upload className="h-3 w-3" />
+                          {(t as any).video_url ? 'Yenilə' : 'Yüklə'}
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleVideoUpload(f);
+                              e.currentTarget.value = '';
+                            }}
+                            data-testid={`collection-tile-video-upload-${idx}`}
+                          />
+                        </label>
+                        <input
+                          type="text"
+                          value={(t as any).video_url || ''}
+                          onChange={(e) => updateTile({ video_url: e.target.value } as any)}
+                          placeholder="Video URL"
+                          className="mt-1 w-full px-1.5 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-gray-900 outline-none"
+                          data-testid={`collection-tile-video-url-${idx}`}
+                        />
+                        {(t as any).video_url && (
+                          <button
+                            type="button"
+                            onClick={() => updateTile({ video_url: '' } as any)}
+                            className="mt-1 w-full px-1.5 py-0.5 text-[10px] text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Videonu sil
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Fields — compact */}

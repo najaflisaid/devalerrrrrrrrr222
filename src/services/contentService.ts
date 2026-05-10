@@ -232,6 +232,7 @@ export interface HomepageSections {
       title_ru: string;
       title_en: string;
       image_url: string;
+      video_url?: string;
       link_url: string;
     }>;
   };
