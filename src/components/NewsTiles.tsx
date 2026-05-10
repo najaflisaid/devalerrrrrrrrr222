@@ -112,8 +112,8 @@ const NewsTiles: React.FC = () => {
           Side padding (px-1.5) === inter-card gap (gap-1.5) so the spacing
           on the screen edges matches the gap between cards. */}
       <div className="relative px-1.5 md:px-1.5">
-        {/* Left arrow — only renders when there's previous page; sits on top
-            of the card with a small portion overlapping the side padding. */}
+        {/* Both arrows positioned on the LEFT side (side-by-side) per request.
+            Prev sits closer to the edge, Next sits right next to it. */}
         {showArrows && canPrev && (
           <button
             type="button"
@@ -130,7 +130,7 @@ const NewsTiles: React.FC = () => {
             type="button"
             onClick={() => goToPage(pageIndex + 1)}
             aria-label="Next"
-            className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
+            className="hidden md:flex absolute left-14 top-1/2 -translate-y-1/2 z-10 w-9 h-9 items-center justify-center bg-white border border-black/15 text-black/80 hover:text-black hover:border-black/40 transition-all cursor-pointer shadow-md"
             data-testid="news-tiles-next"
           >
             <ChevronRight className="w-5 h-5" strokeWidth={1.4} />

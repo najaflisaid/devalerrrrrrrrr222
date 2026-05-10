@@ -151,7 +151,7 @@ const Footer: React.FC = () => {
 
       {/* ============== Main columns / accordion ============== */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-0 md:gap-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-0 md:gap-y-8">
           {/* DE VALEUR (about-style links) */}
           <FooterSection id="company" title="DE VALEUR">
             <ul className="space-y-2.5 md:space-y-3">
@@ -187,25 +187,6 @@ const Footer: React.FC = () => {
                     className="text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left capitalize"
                   >
                     {getCategoryTranslation(category)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </FooterSection>
-
-          {/* Brendlər */}
-          <FooterSection id="brands" title={t('header.brands')}>
-            <ul className="space-y-2.5 md:space-y-2.5">
-              {brands.length === 0 && (
-                <li className="text-xs text-black/40">—</li>
-              )}
-              {brands.map((brand) => (
-                <li key={brand}>
-                  <button
-                    onClick={() => navigate(`/brand/${toBrandSlug(brand)}`)}
-                    className="text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left"
-                  >
-                    {brand}
                   </button>
                 </li>
               ))}

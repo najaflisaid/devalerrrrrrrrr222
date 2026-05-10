@@ -55,7 +55,7 @@ const CollectionTiles: React.FC = () => {
         {/* 2-column grid on ALL devices. Mobile keeps the tall 4/5 ratio,
             desktop uses a much shorter ratio (≈ half) so the tiles don't
             stretch so far down. */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+        <div className="grid grid-cols-2 gap-1.5">
           {tiles.map((tile, idx) => {
             const titleText =
               (tile as any)[`title_${lang}`] || tile.title_az || tile.title_en || tile.title_ru || '';
