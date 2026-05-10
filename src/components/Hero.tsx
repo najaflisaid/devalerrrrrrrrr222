@@ -92,11 +92,18 @@ const Hero: React.FC = () => {
             }`}
           >
             {(slide as any).mediaType === 'video' && (slide as any).videoUrl ? (
-              <iframe
+              <video
                 src={(slide as any).videoUrl}
                 className="w-full h-full object-cover"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                controls={false}
+                disablePictureInPicture
+                controlsList="nodownload noplaybackrate nofullscreen"
+                style={{ pointerEvents: 'none' }}
                 title={slide.alt}
               />
             ) : (
