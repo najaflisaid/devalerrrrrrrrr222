@@ -91,12 +91,12 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative pt-10 md:pt-14 pb-6 md:pb-8 bg-white overflow-hidden"
+      className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto">
         {/* Heading row: title centered, arrows top-right (frameless, compact) */}
-        <div className="relative px-1.5 mb-10 md:mb-14">
+        <div className="relative px-1.5 mb-5 md:mb-7">
           <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
             {t('bestSellers.title') || 'Sevilən məhsullar'}
           </h2>
@@ -124,11 +124,6 @@ const BestSellersSection: React.FC = () => {
               </button>
             </div>
           )}
-        </div>
-
-        {/* Divider under title */}
-        <div className="px-1.5 mb-5 md:mb-7">
-          <div className="h-px bg-black/10" />
         </div>
 
         {/* Horizontal slider — each "page" is a 4×2 grid (web) / 2×3 grid (mobile) */}
