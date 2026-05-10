@@ -859,7 +859,7 @@ const CartPage: React.FC = () => {
               {/* QEYDIYYAT MƏLUMATLARI */}
               <div className="mb-8">
                 <h2 className="text-[14px] uppercase tracking-[0.22em] text-black/65 mb-4" data-testid="checkout-section-title">
-                  {isLoggedIn ? 'Hesab məlumatları' : 'Qeydiyyat məlumatları'}
+                  {isLoggedIn ? 'Hesab' : 'Qeydiyyat'}
                 </h2>
                 {!isLoggedIn ? (
                   <div className="space-y-3 mb-3">
@@ -951,7 +951,7 @@ const CartPage: React.FC = () => {
               {/* ÇATDIRILMA MƏLUMATLARI */}
               <div className="mb-8">
                 <h2 className="text-[14px] uppercase tracking-[0.22em] text-black/65 mb-4">
-                  Çatdırılma məlumatları
+                  Çatdırılma
                 </h2>
 
                 {!isPickupFlow && (
@@ -971,7 +971,6 @@ const CartPage: React.FC = () => {
 
                 {/* Delivery methods — side by side */}
                 <div className="mt-5">
-                  <p className="text-[13px] text-black mb-2">{t('checkout.shippingMethod')}</p>
                   {deliveryMethods.length === 0 ? (
                     <div className="px-3 py-2.5 border border-black/15 bg-black/[0.02] text-[12px] text-black/60">
                       {t('checkout.loadingMethods')}
