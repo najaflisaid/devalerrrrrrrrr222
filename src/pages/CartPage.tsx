@@ -856,20 +856,47 @@ const CartPage: React.FC = () => {
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-12">
             {/* LEFT — form (simplified) */}
             <div className="px-5 sm:px-8 lg:pl-12 lg:pr-6 py-8 md:py-12 lg:border-r lg:border-black/10">
-              {/* Single combined form block */}
+              {/* QEYDIYYAT MƏLUMATLARI */}
               <div className="mb-8">
                 <h2 className="text-[14px] uppercase tracking-[0.22em] text-black/65 mb-4" data-testid="checkout-section-title">
-                  Çatdırılma məlumatları
+                  {isLoggedIn ? 'Hesab məlumatları' : 'Qeydiyyat məlumatları'}
                 </h2>
                 {!isLoggedIn ? (
                   <div className="space-y-3 mb-3">
                     <div className="grid grid-cols-2 gap-3">
-                      <RFInput label={t('checkout.firstName')} required value={guestName} onChange={(v) => { setGuestName(v); if (missingField === 'checkout-first-name') setMissingField(null); }} testId="checkout-first-name" error={missingField === 'checkout-first-name'} />
-                      <RFInput label={t('checkout.lastName')} required value={guestLastName} onChange={(v) => { setGuestLastName(v); if (missingField === 'checkout-last-name') setMissingField(null); }} testId="checkout-last-name" error={missingField === 'checkout-last-name'} />
+                      <RFInput
+                        label={t('checkout.firstName')}
+                        required
+                        value={guestName}
+                        onChange={(v) => { setGuestName(v); if (missingField === 'checkout-first-name') setMissingField(null); }}
+                        testId="checkout-first-name"
+                        error={missingField === 'checkout-first-name'}
+                        name="given-name"
+                        autoComplete="given-name"
+                      />
+                      <RFInput
+                        label={t('checkout.lastName')}
+                        required
+                        value={guestLastName}
+                        onChange={(v) => { setGuestLastName(v); if (missingField === 'checkout-last-name') setMissingField(null); }}
+                        testId="checkout-last-name"
+                        error={missingField === 'checkout-last-name'}
+                        name="family-name"
+                        autoComplete="family-name"
+                      />
                     </div>
-                    <div className="px-3 py-2.5 bg-amber-50 border border-amber-200 text-[12px] text-amber-900 leading-relaxed">
-                      <b>Sürətli qeydiyyat:</b> Sifariş zamanı hesabınız avtomatik yaradılır. Sonradan hesabınıza yenidən daxil olmaq üçün özünüz şifrə təyin edin.
-                    </div>
+                    <RFInput
+                      label={t('checkout.phone')}
+                      required
+                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                      onChange={(v) => { setPhoneDigits(v.replace(/\D/g, '').slice(0, 9)); if (missingField === 'checkout-phone-input') setMissingField(null); }}
+                      testId="checkout-phone-input"
+                      inputMode="numeric"
+                      placeholder={t('checkout.phonePlaceholder')}
+                      error={missingField === 'checkout-phone-input'}
+                      name="tel"
+                      autoComplete="tel"
+                    />
                     <div className="grid grid-cols-2 gap-3">
                       <RFInput
                         label="Şifrə"
@@ -880,6 +907,8 @@ const CartPage: React.FC = () => {
                         testId="checkout-password"
                         placeholder="ən azı 6 simvol"
                         error={missingField === 'checkout-password'}
+                        name="new-password"
+                        autoComplete="new-password"
                       />
                       <RFInput
                         label="Şifrəni təkrarla"
@@ -889,14 +918,41 @@ const CartPage: React.FC = () => {
                         onChange={(v) => { setGuestPassword2(v); if (missingField === 'checkout-password2') setMissingField(null); }}
                         testId="checkout-password2"
                         error={missingField === 'checkout-password2'}
+                        name="new-password-confirm"
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="px-3 py-3 mb-3 border border-black/15 bg-black/[0.02] text-[13px] text-black/80">
-                    {loggedInName || loggedInEmail}
-                  </div>
+                  <>
+                    <div className="px-3 py-3 mb-3 border border-black/15 bg-black/[0.02] text-[13px] text-black/80">
+                      {loggedInName || loggedInEmail}
+                    </div>
+                    {!(phoneDigits.length === 9) && (
+                      <div className="mb-3">
+                        <RFInput
+                          label={t('checkout.phone')}
+                          required
+                          value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                          onChange={(v) => { setPhoneDigits(v.replace(/\D/g, '').slice(0, 9)); if (missingField === 'checkout-phone-input') setMissingField(null); }}
+                          testId="checkout-phone-input"
+                          inputMode="numeric"
+                          placeholder={t('checkout.phonePlaceholder')}
+                          error={missingField === 'checkout-phone-input'}
+                          name="tel"
+                          autoComplete="tel"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
+              </div>
+
+              {/* ÇATDIRILMA MƏLUMATLARI */}
+              <div className="mb-8">
+                <h2 className="text-[14px] uppercase tracking-[0.22em] text-black/65 mb-4">
+                  Çatdırılma məlumatları
+                </h2>
 
                 {!isPickupFlow && (
                   <div className="mb-3">
@@ -907,21 +963,8 @@ const CartPage: React.FC = () => {
                       onChange={(v) => { setCustomerAddress(v); if (missingField === 'checkout-address-input') setMissingField(null); }}
                       testId="checkout-address-input"
                       error={missingField === 'checkout-address-input'}
-                    />
-                  </div>
-                )}
-
-                {!(isLoggedIn && phoneDigits.length === 9) && (
-                  <div className="mb-3">
-                    <RFInput
-                      label={t('checkout.phone')}
-                      required
-                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
-                      onChange={(v) => { setPhoneDigits(v.replace(/\D/g, '').slice(0, 9)); if (missingField === 'checkout-phone-input') setMissingField(null); }}
-                      testId="checkout-phone-input"
-                      inputMode="numeric"
-                      placeholder={t('checkout.phonePlaceholder')}
-                      error={missingField === 'checkout-phone-input'}
+                      name="street-address"
+                      autoComplete="street-address"
                     />
                   </div>
                 )}
@@ -1160,7 +1203,9 @@ const RFInput: React.FC<{
   inputMode?: 'text' | 'numeric' | 'email' | 'tel';
   placeholder?: string;
   error?: boolean;
-}> = ({ label, value, onChange, type = 'text', required, readOnly, testId, inputMode, placeholder, error }) => {
+  autoComplete?: string;
+  name?: string;
+}> = ({ label, value, onChange, type = 'text', required, readOnly, testId, inputMode, placeholder, error, autoComplete, name }) => {
   const [focused, setFocused] = useState(false);
   const filled = value.length > 0;
   const float = focused || filled;
@@ -1183,6 +1228,8 @@ const RFInput: React.FC<{
         inputMode={inputMode}
         placeholder={float ? placeholder : ''}
         data-testid={testId}
+        name={name}
+        autoComplete={autoComplete}
         className={`w-full h-[52px] px-3 pt-4 pb-1 outline-none text-[14px] bg-white transition-colors border ${
           error
             ? 'border-red-500 ring-2 ring-red-500/30 animate-pulse'
