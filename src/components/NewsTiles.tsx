@@ -102,7 +102,7 @@ const NewsTiles: React.FC = () => {
       data-testid="dv-news-tiles"
     >
       {/* Heading row: title centered, arrows top-right */}
-      <div className={`relative px-1.5 mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
+      <div className={`relative px-1.5 mb-3 md:mb-4 dv-reveal ${inView ? 'is-in' : ''}`}>
         <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
           {title[lang]}
         </h2>
@@ -130,6 +130,11 @@ const NewsTiles: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Divider under title — eyni balans Sevilən məhsullar bölməsi ilə */}
+      <div className="px-1.5 mb-5 md:mb-7">
+        <div className="h-px bg-black/10" />
       </div>
 
       {/* Tile track
