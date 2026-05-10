@@ -1,25 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* === FONT SYSTEM ===
-   Single elegant serif everywhere: Canela (commercial) → Fraunces (Google fallback)
-   Canela renders on systems where it is installed; otherwise Fraunces is used. */
+   Single font everywhere: Montserrat Light (300 weight) */
 
 body {
-  font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .font-playfair {
-  font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
 }
 
 * {
-  font-family: 'Canela', 'Canela Deck', 'Fraunces', 'Playfair Display', Georgia, serif;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
 }
 
 /* Prevent iOS auto-zoom when focusing inputs / textareas / selects on mobile.
