@@ -563,11 +563,11 @@ const AiChatWidget: React.FC = () => {
                 <X className="h-3 w-3" strokeWidth={1.25} />
               </span>
               <p className="text-[10px] uppercase tracking-[0.25em] text-black/55 font-semibold mb-1 flex items-center gap-1.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="dv-ai-pulse inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 DE VALEUR AI
               </p>
               <p className="text-[12.5px] text-black font-light leading-snug">
-                Sizə necə kömək göstərə bilərik?
+                Mütəxəssisdən tövsiyə al
               </p>
               {/* Tail pointing to the launcher */}
               <span aria-hidden="true" className="dv-ai-greet-tail" />
@@ -578,13 +578,21 @@ const AiChatWidget: React.FC = () => {
               setOpen(true);
               setShowGreetBubble(false);
             }}
-            className="dv-ai-launcher group relative flex items-center justify-center w-12 h-12 bg-black text-white border border-black hover:bg-white hover:text-black transition-colors duration-300"
+            className="dv-ai-launcher group relative flex items-center justify-center w-14 h-14 rounded-full bg-white border border-black/15 hover:border-black transition-all duration-300 shadow-[0_8px_28px_-10px_rgba(0,0,0,0.35)] overflow-visible"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            <Sparkles className="h-5 w-5 dv-ai-sparkle relative z-[1]" strokeWidth={1.25} />
-            <span aria-hidden="true" className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
+            {/* Logo */}
+            <img
+              src="https://i.hizliresim.com/tmu65g6.png"
+              alt="De Valeur"
+              className="w-9 h-9 object-contain rounded-full"
+              draggable={false}
+            />
+            {/* Pulsing online indicator (green light) */}
+            <span aria-hidden="true" className="dv-ai-online-dot absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+            <span aria-hidden="true" className="dv-ai-online-pulse absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500" />
           </button>
         </div>
       )}
