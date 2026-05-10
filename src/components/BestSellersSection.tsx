@@ -14,11 +14,11 @@ const BestSellersSection: React.FC = () => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(
-    typeof window !== 'undefined' ? !window.matchMedia('(min-width: 768px)').matches : false
+    typeof window !== 'undefined' ? !window.matchMedia('(min-width: 1024px)').matches : false
   );
 
-  // Web: 5 cols × 2 rows = 10 per page · Mobile: 3 cols × 3 rows = 9 per page
-  const PER_PAGE_DESKTOP = 10;
+  // Web: 4 cols × 2 rows = 8 per page · Mobile: 3 cols × 3 rows = 9 per page
+  const PER_PAGE_DESKTOP = 8;
   const PER_PAGE_MOBILE = 9;
   const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
 
@@ -38,7 +38,7 @@ const BestSellersSection: React.FC = () => {
 
   // Track viewport changes
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
+    const mq = window.matchMedia('(min-width: 1024px)');
     const handler = () => setIsMobile(!mq.matches);
     handler();
     mq.addEventListener('change', handler);
@@ -146,7 +146,7 @@ const BestSellersSection: React.FC = () => {
                 style={{
                   gridTemplateColumns: isMobile
                     ? 'repeat(3, minmax(0, 1fr))'
-                    : 'repeat(5, minmax(0, 1fr))',
+                    : 'repeat(4, minmax(0, 1fr))',
                 }}
                 data-testid={`bestsellers-page-${pIdx}`}
               >
