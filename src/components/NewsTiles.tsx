@@ -50,7 +50,7 @@ const NewsTiles: React.FC = () => {
     if (!track) return;
 
     const compute = () => {
-      const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
+      const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 2;
       const pages = Math.max(1, Math.ceil(tiles.length / visible));
       setPageCount(pages);
       const child = track.firstElementChild as HTMLElement | null;
@@ -81,7 +81,7 @@ const NewsTiles: React.FC = () => {
   const goToPage = (page: number) => {
     const track = trackRef.current;
     if (!track) return;
-    const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 3;
+    const visible = window.matchMedia('(min-width: 768px)').matches ? 4 : 2;
     const child = track.firstElementChild as HTMLElement | null;
     if (!child) return;
     const childWidth = child.getBoundingClientRect().width;
@@ -165,9 +165,9 @@ const NewsTiles: React.FC = () => {
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
                 /* basis = (100% - sum_of_gaps) / visibleCount.
-                   Mobile (3 visible, 2 gaps): (100% - 0.75rem) / 3
+                   Mobile (2 visible, 1 gap): (100% - 0.375rem) / 2
                    Desktop (4 visible, 3 gaps): (100% - 1.125rem) / 4 */
-                className={`relative shrink-0 snap-start group block aspect-[3/4.6] md:aspect-[1/1.6] overflow-hidden bg-gray-100 [flex-basis:calc((100%-0.75rem)/3)] md:[flex-basis:calc((100%-1.125rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
+                className={`relative shrink-0 snap-start group block aspect-[3/4.6] md:aspect-[1/1.6] overflow-hidden bg-gray-100 [flex-basis:calc((100%-0.375rem)/2)] md:[flex-basis:calc((100%-1.125rem)/4)] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 70}ms` }}
                 data-testid={`dv-news-tile-${tile.id || idx}`}
               >

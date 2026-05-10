@@ -17,9 +17,9 @@ const BestSellersSection: React.FC = () => {
     typeof window !== 'undefined' ? !window.matchMedia('(min-width: 768px)').matches : false
   );
 
-  // Web: 4 cols × 2 rows = 8 per page · Mobile: 2 cols × 3 rows = 6 per page
-  const PER_PAGE_DESKTOP = 8;
-  const PER_PAGE_MOBILE = 6;
+  // Web: 5 cols × 2 rows = 10 per page · Mobile: 3 cols × 3 rows = 9 per page
+  const PER_PAGE_DESKTOP = 10;
+  const PER_PAGE_MOBILE = 9;
   const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
 
   const getProductName = (product: Product): string => {
@@ -142,7 +142,7 @@ const BestSellersSection: React.FC = () => {
             {pages.map((pageProducts, pIdx) => (
               <div
                 key={pIdx}
-                className="shrink-0 snap-start w-full grid grid-cols-2 md:grid-cols-4 gap-x-3 md:gap-x-4 gap-y-2 md:gap-y-3"
+                className="shrink-0 snap-start w-full grid grid-cols-3 md:grid-cols-5 gap-x-2 md:gap-x-3 gap-y-2 md:gap-y-3"
                 data-testid={`bestsellers-page-${pIdx}`}
               >
                 {pageProducts.map((product) => {
@@ -198,17 +198,17 @@ const BestSellersSection: React.FC = () => {
                       {/* Info — brand uppercase, product name, price (NO category) */}
                       <div className="mt-1.5 md:mt-2 px-1">
                         {brand && (
-                          <p className="text-[11px] sm:text-[12px] md:text-[13px] tracking-[0.05em] uppercase text-black font-medium leading-tight truncate">
+                          <p className="text-[10px] sm:text-[11px] md:text-[12px] tracking-[0.04em] uppercase text-black font-medium leading-tight truncate">
                             {brand}
                           </p>
                         )}
-                        <h3 className="text-[12px] sm:text-[13px] md:text-[14px] font-light text-black/80 leading-snug line-clamp-1 mt-0.5">
+                        <h3 className="text-[10px] sm:text-[11px] md:text-[12px] font-light text-black/70 leading-snug line-clamp-1 mt-0.5">
                           {name}
                         </h3>
-                        <p className="mt-1 text-[13px] sm:text-[14px] md:text-[15px] text-black font-medium tabular-nums">
+                        <p className="mt-0.5 md:mt-1 text-[11px] sm:text-[12px] md:text-[13px] text-black font-medium tabular-nums">
                           {onSale ? (
                             <>
-                              <span className="text-black/40 line-through mr-1.5 font-light">
+                              <span className="text-black/40 line-through mr-1 font-light">
                                 {product.price.toFixed(0)} AZN
                               </span>
                               <span className="text-[#D14545]">{price.toFixed(0)} AZN</span>
