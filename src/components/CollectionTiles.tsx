@@ -156,12 +156,12 @@ const CollectionTiles: React.FC = () => {
                     )}
                     <div className="absolute inset-0 pointer-events-none bg-black/15 group-hover:bg-black/25 transition-colors duration-700" />
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
-                      <h3
-                        className="font-playfair text-white text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-normal tracking-[0.01em] text-center leading-tight"
-                        style={{ textShadow: '0 2px 18px rgba(0,0,0,0.45)' }}
-                      >
-                        {titleText}
-                      </h3>
+                  <h3
+                    className="font-playfair text-white text-base sm:text-xl md:text-3xl lg:text-4xl font-normal tracking-[0.01em] text-center leading-tight"
+                    style={{ textShadow: '0 2px 18px rgba(0,0,0,0.45)' }}
+                  >
+                    {titleText}
+                  </h3>
                     </div>
                   </Link>
                 );

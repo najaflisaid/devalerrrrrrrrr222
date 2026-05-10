@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types';
@@ -11,6 +11,17 @@ const BestSellersSection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState<boolean>(
+    typeof window !== 'undefined' ? !window.matchMedia('(min-width: 768px)').matches : false
+  );
+
+  // Web: 4 cols × 2 rows = 8 per page · Mobile: 2 cols × 3 rows = 6 per page
+  const PER_PAGE_DESKTOP = 8;
+  const PER_PAGE_MOBILE = 6;
+  const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
+
   const getProductName = (product: Product): string => {
     if (typeof product.name === 'string') return product.name as unknown as string;
     const lang = i18n.language as 'az' | 'ru' | 'en';
@@ -18,114 +29,212 @@ const BestSellersSection: React.FC = () => {
   };
 
   useEffect(() => {
-    // Fetch top 12 best sellers — 4 columns × 3 rows grid
-    productService.getBestSellers(12)
+    productService
+      .getBestSellers(24)
       .then((data) => setProducts(data))
       .catch((e) => console.error('Error loading best sellers:', e))
       .finally(() => setLoading(false));
   }, []);
 
+  // Track viewport changes
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = () => setIsMobile(!mq.matches);
+    handler();
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Chunk products into pages
+  const pages: Product[][] = [];
+  for (let i = 0; i < products.length; i += perPage) {
+    pages.push(products.slice(i, i + perPage));
+  }
+  const pageCount = Math.max(1, pages.length);
+
+  // Track active page on scroll
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const compute = () => {
+      const w = track.clientWidth;
+      if (w > 0) {
+        setPageIndex(Math.round(track.scrollLeft / w));
+      }
+    };
+    compute();
+    track.addEventListener('scroll', compute, { passive: true });
+    window.addEventListener('resize', compute);
+    return () => {
+      track.removeEventListener('scroll', compute);
+      window.removeEventListener('resize', compute);
+    };
+  }, [products.length, perPage]);
+
+  // Reset to first page when breakpoint changes
+  useEffect(() => {
+    if (trackRef.current) trackRef.current.scrollTo({ left: 0, behavior: 'auto' });
+  }, [perPage]);
+
+  const goToPage = (page: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const target = Math.max(0, Math.min(pageCount - 1, page)) * track.clientWidth;
+    track.scrollTo({ left: target, behavior: 'smooth' });
+  };
+
   if (loading || products.length === 0) return null;
+
+  const showArrows = pageCount > 1;
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex < pageCount - 1;
 
   return (
     <section
-      className="relative py-8 md:py-12 bg-white"
+      className="relative py-6 md:py-8 bg-white overflow-hidden"
       data-testid="dv-bestsellers"
     >
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
-        {/* Section title — left-aligned, italdizain-style */}
-        <div className="mb-5 md:mb-7">
-          <h2 className="text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black">
-            {t('bestSellers.title') || 'Çox satılanlar'}
-          </h2>
+      <div className="max-w-[1440px] mx-auto">
+        {/* Top divider */}
+        <div className="px-1.5">
+          <div className="h-px bg-black/10" />
         </div>
 
-        {/* 2 cols mobile, 3 cols sm, 4 cols md+ — exactly like italdizain.az */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-black/8">
-          {products.map((product) => {
-            const onSale = !!product.salePrice && product.salePrice < product.price;
-            const price = onSale ? product.salePrice! : product.price;
-            const name = getProductName(product);
-            const brand = (product as any).brand || '';
-            const material = (product as any).material || (product as any).category || '';
-
-            return (
+        {/* Heading row: title centered, arrows top-right (frameless, compact) */}
+        <div className="relative px-1.5 mt-5 md:mt-7 mb-5 md:mb-7">
+          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
+            {t('bestSellers.title') || 'Sevilən məhsullar'}
+          </h2>
+          {showArrows && (
+            <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
               <button
-                key={product.id}
                 type="button"
-                data-testid={`bestseller-card-${product.id}`}
-                onClick={() => navigate(`/product/${product.id}`)}
-                className="group relative flex flex-col bg-white text-left p-3 sm:p-4 md:p-5 transition-colors duration-300 hover:bg-gray-50/40"
+                onClick={() => goToPage(pageIndex - 1)}
+                aria-label="Previous"
+                disabled={!canPrev}
+                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="bestsellers-prev"
               >
-                {/* Wishlist heart — top right */}
-                <span
-                  aria-hidden="true"
-                  className="absolute top-3 right-3 md:top-4 md:right-4 text-black/40 group-hover:text-black/70 transition-colors z-[2]"
-                >
-                  <Heart className="w-5 h-5" strokeWidth={1.4} />
-                </span>
-
-                {/* Sale label — top left */}
-                {onSale && (
-                  <span className="absolute top-3 left-3 md:top-4 md:left-4 z-[2] text-[10px] md:text-[11px] tracking-[0.18em] uppercase font-medium text-[#D14545]">
-                    {t('bestSellers.sale')}
-                  </span>
-                )}
-
-                {/* Product image — large, centered, contained, square-ish */}
-                <div className="relative aspect-[1/1.1] w-full overflow-hidden">
-                  <img
-                    src={product.images?.[0]}
-                    alt={name}
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-contain p-2 sm:p-4 md:p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                  />
-                  {product.images?.[1] && (
-                    <img
-                      src={product.images[1]}
-                      alt={name}
-                      aria-hidden="true"
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain p-2 sm:p-4 md:p-6 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
-                    />
-                  )}
-                </div>
-
-                {/* Info block — brand uppercase, product name, material, price */}
-                <div className="mt-3 md:mt-4 space-y-1">
-                  {brand && (
-                    <p className="text-[11px] sm:text-[12px] md:text-[13px] tracking-[0.05em] uppercase text-black font-medium leading-tight truncate">
-                      {brand}
-                    </p>
-                  )}
-                  <h3 className="text-[13px] sm:text-[14px] md:text-[15px] font-light text-black/85 leading-snug line-clamp-1">
-                    {name}
-                  </h3>
-                  {material && (
-                    <p className="text-[11px] sm:text-[12px] md:text-[13px] text-black/55 font-light leading-tight line-clamp-1">
-                      {material}
-                    </p>
-                  )}
-                  <p className="pt-1.5 md:pt-2 text-[14px] sm:text-[15px] md:text-[16px] text-black font-medium tabular-nums">
-                    {onSale ? (
-                      <>
-                        <span className="text-black/40 line-through mr-1.5 font-light">
-                          {product.price.toFixed(0)} AZN
-                        </span>
-                        <span className="text-[#D14545]">{price.toFixed(0)} AZN</span>
-                      </>
-                    ) : (
-                      <span>{price.toFixed(0)} AZN</span>
-                    )}
-                  </p>
-                </div>
+                <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => goToPage(pageIndex + 1)}
+                aria-label="Next"
+                disabled={!canNext}
+                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="bestsellers-next"
+              >
+                <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Horizontal slider — each "page" is a 4×2 grid (web) / 2×3 grid (mobile) */}
+        <div className="px-1.5">
+          <div
+            ref={trackRef}
+            className="dv-bs-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+            style={{ scrollbarWidth: 'none' }}
+            data-testid="bestsellers-track"
+          >
+            {pages.map((pageProducts, pIdx) => (
+              <div
+                key={pIdx}
+                className="shrink-0 snap-start w-full grid grid-cols-2 md:grid-cols-4 gap-x-3 md:gap-x-4 gap-y-2 md:gap-y-3"
+                data-testid={`bestsellers-page-${pIdx}`}
+              >
+                {pageProducts.map((product) => {
+                  const onSale = !!product.salePrice && product.salePrice < product.price;
+                  const price = onSale ? product.salePrice! : product.price;
+                  const name = getProductName(product);
+                  const brand = (product as any).brand || '';
+
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      data-testid={`bestseller-card-${product.id}`}
+                      onClick={() => navigate(`/product/${product.id}`)}
+                      className="group relative flex flex-col text-left transition-colors duration-300"
+                    >
+                      {/* Wishlist heart — top right */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-2 right-2 md:top-2.5 md:right-2.5 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
+                      >
+                        <Heart className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
+                      </span>
+
+                      {/* Sale label — top left */}
+                      {onSale && (
+                        <span className="absolute top-2 left-2 md:top-2.5 md:left-2.5 z-[2] text-[10px] md:text-[11px] tracking-[0.18em] uppercase font-medium text-[#D14545]">
+                          {t('bestSellers.sale')}
+                        </span>
+                      )}
+
+                      {/* Compact product image — fits content tightly */}
+                      <div className="relative aspect-[4/3] w-full overflow-hidden">
+                        <img
+                          src={product.images?.[0]}
+                          alt={name}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 w-full h-full object-contain p-2 md:p-3 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                        />
+                        {product.images?.[1] && (
+                          <img
+                            src={product.images[1]}
+                            alt={name}
+                            aria-hidden="true"
+                            loading="lazy"
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-contain p-2 md:p-3 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
+                          />
+                        )}
+                      </div>
+
+                      {/* Info — brand uppercase, product name, price (NO category) */}
+                      <div className="mt-1.5 md:mt-2 px-1">
+                        {brand && (
+                          <p className="text-[11px] sm:text-[12px] md:text-[13px] tracking-[0.05em] uppercase text-black font-medium leading-tight truncate">
+                            {brand}
+                          </p>
+                        )}
+                        <h3 className="text-[12px] sm:text-[13px] md:text-[14px] font-light text-black/80 leading-snug line-clamp-1 mt-0.5">
+                          {name}
+                        </h3>
+                        <p className="mt-1 text-[13px] sm:text-[14px] md:text-[15px] text-black font-medium tabular-nums">
+                          {onSale ? (
+                            <>
+                              <span className="text-black/40 line-through mr-1.5 font-light">
+                                {product.price.toFixed(0)} AZN
+                              </span>
+                              <span className="text-[#D14545]">{price.toFixed(0)} AZN</span>
+                            </>
+                          ) : (
+                            <span>{price.toFixed(0)} AZN</span>
+                          )}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom divider */}
+        <div className="px-1.5 mt-6 md:mt-8">
+          <div className="h-px bg-black/10" />
         </div>
       </div>
+
+      <style>{`
+        .dv-bs-track::-webkit-scrollbar { display: none; }
+      `}</style>
     </section>
   );
 };

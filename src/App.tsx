@@ -62,7 +62,6 @@ const HomePage: React.FC = () => {
       <BrandShowcase />
       <HomeProductBanners />
       <StatsBand />
-      <Features />
       <CategoryBanner />
     </>
   );
