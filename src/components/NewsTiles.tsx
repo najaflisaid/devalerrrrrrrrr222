@@ -103,7 +103,7 @@ const NewsTiles: React.FC = () => {
     >
       {/* Heading row: title centered, arrows top-right */}
       <div className={`relative px-1.5 mb-3 md:mb-4 dv-reveal ${inView ? 'is-in' : ''}`}>
-        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
+        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
           {title[lang]}
         </h2>
         {showArrows && (

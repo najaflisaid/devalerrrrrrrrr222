@@ -97,7 +97,7 @@ const BestSellersSection: React.FC = () => {
       <div className="max-w-[1440px] mx-auto">
         {/* Heading row: title centered, arrows top-right (frameless, compact) */}
         <div className="relative px-1.5 mb-3 md:mb-4">
-          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
+          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
             {t('bestSellers.title') || 'Sevilən məhsullar'}
           </h2>
           {showArrows && (
