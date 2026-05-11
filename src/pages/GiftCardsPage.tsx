@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Gift, ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react';
 import {
   buildCustomGiftCardProduct,
   GIFT_CARD_MIN_AMOUNT,
   GIFT_CARD_MAX_AMOUNT,
 } from '../utils/giftCard';
-import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment } from '../services/epointPaymentService';
+import { useCart } from '../context/CartContext';
 
 type Step = 1 | 2;
 
@@ -18,6 +18,8 @@ const STEP_LABELS: Record<Step, string> = {
 
 const GiftCardsPage: React.FC = () => {
   const { t: _t } = useTranslation();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -69,7 +71,8 @@ const GiftCardsPage: React.FC = () => {
   };
 
   /**
-   * Birbaşa ödənişə keçir — səbətə əlavə etmədən sifariş yaradır və Epoint-ə yönləndirir.
+   * Hədiyyə kartını səbətə əlavə edir və standart checkout (cart) səhifəsinə yönləndirir.
+   * Müştəri orada əlaqə məlumatlarını yoxlayır və Ödəniş Et düyməsindən Epoint-ə keçir.
    */
   const handlePayDirectly = async () => {
     if (step2Error || step1Error) return;
@@ -78,49 +81,12 @@ const GiftCardsPage: React.FC = () => {
     try {
       const product = buildCustomGiftCardProduct(amount);
 
-      // Mövcud istifadəçi varsa onu götür, yoxsa rəqəmsal phone üzərindən sintetik
       const phoneDigits = recipientPhone.replace(/\D/g, '');
       const fullPhone = phoneDigits.startsWith('994')
         ? `+${phoneDigits}`
         : `+994${phoneDigits.slice(-9)}`;
 
-      const userId =
-        localStorage.getItem('userId') ||
-        `guest-gift-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const userEmail = localStorage.getItem('userEmail') || '';
-
-      const orderItems = [
-        {
-          productId: product.id,
-          productName: `Hədiyyə Kartı — ${amount} AZN`,
-          image: '',
-          quantity,
-          price: amount,
-        },
-      ];
-
-      const { id: orderId } = await createCustomerOrder({
-        userId,
-        customerName: senderName.trim(),
-        customerEmail: userEmail,
-        customerPhone: fullPhone,
-        customerAddress: 'Hədiyyə Kartı (rəqəmsal)',
-        notes: [
-          `Alıcı: ${recipientName.trim()}`,
-          `Alıcı telefonu: ${fullPhone}`,
-          message ? `Mesaj: ${message.trim()}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-        items: orderItems,
-        subtotal: total,
-        discountAmount: 0,
-        totalAmount: total,
-        deliveryFee: 0,
-        paymentMethod: 'epoint',
-      } as any);
-
-      // Gift card metadatasını payment-success üçün saxla
+      // Hədiyyə kartının alıcı/mesaj kontekstini cart-success flow üçün saxla
       try {
         sessionStorage.setItem(
           'giftCardMeta',
@@ -137,15 +103,10 @@ const GiftCardsPage: React.FC = () => {
         /* noop */
       }
 
-      sessionStorage.setItem('pending_epoint_order_id', orderId);
-
-      await startEpointPayment({
-        orderId,
-        amount: total,
-        description: `DE VALEUR Hədiyyə Kartı — ${amount} AZN × ${quantity}`,
-      });
+      addToCart(product, quantity);
+      navigate('/cart');
     } catch (e: any) {
-      setPaymentError(e?.message || 'Ödənişə keçilmədi. Yenidən cəhd edin.');
+      setPaymentError(e?.message || 'Səbətə əlavə edilmədi. Yenidən cəhd edin.');
       setSubmitting(false);
     }
   };
@@ -196,11 +157,42 @@ const GiftCardsPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Main content — sol sahə form, sağda hədiyyə kartı şəkli (sticky) */}
+      {/* Main content — hədiyyə kartı ortada, formlar altında mərkəzdə */}
       <section className="px-5 sm:px-8 pb-16">
-        <div className="max-w-[1100px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-10 lg:gap-14 items-start">
-          {/* LEFT — form */}
-          <div className="order-2 lg:order-1">
+        <div className="max-w-[680px] mx-auto">
+          {/* Hədiyyə kartı şəkli — mərkəzdə */}
+          <div className="mb-10 md:mb-12">
+            <div className="relative w-full max-w-[440px] mx-auto aspect-[16/10] bg-gradient-to-br from-[#1a1410] via-black to-[#2a2218] overflow-hidden rounded-sm shadow-2xl">
+              <div
+                className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 20% 20%, rgba(255,210,150,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(120,80,40,0.25), transparent 55%)',
+                }}
+              />
+              <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-8 text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.32em] opacity-75">De Valeur</p>
+                    <p className="text-[22px] md:text-[28px] font-light tracking-tight mt-1">
+                      Hədiyyə Kartı
+                    </p>
+                  </div>
+                  <Gift className="w-7 h-7 opacity-60" strokeWidth={1.25} />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] opacity-65 mb-1">Dəyər</p>
+                  <p className="text-[40px] md:text-[56px] font-light leading-none tabular-nums">
+                    {amount > 0 ? amount.toLocaleString('az-AZ') : '—'}{' '}
+                    <span className="text-[20px] md:text-[24px] opacity-80">AZN</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div>
             {step === 1 && (
               <div data-testid="gift-step-1-content">
                 <h2 className="text-[24px] md:text-[32px] font-light tracking-tight text-black mb-3">
@@ -393,68 +385,17 @@ const GiftCardsPage: React.FC = () => {
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Ödənişə keçilir...
+                      <Loader2 className="w-4 h-4 animate-spin" /> Davam edilir...
                     </>
                   ) : (
                     <>
-                      Ödənişə keç ({total.toLocaleString('az-AZ')} AZN)
+                      Davam et ({total.toLocaleString('az-AZ')} AZN)
                       <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
                     </>
                   )}
                 </button>
               )}
             </div>
-          </div>
-
-          {/* RIGHT — gift card visual (sticky on desktop) */}
-          <div className="order-1 lg:order-2 lg:sticky lg:top-24">
-            <div className="relative w-full max-w-[440px] mx-auto aspect-[16/10] bg-gradient-to-br from-[#1a1410] via-black to-[#2a2218] overflow-hidden rounded-sm shadow-2xl">
-              <div
-                className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
-                style={{
-                  backgroundImage:
-                    'radial-gradient(circle at 20% 20%, rgba(255,210,150,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(120,80,40,0.25), transparent 55%)',
-                }}
-              />
-              <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-8 text-white">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.32em] opacity-75">De Valeur</p>
-                    <p className="text-[22px] md:text-[28px] font-light tracking-tight mt-1">
-                      Hədiyyə Kartı
-                    </p>
-                  </div>
-                  <Gift className="w-7 h-7 opacity-60" strokeWidth={1.25} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] opacity-65 mb-1">Dəyər</p>
-                  <p className="text-[40px] md:text-[56px] font-light leading-none tabular-nums">
-                    {amount > 0 ? amount.toLocaleString('az-AZ') : '—'}{' '}
-                    <span className="text-[20px] md:text-[24px] opacity-80">AZN</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Cəmi pre-payment review */}
-            {step === 2 && (
-              <div className="mt-4 max-w-[440px] mx-auto border border-black/15 bg-white">
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/10">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-black/55">Bir kart</span>
-                  <span className="text-[13px] tabular-nums">{amount.toLocaleString('az-AZ')} AZN</span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/10">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-black/55">Say</span>
-                  <span className="text-[13px] tabular-nums">{quantity}</span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 bg-black text-white">
-                  <span className="text-[11px] uppercase tracking-[0.2em] opacity-80">Cəmi</span>
-                  <span className="text-[18px] font-light tabular-nums" data-testid="gift-total">
-                    {total.toLocaleString('az-AZ')} AZN
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
