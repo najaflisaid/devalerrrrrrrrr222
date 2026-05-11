@@ -8,7 +8,6 @@ import Features from './components/Features';
 import CategoryBanner from './components/CategoryBanner';
 import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
-import StatsBand from './components/StatsBand';
 import BrandShowcase from './components/BrandShowcase';
 import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
@@ -62,7 +61,6 @@ const HomePage: React.FC = () => {
       <NewsTiles />
       <BrandShowcase />
       <HomeProductBanners />
-      <StatsBand />
       <CategoryBanner />
     </>
   );
