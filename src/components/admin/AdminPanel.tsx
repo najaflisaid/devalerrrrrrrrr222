@@ -33,6 +33,7 @@ import PromoCodesTab from './PromoCodesTab';
 import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
+import CampaignsTab from './CampaignsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
@@ -1332,6 +1333,7 @@ const AdminPanel: React.FC = () => {
     {
       label: 'Marketing & Məzmun',
       items: [
+        { id: 'campaigns', label: 'Endirim Kampaniyaları', icon: Sparkles },
         { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
         { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
         { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
@@ -3222,6 +3224,10 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'giftCards' && (
           <GiftCardsTab />
+        )}
+
+        {activeTab === 'campaigns' && (
+          <CampaignsTab />
         )}
 
         {activeTab === 'banners' && (

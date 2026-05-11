@@ -66,3 +66,44 @@ Bloger/influencer izləyiciləri eyni kodu istifadə edib endirim ala bilir.
 - src/components/admin/PromoCodesTab.tsx (sub-tab keçidi əlavə olundu)
 - src/pages/CartPage.tsx (regex `/^\d{6}$/` → `/^[A-Z0-9]{3,20}$/`)
 
+
+---
+
+## Endirim Kampaniyaları və Popup Sistemi (Yan 2026)
+
+### Məqsəd
+Bütün məhsullara bir kliklə qlobal endirim tətbiq etmək, brend əsasında istisna/fərqli faiz təyin etmək, kampaniya zamanı ziyarətçilərə popup göstərmək.
+
+### Endirim Qaydaları
+- **Option C**: Yalnız `salePrice`-ı olmayan məhsullara tətbiq olunur (mövcud endirimlər qorunur)
+- **Brend override** (hər ikisi dəstəklənir):
+  - `exclude`: həmin brend tamamilə istisna
+  - `custom`: həmin brend üçün fərqli faiz
+- **Tarix məhdudiyyəti**: startDate/endDate ISO; isCampaignLive() həm `isActive` toggle, həm tarix aralığını yoxlayır
+- **Aktivləşmə**: productService.getAll/getByCategory/getBestSellers/getById səviyyəsində avtomatik (60s in-memory cache, admin save edəndə invalidate)
+
+### Popup Davranışı
+- Hər sessiyada bir dəfə (sessionStorage)
+- Admin tərəfindən: şəkil, başlıq, qısa mətn, düymə mətni+linki, gecikmə (saniyə)
+- X düyməsi sağ küncdə + arxa fona klik → bağlanır
+- Admin/auth səhifələrində göstərilmir
+
+### Firestore
+- `campaigns/current` (tək doc) — Campaign tipi
+- Storage: `campaigns/{timestamp}_{filename}` — popup şəkilləri
+
+### Dəyişən / yeni fayllar
+- `src/services/campaignService.ts` (yeni)
+- `src/services/productService.ts` (kampaniya transform avtomatik tətbiq)
+- `src/components/CampaignPopup.tsx` (yeni)
+- `src/components/admin/CampaignsTab.tsx` (yeni)
+- `src/components/admin/AdminPanel.tsx` (yeni tab Marketing & Məzmun qrupunda)
+- `src/App.tsx` (CampaignPopup mount)
+
+## Chat Widget Redizaynı (Yan 2026)
+- Launcher kiçildi: 56px → 44px
+- Border rəngi: #c9a14a → **#D4AF37** (De Valeur logo qızılı)
+- "Mütəxəssisdən tövsiyə al" bubble: Sparkles ikonu + qızıl shimmer animation + diqqətçəkən bob effekti, qara qalın font
+- Chat panel: qızıl border, AI Mütəxəssis subtitle, rounded mesaj bubbles, send düyməsi hover-də qızıl
+- Yeni CSS animasiyaları: dv-ai-greet-attn, dv-ai-shimmer, dv-ai-panel-in, dv-ai-msg-in
+

@@ -377,6 +377,14 @@ html.dark .dv-orb { opacity: 0.28; }
   animation: fadeIn 0.3s ease-out;
 }
 
+@keyframes popupIn {
+  0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-popupIn {
+  animation: popupIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .animate-scaleIn {
   animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -826,9 +834,65 @@ html.dark .dv-orb { opacity: 0.28; }
   width: 8px;
   height: 8px;
   background: #fff;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid rgba(212, 175, 55, 0.6);
+  border-right: 1px solid rgba(212, 175, 55, 0.6);
   transform: translateY(-50%) rotate(45deg);
+}
+
+/* Attention-grabbing greet bubble (new) — subtle pulse + sparkle */
+.dv-ai-greet-attn {
+  animation: dv-ai-greet-slide 620ms cubic-bezier(0.22, 1, 0.36, 1) both,
+             dv-ai-attn-bob 2.4s ease-in-out 700ms infinite;
+  transform-origin: right center;
+}
+@keyframes dv-ai-attn-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+/* Gold shimmer sweeping across the greet bubble */
+.dv-ai-greet-shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(212, 175, 55, 0.28) 50%,
+    transparent 80%
+  );
+  animation: dv-ai-shimmer 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes dv-ai-shimmer {
+  0%   { left: -60%; }
+  60%  { left: 110%; }
+  100% { left: 110%; }
+}
+/* Sparkle icon rotation */
+.dv-ai-spark {
+  animation: dv-ai-sparkle 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Chat panel slide-in */
+.dv-ai-panel {
+  animation: dv-ai-panel-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: bottom right;
+}
+@keyframes dv-ai-panel-in {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Message fade/slide-in */
+.dv-ai-msg-in {
+  animation: dv-ai-msg-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dv-ai-msg-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -836,7 +900,12 @@ html.dark .dv-orb { opacity: 0.28; }
   .dv-ai-greet,
   .dv-ai-greet::before,
   .dv-ai-online-pulse,
-  .dv-ai-pulse { animation: none !important; }
+  .dv-ai-pulse,
+  .dv-ai-greet-attn,
+  .dv-ai-greet-shimmer::before,
+  .dv-ai-spark,
+  .dv-ai-panel,
+  .dv-ai-msg-in { animation: none !important; }
 }
 
 /* Pulsing online indicator — outer ripple */

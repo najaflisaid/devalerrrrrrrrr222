@@ -2,6 +2,36 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, g
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
 import type { Product } from '../types';
+import {
+  getCampaign,
+  applyCampaignToProduct,
+  applyCampaignToProducts,
+  isCampaignLive,
+  type Campaign,
+} from './campaignService';
+
+// Lightweight in-memory cache to avoid hammering Firestore on every product fetch.
+let _campaignCache: { data: Campaign | null; at: number } = { data: null, at: 0 };
+const CAMPAIGN_TTL_MS = 60_000;
+
+const getCampaignCached = async (): Promise<Campaign | null> => {
+  const now = Date.now();
+  if (_campaignCache.data && now - _campaignCache.at < CAMPAIGN_TTL_MS) {
+    return _campaignCache.data;
+  }
+  try {
+    const c = await getCampaign();
+    _campaignCache = { data: c, at: now };
+    return c;
+  } catch {
+    return _campaignCache.data;
+  }
+};
+
+// Public — admin paneldə kampaniyanı yeniləyəndə cache-i sıfırlayır.
+export const invalidateCampaignCache = () => {
+  _campaignCache = { data: null, at: 0 };
+};
 
 export const productService = {
   async getAll(includeComingSoon: boolean = false): Promise<Product[]> {
@@ -42,6 +72,15 @@ export const productService = {
         products = products.filter(p => p.comingSoon !== true);
       }
 
+      // Aktiv kampaniya endirimini tətbiq et (yalnız retail; B2B üçün
+      // ProductCard onsuz da b2b qiymətlərini üstün tutur).
+      if (userRole !== 'admin') {
+        const campaign = await getCampaignCached();
+        if (isCampaignLive(campaign)) {
+          products = applyCampaignToProducts(products, campaign);
+        }
+      }
+
       console.log('ProductService.getAll - final products returned:', products.length);
       return products;
     } catch (error) {
@@ -75,6 +114,11 @@ export const productService = {
         if (visibleTo === 'customer' && (userRole === 'customer' || !userRole)) return true;
         return false;
       });
+
+      const campaign = await getCampaignCached();
+      if (isCampaignLive(campaign)) {
+        products = applyCampaignToProducts(products, campaign);
+      }
     }
 
     return products;
@@ -113,6 +157,13 @@ export const productService = {
       products = products.filter(p => !p.comingSoon);
     }
 
+    if (userRole !== 'admin') {
+      const campaign = await getCampaignCached();
+      if (isCampaignLive(campaign)) {
+        products = applyCampaignToProducts(products, campaign);
+      }
+    }
+
     return products.slice(0, limit);
   },
 
@@ -144,11 +195,20 @@ export const productService = {
       const snap = await getDoc(doc(db, 'products', id));
       if (!snap.exists()) return null;
       const data = snap.data();
-      return {
+      const product = {
         id: snap.id,
         ...data,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date()),
       } as Product;
+
+      const userRole = localStorage.getItem('userRole');
+      if (userRole !== 'admin') {
+        const campaign = await getCampaignCached();
+        if (isCampaignLive(campaign)) {
+          return applyCampaignToProduct(product, campaign);
+        }
+      }
+      return product;
     } catch (err) {
       console.error('productService.getById:', err);
       return null;
