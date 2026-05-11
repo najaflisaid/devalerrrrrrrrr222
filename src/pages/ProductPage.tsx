@@ -197,18 +197,24 @@ const ProductPage: React.FC = () => {
             </h1>
 
             {/* Price */}
-            <div className="flex items-baseline gap-3 mb-6">
+            <div className="mb-6">
               {onSale ? (
                 <>
-                  <span className="text-[26px] font-medium text-[#D14545] tabular-nums">
-                    {product.salePrice!.toFixed(2)} AZN
-                  </span>
-                  <span className="text-[16px] text-black/40 line-through tabular-nums">
-                    {product.price.toFixed(2)} AZN
-                  </span>
+                  <div className="flex items-baseline gap-3 flex-wrap">
+                    <span className="text-[28px] font-medium text-[#D14545] tabular-nums">
+                      {product.salePrice!.toFixed(2)} AZN
+                    </span>
+                    <span className="text-[20px] text-black/60 line-through tabular-nums">
+                      {product.price.toFixed(2)} AZN
+                    </span>
+                  </div>
+                  <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {(product.price - product.salePrice!).toFixed(2)} AZN qənaət
+                  </p>
                 </>
               ) : (
-                <span className="text-[26px] font-medium text-black tabular-nums">
+                <span className="text-[28px] font-medium text-black tabular-nums">
                   {product.price.toFixed(2)} AZN
                 </span>
               )}

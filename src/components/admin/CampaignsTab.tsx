@@ -305,6 +305,17 @@ const CampaignsTab: React.FC = () => {
                 <button type="button" onClick={() => updatePopup('imageUrl', '')} className="text-xs text-red-500 hover:underline">Sil</button>
               )}
             </div>
+            <div className="mt-2">
+              <label className="text-[11px] text-gray-500 block mb-1">və ya birbaşa şəkil URL-i yapışdırın</label>
+              <input
+                type="text"
+                value={data.popup.imageUrl}
+                onChange={(e) => updatePopup('imageUrl', e.target.value)}
+                placeholder="https://..."
+                className="w-full h-9 px-3 border border-gray-300 rounded text-xs focus:border-gray-900 focus:outline-none"
+                data-testid="campaign-popup-image-url"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-medium text-gray-700 block mb-1.5">Başlıq</label>

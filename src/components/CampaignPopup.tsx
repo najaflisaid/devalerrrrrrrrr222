@@ -83,7 +83,7 @@ const CampaignPopup: React.FC = () => {
       data-testid="campaign-popup"
     >
       <div
-        className={`relative bg-white max-w-[480px] w-full overflow-hidden shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] transition-all duration-300 ${closing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-popupIn'}`}
+        className={`relative bg-white max-w-[600px] w-full overflow-hidden shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] transition-all duration-300 ${closing ? 'scale-95 opacity-0' : 'scale-100 opacity-100 animate-popupIn'}`}
         onClick={(e) => e.stopPropagation()}
         style={{ border: '1px solid #D4AF37' }}
       >
@@ -91,11 +91,11 @@ const CampaignPopup: React.FC = () => {
         <button
           type="button"
           onClick={handleClose}
-          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-black/70 hover:text-black flex items-center justify-center shadow-md transition-all"
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/95 hover:bg-white text-black/70 hover:text-black flex items-center justify-center shadow-md transition-all"
           aria-label="Bağla"
           data-testid="campaign-popup-close"
         >
-          <X className="h-4 w-4" strokeWidth={1.75} />
+          <X className="h-5 w-5" strokeWidth={1.75} />
         </button>
 
         {/* Image */}
@@ -111,17 +111,17 @@ const CampaignPopup: React.FC = () => {
         )}
 
         {/* Body */}
-        <div className="px-7 pt-6 pb-7 text-center">
+        <div className="px-8 pt-7 pb-8 text-center">
           {title && (
             <h2
-              className="font-playfair text-2xl md:text-3xl font-light text-black mb-2 tracking-tight"
+              className="font-playfair text-3xl md:text-4xl font-light text-black mb-3 tracking-tight"
               data-testid="campaign-popup-title"
             >
               {title}
             </h2>
           )}
           {subtitle && (
-            <p className="text-[13px] text-black/65 leading-relaxed mb-5 whitespace-pre-line">
+            <p className="text-[14px] md:text-[15px] text-black/65 leading-relaxed mb-6 whitespace-pre-line">
               {subtitle}
             </p>
           )}
@@ -129,7 +129,7 @@ const CampaignPopup: React.FC = () => {
             <button
               type="button"
               onClick={handleCta}
-              className="inline-flex items-center justify-center min-w-[200px] h-11 px-6 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-[#D4AF37] hover:text-black transition-colors"
+              className="inline-flex items-center justify-center min-w-[220px] h-12 px-7 bg-black text-white text-[12px] uppercase tracking-[0.22em] hover:bg-[#D4AF37] hover:text-black transition-colors"
               data-testid="campaign-popup-cta"
             >
               {buttonText}
