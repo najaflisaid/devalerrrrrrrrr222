@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Gift, ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react';
 import {
-  buildCustomGiftCardProduct,
   GIFT_CARD_MIN_AMOUNT,
   GIFT_CARD_MAX_AMOUNT,
 } from '../utils/giftCard';
-import { useCart } from '../context/CartContext';
 
 type Step = 1 | 2;
 
@@ -19,7 +17,6 @@ const STEP_LABELS: Record<Step, string> = {
 const GiftCardsPage: React.FC = () => {
   const { t: _t } = useTranslation();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
 
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -71,22 +68,19 @@ const GiftCardsPage: React.FC = () => {
   };
 
   /**
-   * Hədiyyə kartını səbətə əlavə edir və standart checkout (cart) səhifəsinə yönləndirir.
-   * Müştəri orada əlaqə məlumatlarını yoxlayır və Ödəniş Et düyməsindən Epoint-ə keçir.
+   * Hədiyyə kartı ödəniş səhifəsinə yönləndirir. Səbətə əlavə olunmur — hədiyyə kartı
+   * adi məhsul deyildir və ayrıca checkout flow istifadə olunur.
    */
   const handlePayDirectly = async () => {
     if (step2Error || step1Error) return;
     setSubmitting(true);
     setPaymentError('');
     try {
-      const product = buildCustomGiftCardProduct(amount);
-
       const phoneDigits = recipientPhone.replace(/\D/g, '');
       const fullPhone = phoneDigits.startsWith('994')
         ? `+${phoneDigits}`
         : `+994${phoneDigits.slice(-9)}`;
 
-      // Hədiyyə kartının alıcı/mesaj kontekstini cart-success flow üçün saxla
       try {
         sessionStorage.setItem(
           'giftCardMeta',
@@ -103,10 +97,9 @@ const GiftCardsPage: React.FC = () => {
         /* noop */
       }
 
-      addToCart(product, quantity);
-      navigate('/cart');
+      navigate('/gift-cards/checkout');
     } catch (e: any) {
-      setPaymentError(e?.message || 'Səbətə əlavə edilmədi. Yenidən cəhd edin.');
+      setPaymentError(e?.message || 'Davam edilmədi. Yenidən cəhd edin.');
       setSubmitting(false);
     }
   };
