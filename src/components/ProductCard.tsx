@@ -95,7 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           {/* Sale badge — sol üst künc */}
           {originalPrice && displayPrice < originalPrice && !compact && (
             <span
-              className="absolute top-2.5 left-2.5 z-[2] inline-flex items-center justify-center min-w-[42px] h-[42px] rounded-full bg-[#D14545] text-white text-[12px] font-bold tracking-tight shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+              className="absolute top-2 left-2 z-[2] inline-flex items-center justify-center w-8 h-8 md:w-[42px] md:h-[42px] rounded-full bg-[#D14545] text-white text-[10px] md:text-[12px] font-bold tracking-tight shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
               data-testid={`product-discount-badge-${product.id}`}
             >
               -{Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}%

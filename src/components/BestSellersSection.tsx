@@ -175,7 +175,7 @@ const BestSellersSection: React.FC = () => {
                       {/* Sale badge — top left, circular % */}
                       {onSale && (
                         <span
-                          className="absolute top-1 left-1 md:top-2 md:left-2 z-[2] inline-flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[10px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+                          className="absolute top-1 left-1 md:top-2 md:left-2 z-[2] inline-flex items-center justify-center w-7 h-7 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[8.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
                           data-testid={`bs-discount-badge-${product.id}`}
                         >
                           −{Math.round(((product.price - product.salePrice!) / product.price) * 100)}%

@@ -916,13 +916,13 @@ html.dark .dv-orb { opacity: 0.28; }
 .dv-price-strike::after {
   content: "";
   position: absolute;
-  left: -2%;
-  right: -2%;
+  left: 0;
+  right: 0;
   top: 50%;
-  height: 1.5px;
+  height: 1px;
   background: currentColor;
-  opacity: 0.85;
-  transform: rotate(-10deg);
+  opacity: 0.9;
+  transform: translateY(-50%) rotate(-6deg);
   transform-origin: center;
   pointer-events: none;
 }
