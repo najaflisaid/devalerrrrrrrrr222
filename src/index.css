@@ -909,6 +909,24 @@ html.dark .dv-orb { opacity: 0.28; }
   100% { transform: translateX(120%); }
 }
 
+/* Diagonal cross-out line over the previous (full) price */
+.dv-price-strike {
+  display: inline-block;
+}
+.dv-price-strike::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  opacity: 0.85;
+  transform: rotate(-10deg);
+  transform-origin: center;
+  pointer-events: none;
+}
+
 /* Lively chat launcher — golden rotating ring + breathing pulse */
 .dv-ai-launcher-live {
   box-shadow: 0 6px 22px -8px rgba(0,0,0,0.38);

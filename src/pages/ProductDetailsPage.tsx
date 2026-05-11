@@ -171,26 +171,27 @@ const ProductDetailsPage: React.FC = () => {
             </div>
 
             <div className="mb-8">
-              <div className="space-y-2">
+              <div>
                 {product.salePrice ? (
-                  <div className="flex items-baseline gap-3 flex-wrap">
-                    <p className="text-4xl font-bold text-gray-900 tabular-nums">{product.salePrice.toFixed(2)} AZN</p>
-                    <p className="text-4xl font-light text-gray-400 line-through tabular-nums">{product.price.toFixed(2)} AZN</p>
+                  <>
                     <span
-                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-2.5 py-1 text-[13px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
+                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-3 py-1 mb-3 text-[13px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
                       data-testid="product-savings-badge"
                     >
-                      <span className="relative z-[1]">−{(product.price - product.salePrice).toFixed(0)} AZN</span>
+                      <span className="relative z-[1]">−{(product.price - product.salePrice).toFixed(0)} AZN qənaət</span>
                     </span>
-                  </div>
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <p className="text-4xl font-bold text-gray-900 tabular-nums">{product.salePrice.toFixed(2)} AZN</p>
+                      <p className="dv-price-strike relative text-4xl font-light text-gray-500 tabular-nums">{product.price.toFixed(2)} AZN</p>
+                    </div>
+                  </>
                 ) : (
                   <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)} AZN</p>
                 )}
                 {isOutOfStock && isB2BUser && (
-                  <p className="text-sm text-red-600 font-medium">Bitdi</p>
+                  <p className="text-sm text-red-600 font-medium mt-2">Bitdi</p>
                 )}
               </div>
-
             </div>
 
             {isB2BUser && (

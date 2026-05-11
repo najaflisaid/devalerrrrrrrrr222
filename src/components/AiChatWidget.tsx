@@ -549,27 +549,24 @@ const AiChatWidget: React.FC = () => {
                 setOpen(true);
                 setShowGreetBubble(false);
               }}
-              className="dv-ai-greet-attn mb-1 max-w-[260px] relative cursor-pointer group"
+              className="dv-ai-greet-attn mb-1 max-w-[210px] relative cursor-pointer group"
               data-testid="ai-greet-bubble"
               aria-label="AI satış mütəxəssisi ilə danış"
             >
-              <span className="dv-ai-greet-shimmer relative block bg-white border border-[#D4AF37]/70 pl-4 pr-8 py-2.5 text-left shadow-[0_6px_24px_-12px_rgba(212,175,55,0.55)] overflow-hidden">
+              <span className="dv-ai-greet-shimmer relative block bg-white border border-[#D4AF37]/70 pl-3 pr-7 py-2 text-left shadow-[0_6px_24px_-12px_rgba(212,175,55,0.55)] overflow-hidden">
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowGreetBubble(false);
                   }}
-                  className="absolute top-1/2 -translate-y-1/2 right-2.5 text-black/30 hover:text-black/70 cursor-pointer leading-none"
+                  className="absolute top-1/2 -translate-y-1/2 right-2 text-black/30 hover:text-black/70 cursor-pointer leading-none"
                 >
-                  <X className="h-3 w-3" strokeWidth={1.5} />
+                  <X className="h-2.5 w-2.5" strokeWidth={1.5} />
                 </span>
-                <span className="relative block text-[11px] tracking-[0.32em] text-[#D4AF37] font-semibold leading-none uppercase">
-                  DE VALEUR
-                </span>
-                <span className="relative mt-1.5 block h-[1px] w-6 bg-[#D4AF37]" />
-                <span className="relative mt-1.5 block text-[12.5px] text-black font-medium leading-snug tracking-tight whitespace-nowrap">
+                <span className="relative block text-[11.5px] text-black font-medium leading-snug tracking-tight whitespace-nowrap">
                   Mütəxəssisdən tövsiyə al
                 </span>
+                <span className="relative mt-1 block h-[1px] w-5 bg-[#D4AF37]" />
               </span>
               {/* Tail pointing to the launcher */}
               <span aria-hidden="true" className="dv-ai-greet-tail" />
@@ -616,14 +613,14 @@ const AiChatWidget: React.FC = () => {
           data-testid="ai-chat-panel"
         >
           {/* Header — luxury with gold accent */}
-          <div className="relative px-5 py-3.5 flex items-center justify-between bg-white">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="relative w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-white" style={{ boxShadow: '0 0 0 1px #D4AF37' }}>
+          <div className="relative px-5 py-4 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="relative w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-white" style={{ boxShadow: '0 0 0 1px #D4AF37' }}>
                 <img src={DEVALEUR_LOGO} alt="" className="w-[75%] h-[75%] object-contain" draggable={false} />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
               </span>
-              <p className="font-playfair text-[16px] font-light text-black tracking-tight leading-none">
-                De Valeur
+              <p className="font-playfair text-[22px] font-light text-black tracking-[0.04em] leading-none uppercase">
+                DE VALEUR
               </p>
             </div>
             <div className="flex items-center gap-0.5 flex-shrink-0">

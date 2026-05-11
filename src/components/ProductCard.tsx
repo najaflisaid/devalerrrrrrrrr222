@@ -134,17 +134,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               {product.brand}
             </p>
           )}
-          <h3 className={`${compact ? 'text-[13px]' : 'text-[15px]'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[1.6rem]' : 'min-h-[1.8rem]'} leading-snug transition-colors duration-300 group-hover:text-black`}>
+          <h3 className={`${compact ? 'text-[13px]' : 'text-[15px]'} font-medium text-gray-900 line-clamp-1 leading-snug transition-colors duration-300 group-hover:text-black`}>
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
-          <div className="flex items-center justify-center gap-2 mt-1">
+          <div className="flex items-center justify-center gap-2 mt-0.5 flex-wrap">
             {originalPrice ? (
               <>
-                <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-gray-400 line-through tabular-nums`}>
-                  {originalPrice.toFixed(2)} AZN
-                </span>
                 <span className={`${compact ? 'text-[11px]' : 'text-[13px]'} font-semibold text-[#D14545] tabular-nums`}>
                   {displayPrice.toFixed(2)} AZN
+                </span>
+                <span className={`dv-price-strike relative ${compact ? 'text-[11px]' : 'text-[13px]'} font-light text-gray-400 tabular-nums`}>
+                  {originalPrice.toFixed(2)} AZN
                 </span>
               </>
             ) : (

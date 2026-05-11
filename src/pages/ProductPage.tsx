@@ -202,22 +202,22 @@ const ProductPage: React.FC = () => {
             {/* Price */}
             <div className="mb-6">
               {onSale ? (
-                <>
+                <div>
+                  <span
+                    className="dv-savings-shimmer relative inline-flex items-center justify-center px-3 py-1 mb-2 text-[12px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
+                    data-testid="product-savings-badge"
+                  >
+                    <span className="relative z-[1]">−{(product.price - product.salePrice!).toFixed(0)} AZN qənaət</span>
+                  </span>
                   <div className="flex items-baseline gap-3 flex-wrap">
                     <span className="text-[28px] font-medium text-[#D14545] tabular-nums" data-testid="product-sale-price">
                       {product.salePrice!.toFixed(2)} AZN
                     </span>
-                    <span className="text-[28px] font-light text-black/45 line-through tabular-nums" data-testid="product-original-price">
+                    <span className="dv-price-strike relative text-[28px] font-light text-black/55 tabular-nums" data-testid="product-original-price">
                       {product.price.toFixed(2)} AZN
                     </span>
-                    <span
-                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-2.5 py-1 text-[12px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
-                      data-testid="product-savings-badge"
-                    >
-                      <span className="relative z-[1]">−{(product.price - product.salePrice!).toFixed(0)} AZN</span>
-                    </span>
                   </div>
-                </>
+                </div>
               ) : (
                 <span className="text-[28px] font-medium text-black tabular-nums">
                   {product.price.toFixed(2)} AZN
