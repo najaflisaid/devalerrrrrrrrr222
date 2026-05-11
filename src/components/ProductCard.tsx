@@ -92,6 +92,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
 
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
 
+          {/* Sale badge — sol üst künc */}
+          {originalPrice && displayPrice < originalPrice && !compact && (
+            <span
+              className="absolute top-2.5 left-2.5 z-[2] inline-flex items-center justify-center min-w-[42px] h-[42px] rounded-full bg-[#D14545] text-white text-[12px] font-bold tracking-tight shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+              data-testid={`product-discount-badge-${product.id}`}
+            >
+              -{Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}%
+            </span>
+          )}
+
           {!compact && !isB2BUser && (
             <button
               onClick={handleToggleFavorite}
@@ -118,22 +128,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
           )}
         </div>
 
-        <div className="text-center space-y-1">
-          <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'} transition-colors duration-300 group-hover:text-black`}>
+        <div className="text-center">
+          {product.brand && (
+            <p className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] text-gray-500 font-normal mb-0.5`}>
+              {product.brand}
+            </p>
+          )}
+          <h3 className={`${compact ? 'text-[13px]' : 'text-[15px]'} font-medium text-gray-900 line-clamp-2 ${compact ? 'min-h-[1.6rem]' : 'min-h-[1.8rem]'} leading-snug transition-colors duration-300 group-hover:text-black`}>
             {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
           </h3>
-          <div className="flex items-center justify-center space-x-2">
+          <div className="flex items-center justify-center gap-2 mt-1">
             {originalPrice ? (
               <>
-                <span className={`${compact ? 'text-xs' : 'text-sm'} text-gray-400`}>
+                <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-gray-400 line-through tabular-nums`}>
                   {originalPrice.toFixed(2)} AZN
                 </span>
-                <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-red-500`}>
+                <span className={`${compact ? 'text-[11px]' : 'text-[13px]'} font-semibold text-[#D14545] tabular-nums`}>
                   {displayPrice.toFixed(2)} AZN
                 </span>
               </>
             ) : (
-              <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-gray-900`}>
+              <span className={`${compact ? 'text-[11px]' : 'text-[13px]'} font-medium text-gray-900 tabular-nums`}>
                 {displayPrice.toFixed(2)} AZN
               </span>
             )}

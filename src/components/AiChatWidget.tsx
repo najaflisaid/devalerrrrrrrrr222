@@ -549,7 +549,7 @@ const AiChatWidget: React.FC = () => {
                 setOpen(true);
                 setShowGreetBubble(false);
               }}
-              className="dv-ai-greet-attn mb-1 max-w-[240px] relative cursor-pointer group"
+              className="dv-ai-greet-attn mb-1 max-w-[260px] relative cursor-pointer group"
               data-testid="ai-greet-bubble"
               aria-label="AI satış mütəxəssisi ilə danış"
             >
@@ -563,10 +563,13 @@ const AiChatWidget: React.FC = () => {
                 >
                   <X className="h-3 w-3" strokeWidth={1.5} />
                 </span>
-                <span className="relative block text-[12px] text-black font-medium leading-snug tracking-tight whitespace-nowrap uppercase">
+                <span className="relative block text-[11px] tracking-[0.32em] text-[#D4AF37] font-semibold leading-none uppercase">
+                  DE VALEUR
+                </span>
+                <span className="relative mt-1.5 block h-[1px] w-6 bg-[#D4AF37]" />
+                <span className="relative mt-1.5 block text-[12.5px] text-black font-medium leading-snug tracking-tight whitespace-nowrap">
                   Mütəxəssisdən tövsiyə al
                 </span>
-                <span className="relative mt-0.5 block h-[1px] w-8 bg-[#D4AF37]" />
               </span>
               {/* Tail pointing to the launcher */}
               <span aria-hidden="true" className="dv-ai-greet-tail" />
@@ -577,17 +580,15 @@ const AiChatWidget: React.FC = () => {
               setOpen(true);
               setShowGreetBubble(false);
             }}
-            className="dv-ai-launcher group relative flex items-center justify-center w-11 h-11 rounded-full bg-white transition-all duration-300 overflow-visible"
-            style={{
-              boxShadow:
-                '0 0 0 1.5px #D4AF37, 0 6px 20px -8px rgba(0,0,0,0.35)',
-            }}
+            className="dv-ai-launcher dv-ai-launcher-live group relative flex items-center justify-center w-12 h-12 rounded-full bg-white transition-all duration-300 overflow-visible"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
+            {/* Animated gold ring */}
+            <span aria-hidden="true" className="dv-ai-ring absolute inset-0 rounded-full" />
             {/* Logo — full image, contained inside the circle so D and R aren't clipped */}
-            <span className="absolute inset-[2.5px] rounded-full overflow-hidden flex items-center justify-center bg-white">
+            <span className="absolute inset-[3px] rounded-full overflow-hidden flex items-center justify-center bg-white z-[1]">
               <img
                 src="https://i.hizliresim.com/tmu65g6.png"
                 alt="De Valeur"

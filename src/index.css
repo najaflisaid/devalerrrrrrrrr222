@@ -882,6 +882,68 @@ html.dark .dv-orb { opacity: 0.28; }
   animation: dv-ai-panel-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transform-origin: bottom right;
 }
+
+/* Sale "savings" red badge — mirror/shine sweep */
+.dv-savings-shimmer {
+  position: relative;
+  isolation: isolate;
+}
+.dv-savings-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 75%
+  );
+  transform: translateX(-120%);
+  animation: dv-savings-shine 2.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes dv-savings-shine {
+  0%   { transform: translateX(-120%); }
+  60%  { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* Lively chat launcher — golden rotating ring + breathing pulse */
+.dv-ai-launcher-live {
+  box-shadow: 0 6px 22px -8px rgba(0,0,0,0.38);
+  animation: dv-ai-breathe 2.8s ease-in-out infinite;
+}
+.dv-ai-launcher-live:hover {
+  transform: scale(1.06);
+}
+.dv-ai-launcher-live .dv-ai-ring {
+  background: conic-gradient(
+    from 0deg,
+    #D4AF37 0deg,
+    #F7DC6F 90deg,
+    #D4AF37 180deg,
+    #B8860B 270deg,
+    #D4AF37 360deg
+  );
+  padding: 1.5px;
+  animation: dv-ai-ring-spin 4s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+}
+@keyframes dv-ai-ring-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes dv-ai-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55), 0 6px 22px -8px rgba(0,0,0,0.38); }
+  50%      { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0), 0 8px 26px -8px rgba(0,0,0,0.42); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-ai-launcher-live,
+  .dv-ai-launcher-live .dv-ai-ring { animation: none !important; }
+}
 @keyframes dv-ai-panel-in {
   0%   { opacity: 0; transform: translateY(16px) scale(0.96); }
   100% { opacity: 1; transform: translateY(0) scale(1); }

@@ -133,7 +133,10 @@ const ProductPage: React.FC = () => {
           <div>
             <div className="relative aspect-square bg-white border border-black/10 overflow-hidden">
               {onSale && (
-                <span className="absolute top-4 left-4 z-10 bg-[#D14545] text-white text-[10px] tracking-[0.22em] uppercase px-2.5 py-1 font-medium">
+                <span
+                  className="absolute top-4 left-4 z-10 inline-flex items-center justify-center w-[64px] h-[64px] rounded-full bg-[#D14545] text-white text-[15px] font-bold tabular-nums shadow-[0_8px_22px_-6px_rgba(209,69,69,0.55)]"
+                  data-testid="product-discount-badge"
+                >
                   −{discountPct}%
                 </span>
               )}
@@ -201,17 +204,19 @@ const ProductPage: React.FC = () => {
               {onSale ? (
                 <>
                   <div className="flex items-baseline gap-3 flex-wrap">
-                    <span className="text-[28px] font-medium text-[#D14545] tabular-nums">
+                    <span className="text-[28px] font-medium text-[#D14545] tabular-nums" data-testid="product-sale-price">
                       {product.salePrice!.toFixed(2)} AZN
                     </span>
-                    <span className="text-[20px] text-black/60 line-through tabular-nums">
+                    <span className="text-[28px] font-light text-black/45 line-through tabular-nums" data-testid="product-original-price">
                       {product.price.toFixed(2)} AZN
                     </span>
+                    <span
+                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-2.5 py-1 text-[12px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
+                      data-testid="product-savings-badge"
+                    >
+                      <span className="relative z-[1]">−{(product.price - product.salePrice!).toFixed(0)} AZN</span>
+                    </span>
                   </div>
-                  <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {(product.price - product.salePrice!).toFixed(2)} AZN qənaət
-                  </p>
                 </>
               ) : (
                 <span className="text-[28px] font-medium text-black tabular-nums">

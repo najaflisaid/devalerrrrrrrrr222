@@ -173,14 +173,16 @@ const ProductDetailsPage: React.FC = () => {
             <div className="mb-8">
               <div className="space-y-2">
                 {product.salePrice ? (
-                  <>
-                    <p className="text-lg text-gray-500 line-through font-medium tabular-nums">{product.price.toFixed(2)} AZN</p>
+                  <div className="flex items-baseline gap-3 flex-wrap">
                     <p className="text-4xl font-bold text-gray-900 tabular-nums">{product.salePrice.toFixed(2)} AZN</p>
-                    <p className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      {(product.price - product.salePrice).toFixed(2)} AZN qənaət
-                    </p>
-                  </>
+                    <p className="text-4xl font-light text-gray-400 line-through tabular-nums">{product.price.toFixed(2)} AZN</p>
+                    <span
+                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-2.5 py-1 text-[13px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
+                      data-testid="product-savings-badge"
+                    >
+                      <span className="relative z-[1]">−{(product.price - product.salePrice).toFixed(0)} AZN</span>
+                    </span>
+                  </div>
                 ) : (
                   <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)} AZN</p>
                 )}
