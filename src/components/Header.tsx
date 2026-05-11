@@ -36,6 +36,8 @@ const Header: React.FC = () => {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showMobileLangDropdown, setShowMobileLangDropdown] = useState(false);
   const [showLoginDropdown, setShowLoginDropdown] = useState(false);
+  const [mobileLangOpen, setMobileLangOpen] = useState(false);
+  const [mobileLoginOpen, setMobileLoginOpen] = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
 
   // Reopen cart drawer if user came back from checkout
@@ -885,79 +887,6 @@ const Header: React.FC = () => {
               </div>
 
               <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto">
-                {/* Mobile Top — luxe (Lang + Login, ən üstdə asanlıqla əlçatan) */}
-                <div className="border-b border-black/[0.06] p-5 space-y-3">
-                  {/* Language Switcher minimal pill */}
-                  <div>
-                    <div className="flex gap-1.5">
-                      {(['az', 'ru', 'en'] as const).map((lng) => (
-                        <button
-                          key={lng}
-                          onClick={() => i18n.changeLanguage(lng)}
-                          className={`flex-1 h-9 text-[11px] uppercase tracking-[0.18em] border transition-all ${
-                            i18n.language === lng
-                              ? 'bg-black text-white border-black'
-                              : 'bg-white text-black/60 border-black/15 hover:border-black/45 hover:text-black'
-                          }`}
-                          data-testid={`mobile-lang-option-${lng}`}
-                        >
-                          {lng}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Login/Logout — luxe */}
-                  {!isLoggedIn ? (
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          setShowLoginModal(true);
-                          closeMobileMenu();
-                        }}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors"
-                        data-testid="mobile-customer-login"
-                      >
-                        <User className="h-4 w-4" strokeWidth={1.5} />
-                        <span>Giriş</span>
-                      </button>
-                      <Link
-                        to="/b2b-login"
-                        onClick={closeMobileMenu}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white transition-colors"
-                        data-testid="mobile-b2b-login"
-                      >
-                        <span>B2B Giriş</span>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="px-4 py-3 border border-black/[0.08] bg-black/[0.02]">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-black/55">{t('header.welcomeUser')}</p>
-                        <p className="text-[14px] text-black mt-0.5">{userName}</p>
-                      </div>
-                      <Link
-                        to="/change-password"
-                        onClick={closeMobileMenu}
-                        className={`w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors ${userRole === 'b2b' ? 'hidden' : ''}`}
-                        data-testid="mobile-change-password"
-                      >
-                        <span>Şifrəni dəyiş</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          closeMobileMenu();
-                        }}
-                        className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" strokeWidth={1.5} />
-                        <span>{t('header.logout')}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 <nav className="flex-1 p-6 space-y-1.5">
                   {/* Mobile "Brendlər" akardeonu */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
@@ -1081,6 +1010,125 @@ const Header: React.FC = () => {
                       <span className="text-black/40 group-hover:text-black transition-colors text-sm">→</span>
                     </Link>
                   </div>
+
+                  {/* Dillər — akardeon */}
+                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 2 }}>
+                    <button
+                      onClick={() => setMobileLangOpen(v => !v)}
+                      className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
+                      data-testid="mobile-lang-toggle"
+                    >
+                      <span className="inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-black font-normal">
+                        {t('header.language', { defaultValue: 'Dillər' })}
+                        <span className="text-black/45 text-[11px] tracking-normal normal-case">({getLanguageLabel()})</span>
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileLangOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
+                    </button>
+                    {mobileLangOpen && (
+                      <div className="dv-accordion-open px-4 py-3 border-b border-black/[0.06] bg-black/[0.015]">
+                        <div className="flex gap-1.5">
+                          {(['az', 'ru', 'en'] as const).map((lng) => (
+                            <button
+                              key={lng}
+                              onClick={() => {
+                                i18n.changeLanguage(lng);
+                                setMobileLangOpen(false);
+                              }}
+                              className={`flex-1 h-9 text-[11px] uppercase tracking-[0.18em] border transition-all ${
+                                i18n.language === lng
+                                  ? 'bg-black text-white border-black'
+                                  : 'bg-white text-black/60 border-black/15 hover:border-black/45 hover:text-black'
+                              }`}
+                              data-testid={`mobile-lang-option-${lng}`}
+                            >
+                              {lng}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Giriş — akardeon (Müştəri Girişi + B2B Giriş) */}
+                  {!isLoggedIn ? (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 3 }}>
+                      <button
+                        onClick={() => setMobileLoginOpen(v => !v)}
+                        className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
+                        data-testid="mobile-login-toggle"
+                      >
+                        <span className="inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-black font-normal">
+                          <User className="h-4 w-4 text-black/70 group-hover:text-black transition-colors" strokeWidth={1.5} />
+                          {t('header.login', { defaultValue: 'Giriş' })}
+                        </span>
+                        <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileLoginOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
+                      </button>
+                      {mobileLoginOpen && (
+                        <div className="dv-accordion-open px-4 py-3 space-y-2 border-b border-black/[0.06] bg-black/[0.015]">
+                          <button
+                            onClick={() => {
+                              setShowLoginModal(true);
+                              setMobileLoginOpen(false);
+                              closeMobileMenu();
+                            }}
+                            className="w-full h-11 inline-flex items-center justify-center gap-2 bg-black text-white text-[11px] uppercase tracking-[0.22em] hover:bg-black/85 transition-colors"
+                            data-testid="mobile-customer-login"
+                          >
+                            <User className="h-4 w-4" strokeWidth={1.5} />
+                            <span>Müştəri Girişi</span>
+                          </button>
+                          <Link
+                            to="/b2b-login"
+                            onClick={() => { setMobileLoginOpen(false); closeMobileMenu(); }}
+                            className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white transition-colors"
+                            data-testid="mobile-b2b-login"
+                          >
+                            <span>B2B Girişi</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 3 }}>
+                      <button
+                        onClick={() => setMobileLoginOpen(v => !v)}
+                        className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
+                        data-testid="mobile-login-toggle"
+                      >
+                        <span className="inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-black font-normal">
+                          <User className="h-4 w-4 text-black/70 group-hover:text-black transition-colors" strokeWidth={1.5} />
+                          <span className="max-w-[180px] truncate normal-case tracking-normal text-[13px]">{userName}</span>
+                        </span>
+                        <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileLoginOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
+                      </button>
+                      {mobileLoginOpen && (
+                        <div className="dv-accordion-open px-4 py-3 space-y-2 border-b border-black/[0.06] bg-black/[0.015]">
+                          {userRole !== 'b2b' && (
+                            <Link
+                              to="/change-password"
+                              onClick={() => { setMobileLoginOpen(false); closeMobileMenu(); }}
+                              className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
+                              data-testid="mobile-change-password"
+                            >
+                              <span>Şifrəni dəyiş</span>
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setMobileLoginOpen(false);
+                              closeMobileMenu();
+                            }}
+                            className="w-full h-11 inline-flex items-center justify-center gap-2 bg-white text-black border border-black/30 text-[11px] uppercase tracking-[0.22em] hover:bg-black hover:text-white hover:border-black transition-colors"
+                            data-testid="mobile-logout"
+                          >
+                            <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                            <span>{t('header.logout')}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {isLoggedIn && userRole === 'customer' && (
                     <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
