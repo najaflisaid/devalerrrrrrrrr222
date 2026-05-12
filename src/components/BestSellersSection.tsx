@@ -144,9 +144,9 @@ const BestSellersSection: React.FC = () => {
           </div>
         )}
 
-        {/* Mobile: products (2 cols × 4 rows) + sticky banner (40% sağda).
+        {/* Mobile: products (2 cols × 4 rows) + sticky banner (45% sağda).
             Desktop: products (3 cols × 3 rows) + sticky banner (~38% sağda). */}
-        <div className="px-1.5 grid grid-cols-[1fr_40%] lg:grid-cols-[1fr_minmax(320px,38%)] gap-2 items-start">
+        <div className="px-1.5 grid grid-cols-[1fr_45%] lg:grid-cols-[1fr_minmax(320px,38%)] gap-1.5 sm:gap-2 items-start">
           {/* PRODUCTS column */}
           <div className="min-w-0">
             <div
@@ -178,12 +178,12 @@ const BestSellersSection: React.FC = () => {
                         type="button"
                         data-testid={`bestseller-card-${product.id}`}
                         onClick={() => navigate(`/product/${product.id}`)}
-                        className="group relative flex flex-col text-left bg-white hover:shadow-[0_14px_32px_-16px_rgba(0,0,0,0.28)] hover:z-[1] transition-shadow duration-300 ease-out p-1.5 md:p-3"
+                        className="group relative flex flex-col text-left bg-white hover:shadow-[0_14px_32px_-16px_rgba(0,0,0,0.28)] hover:z-[1] transition-shadow duration-300 ease-out p-1 md:p-3"
                       >
                         {/* Wishlist heart — top right */}
                         <span
                           aria-hidden="true"
-                          className="absolute top-1.5 right-1.5 md:top-3 md:right-3 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
+                          className="absolute top-1 right-1 md:top-3 md:right-3 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
                         >
                           <Heart className="w-2.5 h-2.5 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
                         </span>
@@ -191,7 +191,7 @@ const BestSellersSection: React.FC = () => {
                         {/* Sale badge — top left, circular % */}
                         {onSale && (
                           <span
-                            className="absolute top-1.5 left-1.5 md:top-3 md:left-3 z-[2] inline-flex items-center justify-center w-6 h-6 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[7.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+                            className="absolute top-1 left-1 md:top-3 md:left-3 z-[2] inline-flex items-center justify-center w-5 h-5 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[7px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
                             data-testid={`bs-discount-badge-${product.id}`}
                           >
                             −{Math.round(((product.price - product.salePrice!) / product.price) * 100)}%
@@ -205,7 +205,7 @@ const BestSellersSection: React.FC = () => {
                             alt={name}
                             loading="lazy"
                             decoding="async"
-                            className="absolute inset-0 w-full h-full object-contain p-1 md:p-2 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                            className="absolute inset-0 w-full h-full object-contain p-0.5 md:p-2 transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                           />
                           {product.images?.[1] && (
                             <img
@@ -214,25 +214,25 @@ const BestSellersSection: React.FC = () => {
                               aria-hidden="true"
                               loading="lazy"
                               decoding="async"
-                              className="absolute inset-0 w-full h-full object-contain p-1 md:p-2 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
+                              className="absolute inset-0 w-full h-full object-contain p-0.5 md:p-2 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
                             />
                           )}
                         </div>
 
                         {/* Info */}
-                        <div className="mt-1 md:mt-2 px-0.5 md:px-1">
+                        <div className="mt-0.5 md:mt-2 px-0.5 md:px-1">
                           {brand && (
-                            <p className="text-[7.5px] sm:text-[9px] md:text-[12px] tracking-[0.03em] uppercase text-black font-medium leading-[1.1] truncate">
+                            <p className="text-[7px] sm:text-[8px] md:text-[12px] tracking-[0.03em] uppercase text-black font-medium leading-[1.1] truncate">
                               {brand}
                             </p>
                           )}
-                          <h3 className="text-[7.5px] sm:text-[9px] md:text-[12px] font-light text-black/65 leading-[1.15] line-clamp-1 mt-px md:mt-0.5">
+                          <h3 className="text-[7px] sm:text-[8px] md:text-[12px] font-light text-black/65 leading-[1.15] line-clamp-1 mt-px md:mt-0.5">
                             {name}
                           </h3>
-                          <p className="mt-0.5 md:mt-1 text-[8.5px] sm:text-[10px] md:text-[13px] text-black font-medium tabular-nums leading-tight">
+                          <p className="mt-0.5 md:mt-1 text-[8px] sm:text-[9px] md:text-[13px] text-black font-medium tabular-nums leading-tight">
                             {onSale ? (
                               <>
-                                <span className="text-black/40 line-through mr-1 font-light">
+                                <span className="text-black/40 line-through mr-0.5 md:mr-1 font-light">
                                   {product.price.toFixed(0)} AZN
                                 </span>
                                 <span className="text-[#D14545]">{price.toFixed(0)} AZN</span>
@@ -259,8 +259,7 @@ const BestSellersSection: React.FC = () => {
             {bannerActive ? (
               <Link
                 to={banner.buttonLink || '/products'}
-                className="group relative block w-full overflow-hidden bg-black"
-                style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
+                className="group relative block w-full aspect-[3/4] overflow-hidden bg-black"
               >
                 <img
                   src={banner.imageUrl}
@@ -302,8 +301,7 @@ const BestSellersSection: React.FC = () => {
               </Link>
             ) : (
               <div
-                className="relative w-full bg-white border border-dashed border-black/15 flex items-center justify-center"
-                style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
+                className="relative w-full aspect-[3/4] bg-white border border-dashed border-black/15 flex items-center justify-center"
                 data-testid="bestsellers-banner-placeholder"
               >
                 <div className="text-center px-3 md:px-6 text-black/35">
