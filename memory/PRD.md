@@ -46,7 +46,21 @@ File: `/app/src/components/BestSellersSection.tsx`
 ## Bilinən pre-existing TS xəbərdarlıqları (yenilərini əlavə etmədik)
 - AdminPanel.tsx, Header.tsx, AiChatWidget.tsx-də mövcud unused-vars / strict-null xətaları. Bu sessiyada toxunulmadı.
 
-## Backlog
+## Bug fix (2026-01-12, sonra)
+
+**Problem:** "Ana səhifədə heç nə görünmür, hər yer ağdır, sadəcə banner və menyu görünür."
+
+**Root cause:** Mənim əlavə etdiyim `.dv-reveal` / `.dv-reveal-in` CSS sinifləri kod bazasında artıq mövcud olan `.dv-reveal` + `.is-in` animation sistemi ilə CSS cascade-də toqquşurdu. Mövcud `.dv-reveal { opacity: 0 }` (line 1353) sonradan gəldiyi üçün mənim `.dv-reveal-in { opacity: 1 }` (line 18) qaydasını üstələyirdi — nəticədə bütün wrap olunmuş bölmələr permanent görünməz qalırdı.
+
+**Fix:**
+1. Yeni siniflər tamamilə fərqli prefix-lə adlandırıldı: `dv-scroll-reveal`, `dv-scroll-in`, `dv-scroll-up/left/right/fade/scale`, `dv-scroll-stagger`. Bu artıq mövcud `dv-reveal`-lə toqquşmur.
+2. `RevealOnScroll.tsx`-də 1200ms failsafe `setTimeout` əlavə edildi — IntersectionObserver hər hansı səbəbdən firing etməsə belə, məzmun gizli qalmır.
+3. `useReveal.ts`-də də eyni 1500ms failsafe + ilkin rect viewport check var.
+4. `BestSellersSection.tsx` yeni `dv-scroll-*` siniflərinə migrate edildi.
+
+**Yoxlama:** `https://bestseller-display-1.preview.emergentagent.com` üzərində Hero, Prestijinizə dəyər qatan detallar başlığı və Features bölmələri indi düzgün görünür. Boş bölmələr (CollectionTiles, BestSellers, NewsTiles, BrandShowcase, CategoryBanner) hələ də yalnız ona görə görünmür ki, preview Firestore-da məlumat (məhsul/tile/banner) yoxdur — production-da hamısı işləyəcək.
+
+
 - [ ] Hero sliderinə da yumşaq parallax/Ken Burns effekti əlavə etmək.
 - [ ] CategoryBanner və CollectionTiles üçün Omega-style staggered children animasiyası.
 - [ ] Best Sellers grid-də "Quick view" modal (səhifəyə keçmədən qiymət/şəkillərə baxış).

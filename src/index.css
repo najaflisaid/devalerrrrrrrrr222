@@ -4,10 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* === SCROLL REVEAL ANIMATIONS ===
+/* === SCROLL REVEAL ANIMATIONS (dv-scroll-* — mövcud dv-reveal-dən fərqli ki, toqquşma olmasın) ===
    Scroll edərkən bölmələrin yumşaq görünməsi üçün universal sistem.
    useReveal() hook-u ilə birgə istifadə olunur. */
-.dv-reveal {
+.dv-scroll-reveal {
   opacity: 0;
   transform: translate3d(0, 28px, 0);
   transition:
@@ -15,23 +15,22 @@
     transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
-.dv-reveal-in {
+.dv-scroll-reveal.dv-scroll-in {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
-/* Müxtəlif variantlar */
-.dv-reveal-up { transform: translate3d(0, 36px, 0); }
-.dv-reveal-up.dv-reveal-in { transform: translate3d(0, 0, 0); }
-.dv-reveal-left { transform: translate3d(-36px, 0, 0); }
-.dv-reveal-left.dv-reveal-in { transform: translate3d(0, 0, 0); }
-.dv-reveal-right { transform: translate3d(36px, 0, 0); }
-.dv-reveal-right.dv-reveal-in { transform: translate3d(0, 0, 0); }
-.dv-reveal-fade { transform: none; }
-.dv-reveal-scale { transform: translate3d(0, 24px, 0) scale(0.985); }
-.dv-reveal-scale.dv-reveal-in { transform: translate3d(0, 0, 0) scale(1); }
+.dv-scroll-reveal.dv-scroll-up { transform: translate3d(0, 36px, 0); }
+.dv-scroll-reveal.dv-scroll-up.dv-scroll-in { transform: translate3d(0, 0, 0); }
+.dv-scroll-reveal.dv-scroll-left { transform: translate3d(-36px, 0, 0); }
+.dv-scroll-reveal.dv-scroll-left.dv-scroll-in { transform: translate3d(0, 0, 0); }
+.dv-scroll-reveal.dv-scroll-right { transform: translate3d(36px, 0, 0); }
+.dv-scroll-reveal.dv-scroll-right.dv-scroll-in { transform: translate3d(0, 0, 0); }
+.dv-scroll-reveal.dv-scroll-fade { transform: none; }
+.dv-scroll-reveal.dv-scroll-scale { transform: translate3d(0, 24px, 0) scale(0.985); }
+.dv-scroll-reveal.dv-scroll-scale.dv-scroll-in { transform: translate3d(0, 0, 0) scale(1); }
 
-/* Staggered children — `--dv-stagger` ilə hər element üçün gecikmə */
-.dv-stagger > * {
+/* Staggered children — --dv-i CSS dəyişəni ilə hər element üçün gecikmə */
+.dv-scroll-stagger > * {
   opacity: 0;
   transform: translate3d(0, 24px, 0);
   transition:
@@ -40,13 +39,13 @@
   transition-delay: calc(var(--dv-i, 0) * 60ms);
   will-change: opacity, transform;
 }
-.dv-stagger.dv-reveal-in > * {
+.dv-scroll-stagger.dv-scroll-in > * {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dv-reveal, .dv-stagger > * {
+  .dv-scroll-reveal, .dv-scroll-stagger > * {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;

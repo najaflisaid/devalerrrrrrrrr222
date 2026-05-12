@@ -72,8 +72,8 @@ const BestSellersSection: React.FC = () => {
         {/* === EDITORIAL HEADER === */}
         <div
           ref={header.ref}
-          className={`dv-reveal dv-reveal-up text-center mb-10 md:mb-16 ${
-            header.revealed ? 'dv-reveal-in' : ''
+          className={`dv-scroll-reveal dv-scroll-up text-center mb-10 md:mb-16 ${
+            header.revealed ? 'dv-scroll-in' : ''
           }`}
           data-testid="bestsellers-header"
         >
@@ -97,8 +97,8 @@ const BestSellersSection: React.FC = () => {
         {/* === PRODUCTS GRID (full-width, scroll-staggered) === */}
         <div
           ref={grid.ref}
-          className={`dv-stagger grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-14 ${
-            grid.revealed ? 'dv-reveal-in' : ''
+          className={`dv-scroll-stagger grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-14 ${
+            grid.revealed ? 'dv-scroll-in' : ''
           }`}
           data-testid="bestsellers-grid"
         >
@@ -224,8 +224,8 @@ const BestSellersSection: React.FC = () => {
         {/* === BOTTOM CTA === */}
         <div
           ref={footer.ref}
-          className={`dv-reveal dv-reveal-up mt-12 md:mt-20 flex justify-center ${
-            footer.revealed ? 'dv-reveal-in' : ''
+          className={`dv-scroll-reveal dv-scroll-up mt-12 md:mt-20 flex justify-center ${
+            footer.revealed ? 'dv-scroll-in' : ''
           }`}
         >
           <button
