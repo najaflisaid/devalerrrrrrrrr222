@@ -29,6 +29,10 @@ const CampaignPopup: React.FC = () => {
     if (!campaign.popup?.enabled) return;
     if (!campaign.popup?.imageUrl && !campaign.popup?.title) return;
 
+    // B2B müştəriləri kampaniya endirimlərini görmür → popup da göstərmirik
+    const userRole = (typeof window !== 'undefined' && localStorage.getItem('userRole')) || '';
+    if (userRole === 'b2b' || userRole === 'admin') return;
+
     // Admin/auth səhifələrində popup göstərmirik
     const p = location.pathname;
     if (

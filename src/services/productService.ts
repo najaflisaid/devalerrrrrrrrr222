@@ -72,9 +72,9 @@ export const productService = {
         products = products.filter(p => p.comingSoon !== true);
       }
 
-      // Aktiv kampaniya endirimini tətbiq et (yalnız retail; B2B üçün
-      // ProductCard onsuz da b2b qiymətlərini üstün tutur).
-      if (userRole !== 'admin') {
+      // Aktiv kampaniya endirimini tətbiq et (yalnız retail/qonaq; B2B və admin
+      // istifadəçilərinə kampaniya endirimləri tətbiq olunmur).
+      if (userRole !== 'admin' && userRole !== 'b2b') {
         const campaign = await getCampaignCached();
         if (isCampaignLive(campaign)) {
           products = applyCampaignToProducts(products, campaign);
@@ -115,9 +115,11 @@ export const productService = {
         return false;
       });
 
-      const campaign = await getCampaignCached();
-      if (isCampaignLive(campaign)) {
-        products = applyCampaignToProducts(products, campaign);
+      if (userRole !== 'b2b') {
+        const campaign = await getCampaignCached();
+        if (isCampaignLive(campaign)) {
+          products = applyCampaignToProducts(products, campaign);
+        }
       }
     }
 
@@ -157,7 +159,7 @@ export const productService = {
       products = products.filter(p => !p.comingSoon);
     }
 
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'b2b') {
       const campaign = await getCampaignCached();
       if (isCampaignLive(campaign)) {
         products = applyCampaignToProducts(products, campaign);
@@ -202,7 +204,7 @@ export const productService = {
       } as Product;
 
       const userRole = localStorage.getItem('userRole');
-      if (userRole !== 'admin') {
+      if (userRole !== 'admin' && userRole !== 'b2b') {
         const campaign = await getCampaignCached();
         if (isCampaignLive(campaign)) {
           return applyCampaignToProduct(product, campaign);

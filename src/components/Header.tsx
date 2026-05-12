@@ -461,12 +461,13 @@ const Header: React.FC = () => {
             <nav className="hidden md:flex items-center space-x-5">
               <Link
                 to="/gift-cards"
-                className="group relative inline-flex items-center gap-1.5 border border-black/80 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-black overflow-hidden transition-all duration-300 hover:shadow-[0_6px_16px_-6px_rgba(0,0,0,0.35)] active:scale-[0.98] whitespace-nowrap"
+                className="dv-giftcard-btn group relative inline-flex items-center gap-1.5 border border-[#8B0000]/90 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-[#8B0000] overflow-hidden transition-all duration-300 hover:shadow-[0_6px_16px_-6px_rgba(139,0,0,0.45)] active:scale-[0.98] whitespace-nowrap"
                 data-testid="header-gift-cards-link"
               >
-                <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out pointer-events-none" />
-                <Gift className="relative h-3.5 w-3.5 transition-all duration-300 group-hover:rotate-[-8deg] group-hover:text-white" strokeWidth={1.5} />
-                <span className="relative transition-colors duration-300 group-hover:text-white">
+                {/* Mirror / shine sweep — appears on hover */}
+                <span aria-hidden="true" className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100" />
+                <Gift className="relative h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.5} />
+                <span className="relative">
                   {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                 </span>
               </Link>
@@ -999,15 +1000,16 @@ const Header: React.FC = () => {
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
                     <Link
                       to="/gift-cards"
-                      className="group flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
+                      className="dv-giftcard-btn group flex items-center justify-between px-4 py-4 hover:bg-[#8B0000]/[0.04] transition-colors border-b border-black/[0.06] relative overflow-hidden"
                       onClick={closeMobileMenu}
                       data-testid="mobile-gift-cards-link"
                     >
-                      <span className="inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-black font-normal">
-                        <Gift className="h-4 w-4 text-black/70 group-hover:text-black transition-colors" strokeWidth={1.5} />
+                      <span aria-hidden="true" className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-[20deg] bg-gradient-to-r from-transparent via-[#8B0000]/15 to-transparent opacity-0 group-hover:opacity-100" />
+                      <span className="relative inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-[#8B0000] font-normal">
+                        <Gift className="h-4 w-4 text-[#8B0000] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.5} />
                         {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                       </span>
-                      <span className="text-black/40 group-hover:text-black transition-colors text-sm">→</span>
+                      <span className="relative text-[#8B0000]/50 group-hover:text-[#8B0000] transition-colors text-sm">→</span>
                     </Link>
                   </div>
 

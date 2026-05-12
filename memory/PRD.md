@@ -107,3 +107,11 @@ Bütün məhsullara bir kliklə qlobal endirim tətbiq etmək, brend əsasında 
 - Chat panel: qızıl border, AI Mütəxəssis subtitle, rounded mesaj bubbles, send düyməsi hover-də qızıl
 - Yeni CSS animasiyaları: dv-ai-greet-attn, dv-ai-shimmer, dv-ai-panel-in, dv-ai-msg-in
 
+
+## Update: 2026-01-XX — Filter minimisation, Red Gift Card, B2B campaign isolation
+- ProductsPage filter sidebar made more minimal & narrower: grid changed from `lg:grid-cols-4` (filter 25%) to `lg:grid-cols-5` (filter 20%); sidebar uses lighter borders, uppercase labels, tighter spacing; FilterSection headings restyled.
+- Header Gift Card link (desktop + mobile) restyled to blood red (`#8B0000`) with a sweeping mirror/shine animation on hover (`dv-giftcard-shine` keyframes added in `index.css`). Same look regardless of login state.
+- Campaign discounts (`campaignService.applyCampaignToProducts`) now skipped entirely for B2B users in `productService.ts` (`getAll`, `getByCategory`, `getBestSellers`, `getById`). B2B users see only their B2B prices — no campaign discount overlay.
+- `CampaignPopup` no longer opens for B2B/admin users.
+- `ProductsPage` "Endirimli məhsullar" filter checkbox hidden for B2B users (no discounts to filter by for them).
+

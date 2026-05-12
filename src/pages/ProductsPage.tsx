@@ -17,21 +17,21 @@ const FilterSection: React.FC<{
 }> = ({ title, defaultOpen = false, action, testId, children }) => {
   const [open, setOpen] = useState<boolean>(defaultOpen);
   return (
-    <div className="border-t border-gray-200 pt-3" data-testid={testId}>
+    <div className="border-t border-gray-100 pt-2" data-testid={testId}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between text-left py-1.5 group"
+        className="w-full flex items-center justify-between text-left py-1 group"
         aria-expanded={open}
       >
-        <span className="font-medium text-gray-900 group-hover:text-black transition-colors">{title}</span>
+        <span className="text-[12px] uppercase tracking-[0.1em] font-medium text-gray-700 group-hover:text-black transition-colors">{title}</span>
         <ChevronDown
-          className={`h-4 w-4 text-gray-500 group-hover:text-black transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          className={`h-3.5 w-3.5 text-gray-400 group-hover:text-black transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           strokeWidth={1.75}
         />
       </button>
       {open && (
-        <div className="mt-3 pl-0.5">
+        <div className="mt-2 pl-0.5">
           {action && <div className="mb-2">{action}</div>}
           {children}
         </div>
@@ -555,12 +555,12 @@ const ProductsPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-5 gap-6">
           <div className={`lg:col-span-1 ${isFilterOpen ? 'block' : 'hidden lg:block'}`}>
-            <div className="sticky top-24 bg-gray-50 rounded-lg p-6 space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto">
-              <div className="flex items-center space-x-2 mb-4">
-                <Filter className="h-5 w-5" />
-                <h2 className="font-semibold text-lg">{t('common.filter')}</h2>
+            <div className="sticky top-24 bg-white border border-gray-100 rounded-lg p-4 space-y-3 max-h-[calc(100vh-120px)] overflow-y-auto">
+              <div className="flex items-center gap-2 mb-1 pb-2 border-b border-gray-100">
+                <Filter className="h-3.5 w-3.5 text-gray-700" strokeWidth={1.75} />
+                <h2 className="font-medium text-[13px] uppercase tracking-[0.12em] text-gray-800">{t('common.filter')}</h2>
               </div>
 
               <FilterSection title={t('common.priceRange')} defaultOpen testId="filter-section-price">
@@ -729,17 +729,20 @@ const ProductsPage: React.FC = () => {
                 </div>
               </FilterSection>
 
-              <div className="border-t border-gray-200 pt-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={discountFilter === 'discounted'}
-                    onChange={(e) => handleDiscountFilterChange(e.target.checked)}
-                    className="mr-2 w-4 h-4"
-                  />
-                  <span className="text-sm font-medium text-red-600">{t('common.discountedProducts')}</span>
-                </label>
-              </div>
+              {/* Discounted products toggle — NOT visible for B2B users (campaign discounts don't apply to them) */}
+              {!isB2BUser && (
+                <div className="border-t border-gray-100 pt-3">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={discountFilter === 'discounted'}
+                      onChange={(e) => handleDiscountFilterChange(e.target.checked)}
+                      className="mr-2 w-3.5 h-3.5 accent-[#8B0000]"
+                    />
+                    <span className="text-[12px] font-medium text-[#8B0000] uppercase tracking-[0.08em]">{t('common.discountedProducts')}</span>
+                  </label>
+                </div>
+              )}
 
               <button
                 onClick={() => {
@@ -755,14 +758,14 @@ const ProductsPage: React.FC = () => {
                   setSearchParams({}, { replace: true });
                   scrollToTop();
                 }}
-                className="w-full py-2 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                className="w-full py-2 px-3 bg-gray-900 text-white rounded-md hover:bg-black transition-colors text-[11px] uppercase tracking-[0.12em]"
               >
                 {t('common.clearFilters')}
               </button>
             </div>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             {searchQuery && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                 <p className="text-sm text-blue-800">
