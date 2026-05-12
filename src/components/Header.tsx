@@ -431,7 +431,7 @@ const Header: React.FC = () => {
     <>
       {/* Main Header */}
       <header
-        className="dv-main-header sticky top-0 z-50 bg-white border-b border-gray-100"
+        className="dv-dark-panel dv-main-header sticky top-0 z-50 border-b border-white/10"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="dv-header-row flex items-center justify-between h-16">
@@ -495,7 +495,7 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <div
-                    className={`fixed left-0 right-0 z-50 dv-megamenu${isDropdownClosing ? ' is-closing' : ''}`}
+                    className={`fixed left-0 right-0 z-50 dv-megamenu dv-light-reset${isDropdownClosing ? ' is-closing' : ''}`}
                     style={{ top: 64 }}
                     onMouseEnter={handleDropdownEnter}
                     onMouseLeave={handleDropdownLeave}
@@ -669,7 +669,7 @@ const Header: React.FC = () => {
                   <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
                 </button>
                 {showLangDropdown && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
+                  <div className="dv-light-reset absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[80px] z-50" data-testid="lang-dropdown">
                     {(['az', 'ru', 'en'] as const)
                       .filter((lng) => lng !== i18n.language)
                       .map((lng) => (
@@ -711,7 +711,7 @@ const Header: React.FC = () => {
 
                   {/* Bildiriş Dropdown */}
                   {showNotificationDropdown && (
-                    <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="dv-light-reset absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
                       <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-5 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Bell className="h-5 w-5" />
@@ -765,7 +765,7 @@ const Header: React.FC = () => {
                     <User className="h-5 w-5" strokeWidth={1.25} />
                   </button>
                   {showLoginDropdown && (
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[160px] z-50" data-testid="account-dropdown">
+                    <div className="dv-light-reset absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[160px] z-50" data-testid="account-dropdown">
                       <button
                         onClick={() => {
                           setShowLoginDropdown(false);
@@ -802,7 +802,7 @@ const Header: React.FC = () => {
                     <span className="text-sm text-gray-700 font-normal max-w-[140px] truncate">{userName}</span>
                   </button>
                   {showLoginDropdown && (
-                    <div className="absolute right-0 top-full bg-white border border-black/10 shadow-lg min-w-[180px] z-50" data-testid="account-loggedin-dropdown">
+                    <div className="dv-light-reset absolute right-0 top-full bg-white border border-black/10 shadow-lg min-w-[180px] z-50" data-testid="account-loggedin-dropdown">
                       <Link
                         to="/my-orders"
                         onClick={() => setShowLoginDropdown(false)}
@@ -871,7 +871,7 @@ const Header: React.FC = () => {
             ></div>
 
             <div
-              className={`fixed top-0 left-0 h-full w-[88%] max-w-[400px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              className={`dv-light-reset fixed top-0 left-0 h-full w-[88%] max-w-[400px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
               style={{ boxShadow: '12px 0 48px -12px rgba(0,0,0,0.22)' }}
             >
               {/* Top header — luxurious */}

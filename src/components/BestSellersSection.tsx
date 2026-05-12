@@ -137,7 +137,7 @@ const BestSellersSection: React.FC = () => {
             {pages.map((pageProducts, pIdx) => (
               <div
                 key={pIdx}
-                className="shrink-0 snap-start w-full grid gap-px bg-[#E5E5E5]"
+                className="shrink-0 snap-start w-full grid gap-1 md:gap-2 bg-[#F4F4F4]"
                 style={{
                   gridTemplateColumns: isMobile
                     ? 'repeat(3, minmax(0, 1fr))'
@@ -157,7 +157,7 @@ const BestSellersSection: React.FC = () => {
                       type="button"
                       data-testid={`bestseller-card-${product.id}`}
                       onClick={() => navigate(`/product/${product.id}`)}
-                      className="group relative flex flex-col text-left transition-colors duration-300 bg-white hover:bg-white/95 p-2 md:p-3"
+                      className="group relative flex flex-col text-left bg-white hover:shadow-[0_14px_32px_-16px_rgba(0,0,0,0.28)] hover:z-[1] transition-shadow duration-300 ease-out p-2 md:p-3"
                     >
                       {/* Wishlist heart — top right */}
                       <span

@@ -440,6 +440,117 @@ html.dark .dv-orb { opacity: 0.28; }
   animation: slideInLeft 0.3s ease-out;
 }
 
+/* ================= Dark Panel — Header & Footer ================= */
+/* Background flip + automatic text/border re-coloring for legacy Tailwind classes.
+   This keeps the Header/Footer JSX untouched while inverting palette for dark surface. */
+.dv-dark-panel {
+  background-color: #3D3D3D !important;
+  color: rgba(255, 255, 255, 0.92);
+}
+.dv-dark-panel a,
+.dv-dark-panel button,
+.dv-dark-panel p,
+.dv-dark-panel span,
+.dv-dark-panel h1,
+.dv-dark-panel h2,
+.dv-dark-panel h3,
+.dv-dark-panel h4,
+.dv-dark-panel h5,
+.dv-dark-panel h6,
+.dv-dark-panel li,
+.dv-dark-panel label,
+.dv-dark-panel input,
+.dv-dark-panel textarea {
+  color: inherit;
+}
+.dv-dark-panel .text-black,
+.dv-dark-panel .text-gray-900,
+.dv-dark-panel .text-gray-800,
+.dv-dark-panel .text-gray-700,
+.dv-dark-panel .text-gray-600 { color: rgba(255, 255, 255, 0.92) !important; }
+.dv-dark-panel .text-black\/80 { color: rgba(255, 255, 255, 0.85) !important; }
+.dv-dark-panel .text-black\/70 { color: rgba(255, 255, 255, 0.75) !important; }
+.dv-dark-panel .text-black\/65 { color: rgba(255, 255, 255, 0.7) !important; }
+.dv-dark-panel .text-black\/60 { color: rgba(255, 255, 255, 0.65) !important; }
+.dv-dark-panel .text-black\/55 { color: rgba(255, 255, 255, 0.6) !important; }
+.dv-dark-panel .text-black\/45 { color: rgba(255, 255, 255, 0.5) !important; }
+.dv-dark-panel .text-black\/40 { color: rgba(255, 255, 255, 0.45) !important; }
+.dv-dark-panel .text-black\/35 { color: rgba(255, 255, 255, 0.4) !important; }
+.dv-dark-panel .text-gray-500 { color: rgba(255, 255, 255, 0.55) !important; }
+.dv-dark-panel .text-gray-400 { color: rgba(255, 255, 255, 0.4) !important; }
+
+.dv-dark-panel .border-black\/10,
+.dv-dark-panel .border-black\/15,
+.dv-dark-panel .border-black\/20,
+.dv-dark-panel .border-black\/\[0\.06\],
+.dv-dark-panel .border-black\/\[0\.07\],
+.dv-dark-panel .border-gray-100,
+.dv-dark-panel .border-gray-200,
+.dv-dark-panel .border-gray-300 { border-color: rgba(255, 255, 255, 0.13) !important; }
+
+/* Background flips */
+.dv-dark-panel .bg-white { background-color: transparent !important; }
+.dv-dark-panel .bg-gray-50,
+.dv-dark-panel .bg-gray-100 { background-color: rgba(255, 255, 255, 0.05) !important; }
+.dv-dark-panel .bg-black\/\[0\.04\],
+.dv-dark-panel .bg-black\/5 { background-color: rgba(255, 255, 255, 0.06) !important; }
+
+/* Hover flip — turning black hover into white on dark panel */
+.dv-dark-panel .hover\:bg-black:hover { background-color: rgba(255, 255, 255, 0.92) !important; }
+.dv-dark-panel .hover\:text-white:hover { color: #2a2a2a !important; }
+.dv-dark-panel .hover\:text-black:hover { color: #ffffff !important; }
+.dv-dark-panel .hover\:border-black:hover { border-color: rgba(255, 255, 255, 0.8) !important; }
+.dv-dark-panel .hover\:bg-black\/\[0\.04\]:hover,
+.dv-dark-panel .hover\:bg-black\/\[0\.03\]:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
+
+/* Inner shadow / divider stays subtle */
+.dv-dark-panel .shadow-lg,
+.dv-dark-panel .shadow-md { box-shadow: 0 4px 18px -6px rgba(0, 0, 0, 0.6) !important; }
+
+/* Keep gift-card red branding intact on dark surface */
+.dv-dark-panel .dv-giftcard-btn {
+  background-color: transparent !important;
+}
+
+/* Light-island reset: any nested panel that opens FROM a dark header (megamenu,
+   dropdowns, mobile drawer) should remain on a light surface for legibility. */
+.dv-light-reset,
+.dv-light-reset * {
+  /* allow children to inherit */
+}
+.dv-light-reset { background-color: #ffffff !important; color: #111 !important; }
+.dv-light-reset .bg-white { background-color: #ffffff !important; }
+.dv-light-reset .text-black { color: #000000 !important; }
+.dv-light-reset .text-gray-900 { color: #111827 !important; }
+.dv-light-reset .text-gray-800 { color: #1f2937 !important; }
+.dv-light-reset .text-gray-700 { color: #374151 !important; }
+.dv-light-reset .text-gray-600 { color: #4b5563 !important; }
+.dv-light-reset .text-gray-500 { color: #6b7280 !important; }
+.dv-light-reset .text-gray-400 { color: #9ca3af !important; }
+.dv-light-reset .text-gray-300 { color: #d1d5db !important; }
+.dv-light-reset .text-black\/80 { color: rgba(0,0,0,0.8) !important; }
+.dv-light-reset .text-black\/70 { color: rgba(0,0,0,0.7) !important; }
+.dv-light-reset .text-black\/65 { color: rgba(0,0,0,0.65) !important; }
+.dv-light-reset .text-black\/60 { color: rgba(0,0,0,0.6) !important; }
+.dv-light-reset .text-black\/55 { color: rgba(0,0,0,0.55) !important; }
+.dv-light-reset .text-black\/45 { color: rgba(0,0,0,0.45) !important; }
+.dv-light-reset .text-black\/40 { color: rgba(0,0,0,0.4) !important; }
+.dv-light-reset .border-gray-100 { border-color: #f3f4f6 !important; }
+.dv-light-reset .border-gray-200 { border-color: #e5e7eb !important; }
+.dv-light-reset .border-black\/10 { border-color: rgba(0,0,0,0.1) !important; }
+.dv-light-reset .border-black\/15 { border-color: rgba(0,0,0,0.15) !important; }
+.dv-light-reset .border-black\/\[0\.06\] { border-color: rgba(0,0,0,0.06) !important; }
+.dv-light-reset .border-black\/\[0\.07\] { border-color: rgba(0,0,0,0.07) !important; }
+.dv-light-reset .hover\:text-black:hover { color: #000 !important; }
+.dv-light-reset .hover\:text-gray-700:hover { color: #374151 !important; }
+.dv-light-reset .hover\:bg-black:hover { background-color: #000 !important; }
+.dv-light-reset .hover\:bg-black\/\[0\.04\]:hover,
+.dv-light-reset .hover\:bg-black\/\[0\.03\]:hover { background-color: rgba(0,0,0,0.04) !important; }
+.dv-light-reset .hover\:text-white:hover { color: #fff !important; }
+.dv-light-reset .bg-gray-50 { background-color: #f9fafb !important; }
+
+
+
 /* ================= Gift Card – Mirror / Shine Effect ================= */
 @keyframes dv-giftcard-shine {
   0%   { left: -60%; opacity: 0; }

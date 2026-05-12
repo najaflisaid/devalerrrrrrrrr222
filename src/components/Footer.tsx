@@ -109,7 +109,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="bg-white text-black border-t border-black/10" data-testid="site-footer">
+    <footer className="dv-dark-panel border-t border-white/10" data-testid="site-footer">
       {/* ============== Promo strip — feature cards ============== */}
       <div className="border-b border-black/10">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-7">
