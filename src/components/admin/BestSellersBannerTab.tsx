@@ -128,17 +128,41 @@ const BestSellersBannerTab: React.FC = () => {
                 <ImageIcon className="h-8 w-8 text-gray-300" />
               )}
             </div>
-            <label className="inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
-              <Upload className="h-4 w-4" />
-              {uploading ? 'Yüklənir...' : 'Şəkil yüklə'}
+            <div className="flex-1 space-y-2">
+              <label className="inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
+                <Upload className="h-4 w-4" />
+                {uploading ? 'Yüklənir...' : 'Şəkil yüklə (fayl)'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImage}
+                  className="hidden"
+                  data-testid="bsb-image"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider">və ya link</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleImage}
-                className="hidden"
-                data-testid="bsb-image"
+                type="text"
+                value={data.imageUrl}
+                onChange={(e) => setData((d) => ({ ...d, imageUrl: e.target.value }))}
+                placeholder="https://...jpg"
+                className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:border-gray-900 focus:outline-none font-mono"
+                data-testid="bsb-image-url"
               />
-            </label>
+              {data.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setData((d) => ({ ...d, imageUrl: '' }))}
+                  className="text-[11px] text-red-600 hover:underline"
+                  data-testid="bsb-image-clear"
+                >
+                  Şəkli sil
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
