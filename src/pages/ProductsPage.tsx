@@ -67,6 +67,8 @@ const ProductsPage: React.FC = () => {
   // Show the bottom-left floating filter button only when the inline top
   // filter button is scrolled out of view (mobile only).
   const [showFloatingFilter, setShowFloatingFilter] = useState(false);
+  // Mobile: 3 quick-filter chips (Kateqoriya / Brend / Cins) — bir anda yalnız biri açılır
+  const [mobileChipOpen, setMobileChipOpen] = useState<'category' | 'brand' | 'gender' | null>(null);
 
   useEffect(() => {
     const handle = () => {
@@ -545,12 +547,118 @@ const ProductsPage: React.FC = () => {
       </button>
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="lg:hidden mb-6">
+        <div className="lg:hidden mb-6 space-y-2">
+          {/* Mobile 3 quick-filter chips: Kateqoriya / Brend / Cins + tiny "Daha çox" for the rest */}
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { key: 'category' as const, label: t('product.category', { defaultValue: 'Kateqoriya' }), value: selectedCategory },
+              { key: 'brand' as const, label: t('product.brand', { defaultValue: 'Brend' }), value: selectedBrand },
+              { key: 'gender' as const, label: t('category.filterByGender', { defaultValue: 'Cins' }), value: selectedGender },
+            ]).map((chip) => {
+              const isActive = chip.value !== 'all';
+              const isOpen = mobileChipOpen === chip.key;
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => setMobileChipOpen(isOpen ? null : chip.key)}
+                  aria-expanded={isOpen}
+                  className={`flex items-center justify-between gap-1 px-2.5 h-10 rounded-full border text-[11px] uppercase tracking-[0.08em] font-medium transition-all ${
+                    isOpen
+                      ? 'bg-black text-white border-black'
+                      : isActive
+                        ? 'bg-white text-black border-black'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                  }`}
+                  data-testid={`mobile-chip-${chip.key}`}
+                >
+                  <span className="truncate">{chip.label}</span>
+                  <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.75} />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Inline tray — shows the options of the currently-open chip */}
+          {mobileChipOpen && (
+            <div
+              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-h-[300px] overflow-y-auto"
+              data-testid={`mobile-chip-panel-${mobileChipOpen}`}
+            >
+              {mobileChipOpen === 'category' && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { handleCategoryChange('all'); setMobileChipOpen(null); }}
+                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedCategory === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {t('common.all')}
+                  </button>
+                  {categories.filter(c => c !== 'all').map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => { handleCategoryChange(category); setMobileChipOpen(null); }}
+                      className={`block w-full text-left px-2 py-1.5 text-sm capitalize rounded ${selectedCategory === category ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      data-testid={`mobile-filter-category-${category}`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {mobileChipOpen === 'brand' && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { handleBrandChange('all'); setMobileChipOpen(null); }}
+                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {t('common.all')}
+                  </button>
+                  {brands.filter(b => b !== 'all').map((brand) => (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => { handleBrandChange(brand); setMobileChipOpen(null); }}
+                      className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === brand ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      data-testid={`mobile-filter-brand-${brand}`}
+                    >
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {mobileChipOpen === 'gender' && (
+                <div className="space-y-1.5">
+                  {([
+                    { value: 'all', label: t('common.all') },
+                    { value: 'men', label: t('category.men') },
+                    { value: 'women', label: t('category.women') },
+                    { value: 'unisex', label: t('category.unisex') },
+                  ]).map((g) => (
+                    <button
+                      key={g.value}
+                      type="button"
+                      onClick={() => { handleGenderChange(g.value); setMobileChipOpen(null); }}
+                      className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedGender === g.value ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      data-testid={`mobile-filter-gender-${g.value}`}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* "More filters" — opens the full sidebar with price / discount / etc. */}
           <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            onClick={() => { setIsFilterOpen(!isFilterOpen); setMobileChipOpen(null); }}
+            className="w-full flex items-center justify-center gap-2 py-2 text-[11px] uppercase tracking-[0.12em] font-medium text-gray-700 hover:text-black border border-gray-200 hover:border-gray-400 rounded-full transition-colors"
+            data-testid="mobile-more-filters"
           >
-            <Filter className="h-5 w-5" />
+            <Filter className="h-3.5 w-3.5" strokeWidth={1.75} />
             <span>{isFilterOpen ? t('common.closeFilters') : t('common.filter')}</span>
           </button>
         </div>
