@@ -15,7 +15,6 @@ interface CreditCalculatorProps {
 }
 
 const formatAzn = (n: number): string => {
-  // 53.33 formatına uyğun (iki onluq nöqtə ilə)
   return n.toLocaleString('az-AZ', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -72,7 +71,7 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
   );
 
   return (
-    <div className="space-y-8" data-testid="credit-calculator">
+    <div className="space-y-5" data-testid="credit-calculator">
       {/* Kredit kalkulyatoru */}
       <section data-testid="installment-calculator">
         <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -82,10 +81,10 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
           Şərtlər endirimli qiymətə tətbiq olunmur
         </p>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Ay düymələri */}
-            <div className="flex-1 flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-0 flex flex-nowrap items-end gap-1.5 sm:gap-2">
               {rates.map((r) => {
                 const isActive = r.months === activeRate?.months;
                 return (
@@ -93,19 +92,19 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
                     key={r.months}
                     type="button"
                     onClick={() => setSelectedMonths(r.months)}
-                    className="relative group focus:outline-none"
+                    className="relative group focus:outline-none flex-1 min-w-0"
                     data-testid={`cc-month-${r.months}`}
                   >
                     {/* Faiz etiketi */}
                     <span
-                      className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap text-red-500 ${
+                      className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap text-red-500 ${
                         isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
                       }`}
                     >
                       {r.percent > 0 ? `${r.percent}%` : '0%'}
                     </span>
                     <span
-                      className={`flex items-center justify-center rounded-full text-[11px] font-medium transition-all px-3 h-9 min-w-[52px] uppercase tracking-[0.1em] ${
+                      className={`flex items-center justify-center rounded-full text-[10px] sm:text-[11px] font-medium transition-all w-full px-1 h-8 tabular-nums ${
                         isActive
                           ? 'bg-gray-900 text-white shadow-sm'
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
@@ -119,15 +118,15 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
             </div>
 
             {/* Aylıq */}
-            <div className="sm:border-l sm:border-gray-200 sm:pl-4 text-center sm:text-left sm:min-w-[96px]">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-0.5">
+            <div className="flex-shrink-0 border-l border-gray-200 pl-2 sm:pl-3 text-right min-w-[78px] sm:min-w-[92px]">
+              <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] text-gray-500 mb-0.5">
                 Aylıq
               </div>
               <div
-                className="text-lg font-bold text-gray-900 tabular-nums"
+                className="text-[13px] sm:text-[15px] font-bold text-gray-900 tabular-nums leading-tight"
                 data-testid="cc-monthly-amount"
               >
-                {formatAzn(monthlyAmount)} ₼
+                {formatAzn(monthlyAmount)} AZN
               </div>
             </div>
           </div>
@@ -142,7 +141,7 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
       {/* Taksitlə al */}
       {activeCards.length > 0 && (
         <section data-testid="installment-cards">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Taksitlə al</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Taksitlə al</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {activeCards.map((c) => {
               const sortedMonths = [...c.months].sort((a, b) => a - b);
@@ -182,8 +181,8 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
                     )}
                   </div>
                   <div className="flex-1 min-w-0 leading-tight">
-                    <div className="text-[13px] font-semibold text-gray-900 tabular-nums">
-                      {sel} ay {formatAzn(monthly)} ₼
+                    <div className="text-[12px] font-semibold text-gray-900 tabular-nums">
+                      {sel} ay {formatAzn(monthly)} AZN
                     </div>
                     <div className="text-[10px] text-gray-500 truncate">
                       {c.name} ilə faizsiz ödə!
