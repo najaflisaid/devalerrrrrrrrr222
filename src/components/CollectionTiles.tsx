@@ -85,16 +85,13 @@ const CollectionTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative pt-6 md:pt-8 bg-white overflow-hidden"
+      className="relative pt-3 md:pt-4 bg-white overflow-hidden"
       data-testid="dv-collection-tiles"
     >
-      {/* Heading row: title centered, arrows top-right (frameless, compact) */}
-      <div className={`relative px-1.5 mb-5 md:mb-7 dv-reveal ${inView ? 'is-in' : ''}`}>
-        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center">
-          {title[lang]}
-        </h2>
-        {showArrows && (
-          <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
+      {/* Top arrows row (heading text removed per design) */}
+      {showArrows && (
+        <div className={`flex items-center justify-end px-1.5 mb-2 md:mb-3 dv-reveal ${inView ? 'is-in' : ''}`}>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => goToPage(pageIndex - 1)}
@@ -116,8 +113,8 @@ const CollectionTiles: React.FC = () => {
               <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Horizontal scroll: each "page" is a 2×2 grid (4 boxes total).
           Additional tiles beyond 4 slide in from the right as a new page. */}
@@ -192,7 +189,7 @@ const CollectionTiles: React.FC = () => {
 
       {/* Gray transition strip — extends the BestSellers gray bg upward from
           right where the 2nd row of collection tiles ends */}
-      <div className="h-6 md:h-8 bg-[#F4F4F4]" aria-hidden="true" />
+      <div className="h-3 md:h-4 bg-[#F4F4F4]" aria-hidden="true" />
     </section>
   );
 };

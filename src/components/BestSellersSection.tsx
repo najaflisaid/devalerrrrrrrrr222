@@ -91,17 +91,14 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative pt-3 md:pt-4 pb-6 md:pb-8 bg-[#F4F4F4] overflow-hidden"
+      className="relative pt-1.5 md:pt-2 pb-3 md:pb-4 bg-[#F4F4F4] overflow-hidden"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto">
-        {/* Heading row: title centered, arrows top-right (frameless, compact) */}
-        <div className="relative px-1.5 mb-3 md:mb-4">
-          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
-            {t('bestSellers.title') || 'Sevilən məhsullar'}
-          </h2>
-          {showArrows && (
-            <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
+        {/* Arrows-only row (heading text removed per design) */}
+        {showArrows && (
+          <div className="flex items-center justify-end px-1.5 mb-1.5 md:mb-2">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => goToPage(pageIndex - 1)}
@@ -123,8 +120,8 @@ const BestSellersSection: React.FC = () => {
                 <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Horizontal slider — each "page" is a 4×2 grid (web) / 2×3 grid (mobile) */}
         <div className="px-1.5">

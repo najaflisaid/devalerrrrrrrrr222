@@ -98,17 +98,14 @@ const NewsTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative pb-6 md:pb-8 bg-white overflow-hidden"
+      className="relative pb-3 md:pb-4 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
       {/* Gray transition strip — continues BestSellers gray bg down to where the news images begin */}
-      <div className="bg-[#F4F4F4] pt-3 md:pt-4 pb-3 md:pb-4">
-        <div className={`relative px-1.5 dv-reveal ${inView ? 'is-in' : ''}`}>
-          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
-            {title[lang]}
-          </h2>
-          {showArrows && (
-            <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
+      <div className="bg-[#F4F4F4] pt-1.5 md:pt-2 pb-1.5 md:pb-2">
+        {showArrows && (
+          <div className={`flex items-center justify-end px-1.5 dv-reveal ${inView ? 'is-in' : ''}`}>
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => goToPage(pageIndex - 1)}
@@ -130,8 +127,8 @@ const NewsTiles: React.FC = () => {
                 <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Tile track
