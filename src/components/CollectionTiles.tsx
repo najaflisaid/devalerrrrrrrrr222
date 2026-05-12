@@ -128,7 +128,7 @@ const CollectionTiles: React.FC = () => {
           {pages.map((pageTiles, pIdx) => (
             <div
               key={pIdx}
-              className="shrink-0 snap-start w-full grid grid-cols-2 grid-rows-2 gap-1.5"
+              className="shrink-0 snap-start w-full grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3"
               data-testid={`collection-tiles-page-${pIdx}`}
             >
               {pageTiles.map((tile, idx) => {
@@ -138,7 +138,7 @@ const CollectionTiles: React.FC = () => {
                   <Link
                     key={tile.id || idx}
                     to={tile.link_url || '/products'}
-                    className={`dv-collection-tile group relative block overflow-hidden bg-gray-100 aspect-[4/2.6] md:aspect-[16/8.3] ${inView ? 'dv-brand-in' : ''}`}
+                    className={`dv-collection-tile group relative block overflow-hidden bg-[#e8ddd2] aspect-[3/4] sm:aspect-[3/4.4] rounded-sm ${inView ? 'dv-brand-in' : ''}`}
                     style={{ animationDelay: `${100 + idx * 90}ms` }}
                     data-testid={`dv-collection-tile-${tile.id || idx}`}
                   >
@@ -166,14 +166,15 @@ const CollectionTiles: React.FC = () => {
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
                     )}
-                    <div className="absolute inset-0 pointer-events-none bg-black/15 group-hover:bg-black/25 transition-colors duration-700" />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
-                  <h3
-                    className="font-playfair text-white text-base sm:text-xl md:text-3xl lg:text-4xl font-normal tracking-[0.01em] text-center leading-tight"
-                    style={{ textShadow: '0 2px 18px rgba(0,0,0,0.45)' }}
-                  >
-                    {titleText}
-                  </h3>
+                    {/* Subtle gradient at bottom for text legibility */}
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 via-black/15 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pointer-events-none p-5 sm:p-6 md:p-7">
+                      <h3
+                        className="font-playfair text-white text-lg sm:text-xl md:text-2xl lg:text-[28px] font-normal tracking-wide text-center leading-tight"
+                        style={{ textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}
+                      >
+                        {titleText}
+                      </h3>
                     </div>
                   </Link>
                 );
