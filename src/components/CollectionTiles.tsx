@@ -85,7 +85,7 @@ const CollectionTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative py-6 md:py-8 bg-white overflow-hidden"
+      className="relative pt-6 md:pt-8 bg-white overflow-hidden"
       data-testid="dv-collection-tiles"
     >
       {/* Heading row: title centered, arrows top-right (frameless, compact) */}
@@ -189,6 +189,10 @@ const CollectionTiles: React.FC = () => {
       <style>{`
         .dv-collection-track::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Gray transition strip — extends the BestSellers gray bg upward from
+          right where the 2nd row of collection tiles ends */}
+      <div className="h-6 md:h-8 bg-[#F4F4F4]" aria-hidden="true" />
     </section>
   );
 };

@@ -98,38 +98,40 @@ const NewsTiles: React.FC = () => {
   return (
     <section
       ref={ref}
-      className="relative pt-3 md:pt-4 pb-6 md:pb-8 bg-white overflow-hidden"
+      className="relative pb-6 md:pb-8 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
-      {/* Heading row: title centered, arrows top-right */}
-      <div className={`relative px-1.5 mb-3 md:mb-4 dv-reveal ${inView ? 'is-in' : ''}`}>
-        <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
-          {title[lang]}
-        </h2>
-        {showArrows && (
-          <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => goToPage(pageIndex - 1)}
-              aria-label="Previous"
-              disabled={!canPrev}
-              className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              data-testid="news-tiles-prev"
-            >
-              <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-            <button
-              type="button"
-              onClick={() => goToPage(pageIndex + 1)}
-              aria-label="Next"
-              disabled={!canNext}
-              className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              data-testid="news-tiles-next"
-            >
-              <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          </div>
-        )}
+      {/* Gray transition strip — continues BestSellers gray bg down to where the news images begin */}
+      <div className="bg-[#F4F4F4] pt-3 md:pt-4 pb-3 md:pb-4">
+        <div className={`relative px-1.5 dv-reveal ${inView ? 'is-in' : ''}`}>
+          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[30px] font-light tracking-tight text-black text-center relative -top-2 md:-top-3">
+            {title[lang]}
+          </h2>
+          {showArrows && (
+            <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => goToPage(pageIndex - 1)}
+                aria-label="Previous"
+                disabled={!canPrev}
+                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="news-tiles-prev"
+              >
+                <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                onClick={() => goToPage(pageIndex + 1)}
+                aria-label="Next"
+                disabled={!canNext}
+                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                data-testid="news-tiles-next"
+              >
+                <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tile track
