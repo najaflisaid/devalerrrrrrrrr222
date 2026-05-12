@@ -512,6 +512,13 @@ html.dark .dv-orb { opacity: 0.28; }
   background-color: transparent !important;
 }
 
+/* Logo on dark surface — turn the original black-on-transparent mark into a
+   clean off-white silhouette so it stays legible against the #3D3D3D bg. */
+.dv-dark-panel .dv-logo-darkmode {
+  filter: brightness(0) invert(1) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+  opacity: 0.95;
+}
+
 /* Light-island reset: any nested panel that opens FROM a dark header (megamenu,
    dropdowns, mobile drawer) should remain on a light surface for legibility. */
 .dv-light-reset,

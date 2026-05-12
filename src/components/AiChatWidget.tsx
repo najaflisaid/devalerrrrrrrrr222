@@ -391,6 +391,18 @@ const AiChatWidget: React.FC = () => {
     return () => unsub();
   }, []);
 
+  // Listen for the external "open chat" event (dispatched from the header's
+  // "Onlayn dəstək" badge, footer CTAs, etc.).
+  useEffect(() => {
+    const handler = () => {
+      setBubbleVisible(false);
+      setBubbleDismissed(true);
+      setOpen(true);
+    };
+    window.addEventListener('dv:open-chat', handler);
+    return () => window.removeEventListener('dv:open-chat', handler);
+  }, []);
+
   // Init: load session id + history from localStorage (safe-wrapped for Safari private mode)
   useEffect(() => {
     let sid: string | null = null;
