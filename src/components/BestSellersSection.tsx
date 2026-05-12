@@ -112,7 +112,7 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative pt-1.5 md:pt-2 pb-3 md:pb-4 bg-[#F4F4F4] overflow-hidden"
+      className="relative pt-1.5 md:pt-2 pb-3 md:pb-4 bg-[#F4F4F4]"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto">
@@ -249,16 +249,18 @@ const BestSellersSection: React.FC = () => {
           </div>
 
           {/* BANNER column — sticky on desktop, hidden on mobile.
-              Hər zaman görünür (boş halda subtle placeholder). */}
+              Hər zaman görünür (boş halda subtle placeholder).
+              max-h ilə banner məhsullar sütunundan qısa olur ki sticky uzun müddət işləsin. */}
           {showBannerColumn && (
             <aside
-              className="hidden lg:block lg:sticky lg:top-20 lg:self-start"
+              className="hidden lg:block lg:sticky lg:top-4 lg:self-start"
               data-testid="bestsellers-banner"
             >
               {bannerActive ? (
                 <Link
                   to={banner.buttonLink || '/products'}
-                  className="group relative block w-full aspect-[3/4] overflow-hidden bg-black"
+                  className="group relative block w-full overflow-hidden bg-black"
+                  style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
                 >
                   <img
                     src={banner.imageUrl}
@@ -300,7 +302,8 @@ const BestSellersSection: React.FC = () => {
                 </Link>
               ) : (
                 <div
-                  className="relative w-full aspect-[3/4] bg-white border border-dashed border-black/15 flex items-center justify-center"
+                  className="relative w-full bg-white border border-dashed border-black/15 flex items-center justify-center"
+                  style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
                   data-testid="bestsellers-banner-placeholder"
                 >
                   <div className="text-center px-6 text-black/35">
