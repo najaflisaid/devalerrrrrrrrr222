@@ -23,9 +23,9 @@ const BestSellersSection: React.FC = () => {
     typeof window !== 'undefined' ? !window.matchMedia('(min-width: 1024px)').matches : false
   );
 
-  // Web: 3 cols × 3 rows = 9 per page (+ banner sağda) · Mobile: 3 cols × 3 rows = 9 per page
+  // Web: 3 cols × 3 rows = 9 per page (+ banner sağda) · Mobile: 2 cols × 4 rows = 8 per page (+ banner sağda)
   const PER_PAGE_DESKTOP = 9;
-  const PER_PAGE_MOBILE = 9;
+  const PER_PAGE_MOBILE = 8;
   const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
 
   const getProductName = (product: Product): string => {
@@ -97,9 +97,9 @@ const BestSellersSection: React.FC = () => {
   const canNext = pageIndex < pageCount - 1;
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  // Banner sahəsi həmişə desktop-də göstərilir; admin şəkil yükləməyibsə placeholder göstərilir
-  const showBannerColumn = !isMobile;
-  const bannerActive = banner.enabled && !!banner.imageUrl && !isMobile;
+  // Banner sahəsi həm mobil, həm desktop-də həmişə sağda göstərilir
+  const showBannerColumn = true;
+  const bannerActive = banner.enabled && !!banner.imageUrl;
   const bannerTitle = banner.title[lang] || banner.title.az;
   const bannerSubtitle = banner.subtitle[lang] || banner.subtitle.az;
   const bannerBtnText = banner.buttonText[lang] || banner.buttonText.az;
@@ -144,9 +144,9 @@ const BestSellersSection: React.FC = () => {
           </div>
         )}
 
-        {/* Desktop layout: products (left, 3 cols × 3 rows) + sticky banner (right).
-            Mobile: products only, 3×3 horizontal pagination. */}
-        <div className={`px-1.5 ${showBannerColumn ? 'lg:grid lg:grid-cols-[1fr_minmax(320px,38%)] lg:gap-2 lg:items-start' : ''}`}>
+        {/* Mobile: products (2 cols × 4 rows) + sticky banner (40% sağda).
+            Desktop: products (3 cols × 3 rows) + sticky banner (~38% sağda). */}
+        <div className="px-1.5 grid grid-cols-[1fr_40%] lg:grid-cols-[1fr_minmax(320px,38%)] gap-2 items-start">
           {/* PRODUCTS column */}
           <div className="min-w-0">
             <div
@@ -160,7 +160,9 @@ const BestSellersSection: React.FC = () => {
                   key={pIdx}
                   className="shrink-0 snap-start w-full grid gap-1 md:gap-2 bg-[#F4F4F4]"
                   style={{
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gridTemplateColumns: isMobile
+                      ? 'repeat(2, minmax(0, 1fr))'
+                      : 'repeat(3, minmax(0, 1fr))',
                   }}
                   data-testid={`bestsellers-page-${pIdx}`}
                 >
@@ -176,20 +178,20 @@ const BestSellersSection: React.FC = () => {
                         type="button"
                         data-testid={`bestseller-card-${product.id}`}
                         onClick={() => navigate(`/product/${product.id}`)}
-                        className="group relative flex flex-col text-left bg-white hover:shadow-[0_14px_32px_-16px_rgba(0,0,0,0.28)] hover:z-[1] transition-shadow duration-300 ease-out p-2 md:p-3"
+                        className="group relative flex flex-col text-left bg-white hover:shadow-[0_14px_32px_-16px_rgba(0,0,0,0.28)] hover:z-[1] transition-shadow duration-300 ease-out p-1.5 md:p-3"
                       >
                         {/* Wishlist heart — top right */}
                         <span
                           aria-hidden="true"
-                          className="absolute top-2 right-2 md:top-3 md:right-3 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
+                          className="absolute top-1.5 right-1.5 md:top-3 md:right-3 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
                         >
-                          <Heart className="w-3 h-3 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
+                          <Heart className="w-2.5 h-2.5 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
                         </span>
 
                         {/* Sale badge — top left, circular % */}
                         {onSale && (
                           <span
-                            className="absolute top-2 left-2 md:top-3 md:left-3 z-[2] inline-flex items-center justify-center w-7 h-7 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[8.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+                            className="absolute top-1.5 left-1.5 md:top-3 md:left-3 z-[2] inline-flex items-center justify-center w-6 h-6 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[7.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
                             data-testid={`bs-discount-badge-${product.id}`}
                           >
                             −{Math.round(((product.price - product.salePrice!) / product.price) * 100)}%
@@ -220,14 +222,14 @@ const BestSellersSection: React.FC = () => {
                         {/* Info */}
                         <div className="mt-1 md:mt-2 px-0.5 md:px-1">
                           {brand && (
-                            <p className="text-[8px] sm:text-[10px] md:text-[12px] tracking-[0.03em] uppercase text-black font-medium leading-[1.1] truncate">
+                            <p className="text-[7.5px] sm:text-[9px] md:text-[12px] tracking-[0.03em] uppercase text-black font-medium leading-[1.1] truncate">
                               {brand}
                             </p>
                           )}
-                          <h3 className="text-[8px] sm:text-[10px] md:text-[12px] font-light text-black/65 leading-[1.15] line-clamp-1 mt-px md:mt-0.5">
+                          <h3 className="text-[7.5px] sm:text-[9px] md:text-[12px] font-light text-black/65 leading-[1.15] line-clamp-1 mt-px md:mt-0.5">
                             {name}
                           </h3>
-                          <p className="mt-0.5 md:mt-1 text-[9px] sm:text-[11px] md:text-[13px] text-black font-medium tabular-nums leading-tight">
+                          <p className="mt-0.5 md:mt-1 text-[8.5px] sm:text-[10px] md:text-[13px] text-black font-medium tabular-nums leading-tight">
                             {onSale ? (
                               <>
                                 <span className="text-black/40 line-through mr-1 font-light">
@@ -248,74 +250,71 @@ const BestSellersSection: React.FC = () => {
             </div>
           </div>
 
-          {/* BANNER column — sticky on desktop, hidden on mobile.
-              Hər zaman görünür (boş halda subtle placeholder).
-              max-h ilə banner məhsullar sütunundan qısa olur ki sticky uzun müddət işləsin. */}
-          {showBannerColumn && (
-            <aside
-              className="hidden lg:block lg:sticky lg:top-4 lg:self-start"
-              data-testid="bestsellers-banner"
-            >
-              {bannerActive ? (
-                <Link
-                  to={banner.buttonLink || '/products'}
-                  className="group relative block w-full overflow-hidden bg-black"
-                  style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
-                >
-                  <img
-                    src={banner.imageUrl}
-                    alt={bannerTitle || 'Banner'}
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none" />
-                  <div
-                    className={`absolute inset-0 flex flex-col justify-end ${posClass} p-6 md:p-8 pointer-events-none`}
-                    style={{ color: banner.textColor || '#ffffff' }}
-                  >
-                    {bannerTitle && (
-                      <h3
-                        className="font-playfair text-2xl md:text-3xl lg:text-[34px] font-normal leading-[1.1] tracking-tight"
-                        style={{ textShadow: '0 2px 16px rgba(0,0,0,0.45)' }}
-                      >
-                        {bannerTitle}
-                      </h3>
-                    )}
-                    {bannerSubtitle && (
-                      <p
-                        className="mt-2 text-sm md:text-base font-light max-w-[28ch] leading-snug"
-                        style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}
-                      >
-                        {bannerSubtitle}
-                      </p>
-                    )}
-                    {bannerBtnText && (
-                      <span
-                        className="mt-4 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.24em] font-medium pointer-events-auto"
-                        style={{ borderBottom: `1px solid ${banner.textColor || '#ffffff'}` }}
-                      >
-                        {bannerBtnText}
-                        <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ) : (
+          {/* BANNER column — sticky on both mobile and desktop.
+              Hər zaman görünür (boş halda subtle placeholder). */}
+          <aside
+            className="sticky top-2 lg:top-4 self-start"
+            data-testid="bestsellers-banner"
+          >
+            {bannerActive ? (
+              <Link
+                to={banner.buttonLink || '/products'}
+                className="group relative block w-full overflow-hidden bg-black"
+                style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
+              >
+                <img
+                  src={banner.imageUrl}
+                  alt={bannerTitle || 'Banner'}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none" />
                 <div
-                  className="relative w-full bg-white border border-dashed border-black/15 flex items-center justify-center"
-                  style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
-                  data-testid="bestsellers-banner-placeholder"
+                  className={`absolute inset-0 flex flex-col justify-end ${posClass} p-3 md:p-8 pointer-events-none`}
+                  style={{ color: banner.textColor || '#ffffff' }}
                 >
-                  <div className="text-center px-6 text-black/35">
-                    <div className="font-playfair text-2xl mb-2">DE VALEUR</div>
-                    <p className="text-[11px] uppercase tracking-[0.24em]">
-                      Admin panel — Bestseller Banner
+                  {bannerTitle && (
+                    <h3
+                      className="font-playfair text-base sm:text-lg md:text-3xl lg:text-[34px] font-normal leading-[1.1] tracking-tight"
+                      style={{ textShadow: '0 2px 16px rgba(0,0,0,0.45)' }}
+                    >
+                      {bannerTitle}
+                    </h3>
+                  )}
+                  {bannerSubtitle && (
+                    <p
+                      className="mt-1 md:mt-2 text-[10px] sm:text-xs md:text-base font-light max-w-[28ch] leading-snug"
+                      style={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}
+                    >
+                      {bannerSubtitle}
                     </p>
-                  </div>
+                  )}
+                  {bannerBtnText && (
+                    <span
+                      className="mt-2 md:mt-4 inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] uppercase tracking-[0.18em] md:tracking-[0.24em] font-medium pointer-events-auto"
+                      style={{ borderBottom: `1px solid ${banner.textColor || '#ffffff'}` }}
+                    >
+                      {bannerBtnText}
+                      <ChevronRight className="w-2.5 h-2.5 md:w-3 md:h-3" strokeWidth={1.5} />
+                    </span>
+                  )}
                 </div>
-              )}
-            </aside>
-          )}
+              </Link>
+            ) : (
+              <div
+                className="relative w-full bg-white border border-dashed border-black/15 flex items-center justify-center"
+                style={{ height: 'min(calc(100vh - 1.5rem), 720px)' }}
+                data-testid="bestsellers-banner-placeholder"
+              >
+                <div className="text-center px-3 md:px-6 text-black/35">
+                  <div className="font-playfair text-lg md:text-2xl mb-1 md:mb-2">DE VALEUR</div>
+                  <p className="text-[8px] md:text-[11px] uppercase tracking-[0.18em] md:tracking-[0.24em]">
+                    Admin panel — Bestseller Banner
+                  </p>
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
 
