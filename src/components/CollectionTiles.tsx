@@ -15,8 +15,6 @@ interface Tile {
   link_url: string;
 }
 
-const PER_PAGE = 4; // 2 columns × 2 rows
-
 const CollectionTiles: React.FC = () => {
   const { i18n } = useTranslation();
   const { ref, inView } = useInView<HTMLElement>();
@@ -42,21 +40,21 @@ const CollectionTiles: React.FC = () => {
     })();
   }, []);
 
-  // Chunk tiles into pages of PER_PAGE (2x2)
-  const pages: Tile[][] = [];
-  for (let i = 0; i < tiles.length; i += PER_PAGE) {
-    pages.push(tiles.slice(i, i + PER_PAGE));
-  }
-  const pageCount = Math.max(1, pages.length);
+  // Chunk tiles into pages — hər kart bir snap-nöqtəsi olduğundan
+  // pageCount = visible-də olmayan ilk kartın indexi qədərdir
+  const pageCount = Math.max(1, tiles.length);
 
-  // Track active page on scroll
+  // Track active scroll index
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
     const compute = () => {
-      const w = track.clientWidth;
-      if (w > 0) {
-        setPageIndex(Math.round(track.scrollLeft / w));
+      const first = track.firstElementChild as HTMLElement | null;
+      const tileW = first?.clientWidth || track.clientWidth / 3.5;
+      const gap = parseInt(getComputedStyle(track).gap || '12', 10);
+      const step = tileW + gap;
+      if (step > 0) {
+        setPageIndex(Math.round(track.scrollLeft / step));
       }
     };
     compute();
@@ -71,14 +69,19 @@ const CollectionTiles: React.FC = () => {
   const goToPage = (page: number) => {
     const track = trackRef.current;
     if (!track) return;
-    const target = Math.max(0, Math.min(pageCount - 1, page)) * track.clientWidth;
+    const first = track.firstElementChild as HTMLElement | null;
+    const tileW = first?.clientWidth || track.clientWidth / 3.5;
+    const gap = parseInt(getComputedStyle(track).gap || '12', 10);
+    const step = tileW + gap;
+    const target = Math.max(0, Math.min(pageCount - 1, page)) * step;
     track.scrollTo({ left: target, behavior: 'smooth' });
   };
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
   if (!enabled || tiles.length === 0) return null;
 
-  const showArrows = pageCount > 1;
+  // Arrows yalnız kartların ekrana sığmadığı halda göstərilir
+  const showArrows = tiles.length > 3;
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < pageCount - 1;
 
@@ -116,71 +119,63 @@ const CollectionTiles: React.FC = () => {
         </div>
       )}
 
-      {/* Horizontal scroll: each "page" is a 2×2 grid (4 boxes total).
-          Additional tiles beyond 4 slide in from the right as a new page. */}
-      <div className="px-1.5">
+      {/* Horizontal scroll — hər kart snap nöqtəsi.
+          Desktop: ~3.5 kart görünür (4-cü yarımçıq), mobile: ~2.3 kart görünür. */}
+      <div className="pl-3 sm:pl-5">
         <div
           ref={trackRef}
-          className="dv-collection-track flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+          className="dv-collection-track flex gap-2.5 sm:gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pr-3 sm:pr-5 pb-1"
           style={{ scrollbarWidth: 'none' }}
           data-testid="collection-tiles-track"
         >
-          {pages.map((pageTiles, pIdx) => (
-            <div
-              key={pIdx}
-              className="shrink-0 snap-start w-full grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3"
-              data-testid={`collection-tiles-page-${pIdx}`}
-            >
-              {pageTiles.map((tile, idx) => {
-                const titleText =
-                  (tile as any)[`title_${lang}`] || tile.title_az || tile.title_en || tile.title_ru || '';
-                return (
-                  <Link
-                    key={tile.id || idx}
-                    to={tile.link_url || '/products'}
-                    className={`dv-collection-tile group relative block overflow-hidden bg-[#e8ddd2] aspect-[3/4] sm:aspect-[3/4.4] rounded-sm ${inView ? 'dv-brand-in' : ''}`}
-                    style={{ animationDelay: `${100 + idx * 90}ms` }}
-                    data-testid={`dv-collection-tile-${tile.id || idx}`}
+          {tiles.map((tile, idx) => {
+            const titleText =
+              (tile as any)[`title_${lang}`] || tile.title_az || tile.title_en || tile.title_ru || '';
+            return (
+              <Link
+                key={tile.id || idx}
+                to={tile.link_url || '/products'}
+                className={`dv-collection-tile group relative block shrink-0 snap-start overflow-hidden bg-[#e8ddd2] aspect-[3/4] sm:aspect-[3/4.4] rounded-2xl sm:rounded-[20px] w-[44%] sm:w-[28%] ${inView ? 'dv-brand-in' : ''}`}
+                style={{ animationDelay: `${100 + idx * 90}ms` }}
+                data-testid={`dv-collection-tile-${tile.id || idx}`}
+              >
+                {tile.video_url ? (
+                  <video
+                    src={tile.video_url}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.2,0.6,0.2,1)] group-hover:scale-[1.06]"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload noplaybackrate nofullscreen"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                ) : tile.image_url ? (
+                  <img
+                    src={tile.image_url}
+                    alt={titleText}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.2,0.6,0.2,1)] group-hover:scale-[1.06]"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
+                )}
+                {/* Subtle gradient at bottom for text legibility */}
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 via-black/15 to-transparent pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pointer-events-none p-5 sm:p-6 md:p-7">
+                  <h3
+                    className="font-playfair text-white text-lg sm:text-xl md:text-2xl lg:text-[28px] font-normal tracking-wide text-center leading-tight"
+                    style={{ textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}
                   >
-                    {tile.video_url ? (
-                      <video
-                        src={tile.video_url}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.2,0.6,0.2,1)] group-hover:scale-[1.06]"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        controls={false}
-                        disablePictureInPicture
-                        controlsList="nodownload noplaybackrate nofullscreen"
-                        style={{ pointerEvents: 'none' }}
-                      />
-                    ) : tile.image_url ? (
-                      <img
-                        src={tile.image_url}
-                        alt={titleText}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.2,0.6,0.2,1)] group-hover:scale-[1.06]"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
-                    )}
-                    {/* Subtle gradient at bottom for text legibility */}
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 via-black/15 to-transparent pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pointer-events-none p-5 sm:p-6 md:p-7">
-                      <h3
-                        className="font-playfair text-white text-lg sm:text-xl md:text-2xl lg:text-[28px] font-normal tracking-wide text-center leading-tight"
-                        style={{ textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}
-                      >
-                        {titleText}
-                      </h3>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+                    {titleText}
+                  </h3>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
