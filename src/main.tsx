@@ -14,3 +14,14 @@ createRoot(document.getElementById('root')!).render(
     </CartProvider>
   </StrictMode>
 );
+
+// Splash screen-i sayt mount olduqdan sonra fade-out edib sil
+requestAnimationFrame(() => {
+  const splash = document.getElementById('dv-splash');
+  if (!splash) return;
+  // Minimum görünüş müddəti (qəfil yox olmasın)
+  setTimeout(() => {
+    splash.classList.add('dv-splash-out');
+    setTimeout(() => splash.remove(), 500);
+  }, 350);
+});

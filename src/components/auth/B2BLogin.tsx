@@ -141,7 +141,7 @@ const B2BLogin: React.FC = () => {
             setIsLoggedIn(true);
             setUserName(userData.name || email);
             window.location.reload();
-          }, 1200);
+          }, 300);
         } else {
           setLoginError(t('auth.notB2BUser'));
           setLoginLoading(false);

@@ -158,7 +158,87 @@
     </script>
   </head>
   <body>
+    <style>
+      /* Initial splash — show instantly before React bundle loads.
+         Disappears automatically once <App /> mounts and replaces root content. */
+      #dv-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0b0b0b;
+        color: #d4af37;
+        font-family: 'Playfair Display', 'Times New Roman', serif;
+        animation: dv-splash-fade-in 0.3s ease;
+      }
+      #dv-splash .dv-splash-inner {
+        text-align: center;
+        padding: 0 24px;
+        animation: dv-splash-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+      #dv-splash .dv-splash-brand {
+        font-size: clamp(36px, 7vw, 64px);
+        letter-spacing: 0.18em;
+        font-weight: 500;
+        line-height: 1;
+        margin: 0 0 18px;
+        background: linear-gradient(90deg, #b8862b 0%, #f4e1a2 50%, #b8862b 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-size: 200% auto;
+        animation: dv-splash-shine 2.6s linear infinite;
+      }
+      #dv-splash .dv-splash-welcome {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: clamp(13px, 2vw, 16px);
+        letter-spacing: 0.32em;
+        color: rgba(255, 255, 255, 0.65);
+        text-transform: uppercase;
+        margin: 0 0 28px;
+      }
+      #dv-splash .dv-splash-dots {
+        display: inline-flex;
+        gap: 8px;
+      }
+      #dv-splash .dv-splash-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #d4af37;
+        animation: dv-splash-bounce 1.2s ease-in-out infinite;
+      }
+      #dv-splash .dv-splash-dots span:nth-child(2) { animation-delay: 0.18s; }
+      #dv-splash .dv-splash-dots span:nth-child(3) { animation-delay: 0.36s; }
+      @keyframes dv-splash-fade-in { from { opacity: 0 } to { opacity: 1 } }
+      @keyframes dv-splash-rise {
+        from { opacity: 0; transform: translateY(12px) }
+        to { opacity: 1; transform: translateY(0) }
+      }
+      @keyframes dv-splash-shine {
+        0% { background-position: 0% center }
+        100% { background-position: 200% center }
+      }
+      @keyframes dv-splash-bounce {
+        0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) }
+        40% { opacity: 1; transform: scale(1) }
+      }
+      #dv-splash.dv-splash-out {
+        opacity: 0;
+        transition: opacity 0.45s ease;
+        pointer-events: none;
+      }
+    </style>
     <div id="root"></div>
+    <div id="dv-splash" aria-hidden="true">
+      <div class="dv-splash-inner">
+        <div class="dv-splash-brand">DE&nbsp;VALEUR</div>
+        <div class="dv-splash-welcome">Xoş&nbsp;gəlmisiniz</div>
+        <div class="dv-splash-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

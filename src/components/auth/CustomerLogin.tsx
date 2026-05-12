@@ -157,7 +157,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose, initialMode = 'l
           } else {
             window.location.reload();
           }
-        }, 1200);
+        }, 300);
       } else {
         // REGISTER
         const previousRole = localStorage.getItem('userRole');
@@ -211,7 +211,7 @@ const CustomerLogin: React.FC<CustomerLoginProps> = ({ onClose, initialMode = 'l
 
         setSuccessMessage(t('auth.registerSuccess'));
         setShowSuccess(true);
-        setTimeout(() => { onClose(); window.location.reload(); }, 1200);
+        setTimeout(() => { onClose(); window.location.reload(); }, 400);
       }
     } catch (err: any) {
       const code = err?.code || '';

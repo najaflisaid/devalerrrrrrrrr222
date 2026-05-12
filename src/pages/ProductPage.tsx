@@ -131,7 +131,7 @@ const ProductPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-16 items-start">
           {/* LEFT — Gallery (desktop-də sticky: sağ tərəf scroll edilərkən şəkil yerində qalır) */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto scrollbar-hide">
+          <div className="lg:sticky lg:top-4 lg:self-start">
             <div className="relative aspect-square bg-white border border-black/10 overflow-hidden">
               {onSale && (
                 <span

@@ -605,8 +605,8 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       console.log('Admin Panel - Loading data...');
       console.log('Admin Panel - userRole from localStorage:', localStorage.getItem('userRole'));
@@ -665,7 +665,7 @@ const AdminPanel: React.FC = () => {
     } catch (error) {
       console.error('Error loading admin data:', error);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   };
 
@@ -716,7 +716,7 @@ const AdminPanel: React.FC = () => {
       };
 
       await productService.add(product);
-      await loadData();
+      await loadData({ silent: true });
 
       setNewProduct({
         nameAz: '',
@@ -822,7 +822,7 @@ const AdminPanel: React.FC = () => {
       };
 
       await updateDoc(doc(db, 'products', editingProduct.id), updatedProduct);
-      await loadData();
+      await loadData({ silent: true });
 
       setEditingProduct(null);
       setShowEditProduct(false);
@@ -850,7 +850,7 @@ const AdminPanel: React.FC = () => {
         createdAt: new Date()
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setNewBrand({ name: '', logo: '' });
       setShowAddBrand(false);
       alert('Marka uğurla əlavə edildi!');
@@ -879,7 +879,7 @@ const AdminPanel: React.FC = () => {
         createdAt: new Date()
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setNewCategory({ nameAz: '', nameRu: '', nameEn: '', parentId: '' });
       setShowAddCategory(false);
       alert('Kateqoriya uğurla əlavə edildi!');
@@ -905,7 +905,7 @@ const AdminPanel: React.FC = () => {
         createdAt: new Date()
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setNewBlog({ titleAz: '', titleRu: '', contentAz: '', contentRu: '', image: '' });
       setShowAddBlog(false);
       alert('Bloq yazısı uğurla əlavə edildi!');
@@ -931,7 +931,7 @@ const AdminPanel: React.FC = () => {
         createdAt: new Date()
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setNewPartner({ name: '', logo: '', website: '' });
       setShowAddPartner(false);
       alert('Tərəfdaş uğurla əlavə edildi!');
@@ -964,7 +964,7 @@ const AdminPanel: React.FC = () => {
         await addDoc(collection(db, 'about'), data);
       }
 
-      await loadData();
+      await loadData({ silent: true });
       alert('Haqqımızda bölməsi yeniləndi!');
     } catch (error) {
       console.error('Error saving about:', error);
@@ -995,7 +995,7 @@ const AdminPanel: React.FC = () => {
         await addDoc(collection(db, 'contact'), data);
       }
 
-      await loadData();
+      await loadData({ silent: true });
       alert('Əlaqə məlumatları yeniləndi!');
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -1009,7 +1009,7 @@ const AdminPanel: React.FC = () => {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
         await deleteDoc(doc(db, 'brands', id));
-        await loadData();
+        await loadData({ silent: true });
         alert('Marka silindi!');
       } catch (error) {
         console.error('Error deleting brand:', error);
@@ -1036,7 +1036,7 @@ const AdminPanel: React.FC = () => {
         parentId: editingCategory.parentId || null
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setShowEditCategory(false);
       setEditingCategory(null);
       alert('Kateqoriya uğurla yeniləndi!');
@@ -1052,7 +1052,7 @@ const AdminPanel: React.FC = () => {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
         await deleteDoc(doc(db, 'categories', id));
-        await loadData();
+        await loadData({ silent: true });
         alert('Kateqoriya silindi!');
       } catch (error) {
         console.error('Error deleting category:', error);
@@ -1067,7 +1067,7 @@ const AdminPanel: React.FC = () => {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
         await deleteDoc(doc(db, 'blog_posts', id));
-        await loadData();
+        await loadData({ silent: true });
         alert('Bloq yazısı silindi!');
       } catch (error) {
         console.error('Error deleting blog:', error);
@@ -1108,7 +1108,7 @@ const AdminPanel: React.FC = () => {
       setNewBlog({ titleAz: '', titleRu: '', contentAz: '', contentRu: '', image: '' });
       setShowEditBlog(false);
       setEditingBlog(null);
-      await loadData();
+      await loadData({ silent: true });
       alert('Bloq yazısı yeniləndi!');
     } catch (error) {
       console.error('Error updating blog:', error);
@@ -1122,7 +1122,7 @@ const AdminPanel: React.FC = () => {
         const { doc, deleteDoc } = await import('firebase/firestore');
         const { db } = await import('../../lib/firebase');
         await deleteDoc(doc(db, 'partners', id));
-        await loadData();
+        await loadData({ silent: true });
         alert('Tərəfdaş silindi!');
       } catch (error) {
         console.error('Error deleting partner:', error);
@@ -1135,7 +1135,7 @@ const AdminPanel: React.FC = () => {
     if (await siteConfirm('Bu məhsulu silmək istədiyinizdən əminsiniz?')) {
       try {
         await productService.delete(id);
-        await loadData();
+        await loadData({ silent: true });
         alert('Məhsul silindi!');
       } catch (error) {
         console.error('Error deleting product:', error);
@@ -1160,7 +1160,7 @@ const AdminPanel: React.FC = () => {
         status: 'active'
       });
 
-      await loadData();
+      await loadData({ silent: true });
       setNewB2BUser({ email: '', password: '', name: '', surname: '', phone: '', companyName: '' });
       setShowAddB2BUser(false);
       alert('B2B istifadəçi uğurla əlavə edildi!');
@@ -1219,7 +1219,7 @@ const AdminPanel: React.FC = () => {
           approvedAt: new Date()
         });
 
-        await loadData();
+        await loadData({ silent: true });
       } catch (error) {
         console.error('Error approving B2B request:', error);
         alert('Xəta baş verdi: ' + (error as Error).message);
@@ -1236,7 +1236,7 @@ const AdminPanel: React.FC = () => {
           status: 'rejected',
           rejectedAt: new Date()
         });
-        await loadData();
+        await loadData({ silent: true });
       } catch (error) {
         console.error('Error rejecting B2B request:', error);
       }
@@ -1246,7 +1246,7 @@ const AdminPanel: React.FC = () => {
   const handleToggleB2BStatus = async (userId: string, currentStatus: string) => {
     try {
       await userService.toggleB2BStatus(userId, currentStatus === 'active' ? 'inactive' : 'active');
-      loadData();
+      loadData({ silent: true });
     } catch (error) {
       console.error('Error toggling B2B status:', error);
     }
@@ -1261,7 +1261,7 @@ const AdminPanel: React.FC = () => {
     const { userId, userName } = deleteUserTarget;
     try {
       await userService.deleteUser(userId);
-      await loadData();
+      await loadData({ silent: true });
       showToast(`${userName} silindi`, 'success');
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -1282,7 +1282,7 @@ const AdminPanel: React.FC = () => {
     if (!adminToggleTarget) return;
     const { userId, userName, newRole } = adminToggleTarget;
     await userService.setUserRole(userId, newRole);
-    await loadData();
+    await loadData({ silent: true });
     showToast(
       newRole === 'admin' ? `${userName} artıq admindir` : `${userName} artıq müştəridir`,
       'success'
@@ -2218,7 +2218,7 @@ const AdminPanel: React.FC = () => {
                       });
                       setShowEditBrand(false);
                       setEditingBrand(null);
-                      loadData();
+                      loadData({ silent: true });
                       alert('Marka yeniləndi!');
                     } catch (error) {
                       console.error('Error updating brand:', error);
@@ -3405,7 +3405,7 @@ const AdminPanel: React.FC = () => {
                           if (discount >= 0 && discount <= 100) {
                             userService.updateUserDiscount(user.id, discount, discountType, expiresAt)
                               .then(() => {
-                                loadData();
+                                loadData({ silent: true });
                                 alert('Endirim parametrləri yeniləndi!');
                               })
                               .catch((error) => {
