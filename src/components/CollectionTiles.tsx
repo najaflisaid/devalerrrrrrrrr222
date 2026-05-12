@@ -135,7 +135,7 @@ const CollectionTiles: React.FC = () => {
               <Link
                 key={tile.id || idx}
                 to={tile.link_url || '/products'}
-                className={`dv-collection-tile group relative block shrink-0 snap-start overflow-hidden bg-[#e8ddd2] aspect-[3/4] sm:aspect-[3/4.4] rounded-2xl sm:rounded-[20px] w-[44%] sm:w-[28%] ${inView ? 'dv-brand-in' : ''}`}
+                className={`dv-collection-tile group relative block shrink-0 snap-start overflow-hidden bg-[#e8ddd2] aspect-[3/4] sm:aspect-[3/4.4] w-[44%] sm:w-[28%] ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${100 + idx * 90}ms` }}
                 data-testid={`dv-collection-tile-${tile.id || idx}`}
               >
