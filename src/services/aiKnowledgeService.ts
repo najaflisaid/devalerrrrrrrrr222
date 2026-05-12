@@ -3,6 +3,7 @@ import { db } from '../lib/firebase';
 
 export interface AiKnowledge {
   enabled: boolean;          // Chat widget visible on the site
+  greetBubbleText: string;   // Tooltip text shown next to the AI launcher (e.g. "Mütəxəssisdən tövsiyə al")
   aiInstructions: string;    // AI davranış komandaları (admin-in xüsusi göstərişləri)
   companyInfo: string;       // Şirkət, missiya, tarix
   brandsInfo: string;        // Brendlər haqqında (hansı ölkə, tarix)
@@ -16,6 +17,7 @@ const DOC_REF = doc(db, 'ai_knowledge', 'main');
 
 export const EMPTY_KNOWLEDGE: AiKnowledge = {
   enabled: true,
+  greetBubbleText: '',
   aiInstructions: '',
   companyInfo: '',
   brandsInfo: '',
@@ -32,6 +34,7 @@ export const getAiKnowledge = async (): Promise<AiKnowledge> => {
     return {
       // default to true if the field is missing (backward compat)
       enabled: d.enabled === false ? false : true,
+      greetBubbleText: d.greetBubbleText || '',
       aiInstructions: d.aiInstructions || '',
       companyInfo: d.companyInfo || '',
       brandsInfo: d.brandsInfo || '',
@@ -77,6 +80,30 @@ export const subscribeChatEnabled = (
     (err) => {
       console.warn('subscribeChatEnabled failed:', err);
       cb(true);
+    }
+  );
+};
+
+/**
+ * Live subscription to the greeting-bubble text shown next to the AI launcher.
+ * Empty string → the bubble is hidden entirely.
+ */
+export const subscribeGreetBubbleText = (
+  cb: (text: string) => void
+): (() => void) => {
+  return onSnapshot(
+    DOC_REF,
+    (snap) => {
+      if (!snap.exists()) {
+        cb('');
+        return;
+      }
+      const d = snap.data() as any;
+      cb(typeof d.greetBubbleText === 'string' ? d.greetBubbleText : '');
+    },
+    (err) => {
+      console.warn('subscribeGreetBubbleText failed:', err);
+      cb('');
     }
   );
 };

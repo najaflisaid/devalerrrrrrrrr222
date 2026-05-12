@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2, MessageCircle, Power } from 'lucide-react';
+import { Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2, MessageCircle, Power, MessageSquare } from 'lucide-react';
 import {
   getAiKnowledge,
   saveAiKnowledge,
@@ -224,6 +224,40 @@ const AiKnowledgeTab: React.FC = () => {
             burdakı məlumatları nəzərə alaraq cavab verir. Məsələn, müştəri "Festina haradandır?" deyəndə, brendlər
             bölməsində yazdığınız "İspaniya, 1902" cavabını verəcək. Daha çox yazsanız → daha dəqiq tövsiyələr.
           </p>
+        </div>
+      </div>
+
+      {/* Greet bubble text — special field shown next to the chat launcher on the site */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4" data-testid="ai-greet-bubble-field">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-7 h-7 rounded-lg bg-[#D4AF37] text-white flex items-center justify-center flex-shrink-0">
+            <MessageSquare className="h-4 w-4" />
+          </div>
+          <label
+            htmlFor="ai-knowledge-greetBubbleText"
+            className="text-sm font-semibold text-gray-900"
+          >
+            Saytda göstərilən qısa mesaj (chat ikonunun yanında)
+          </label>
+        </div>
+        <p className="text-xs text-gray-500 mb-2.5 leading-relaxed">
+          Bu mətn saytın sağ-aşağı küncündə AI chat ikonunun yanında müştəriyə göstərilir.
+          Səhifə açılandan <strong>30 saniyə</strong> sonra animasiya ilə görünür,{' '}
+          <strong>1 dəqiqə</strong> qalır, sonra avtomatik gizlənir. Boş buraxılarsa heç vaxt göstərilmir.
+        </p>
+        <input
+          id="ai-knowledge-greetBubbleText"
+          type="text"
+          value={data.greetBubbleText || ''}
+          onChange={(e) => update('greetBubbleText', e.target.value)}
+          placeholder="Məsələn: Mütəxəssisdən tövsiyə al"
+          maxLength={80}
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white transition-colors"
+          data-testid="ai-knowledge-greetBubbleText"
+        />
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-[11px] text-gray-400">{(data.greetBubbleText || '').length}/80</span>
+          <span className="text-[11px] text-gray-400 italic">Dəyişiklik dərhal saytda görünür.</span>
         </div>
       </div>
 

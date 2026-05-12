@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Send, Loader2, Sparkles, Trash2, ShoppingBag, Check } from 'lucide-react';
 import { productService } from '../services/productService';
-import { getAiKnowledge, subscribeChatEnabled, type AiKnowledge } from '../services/aiKnowledgeService';
+import { getAiKnowledge, subscribeChatEnabled, subscribeGreetBubbleText, type AiKnowledge } from '../services/aiKnowledgeService';
 import { sendChatMessage } from '../services/aiChatService';
 import { useCart } from '../context/CartContext';
 import type { Product } from '../types';
@@ -341,8 +341,14 @@ const AiChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
-  // Salamlama "tooltip" üçün state — sayta girəndə avtomatik göstərilir
-  const [showGreetBubble, setShowGreetBubble] = useState(true);
+  // Salamlama "tooltip" üçün state — sayta girdikdən 30 saniyə sonra
+  // animasiya ilə görünür, 1 dəqiqə qalır, sonra avtomatik gizlənir.
+  // Mətn admin paneldən (AI Bilik Bazası) dinamik gəlir; boş olsa
+  // bubble heç vaxt göstərilmir.
+  const [greetBubbleText, setGreetBubbleText] = useState<string>('');
+  const [bubbleVisible, setBubbleVisible] = useState(false);
+  const [bubbleClosing, setBubbleClosing] = useState(false);
+  const [bubbleDismissed, setBubbleDismissed] = useState(false);
   const productsRef = useRef<Product[]>([]);
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -449,11 +455,50 @@ const AiChatWidget: React.FC = () => {
     try { sessionStorage.setItem(k, v); } catch { /* ignore */ }
   };
 
-  // (Auto-show greet bubble disabled — icon stays consistently visible without
-  // periodic UI changes that gave the impression of "appearing / disappearing".)
+  // Live-subscribe to the greeting-bubble text (set in admin > AI Knowledge).
   useEffect(() => {
-    return undefined;
-  }, [hidden, open]);
+    const unsub = subscribeGreetBubbleText((txt) => setGreetBubbleText(txt || ''));
+    return () => unsub();
+  }, []);
+
+  // Bubble lifecycle: 30s after the visit it fades in, stays for 60s,
+  // then fades out — only once per session.
+  useEffect(() => {
+    if (hidden || open) return;
+    if (bubbleDismissed) return;
+    if (!greetBubbleText.trim()) return;
+    if (bubbleVisible) return;
+
+    const SHOW_DELAY_MS = 30_000;
+    const VISIBLE_DURATION_MS = 60_000;
+    const CLOSE_ANIM_MS = 420;
+
+    const showTimer = setTimeout(() => {
+      setBubbleClosing(false);
+      setBubbleVisible(true);
+
+      const hideTimer = setTimeout(() => {
+        setBubbleClosing(true);
+        const removeTimer = setTimeout(() => {
+          setBubbleVisible(false);
+          setBubbleClosing(false);
+          setBubbleDismissed(true);
+        }, CLOSE_ANIM_MS);
+        (showTimer as any)._removeTimer = removeTimer;
+      }, VISIBLE_DURATION_MS);
+      (showTimer as any)._hideTimer = hideTimer;
+    }, SHOW_DELAY_MS);
+
+    return () => {
+      clearTimeout(showTimer);
+      const h = (showTimer as any)._hideTimer;
+      const r = (showTimer as any)._removeTimer;
+      if (h) clearTimeout(h);
+      if (r) clearTimeout(r);
+    };
+    // We intentionally trigger only when the text first arrives / route becomes eligible.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidden, greetBubbleText, bubbleDismissed]);
 
   // (Auto-open after 60s disabled — keeps the launcher icon consistently
   // visible. Users can open the chat manually whenever they need it.)
@@ -541,32 +586,38 @@ const AiChatWidget: React.FC = () => {
       {/* Floating launcher button — minimalist */}
       {!open && (
         <div className="fixed bottom-5 right-5 z-[9998] flex items-end gap-2">
-          {/* Greet bubble — slides in from the left so the customer knows this is an AI chat */}
-          {showGreetBubble && (
+          {/* Greet bubble — fades in 30s after visit, stays 1 min, fades out. Text from admin. */}
+          {bubbleVisible && greetBubbleText.trim() && (
             <button
               type="button"
               onClick={() => {
                 setOpen(true);
-                setShowGreetBubble(false);
+                setBubbleVisible(false);
+                setBubbleDismissed(true);
               }}
-              className="dv-ai-greet-attn mb-1 max-w-[210px] relative cursor-pointer group"
+              className={`mb-1.5 max-w-[200px] relative cursor-pointer group ${bubbleClosing ? 'dv-ai-greet-out' : 'dv-ai-greet-in'}`}
               data-testid="ai-greet-bubble"
-              aria-label="AI satış mütəxəssisi ilə danış"
+              aria-label={greetBubbleText}
             >
-              <span className="dv-ai-greet-shimmer relative block bg-white border border-[#D4AF37]/70 pl-3 pr-7 py-2 text-left shadow-[0_6px_24px_-12px_rgba(212,175,55,0.55)] overflow-hidden">
+              <span className="relative block bg-white border border-[#D4AF37]/70 pl-2.5 pr-6 py-1.5 text-left shadow-[0_4px_14px_-6px_rgba(212,175,55,0.45)]">
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowGreetBubble(false);
+                    setBubbleClosing(true);
+                    setTimeout(() => {
+                      setBubbleVisible(false);
+                      setBubbleClosing(false);
+                      setBubbleDismissed(true);
+                    }, 380);
                   }}
-                  className="absolute top-1/2 -translate-y-1/2 right-2 text-black/30 hover:text-black/70 cursor-pointer leading-none"
+                  className="absolute top-1/2 -translate-y-1/2 right-1.5 text-black/30 hover:text-black/70 cursor-pointer leading-none"
+                  aria-label="Bağla"
                 >
                   <X className="h-2.5 w-2.5" strokeWidth={1.5} />
                 </span>
-                <span className="relative block text-[11.5px] text-black font-medium leading-snug tracking-tight whitespace-nowrap">
-                  Mütəxəssisdən tövsiyə al
+                <span className="relative block text-[10.5px] text-black font-medium leading-snug tracking-tight whitespace-nowrap">
+                  {greetBubbleText}
                 </span>
-                <span className="relative mt-1 block h-[1px] w-5 bg-[#D4AF37]" />
               </span>
               {/* Tail pointing to the launcher */}
               <span aria-hidden="true" className="dv-ai-greet-tail" />
@@ -575,7 +626,8 @@ const AiChatWidget: React.FC = () => {
           <button
             onClick={() => {
               setOpen(true);
-              setShowGreetBubble(false);
+              setBubbleVisible(false);
+              setBubbleDismissed(true);
             }}
             className="dv-ai-launcher dv-ai-launcher-live group relative flex items-center justify-center w-12 h-12 rounded-full bg-white transition-all duration-300 overflow-visible"
             title="De Valeur AI ilə danış"
