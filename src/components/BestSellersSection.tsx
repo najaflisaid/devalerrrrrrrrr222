@@ -91,7 +91,7 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative pt-3 md:pt-4 pb-6 md:pb-8 bg-white overflow-hidden"
+      className="relative pt-3 md:pt-4 pb-6 md:pb-8 bg-[#F4F4F4] overflow-hidden"
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto">
@@ -126,11 +126,6 @@ const BestSellersSection: React.FC = () => {
           )}
         </div>
 
-        {/* Divider — məhsulların başlayacağı yerdə */}
-        <div className="px-1.5 mb-3 md:mb-4">
-          <div className="h-px bg-black/10" />
-        </div>
-
         {/* Horizontal slider — each "page" is a 4×2 grid (web) / 2×3 grid (mobile) */}
         <div className="px-1.5">
           <div
@@ -142,7 +137,7 @@ const BestSellersSection: React.FC = () => {
             {pages.map((pageProducts, pIdx) => (
               <div
                 key={pIdx}
-                className="shrink-0 snap-start w-full grid gap-x-1.5 md:gap-x-3 gap-y-2 md:gap-y-3"
+                className="shrink-0 snap-start w-full grid gap-px bg-[#E5E5E5]"
                 style={{
                   gridTemplateColumns: isMobile
                     ? 'repeat(3, minmax(0, 1fr))'
@@ -162,12 +157,12 @@ const BestSellersSection: React.FC = () => {
                       type="button"
                       data-testid={`bestseller-card-${product.id}`}
                       onClick={() => navigate(`/product/${product.id}`)}
-                      className="group relative flex flex-col text-left transition-colors duration-300"
+                      className="group relative flex flex-col text-left transition-colors duration-300 bg-white hover:bg-white/95 p-2 md:p-3"
                     >
                       {/* Wishlist heart — top right */}
                       <span
                         aria-hidden="true"
-                        className="absolute top-1 right-1 md:top-2.5 md:right-2.5 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
+                        className="absolute top-2 right-2 md:top-3 md:right-3 text-black/35 group-hover:text-black/70 transition-colors z-[2]"
                       >
                         <Heart className="w-3 h-3 md:w-[18px] md:h-[18px]" strokeWidth={1.4} />
                       </span>
@@ -175,7 +170,7 @@ const BestSellersSection: React.FC = () => {
                       {/* Sale badge — top left, circular % */}
                       {onSale && (
                         <span
-                          className="absolute top-1 left-1 md:top-2 md:left-2 z-[2] inline-flex items-center justify-center w-7 h-7 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[8.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
+                          className="absolute top-2 left-2 md:top-3 md:left-3 z-[2] inline-flex items-center justify-center w-7 h-7 md:w-11 md:h-11 rounded-full bg-[#D14545] text-white text-[8.5px] md:text-[12px] font-bold tabular-nums shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]"
                           data-testid={`bs-discount-badge-${product.id}`}
                         >
                           −{Math.round(((product.price - product.salePrice!) / product.price) * 100)}%
@@ -232,11 +227,6 @@ const BestSellersSection: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Bottom divider */}
-        <div className="px-1.5 mt-6 md:mt-8">
-          <div className="h-px bg-black/10" />
         </div>
       </div>
 
