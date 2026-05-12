@@ -155,29 +155,32 @@ const GiftCardsPage: React.FC = () => {
         <div className="max-w-[680px] mx-auto">
           {/* Hədiyyə kartı şəkli — mərkəzdə */}
           <div className="mb-10 md:mb-12">
-            <div className="relative w-full max-w-[440px] mx-auto aspect-[16/10] bg-gradient-to-br from-[#1a1410] via-black to-[#2a2218] overflow-hidden rounded-sm shadow-2xl">
+            <div className="dv-giftcard-hero group relative w-full max-w-[440px] mx-auto aspect-[16/10] bg-gradient-to-br from-[#5a0a0a] via-[#8B0000] to-[#3a0606] overflow-hidden rounded-sm shadow-[0_20px_60px_-15px_rgba(139,0,0,0.55)]">
+              {/* warm sheen */}
               <div
-                className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
+                className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none"
                 style={{
                   backgroundImage:
-                    'radial-gradient(circle at 20% 20%, rgba(255,210,150,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(120,80,40,0.25), transparent 55%)',
+                    'radial-gradient(circle at 22% 22%, rgba(255,180,160,0.28), transparent 60%), radial-gradient(circle at 78% 82%, rgba(60,0,0,0.55), transparent 55%)',
                 }}
               />
+              {/* Mirror / shine sweep — looped */}
+              <span aria-hidden="true" className="dv-giftcard-hero-shine pointer-events-none absolute inset-y-0 w-[35%] -skew-x-[18deg] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
               <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-8 text-white">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.32em] opacity-75">De Valeur</p>
+                    <p className="text-[10px] uppercase tracking-[0.32em] opacity-80">De Valeur</p>
                     <p className="text-[22px] md:text-[28px] font-light tracking-tight mt-1">
                       Hədiyyə Kartı
                     </p>
                   </div>
-                  <Gift className="w-7 h-7 opacity-60" strokeWidth={1.25} />
+                  <Gift className="w-7 h-7 opacity-75" strokeWidth={1.25} />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] opacity-65 mb-1">Dəyər</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] opacity-75 mb-1">Dəyər</p>
                   <p className="text-[40px] md:text-[56px] font-light leading-none tabular-nums">
                     {amount > 0 ? amount.toLocaleString('az-AZ') : '—'}{' '}
-                    <span className="text-[20px] md:text-[24px] opacity-80">AZN</span>
+                    <span className="text-[20px] md:text-[24px] opacity-85">AZN</span>
                   </p>
                 </div>
               </div>

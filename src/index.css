@@ -456,6 +456,24 @@ html.dark .dv-orb { opacity: 0.28; }
   position: relative;
 }
 
+/* Hero gift card preview (GiftCardsPage) — looping mirror sweep */
+@keyframes dv-giftcard-hero-shine {
+  0%   { left: -45%; opacity: 0; }
+  18%  { opacity: 0.95; }
+  55%  { opacity: 0.7; }
+  100% { left: 120%; opacity: 0; }
+}
+
+.dv-giftcard-hero-shine {
+  left: -45%;
+  animation: dv-giftcard-hero-shine 4.5s cubic-bezier(0.22, 1, 0.36, 1) 1.2s infinite;
+  will-change: left, opacity;
+}
+
+.dv-giftcard-hero:hover .dv-giftcard-hero-shine {
+  animation-duration: 1.6s;
+}
+
 
 
 /* ================= Minimal Menu Animations ================= */
