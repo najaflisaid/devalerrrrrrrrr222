@@ -11,6 +11,7 @@ import BestSellersSection from './components/BestSellersSection';
 import BrandShowcase from './components/BrandShowcase';
 import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
+import RevealOnScroll from './components/RevealOnScroll';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
 import B2BRequestForm from './components/auth/B2BRequestForm';
@@ -56,13 +57,31 @@ import './i18n';
 const HomePage: React.FC = () => {
   return (
     <>
+      {/* Hero — banner öz daxili keçidlərinə malikdir, reveal əlavə etmirik */}
       <Hero />
-      <CollectionTiles />
+
+      <RevealOnScroll variant="up">
+        <CollectionTiles />
+      </RevealOnScroll>
+
+      {/* BestSellersSection — daxilində öz scroll-reveal animasiyası var */}
       <BestSellersSection />
-      <NewsTiles />
-      <BrandShowcase />
-      <HomeProductBanners />
-      <CategoryBanner />
+
+      <RevealOnScroll variant="up">
+        <NewsTiles />
+      </RevealOnScroll>
+
+      <RevealOnScroll variant="up">
+        <BrandShowcase />
+      </RevealOnScroll>
+
+      <RevealOnScroll variant="up">
+        <HomeProductBanners />
+      </RevealOnScroll>
+
+      <RevealOnScroll variant="up">
+        <CategoryBanner />
+      </RevealOnScroll>
     </>
   );
 };
