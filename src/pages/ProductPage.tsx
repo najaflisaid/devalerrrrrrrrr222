@@ -303,11 +303,12 @@ const ProductPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Kredit kalkulyatoru — yalnız adi müştəri (B2B-də göstərilmir) */}
+              {/* Kredit kalkulyatoru — yalnız adi müştəri (B2B-də göstərilmir).
+                  Hesablama HƏMİŞƏ orijinal qiymət üzərində — endirim tətbiq olunmur. */}
               {!isB2BUser && (
                 <div className="mt-8" data-testid="product-credit-calculator">
                   <CreditCalculator
-                    price={product.salePrice || product.price}
+                    price={product.price}
                     brand={product.brand || ''}
                   />
                 </div>

@@ -73,19 +73,19 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
 
   return (
     <div className="space-y-8" data-testid="credit-calculator">
-      {/* Hissəli alış kalkulyatoru */}
+      {/* Kredit kalkulyatoru */}
       <section data-testid="installment-calculator">
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">
-          Hissəli alış kalkulyatoru
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          Kredit kalkulyatoru
         </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Şərtlər ilk dəfə olaraq endirimli qiymətə tətbiq olunur
+        <p className="text-xs text-gray-500 mb-3">
+          Şərtlər endirimli qiymətə tətbiq olunmur
         </p>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Ay düymələri */}
-            <div className="flex-1 flex flex-wrap items-end gap-3 sm:gap-4">
+            <div className="flex-1 flex flex-wrap items-end gap-2">
               {rates.map((r) => {
                 const isActive = r.months === activeRate?.months;
                 return (
@@ -98,16 +98,16 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
                   >
                     {/* Faiz etiketi */}
                     <span
-                      className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[12px] font-semibold whitespace-nowrap ${
-                        r.percent > 0 ? 'text-red-500' : 'text-red-500'
-                      } ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                      className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap text-red-500 ${
+                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+                      }`}
                     >
                       {r.percent > 0 ? `${r.percent}%` : '0%'}
                     </span>
                     <span
-                      className={`flex items-center justify-center rounded-full text-sm font-medium transition-all w-[68px] h-[68px] sm:w-[72px] sm:h-[72px] ${
+                      className={`flex items-center justify-center rounded-full text-[11px] font-medium transition-all px-3 h-9 min-w-[52px] uppercase tracking-[0.1em] ${
                         isActive
-                          ? 'bg-gray-900 text-white shadow-md'
+                          ? 'bg-gray-900 text-white shadow-sm'
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
@@ -119,10 +119,12 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
             </div>
 
             {/* Aylıq */}
-            <div className="sm:border-l sm:border-gray-200 sm:pl-6 text-center sm:text-left sm:min-w-[120px]">
-              <div className="text-sm text-gray-500 mb-1">Aylıq</div>
+            <div className="sm:border-l sm:border-gray-200 sm:pl-4 text-center sm:text-left sm:min-w-[96px]">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-0.5">
+                Aylıq
+              </div>
               <div
-                className="text-2xl font-bold text-gray-900"
+                className="text-lg font-bold text-gray-900 tabular-nums"
                 data-testid="cc-monthly-amount"
               >
                 {formatAzn(monthlyAmount)} ₼
@@ -131,8 +133,8 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
           </div>
         </div>
 
-        <p className="mt-3 text-xs text-gray-500 flex items-start gap-1.5">
-          <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+        <p className="mt-2 text-[11px] text-gray-500 flex items-start gap-1.5">
+          <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
           Sifarişin rəsmiləşdirilməsi zamanı komissiya əlavə oluna bilər
         </p>
       </section>
@@ -140,8 +142,8 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
       {/* Taksitlə al */}
       {activeCards.length > 0 && (
         <section data-testid="installment-cards">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Taksitlə al</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Taksitlə al</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {activeCards.map((c) => {
               const sortedMonths = [...c.months].sort((a, b) => a - b);
               const sel = cardSelectedMonths[c.id] ?? sortedMonths[sortedMonths.length - 1];
@@ -157,33 +159,33 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
                     const next = sortedMonths[(idx + 1) % sortedMonths.length];
                     setCardSelectedMonths((m) => ({ ...m, [c.id]: next }));
                   }}
-                  className={`group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all ${
+                  className={`group flex items-center gap-2.5 rounded-lg border border-gray-200 bg-white p-2.5 text-left transition-all ${
                     hasMultiple ? 'hover:border-gray-900 cursor-pointer' : 'cursor-default'
                   }`}
                   data-testid={`cc-card-${c.id}`}
                   title={hasMultiple ? 'Ay dəyişmək üçün klikləyin' : c.name}
                 >
                   <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                     style={{ backgroundColor: c.bgColor || '#000000' }}
                   >
                     {c.logoUrl ? (
                       <img
                         src={c.logoUrl}
                         alt={c.name}
-                        className="max-w-full max-h-full object-contain p-1"
+                        className="max-w-full max-h-full object-contain p-0.5"
                       />
                     ) : (
-                      <span className="text-white text-xs font-bold">
+                      <span className="text-white text-[10px] font-bold">
                         {(c.name || '?').slice(0, 2)}
                       </span>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900">
+                  <div className="flex-1 min-w-0 leading-tight">
+                    <div className="text-[13px] font-semibold text-gray-900 tabular-nums">
                       {sel} ay {formatAzn(monthly)} ₼
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                    <div className="text-[10px] text-gray-500 truncate">
                       {c.name} ilə faizsiz ödə!
                     </div>
                   </div>

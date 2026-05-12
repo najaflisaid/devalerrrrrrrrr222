@@ -294,11 +294,12 @@ const ProductDetailsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Kredit kalkulyatoru — yalnız adi müştəri */}
+            {/* Kredit kalkulyatoru — yalnız adi müştəri.
+                Hesablama HƏMİŞƏ orijinal qiymət üzərində — endirim tətbiq olunmur. */}
             {!isB2BUser && product && (
               <div className="mt-8" data-testid="product-credit-calculator">
                 <CreditCalculator
-                  price={displayPrice}
+                  price={product.price}
                   brand={product.brand || ''}
                 />
               </div>
