@@ -115,3 +115,44 @@ Bütün məhsullara bir kliklə qlobal endirim tətbiq etmək, brend əsasında 
 - `CampaignPopup` no longer opens for B2B/admin users.
 - `ProductsPage` "Endirimli məhsullar" filter checkbox hidden for B2B users (no discounts to filter by for them).
 
+
+
+---
+
+## Hissəli Alış Kalkulyatoru + Taksitlə Al Kartları (Yan 2026)
+
+### Məqsəd
+Məhsul səhifəsində (yalnız adi müştərilərə) interaktiv hissəli alış kalkulyatoru
+və "Taksitlə al" bank kartı bölməsi göstərilsin. Admin paneldən hər brendə görə
+ay/faiz cədvəli və bank kartları (loqo + dəstəklənən aylar) konfiqurasiya edilsin.
+
+### Qaydalar
+- **Brend faizi məntiqi** (admin tabında qurulur):
+  - Brend üçün ay→faiz cədvəli təyin olunarsa → həmin aylar göstərilir
+  - Brend cədvəldə yoxdursa VƏ YA cədvəl boşdursa → **defaultMonths** istifadə
+    olunur (hamısı 0% — faizsiz)
+- **Aylıq hesablama**: `(price * (1 + percent/100)) / months`
+  (faiz 0 olduqda sadəcə `price / months`)
+- **B2B istifadəçiləri**: kalkulyator B2B-də göstərilmir
+- **Taksitlə al kartları** (faizsiz): hər kart üçün loqo + dəstəklənən aylar.
+  Klik → ay dəyişir (cycle).
+
+### Firestore
+- `creditCalculator/config` (tək doc):
+  ```
+  {
+    enabled: bool,
+    defaultMonths: [6,9,12,15,18,24],
+    brandRates: [{ brand, rates: [{ months, percent }] }],
+    installmentCards: [{ id, name, logoUrl, months, bgColor, isActive }]
+  }
+  ```
+- Storage: `installmentCards/{timestamp}_{filename}` — kart loqoları
+
+### Dəyişən / yeni fayllar
+- `src/services/creditCalculatorService.ts` (yeni)
+- `src/components/CreditCalculator.tsx` (yeni — məhsul səhifəsi komponenti)
+- `src/components/admin/CreditCalculatorTab.tsx` (yeni — admin tab)
+- `src/components/admin/AdminPanel.tsx` (yeni tab: Marketing & Məzmun → Kredit Kalkulyatoru)
+- `src/pages/ProductPage.tsx` (CreditCalculator mount — /product/:id)
+- `src/pages/ProductDetailsPage.tsx` (CreditCalculator mount — /products/:productId)

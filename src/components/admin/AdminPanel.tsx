@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -36,6 +36,7 @@ import GiftCardsTab from './GiftCardsTab';
 import CampaignsTab from './CampaignsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
+import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
@@ -1334,6 +1335,7 @@ const AdminPanel: React.FC = () => {
       label: 'Marketing & Məzmun',
       items: [
         { id: 'campaigns', label: 'Endirim Kampaniyaları', icon: Sparkles },
+        { id: 'creditCalculator', label: 'Kredit Kalkulyatoru', icon: Percent },
         { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
         { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
         { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
@@ -3228,6 +3230,10 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'campaigns' && (
           <CampaignsTab />
+        )}
+
+        {activeTab === 'creditCalculator' && (
+          <CreditCalculatorTab />
         )}
 
         {activeTab === 'banners' && (

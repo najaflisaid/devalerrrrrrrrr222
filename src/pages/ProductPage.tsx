@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
+import CreditCalculator from '../components/CreditCalculator';
 import ProductReviews from '../components/ProductReviews';
 import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
@@ -301,6 +302,16 @@ const ProductPage: React.FC = () => {
                   </button>
                 )}
               </div>
+
+              {/* Kredit kalkulyatoru — yalnız adi müştəri (B2B-də göstərilmir) */}
+              {!isB2BUser && (
+                <div className="mt-8" data-testid="product-credit-calculator">
+                  <CreditCalculator
+                    price={product.salePrice || product.price}
+                    brand={product.brand || ''}
+                  />
+                </div>
+              )}
 
               {/* Share */}
               <button

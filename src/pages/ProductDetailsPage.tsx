@@ -5,6 +5,7 @@ import { ChevronLeft, ShoppingCart } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
+import CreditCalculator from '../components/CreditCalculator';
 import ProductReviews from '../components/ProductReviews';
 import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
@@ -290,6 +291,16 @@ const ProductDetailsPage: React.FC = () => {
                 >
                   {t('product.buyWithCredit')}
                 </button>
+              </div>
+            )}
+
+            {/* Kredit kalkulyatoru — yalnız adi müştəri */}
+            {!isB2BUser && product && (
+              <div className="mt-8" data-testid="product-credit-calculator">
+                <CreditCalculator
+                  price={displayPrice}
+                  brand={product.brand || ''}
+                />
               </div>
             )}
 
