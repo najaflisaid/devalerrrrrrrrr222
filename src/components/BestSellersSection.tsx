@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { ChevronRight, Heart } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useNavigate, Link } from 'react-router-dom';
 import { Product } from '../types';
@@ -11,22 +11,15 @@ import {
 } from '../services/bestSellersBannerService';
 
 const BestSellersSection: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<BestSellersBanner>(defaultBanner());
 
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [pageIndex, setPageIndex] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(
     typeof window !== 'undefined' ? !window.matchMedia('(min-width: 1024px)').matches : false
   );
-
-  // Web: 3 cols × 3 rows = 9 per page (+ banner sağda) · Mobile: 2 cols × 4 rows = 8 per page (+ banner sağda)
-  const PER_PAGE_DESKTOP = 9;
-  const PER_PAGE_MOBILE = 8;
-  const perPage = isMobile ? PER_PAGE_MOBILE : PER_PAGE_DESKTOP;
 
   const getProductName = (product: Product): string => {
     if (typeof product.name === 'string') return product.name as unknown as string;
@@ -52,53 +45,14 @@ const BestSellersSection: React.FC = () => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Chunk products into pages
-  const pages: Product[][] = [];
-  for (let i = 0; i < products.length; i += perPage) {
-    pages.push(products.slice(i, i + perPage));
-  }
-  const pageCount = Math.max(1, pages.length);
-
-  // Track active page on scroll
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    const compute = () => {
-      const w = track.clientWidth;
-      if (w > 0) {
-        setPageIndex(Math.round(track.scrollLeft / w));
-      }
-    };
-    compute();
-    track.addEventListener('scroll', compute, { passive: true });
-    window.addEventListener('resize', compute);
-    return () => {
-      track.removeEventListener('scroll', compute);
-      window.removeEventListener('resize', compute);
-    };
-  }, [products.length, perPage]);
-
-  // Reset to first page when breakpoint changes
-  useEffect(() => {
-    if (trackRef.current) trackRef.current.scrollTo({ left: 0, behavior: 'auto' });
-  }, [perPage]);
-
-  const goToPage = (page: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const target = Math.max(0, Math.min(pageCount - 1, page)) * track.clientWidth;
-    track.scrollTo({ left: target, behavior: 'smooth' });
-  };
+  // Banner sticky işləməsi üçün məhsullar vertikal grid kimi göstərilir (paginasiya yoxdur).
+  // Beləliklə məhsullar sütunu banner-dən xeyli hündür olur və sticky uzun müddət işləyir.
+  // Desktop: 3 sütun, Mobil: 2 sütun. Bütün məhsullar (24-ə qədər) tək siyahıda.
 
   if (loading || products.length === 0) return null;
 
-  const showArrows = pageCount > 1;
-  const canPrev = pageIndex > 0;
-  const canNext = pageIndex < pageCount - 1;
-
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
   // Banner sahəsi həm mobil, həm desktop-də həmişə sağda göstərilir
-  const showBannerColumn = true;
   const bannerActive = banner.enabled && !!banner.imageUrl;
   const bannerTitle = banner.title[lang] || banner.title.az;
   const bannerSubtitle = banner.subtitle[lang] || banner.subtitle.az;
@@ -116,57 +70,22 @@ const BestSellersSection: React.FC = () => {
       data-testid="dv-bestsellers"
     >
       <div className="max-w-[1440px] mx-auto">
-        {/* Arrows-only row */}
-        {showArrows && (
-          <div className="flex items-center justify-end px-1.5 mb-1.5 md:mb-2">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => goToPage(pageIndex - 1)}
-                aria-label="Previous"
-                disabled={!canPrev}
-                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                data-testid="bestsellers-prev"
-              >
-                <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => goToPage(pageIndex + 1)}
-                aria-label="Next"
-                disabled={!canNext}
-                className="p-1 text-black/70 hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                data-testid="bestsellers-next"
-              >
-                <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile: products (2 cols × 4 rows) + sticky banner (45% sağda).
-            Desktop: products (3 cols × 3 rows) + sticky banner (~38% sağda). */}
+        {/* Mobile: products (2 sütun, vertikal) + sticky banner (45% sağda).
+            Desktop: products (3 sütun, vertikal) + sticky banner (~38% sağda).
+            Paginasiya yoxdur — məhsullar bütün uzunluqda göstərilir ki, banner uzun müddət sticky qalsın. */}
         <div className="px-1.5 grid grid-cols-[1fr_45%] lg:grid-cols-[1fr_minmax(320px,38%)] gap-1.5 sm:gap-2 items-start">
           {/* PRODUCTS column */}
           <div className="min-w-0">
             <div
-              ref={trackRef}
-              className="dv-bs-scroll flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
-              style={{ scrollbarWidth: 'none' }}
-              data-testid="bestsellers-track"
+              className="grid gap-1 md:gap-2 bg-[#F4F4F4]"
+              style={{
+                gridTemplateColumns: isMobile
+                  ? 'repeat(2, minmax(0, 1fr))'
+                  : 'repeat(3, minmax(0, 1fr))',
+              }}
+              data-testid="bestsellers-grid"
             >
-              {pages.map((pageProducts, pIdx) => (
-                <div
-                  key={pIdx}
-                  className="shrink-0 snap-start w-full grid gap-1 md:gap-2 bg-[#F4F4F4]"
-                  style={{
-                    gridTemplateColumns: isMobile
-                      ? 'repeat(2, minmax(0, 1fr))'
-                      : 'repeat(3, minmax(0, 1fr))',
-                  }}
-                  data-testid={`bestsellers-page-${pIdx}`}
-                >
-                  {pageProducts.map((product) => {
+                  {products.map((product) => {
                     const onSale = !!product.salePrice && product.salePrice < product.price;
                     const price = onSale ? product.salePrice! : product.price;
                     const name = getProductName(product);
@@ -245,8 +164,6 @@ const BestSellersSection: React.FC = () => {
                       </button>
                     );
                   })}
-                </div>
-              ))}
             </div>
           </div>
 
