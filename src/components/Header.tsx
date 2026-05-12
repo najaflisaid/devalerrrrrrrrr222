@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift, Headphones } from 'lucide-react';
+import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -431,7 +431,7 @@ const Header: React.FC = () => {
     <>
       {/* Main Header */}
       <header
-        className="dv-dark-panel dv-main-header sticky top-0 z-50 border-b border-white/10"
+        className="dv-main-header sticky top-0 z-50 bg-white border-b border-gray-100"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="dv-header-row flex items-center justify-between h-16">
@@ -452,7 +452,7 @@ const Header: React.FC = () => {
                 <img
                   src="https://i.hizliresim.com/tmu65g6.png"
                   alt="De Valeur"
-                  className="dv-logo-darkmode h-8 sm:h-9 md:h-10"
+                  className="h-8 sm:h-9 md:h-10"
                 />
               </Link>
             </div>
@@ -640,22 +640,6 @@ const Header: React.FC = () => {
                   {t('header.admin')}
                 </Link>
               )}
-
-              {/* Online support badge — drives attention to the AI chat (green pulse + clock) */}
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('dv:open-chat'))}
-                className="dv-online-badge group hidden lg:inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 text-[10.5px] uppercase tracking-[0.1em] font-medium whitespace-nowrap text-white/85 hover:text-white transition-colors"
-                aria-label="Onlayn dəstək"
-                data-testid="header-online-support-badge"
-              >
-                <span className="relative inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/15">
-                  <span className="absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </span>
-                <Headphones className="h-3.5 w-3.5 opacity-80 group-hover:opacity-100" strokeWidth={1.5} />
-                <span>Onlayn dəstək</span>
-              </button>
             </nav>
 
             {/* Right Actions */}
