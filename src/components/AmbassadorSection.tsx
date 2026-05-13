@@ -116,7 +116,7 @@ const AmbassadorSection: React.FC = () => {
               <ProductCarousel
                 products={products.slice(0, 6)}
                 testIdPrefix="ambassador"
-                cardBasis="basis-[78%] sm:basis-[48%] md:basis-[36%] lg:basis-[32%]"
+                cardBasis="basis-[36%] sm:basis-[48%] md:basis-[36%] lg:basis-[32%]"
               />
             </div>
           )}
