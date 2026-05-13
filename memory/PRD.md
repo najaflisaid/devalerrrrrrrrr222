@@ -81,6 +81,32 @@ File: `/app/src/App.tsx`
 - Firestore-da 524 məhsul var, lakin heç biri `isBestseller=true` deyil — fallback ümumi məhsullardan ilk 12-ni istifadə edir.
 - Hero default fallback: 2 Unsplash şəkli (Seamaster Planet Ocean + L'Heure Bleue) admin banner data olmadıqda göstərilir.
 
+## Bu sessiya (Banner auto-snap rise effekti)
+
+### HeroRisingPanel — gücləndirilmiş "səhifə kimi qalxan" animasiya
+File: `/app/src/components/HeroRisingPanel.tsx`
+
+Problem statement (az): "ana sehifede banneri asagi scrolla endirdikde asagidaki
+banner sehife kimi yuxari ozu gelsin animasiya ile biraz scrolu asagi eden kimi
+altdaki banner ozu qalxsin ve renglerde deyissin scrolu asagi eledikde sehife
+kimi yuxari gelsinler."
+
+İcra olunmuş dəyişikliklər:
+- **Auto-snap (smooth)**: `useMotionValueEvent(scrollY, 'change')` ilə istifadəçi
+  ≥40px scroll edən kimi `window.scrollTo({ top: snapTarget, behavior: 'smooth' })`
+  işə düşür — panel öz-özünə tam qalxır. Yuxarı snap simmetrik şəkildə işləyir
+  (≤40px-də sıfıra qayıdır).
+- **Daha dramatik rise**: viewport-a görə dinamik `riseDistance` (55vh) və
+  `snapTarget` (70vh). Köhnə 280→0 əvəzinə təxminən 560→0.
+- **Rəng keçidi**: panel bg `#F4ECE0 → #FBF7F0 → #FFFFFF` scroll boyunca.
+- **Hero dim overlay**: `fixed` qaranlıq gradient Hero üzərində; panel qalxdıqca
+  Hero qaralır (opacity 0 → 0.55) → "səhifə üstə örtülür" effekti.
+- **Gold accent xətti**: scaleX 0.4→1, opacity 0→1 — scroll ilə birlikdə uzanır.
+- `prefers-reduced-motion`: snap deaktiv olunur.
+
+Validation: Manual playwright screenshot — kiçik wheel(50px) scroll → 756px-ə
+auto-snap; geri scroll(25px) → 0-a auto-snap. Console error yox.
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.
