@@ -177,6 +177,22 @@ Köhnə "01 / 02 ━ ━" + plain "Aşağı + vertical line" əvəzlənildi:
   label, ortada vertikal gradient track içində animasiyalı qızıl nöqtə
   (mouse-wheel hint), altında ChevronDown ikon (hover-də translate-y-1).
 
+### CollectionTiles — editorial grid redesign (bu kiçik iterasiya)
+File: `/app/src/components/CollectionTiles.tsx`
+- Köhnə horizontal scroller + sıxıq kartlar tamamilə yenidən yazıldı:
+  desktop **4 sütun grid** (md: 2, lg: 4), mobile horizontal snap fallback.
+- Hər kart Omega/Cartier-tipli portret (`aspect-[3/4.2]`): full-bleed media +
+  Ken Burns hover zoom (1.08x, 1800ms), vignette gradient overlay, alt hissədə
+  gold accent xətti (hover-də 2.5x uzanır) + Playfair başlıq + "Kəşf et →" CTA
+  underline reveal hover-də.
+- Üstdə editorial header (centered): gold dashes + tracked uppercase
+  "KOLLEKSİYALARIMIZ" + böyük Playfair `Kateqoriyalar` başlıq.
+- **Dedupe**: admin data-da dublikat və başlıqsız element-lər var idi (SAATLAR /
+  DERI MEHSULLAR / DERI MEHSULLAR / AKSESUARLAR / AKSESUARLAR / QELEMLER /
+  QELEMLER). İndi `title_az` (lowercased) əsasında unique süzgəc + boş başlıqlı
+  tile-lar atılır — nəticədə 4 təmiz kart render olunur.
+- Framer Motion `whileInView` + `staggerChildren` ilə kartlar 36px-dən qalxır.
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.
