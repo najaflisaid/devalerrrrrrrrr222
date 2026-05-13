@@ -126,10 +126,8 @@ html,
 body {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Üfüqi səhifə sürüşməsi (saga/sola) blok — daxili komponentlərdəki
-     overflow-x: auto (məs. ProductCarousel) öz kontekstində işləməyə davam edir,
-     yalnız root document-də pan deaktiv. */
-  overflow-x: hidden;
+  /* Üfüqi səhifə sürüşməsi JS ilə blok olunur (main.tsx); CSS-də overflow-x
+     tətbiq etmirik, çünki `hidden` və `clip` `position: sticky`-ni sındırır. */
   max-width: 100%;
   overscroll-behavior-x: none;
 }
