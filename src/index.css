@@ -121,11 +121,21 @@ body {
 /* Prevent iOS auto-zoom when focusing inputs / textareas / selects on mobile.
    iOS Safari zooms automatically if input font-size < 16px regardless of the
    viewport user-scalable=no rule. Force 16px on mobile only — desktop keeps
-   the smaller, designed font-size. Also disable touch double-tap zoom and
-   text-size-adjust so tapping anywhere never triggers a page zoom. */
-html {
+   the smaller, designed font-size. */
+html,
+body {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Üfüqi səhifə sürüşməsi (saga/sola) blok — daxili komponentlərdəki
+     overflow-x: auto (məs. ProductCarousel) öz kontekstində işləməyə davam edir,
+     yalnız root document-də pan deaktiv. */
+  overflow-x: hidden;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+html {
+  /* Yalnız double-tap zoom və callout deaktiv; horizontal pan daxili
+     carousel-larda işləyə bilməsi üçün touch-action-ı body-də override etmirik. */
   touch-action: manipulation;
 }
 @media (max-width: 768px) {
