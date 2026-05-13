@@ -74,7 +74,7 @@ const SectionEditor: React.FC<{
   </div>
 );
 
-/** Multi-select product picker (search + chip list). */
+/** Multi-select product picker with thumbnail, multi-lang search, category filter. */
 const ProductPicker: React.FC<{
   label: string;
   products: Product[];
@@ -84,13 +84,38 @@ const ProductPicker: React.FC<{
   testidPrefix: string;
 }> = ({ label, products, selected, onChange, maxCount = 12, testidPrefix }) => {
   const [q, setQ] = useState('');
+  const [catFilter, setCatFilter] = useState<string>('all');
+  const [brandFilter, setBrandFilter] = useState<string>('all');
+
   const getName = (p: Product) =>
-    typeof p.name === 'string' ? (p.name as unknown as string) : p.name.az || p.name.en || '';
-  const filtered = products.filter((p) => {
-    if (!q.trim()) return true;
-    const s = q.toLowerCase();
-    return getName(p).toLowerCase().includes(s) || (p.brand || '').toLowerCase().includes(s);
-  });
+    typeof p.name === 'string' ? (p.name as unknown as string) : p.name.az || p.name.en || p.name.ru || '';
+
+  // Yığım: bütün uniq brendlər və kateqoriyalar
+  const allBrands = React.useMemo(() => {
+    const s = new Set<string>();
+    products.forEach((p) => p.brand && s.add(p.brand));
+    return Array.from(s).sort();
+  }, [products]);
+  const allCats = React.useMemo(() => {
+    const s = new Set<string>();
+    products.forEach((p) => p.category && s.add(p.category));
+    return Array.from(s).sort();
+  }, [products]);
+
+  // Filter
+  const filtered = React.useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return products.filter((p) => {
+      if (catFilter !== 'all' && p.category !== catFilter) return false;
+      if (brandFilter !== 'all' && p.brand !== brandFilter) return false;
+      if (!s) return true;
+      // Çoxdilli + brend + kateqoriya + id axtarışı
+      const pname = typeof p.name === 'string' ? p.name : `${p.name.az || ''} ${p.name.en || ''} ${p.name.ru || ''}`;
+      const hay = `${pname} ${p.brand || ''} ${p.category || ''} ${p.id || ''}`.toLowerCase();
+      return hay.includes(s);
+    });
+  }, [products, q, catFilter, brandFilter]);
+
   const toggle = (id: string) => {
     if (selected.includes(id)) {
       onChange(selected.filter((x) => x !== id));
@@ -99,74 +124,193 @@ const ProductPicker: React.FC<{
       onChange([...selected, id]);
     }
   };
+  const move = (id: string, dir: -1 | 1) => {
+    const idx = selected.indexOf(id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= selected.length) return;
+    const copy = [...selected];
+    [copy[idx], copy[j]] = [copy[j], copy[idx]];
+    onChange(copy);
+  };
+
   const byId = new Map(products.map((p) => [p.id, p]));
+
   return (
     <div data-testid={testidPrefix}>
       <Label>{label}</Label>
+
+      {/* Selected chips with reorder + thumbnail */}
       {selected.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2" data-testid={`${testidPrefix}-selected`}>
           {selected.map((id, i) => {
             const p = byId.get(id);
+            if (!p) return null;
             return (
-              <span
+              <div
                 key={id}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white rounded-full text-xs"
+                className="flex items-center gap-3 p-2 bg-black/[0.03] border border-gray-200 rounded-lg"
                 data-testid={`${testidPrefix}-chip-${i}`}
               >
-                <span className="font-mono opacity-60">{i + 1}.</span>
-                {p ? `${p.brand ? p.brand + ' · ' : ''}${getName(p)}` : id}
+                <span className="font-mono text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                {p.images?.[0] ? (
+                  <img src={p.images[0]} alt="" className="w-12 h-12 object-contain bg-white border border-gray-100 rounded" />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-100 rounded" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] tracking-[0.18em] uppercase text-gray-500 font-semibold">{p.brand}</div>
+                  <div className="text-sm text-gray-800 truncate">{getName(p)}</div>
+                  <div className="text-xs text-gray-500 tabular-nums">{p.price?.toFixed(0)} AZN</div>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => move(id, -1)}
+                    disabled={i === 0}
+                    className="p-1 text-gray-500 hover:text-black disabled:opacity-25"
+                    aria-label="Yuxarı"
+                    data-testid={`${testidPrefix}-move-up-${i}`}
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(id, 1)}
+                    disabled={i === selected.length - 1}
+                    className="p-1 text-gray-500 hover:text-black disabled:opacity-25"
+                    aria-label="Aşağı"
+                    data-testid={`${testidPrefix}-move-down-${i}`}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => toggle(id)}
-                  className="ml-1 opacity-70 hover:opacity-100"
+                  className="p-1 text-gray-400 hover:text-red-600"
                   aria-label="Sil"
+                  data-testid={`${testidPrefix}-remove-${i}`}
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
-              </span>
+              </div>
             );
           })}
           <button
             type="button"
             onClick={() => onChange([])}
-            className="text-xs text-gray-500 hover:text-black underline ml-1"
+            className="text-xs text-gray-500 hover:text-black underline justify-self-start mt-1"
           >
             Hamısını təmizlə
           </button>
         </div>
       )}
-      <input
-        type="text"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Məhsul axtar (ad və ya brend)..."
-        className="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
-        data-testid={`${testidPrefix}-search`}
-      />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-72 overflow-y-auto border border-gray-100 rounded-lg p-3 bg-gray-50">
-        {filtered.slice(0, 120).map((p) => {
-          const isSel = selected.includes(p.id);
-          return (
+
+      {/* Search + filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3">
+        <div className="sm:col-span-6 relative">
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="🔍  Məhsul axtar (ad, brend, kateqoriya, ID)..."
+            className="w-full pl-3 pr-8 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+            data-testid={`${testidPrefix}-search`}
+          />
+          {q && (
             <button
-              key={p.id}
               type="button"
-              onClick={() => toggle(p.id)}
-              className={`text-left text-xs px-2.5 py-2 rounded-lg border transition-colors ${
-                isSel
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-900'
-              }`}
-              data-testid={`${testidPrefix}-option-${p.id}`}
+              onClick={() => setQ('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black p-1"
+              aria-label="Təmizlə"
             >
-              <div className="font-semibold truncate">{p.brand || '—'}</div>
-              <div className="truncate opacity-80">{getName(p)}</div>
-              <div className="mt-1 tabular-nums opacity-70">{p.price?.toFixed(0)} AZN</div>
+              <X className="w-3.5 h-3.5" />
             </button>
-          );
-        })}
+          )}
+        </div>
+        <select
+          value={brandFilter}
+          onChange={(e) => setBrandFilter(e.target.value)}
+          className="sm:col-span-3 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+          data-testid={`${testidPrefix}-brand-filter`}
+        >
+          <option value="all">Bütün brendlər</option>
+          {allBrands.map((b) => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </select>
+        <select
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+          className="sm:col-span-3 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+          data-testid={`${testidPrefix}-cat-filter`}
+        >
+          <option value="all">Bütün kateqoriyalar</option>
+          {allCats.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
-      <p className="mt-1 text-xs text-gray-500">
-        Seçilmiş: {selected.length} / {maxCount}
+
+      {/* Options grid with thumbnail */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[420px] overflow-y-auto border border-gray-100 rounded-lg p-3 bg-gray-50">
+        {filtered.length === 0 ? (
+          <p className="col-span-full text-center py-8 text-sm text-gray-500">
+            Bu axtarışa uyğun məhsul tapılmadı.
+          </p>
+        ) : (
+          filtered.slice(0, 200).map((p) => {
+            const isSel = selected.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggle(p.id)}
+                className={`group text-left p-2 rounded-lg border-2 transition-all relative ${
+                  isSel
+                    ? 'bg-white border-black ring-1 ring-black'
+                    : 'bg-white border-gray-200 hover:border-gray-900'
+                }`}
+                data-testid={`${testidPrefix}-option-${p.id}`}
+              >
+                {isSel && (
+                  <span className="absolute top-1 right-1 z-[2] w-5 h-5 rounded-full bg-black text-white text-[10px] flex items-center justify-center font-bold">
+                    {selected.indexOf(p.id) + 1}
+                  </span>
+                )}
+                <div className="aspect-square w-full bg-white rounded mb-2 overflow-hidden">
+                  {p.images?.[0] ? (
+                    <img
+                      src={p.images[0]}
+                      alt=""
+                      className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-[1.05]"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100" />
+                  )}
+                </div>
+                <div className="text-[9px] tracking-[0.18em] uppercase text-gray-600 font-bold truncate">
+                  {p.brand || '—'}
+                </div>
+                <div className="text-[11px] text-gray-800 line-clamp-2 leading-snug min-h-[2em]">
+                  {getName(p)}
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px]">
+                  <span className="font-medium tabular-nums text-black">{p.price?.toFixed(0)} AZN</span>
+                  {p.stock !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded ${p.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {p.stock > 0 ? `${p.stock}` : '0'}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+      <p className="mt-1.5 text-xs text-gray-500 flex items-center justify-between">
+        <span>Seçilmiş: <b className="text-black">{selected.length}</b> / {maxCount}</span>
+        <span className="text-gray-400">{filtered.length} / {products.length} məhsul göstərilir</span>
       </p>
     </div>
   );
