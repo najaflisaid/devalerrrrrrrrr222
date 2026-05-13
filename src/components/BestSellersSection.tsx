@@ -34,11 +34,23 @@ const BestSellersSection: React.FC = () => {
   };
 
   useEffect(() => {
-    productService
-      .getBestSellers(12)
-      .then((data) => setProducts(data))
-      .catch((e) => console.error('Error loading best sellers:', e))
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const data = await productService.getBestSellers(12);
+        if (data && data.length > 0) {
+          setProducts(data);
+        } else {
+          // Fallback: əgər heç bir məhsul "isBestseller=true" deyilsə,
+          // bütün məhsullardan ilk 12-ni göstər ki, bölmə boş qalmasın.
+          const all = await productService.getAll();
+          setProducts(all.slice(0, 12));
+        }
+      } catch (e) {
+        console.error('Error loading best sellers:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   if (loading || products.length === 0) return null;
@@ -65,10 +77,22 @@ const BestSellersSection: React.FC = () => {
 
   return (
     <section
-      className="relative bg-white py-14 md:py-24"
+      className="relative bg-[#FAF9F7] py-16 md:py-28 overflow-hidden"
       data-testid="dv-bestsellers"
     >
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
+      {/* Ambient gold orb decoration */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-40 -right-40 w-[520px] h-[520px] rounded-full opacity-[0.06] blur-3xl"
+        style={{ background: 'radial-gradient(circle, #C9A961 0%, transparent 70%)' }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-40 -left-40 w-[480px] h-[480px] rounded-full opacity-[0.05] blur-3xl"
+        style={{ background: 'radial-gradient(circle, #C9A961 0%, transparent 70%)' }}
+      />
+
+      <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         {/* === EDITORIAL HEADER === */}
         <div
           ref={header.ref}

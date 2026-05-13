@@ -11,6 +11,8 @@ import BestSellersSection from './components/BestSellersSection';
 import BrandShowcase from './components/BrandShowcase';
 import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
+import HomeBlogSection from './components/HomeBlogSection';
+import FeaturedStorySection from './components/FeaturedStorySection';
 import RevealOnScroll from './components/RevealOnScroll';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
@@ -57,28 +59,39 @@ import './i18n';
 const HomePage: React.FC = () => {
   return (
     <>
-      {/* Hero — banner öz daxili keçidlərinə malikdir, reveal əlavə etmirik */}
+      {/* 1) Hero — full-bleed banner / video */}
       <Hero />
 
+      {/* 2) Collections strip — horizontal scroll tiles */}
       <RevealOnScroll variant="up">
         <CollectionTiles />
       </RevealOnScroll>
 
-      {/* BestSellersSection — daxilində öz scroll-reveal animasiyası var */}
+      {/* 3) Best Sellers — premium editorial grid (öz daxili reveal-ı var) */}
       <BestSellersSection />
 
-      <RevealOnScroll variant="up">
-        <NewsTiles />
-      </RevealOnScroll>
+      {/* 4) Featured Story — Omega/Cartier tipli half-half editorial split */}
+      <FeaturedStorySection />
 
+      {/* 5) Brand showcase — premium brendlər */}
       <RevealOnScroll variant="up">
         <BrandShowcase />
       </RevealOnScroll>
 
+      {/* 6) Product banners (Signature Selection) */}
       <RevealOnScroll variant="up">
         <HomeProductBanners />
       </RevealOnScroll>
 
+      {/* 7) Journal — ana səhifədə blog yazıları */}
+      <HomeBlogSection />
+
+      {/* 8) News tiles — admin-managed elanlar / yeniliklər */}
+      <RevealOnScroll variant="up">
+        <NewsTiles />
+      </RevealOnScroll>
+
+      {/* 9) Category banner — kateqoriya çağırışı */}
       <RevealOnScroll variant="up">
         <CategoryBanner />
       </RevealOnScroll>

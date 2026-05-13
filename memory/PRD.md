@@ -1,67 +1,56 @@
 # DE VALEUR — PRD (Living Document)
 
-## Problem statement (orijinal)
-> "best sellers bolmunu ana sehifede daha yaxsi et ve sagdaki sekli sil"
-> "ana sehifeni eyni bu dizaynda et ama asagi etdikde scrolu animasiya ile gelsin"
-> Referans dizayn: Omega Watches ana səhifəsi (editorial, full-width, premium e-commerce)
+## Problem statement
+> 1. "best sellers bolmunu ana sehifede daha yaxsi et ve sagdaki sekli sil"
+> 2. "ana sehifeni eyni bu dizaynda et ama asagi etdikde scrolu animasiya ile gelsin" (Omega referansı ilə)
+> 3. "ANA sehifeni bahali markalarin sayti kimi et bloglar falanda olsun ana sehifede en cox satilanlar daha yaxsi olsun"
 
 ## Tech stack
 - Vite + React + TypeScript
 - TailwindCSS, Lucide icons
-- Firebase Firestore (məhsullar)
+- Firebase Firestore (məhsullar, blog_posts, banners, brands)
 - i18next (az / ru / en)
 
-## Bu sessiyada görülən işlər (2026-01-12)
+## Ana səhifə arxitekturası (lüks brend axını)
 
-### 1) BestSellersSection tamamilə yenidən dizayn edildi
-File: `/app/src/components/BestSellersSection.tsx`
-- Sağdakı banner şəkli (aside column) tamamilə **silindi**.
-- 1+1 grid layout-u tam genişlikdə (full-width) məhsul grid-i ilə əvəz olundu:
-  - mobil: 2 sütun
-  - planşet (md): 3 sütun
-  - desktop (lg): 4 sütun
-- Editorial başlıq əlavə edildi: qızıl xətt + "BEST SELLERS" üzəri (surtitle) + böyük "Sevilən məhsullar" başlığı + alt-yazı.
-- Yeni watch-style məhsul kartları: brend (uppercase, semibold), məhsul adı (light), qiymət, hover-də ArrowRight-lı "Detallar" CTA.
-- Sale badge: yumşaq qara pill (köhnə qırmızı dairə deyil).
-- Hover effektləri: image swap, scale 1.06, alt qaranlıq xətt.
-- Bottom CTA: "Hamısına bax" → `/products?sort=bestsellers` keçidi.
+```
+1. Hero                  — full-bleed banner / video carousel
+2. CollectionTiles       — horizontal scroll tiles (admin-managed)
+3. BestSellersSection    — ⭐ premium editorial grid (yenidən qurulmuş)
+4. FeaturedStorySection  — ⭐ yeni: Omega tipli half-half image+text
+5. BrandShowcase         — premium brendlər
+6. HomeProductBanners    — "Signature Selection" banner grid
+7. HomeBlogSection       — ⭐ yeni: ana səhifədə Jurnal (3 ən son blog yazısı)
+8. NewsTiles             — admin elanlar
+9. CategoryBanner        — kateqoriya çağırışı
+```
 
-### 2) Scroll-trigger animasiya sistemi
-- Yeni hook: `/app/src/hooks/useReveal.ts` — IntersectionObserver tabanlı, `prefers-reduced-motion` dəstəyi ilə.
-- Yeni wrapper: `/app/src/components/RevealOnScroll.tsx` — istənilən komponenti `variant` ("up" | "left" | "right" | "fade" | "scale") ilə fade-in edir.
-- CSS: `/app/src/index.css` faylına universal `.dv-reveal`, `.dv-stagger` sinifləri əlavə edildi (cubic-bezier 0.22,1,0.36,1; 800-900ms; 60ms stagger).
-- Ana səhifə (`App.tsx` → `HomePage`) bütün bölmələrə tətbiq edildi:
-  - Hero — animasiyasız (öz keçidləri var)
-  - CollectionTiles, NewsTiles, BrandShowcase, HomeProductBanners, CategoryBanner → `<RevealOnScroll variant="up">`
-  - BestSellersSection daxilində 3 ayrı reveal trigger (header / grid+stagger / footer-CTA).
+## Bu sessiyada görülmüş işlər
 
-### 3) Saxlanılan funksionallıq
-- Admin panel "Bestseller Banner" tab-ı kod bazasında qalır (sıralanma idarəsi və s. üçün lazım ola bilər) — sadəcə ana səhifədə artıq göstərilmir.
-- `bestSellersBannerService` toxunulmadı.
+### Bu iterasiya (ana səhifə luxury-brand redesign)
+- **YENİ**: `FeaturedStorySection.tsx` — half-half image + editorial text bölmə (KOLLEKSİYA HEKAYƏSİ eyebrow + Atelyelərdə doğulan zaman başlığı + body + CTA).
+- **YENİ**: `HomeBlogSection.tsx` — ana səhifədə "JURNAL" editorial blok. 1 böyük feature + 2 yığcam stack. Firestore `blog_posts` collection-undan götürür. İllüstrasiya, tarix, başlıq, snippet, "Oxu →" CTA.
+- **YENİLƏNDİ**: `BestSellersSection.tsx` — luxury off-white `#FAF9F7` background + 2 ambient gold orb decoration. Fallback əlavə edildi — əgər heç bir məhsul `isBestseller=true` deyilsə, ümumi məhsullardan ilk 12-ni göstərir (bölmə boş qalmasın).
+- **YENİLƏNDİ**: `App.tsx` HomePage — bölmələr yeni lüks brend ardıcıllığında düzüldü.
+
+### Əvvəlki iterasiyalar
+- `useReveal` hook + `RevealOnScroll` wrapper + universal `dv-scroll-*` CSS sistem.
+- BestSellersSection-da sağdakı banner-aside silindi, full-width editorial grid quruldu (4 col desktop / 3 col tablet / 2 col mobil), watch-style kartlar.
+- CSS toqquşması (`dv-reveal` → `dv-scroll-reveal`) düzəldildi, 1.2s failsafe.
 
 ## Build/preview qeydləri
 - Vite dev server təmiz kompilyasiya edir (HMR işləyir).
-- Preview-də məhsullar görünmür — Firestore-da məlumat yoxdur (preview environment limit). Production-da real məhsullarla dizayn tam görünəcək.
+- Preview Firestore-da məhsullar var (524 docs), amma heç biri `isBestseller=true` deyil — fallback işləyir.
+- Hero banner data yox → Hero placeholder cream görünür.
+- Blog posts boş ola bilər → HomeBlogSection yalnız yazı varsa render olunur.
 
-## Bilinən pre-existing TS xəbərdarlıqları (yenilərini əlavə etmədik)
-- AdminPanel.tsx, Header.tsx, AiChatWidget.tsx-də mövcud unused-vars / strict-null xətaları. Bu sessiyada toxunulmadı.
+## Backlog (P1 / P2)
+- [ ] Hero sliderinə Ken Burns / parallax effekti.
+- [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
+- [ ] Best Sellers altında "Just sold" social-proof ticker.
+- [ ] CategoryBanner üçün stagger animasiya.
+- [ ] "Quick view" modal Best Sellers kartlarında.
+- [ ] HomeBlogSection title/CTA admin tərəfindən tərcümə oluna bilsin.
 
-## Bug fix (2026-01-12, sonra)
-
-**Problem:** "Ana səhifədə heç nə görünmür, hər yer ağdır, sadəcə banner və menyu görünür."
-
-**Root cause:** Mənim əlavə etdiyim `.dv-reveal` / `.dv-reveal-in` CSS sinifləri kod bazasında artıq mövcud olan `.dv-reveal` + `.is-in` animation sistemi ilə CSS cascade-də toqquşurdu. Mövcud `.dv-reveal { opacity: 0 }` (line 1353) sonradan gəldiyi üçün mənim `.dv-reveal-in { opacity: 1 }` (line 18) qaydasını üstələyirdi — nəticədə bütün wrap olunmuş bölmələr permanent görünməz qalırdı.
-
-**Fix:**
-1. Yeni siniflər tamamilə fərqli prefix-lə adlandırıldı: `dv-scroll-reveal`, `dv-scroll-in`, `dv-scroll-up/left/right/fade/scale`, `dv-scroll-stagger`. Bu artıq mövcud `dv-reveal`-lə toqquşmur.
-2. `RevealOnScroll.tsx`-də 1200ms failsafe `setTimeout` əlavə edildi — IntersectionObserver hər hansı səbəbdən firing etməsə belə, məzmun gizli qalmır.
-3. `useReveal.ts`-də də eyni 1500ms failsafe + ilkin rect viewport check var.
-4. `BestSellersSection.tsx` yeni `dv-scroll-*` siniflərinə migrate edildi.
-
-**Yoxlama:** `https://bestseller-display-1.preview.emergentagent.com` üzərində Hero, Prestijinizə dəyər qatan detallar başlığı və Features bölmələri indi düzgün görünür. Boş bölmələr (CollectionTiles, BestSellers, NewsTiles, BrandShowcase, CategoryBanner) hələ də yalnız ona görə görünmür ki, preview Firestore-da məlumat (məhsul/tile/banner) yoxdur — production-da hamısı işləyəcək.
-
-
-- [ ] Hero sliderinə da yumşaq parallax/Ken Burns effekti əlavə etmək.
-- [ ] CategoryBanner və CollectionTiles üçün Omega-style staggered children animasiyası.
-- [ ] Best Sellers grid-də "Quick view" modal (səhifəyə keçmədən qiymət/şəkillərə baxış).
-- [ ] Brand showcase üçün horizontal scroll snap.
+## Pre-existing TS xəbərdarlıqları
+- Bu sessiyada yenidən toxunulmadı, mövcud unused-vars / strict-null xətaları AdminPanel, Header, AiChatWidget-də qalır.
