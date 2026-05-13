@@ -164,6 +164,19 @@ adi yumşaq scroll. Fayl saxlanılıb, lakin istifadə olunmur.
 - Firestore connection bir dəfə xəbərdarlıq verir (network), data offline cache
   vasitəsi ilə uğurla yüklənir.
 
+### Hero — slide counter & scroll hint rafine dizayn (bu kiçik iterasiya)
+File: `/app/src/components/Hero.tsx`
+Köhnə "01 / 02 ━ ━" + plain "Aşağı + vertical line" əvəzlənildi:
+- **Slide counter (bottom-right)**: böyük italic Playfair `01` (text-shadow ilə),
+  yan tərəfdə soluq `/ 02`, altında qızıl gradient auto-cycle progress bar
+  (slide dəyişəndə restart edir, banner duration boyunca dolur), altında
+  klik-edilə bilən dot pagination (aktiv: 8px gold + 4px halo, passiv: 4px
+  ağ/40).
+- **Scroll hint (bottom-center)**: indi clickable button-dur; `window.scrollTo`
+  ilə hero hündürlüyünün 86%-nə smooth scroll edir. Yuxarıda tracked uppercase
+  label, ortada vertikal gradient track içində animasiyalı qızıl nöqtə
+  (mouse-wheel hint), altında ChevronDown ikon (hover-də translate-y-1).
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.
