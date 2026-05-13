@@ -64,10 +64,10 @@ const FeaturedStorySection: React.FC = () => {
     <section ref={ref} className="relative bg-white" data-testid="dv-featured-story">
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:min-h-[720px]">
         {/* IMAGE column — mobil üçün aspect ratio ilə hündürlük təminatı */}
-        <div className="relative overflow-hidden bg-[#0A0A0A] aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto">
+        <div className="relative overflow-hidden bg-white aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto lg:bg-[#0A0A0A]">
           <motion.div
             className="absolute inset-0"
-            style={{ y: imgY, scale: imgScale }}
+            style={isMobile ? undefined : { y: imgY, scale: imgScale }}
             transition={{ type: 'tween' }}
           >
             <img
@@ -78,7 +78,7 @@ const FeaturedStorySection: React.FC = () => {
             />
           </motion.div>
           <div
-            className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/30 lg:from-black/20 to-transparent pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/20 lg:from-black/20 to-transparent pointer-events-none"
             aria-hidden="true"
           />
         </div>
