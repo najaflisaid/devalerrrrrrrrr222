@@ -63,8 +63,8 @@ const FeaturedStorySection: React.FC = () => {
   return (
     <section ref={ref} className="relative bg-white" data-testid="dv-featured-story">
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:min-h-[720px]">
-        {/* IMAGE column — mobil üçün aspect ratio ilə hündürlük təminatı */}
-        <div className="relative overflow-hidden bg-white aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto lg:bg-[#0A0A0A]">
+        {/* IMAGE column — desktop-da SAĞDA (lg:order-2), mobil-də üstdə qalır */}
+        <div className="relative overflow-hidden bg-white aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto lg:bg-[#0A0A0A] lg:order-2">
           <motion.div
             className="absolute inset-0"
             style={isMobile ? undefined : { y: imgY, scale: imgScale }}
@@ -78,16 +78,16 @@ const FeaturedStorySection: React.FC = () => {
             />
           </motion.div>
           <div
-            className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/20 lg:from-black/20 to-transparent pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-l from-black/20 to-transparent pointer-events-none"
             aria-hidden="true"
           />
         </div>
 
-        {/* TEXT column — mobil-də parallax olmaz, daha kompakt padding/title */}
+        {/* TEXT column — desktop-da SOLDA (lg:order-1) */}
         <motion.div
-          className="flex items-center bg-white"
+          className="flex items-center bg-white lg:order-1"
           style={isMobile ? undefined : { y: textY }}
-          initial={{ opacity: 0, x: 40 }}
+          initial={{ opacity: 0, x: -40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-15%' }}
           transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
@@ -95,7 +95,7 @@ const FeaturedStorySection: React.FC = () => {
           <div className="px-5 sm:px-10 md:px-14 lg:px-20 py-10 sm:py-14 md:py-20 lg:py-24 max-w-[620px] w-full">
             <motion.div
               className="flex items-center gap-3 mb-4 md:mb-7"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-15%' }}
               transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
