@@ -22,8 +22,8 @@ interface ProductCarouselProps {
 const ProductCarousel: React.FC<ProductCarouselProps> = ({
   products,
   testIdPrefix = 'pc',
-  // Mobil: 3 kart + 4-cünün yarısı görünür (basis ~28%).
-  cardBasis = 'basis-[28%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]',
+  // Mobil: 2 kart + 3-cünün yarısı görünür (basis ~36%, gap-5 nəzərə alınmaqla).
+  cardBasis = 'basis-[36%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]',
 }) => {
   const { i18n } = useTranslation();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
