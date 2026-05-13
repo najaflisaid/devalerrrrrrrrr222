@@ -251,6 +251,42 @@ export interface HomepageSections {
       link_url: string;
     }>;
   };
+  featuredStory?: {
+    enabled: boolean;
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    body: { az: string; ru: string; en: string };
+    imageUrl: string;
+    ctaLabel: { az: string; ru: string; en: string };
+    ctaLink: string;
+  };
+  ambassador?: {
+    enabled: boolean;
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    body: { az: string; ru: string; en: string };
+    imageUrl: string;
+    ctaLabel: { az: string; ru: string; en: string };
+    ctaLink: string;
+    productIds: string[];
+  };
+  giftFinder?: {
+    enabled: boolean;
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    body: { az: string; ru: string; en: string };
+    ctaLabel: { az: string; ru: string; en: string };
+    ctaLink: string;
+  };
+  redCarpet?: {
+    enabled: boolean;
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    productIds: string[];
+  };
+  /** Section keys in the order they should appear on the homepage. Hero
+   *  is always rendered first (not included in this list). */
+  sectionOrder?: string[];
 }
 
 const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
@@ -374,6 +410,81 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
       },
     ],
   },
+  featuredStory: {
+    enabled: true,
+    eyebrow: { az: 'KOLLEKSİYA HEKAYƏSİ', ru: 'ИСТОРИЯ КОЛЛЕКЦИИ', en: 'A COLLECTION STORY' },
+    title: {
+      az: 'Atelyelərdə doğulan\nzaman',
+      ru: 'Время, рождённое\nв мастерских',
+      en: 'Time, born\nin the ateliers',
+    },
+    body: {
+      az: 'Kolleksiyamızın hər detalı ənənə və müasirlik arasında bir dialoqdur. İsveçrə manufakturalarından mahir əl bəzəyinə qədər — hər əsər sizinlə bir nəsil boyu yaşamaq üçün yaradılır.',
+      ru: 'Каждая деталь нашей коллекции — это диалог между традицией и современностью. От швейцарских мануфактур до искусной ручной отделки, каждое изделие создаётся, чтобы прожить с вами поколение.',
+      en: 'Every detail of our collection is a dialogue between tradition and modernity. From Swiss manufactures to artisanal hand-finishing, each piece is crafted to live with you for a generation.',
+    },
+    imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1600&q=85',
+    ctaLabel: { az: 'Kolleksiyaya bax', ru: 'Открыть коллекцию', en: 'Discover the collection' },
+    ctaLink: '/products',
+  },
+  ambassador: {
+    enabled: true,
+    eyebrow: { az: 'BREND SİMASI', ru: 'АМБАССАДОР', en: 'AMBASSADOR' },
+    title: {
+      az: 'Xarakterini\ngöstər',
+      ru: 'Время носить\nсвой характер',
+      en: 'Wear your\ncharacter',
+    },
+    body: {
+      az: 'Saat — yalnız aksesuar deyil. O, sizin kim olduğunuzun əksi və kim olacağınızın vədidir. Kolleksiyamızdakı hər əsər müəllifini gözləyən bir hekayədir.',
+      ru: 'Часы — больше, чем аксессуар. Это — отражение того, кем вы являетесь, и обещание того, кем вы становитесь. Каждое изделие в нашей коллекции — это история, которая ждёт своего автора.',
+      en: 'A timepiece is more than an accessory. It is a reflection of who you are — and a promise of who you are becoming. Every piece in our collection is a story waiting for its author.',
+    },
+    imageUrl: 'https://images.unsplash.com/photo-1507081323647-4d250478b919?auto=format&fit=crop&w=1400&q=85',
+    ctaLabel: { az: 'Kolleksiyaya bax', ru: 'Смотреть коллекцию', en: 'View collection' },
+    ctaLink: '/products',
+    productIds: [],
+  },
+  giftFinder: {
+    enabled: true,
+    eyebrow: { az: 'HƏDİYYƏ TAPICI', ru: 'ПОДБОР ПОДАРКА', en: 'GIFT FINDER' },
+    title: {
+      az: 'Mükəmməl hədiyyəni tapın',
+      ru: 'Найдите идеальный подарок',
+      en: 'Find the perfect gift',
+    },
+    body: {
+      az: 'Kimə və niyə hədiyyə axtardığınızı bilirsinizsə, bir neçə kliklə ideal hədiyyəni tapmaqda kömək edəcəyik.',
+      ru: 'Если вы знаете, для кого и зачем — наш помощник подберёт идеальный подарок за несколько кликов.',
+      en: "If you know who you're buying for and why, our Gift Finder will help you find the perfect present in just a few clicks.",
+    },
+    ctaLabel: { az: 'Hədiyyəni tap', ru: 'Подобрать подарок', en: 'Find your gift' },
+    ctaLink: '/gift-cards',
+  },
+  redCarpet: {
+    enabled: true,
+    eyebrow: { az: 'REDAKSİYANIN SEÇİMİ', ru: 'ВЫБОР РЕДАКЦИИ', en: "EDITOR'S PICK" },
+    title: {
+      az: 'Qırmızı xalçaya hazır',
+      ru: 'Готовы к красной дорожке',
+      en: 'Red carpet ready',
+    },
+    productIds: [],
+  },
+  sectionOrder: [
+    'collectionTiles',
+    'bestSellers',
+    'heroSecondary',
+    'redCarpet',
+    'ambassador',
+    'featuredStory',
+    'giftFinder',
+    'brandShowcase',
+    'homeProductBanners',
+    'homeBlogSection',
+    'newsTiles',
+    'categoryBanner',
+  ],
 };
 
 export const getHomepageSections = async (): Promise<HomepageSections> => {
@@ -388,6 +499,13 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
         brandShowcase: { ...DEFAULT_HOMEPAGE_SECTIONS.brandShowcase, ...(data.brandShowcase || {}) },
         collectionTiles: { ...DEFAULT_HOMEPAGE_SECTIONS.collectionTiles!, ...(data.collectionTiles || {}) },
         newsTiles: { ...DEFAULT_HOMEPAGE_SECTIONS.newsTiles!, ...(data.newsTiles || {}) },
+        featuredStory: { ...DEFAULT_HOMEPAGE_SECTIONS.featuredStory!, ...(data.featuredStory || {}) },
+        ambassador: { ...DEFAULT_HOMEPAGE_SECTIONS.ambassador!, ...(data.ambassador || {}) },
+        giftFinder: { ...DEFAULT_HOMEPAGE_SECTIONS.giftFinder!, ...(data.giftFinder || {}) },
+        redCarpet: { ...DEFAULT_HOMEPAGE_SECTIONS.redCarpet!, ...(data.redCarpet || {}) },
+        sectionOrder: data.sectionOrder && data.sectionOrder.length > 0
+          ? data.sectionOrder
+          : DEFAULT_HOMEPAGE_SECTIONS.sectionOrder,
       };
     }
   } catch (err) {

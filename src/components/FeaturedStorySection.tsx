@@ -1,57 +1,60 @@
-import React, { useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { getHomepageSections, HomepageSections } from '../services/contentService';
 
 /**
  * FeaturedStorySection — Editorial half-half story bölmə (Omega "Aqua Terra in Black" tipli).
- *  - Scroll-linked parallax: şəkil scroll edildikcə yumşaq yuxarı sürüşür və zoom-in olur
- *  - Mətn sağdan slide-in olur, sonra translate-y reduces (yumşaq qalxma)
- *  - Framer Motion useScroll + useTransform ilə yağ kimi axıcı keçidlər
+ * Admin tab-dan idarə olunur (eyebrow, title, body, image, CTA, link, enabled).
  */
 const FeaturedStorySection: React.FC = () => {
   const { i18n } = useTranslation();
   const ref = useRef<HTMLDivElement | null>(null);
+  const [data, setData] = useState<HomepageSections['featuredStory'] | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const sec = await getHomepageSections();
+        if (sec.featuredStory) setData(sec.featuredStory);
+      } catch (e) {
+        console.error('FeaturedStory load error:', e);
+      }
+    })();
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start end', 'end start'],
   });
 
-  // Şəkil parallax: bölmə görünməyə başlayanda y:60 → bitəndə y:-60
   const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '-12%']);
   const imgScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.15, 1.04, 1.0]);
-  // Mətn yavaş parallax: əksinə yuxarı
   const textY = useTransform(scrollYProgress, [0, 1], ['8%', '-4%']);
 
-  const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+  if (!data || data.enabled === false) return null;
 
-  const surtitle =
-    lang === 'ru' ? 'ИСТОРИЯ КОЛЛЕКЦИИ' : lang === 'en' ? 'A COLLECTION STORY' : 'KOLLEKSİYA HEKAYƏSİ';
-  const title =
-    lang === 'ru'
-      ? 'Время, рождённое\nв мастерских'
-      : lang === 'en'
-      ? 'Time, born\nin the ateliers'
-      : 'Atelyelərdə doğulan\nzaman';
-  const body =
-    lang === 'ru'
-      ? 'Каждая деталь нашей коллекции — это диалог между традицией и современностью. От швейцарских мануфактур до искусной ручной отделки, каждое изделие создаётся, чтобы прожить с вами поколение.'
-      : lang === 'en'
-      ? 'Every detail of our collection is a dialogue between tradition and modernity. From Swiss manufactures to artisanal hand-finishing, each piece is crafted to live with you for a generation.'
-      : 'Kolleksiyamızın hər detalı ənənə və müasirlik arasında bir dialoqdur. İsveçrə manufakturalarından mahir əl bəzəyinə qədər — hər əsər sizinlə bir nəsil boyu yaşamaq üçün yaradılır.';
-  const cta =
-    lang === 'ru' ? 'Открыть коллекцию' : lang === 'en' ? 'Discover the collection' : 'Kolleksiyaya bax';
+  const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+  const surtitle = data.eyebrow[lang] || data.eyebrow.az;
+  const title = data.title[lang] || data.title.az;
+  const body = data.body[lang] || data.body.az;
+  const cta = data.ctaLabel[lang] || data.ctaLabel.az;
+  const link = data.ctaLink || '/products';
+  const imageUrl =
+    data.imageUrl ||
+    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1600&q=85';
+
+  const handleLink = (e: React.MouseEvent) => {
+    if (!/^https?:\/\//.test(link)) return; // let React Router handle internal
+    e.preventDefault();
+    window.open(link, '_blank', 'noopener,noreferrer');
+  };
 
   return (
-    <section
-      ref={ref}
-      className="relative bg-white"
-      data-testid="dv-featured-story"
-    >
+    <section ref={ref} className="relative bg-white" data-testid="dv-featured-story">
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px] md:min-h-[720px]">
-        {/* IMAGE column — parallax + zoom */}
+        {/* IMAGE column */}
         <div className="relative overflow-hidden bg-[#0A0A0A]">
           <motion.div
             className="absolute inset-0"
@@ -59,8 +62,8 @@ const FeaturedStorySection: React.FC = () => {
             transition={{ type: 'tween' }}
           >
             <img
-              src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1600&q=85"
-              alt="Luxury timepiece"
+              src={imageUrl}
+              alt={title}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -120,8 +123,9 @@ const FeaturedStorySection: React.FC = () => {
               viewport={{ once: true, margin: '-15%' }}
               transition={{ duration: 0.9, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
             >
-              <Link
-                to="/products"
+              <a
+                href={link}
+                onClick={handleLink}
                 className="group mt-9 md:mt-12 inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-black"
                 data-testid="featured-story-cta"
               >
@@ -136,7 +140,7 @@ const FeaturedStorySection: React.FC = () => {
                   className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover:translate-x-1.5"
                   strokeWidth={1.4}
                 />
-              </Link>
+              </a>
             </motion.div>
           </div>
         </motion.div>

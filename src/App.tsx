@@ -60,55 +60,81 @@ import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import './i18n';
 
+const DEFAULT_SECTION_ORDER = [
+  'collectionTiles',
+  'bestSellers',
+  'heroSecondary',
+  'redCarpet',
+  'ambassador',
+  'featuredStory',
+  'giftFinder',
+  'brandShowcase',
+  'homeProductBanners',
+  'homeBlogSection',
+  'newsTiles',
+  'categoryBanner',
+];
+
 const HomePage: React.FC = () => {
-  return (
-    <>
-      {/* 1) Hero #1 — full-bleed banner / video (Omega tipli stacked title) */}
-      <Hero />
+  const [order, setOrder] = React.useState<string[]>(DEFAULT_SECTION_ORDER);
 
-      {/* 2) Collection tiles — kateqoriyalar */}
-      <CollectionTiles />
+  React.useEffect(() => {
+    import('./services/contentService').then(({ getHomepageSections }) => {
+      getHomepageSections()
+        .then((sec) => {
+          if (sec.sectionOrder && sec.sectionOrder.length > 0) {
+            // Mövcud + default-da unutulan keyləri əlavə et (yeni section əlavə olunduqda)
+            const merged = [
+              ...sec.sectionOrder,
+              ...DEFAULT_SECTION_ORDER.filter((k) => !sec.sectionOrder!.includes(k)),
+            ];
+            setOrder(merged);
+          }
+        })
+        .catch(() => undefined);
+    });
+  }, []);
 
-      {/* 3) Best Sellers — Omega tipli horizontal carousel */}
-      <BestSellersSection />
-
-      {/* 4) Hero #2 — ikinci kolleksiya banneri (admin tərəfindən idarə olunan) */}
-      <HeroSecondary />
-
-      {/* 5) Red Carpet Ready — ikinci tematik məhsul carousel */}
-      <RedCarpetSection />
-
-      {/* 6) Ambassador editorial — split layout + mini product carousel */}
-      <AmbassadorSection />
-
-      {/* 7) Featured Story — half-half editorial split */}
-      <FeaturedStorySection />
-
-      {/* 8) Gift Finder — mərkəzi dairəvi kart */}
-      <GiftFinderSection />
-
-      {/* 9) Brand showcase */}
+  const sectionMap: Record<string, React.ReactNode> = {
+    collectionTiles: <CollectionTiles />,
+    bestSellers: <BestSellersSection />,
+    heroSecondary: <HeroSecondary />,
+    redCarpet: <RedCarpetSection />,
+    ambassador: <AmbassadorSection />,
+    featuredStory: <FeaturedStorySection />,
+    giftFinder: <GiftFinderSection />,
+    brandShowcase: (
       <RevealOnScroll variant="up">
         <BrandShowcase />
       </RevealOnScroll>
-
-      {/* 10) Product banners (Signature Selection) */}
+    ),
+    homeProductBanners: (
       <RevealOnScroll variant="up">
         <HomeProductBanners />
       </RevealOnScroll>
-
-      {/* 11) News & Stories — Omega tipli 4-lü minimal grid */}
-      <HomeBlogSection />
-
-      {/* 12) News tiles — admin-managed elanlar */}
+    ),
+    homeBlogSection: <HomeBlogSection />,
+    newsTiles: (
       <RevealOnScroll variant="up">
         <NewsTiles />
       </RevealOnScroll>
-
-      {/* 13) Category banner — kateqoriya çağırışı */}
+    ),
+    categoryBanner: (
       <RevealOnScroll variant="up">
         <CategoryBanner />
       </RevealOnScroll>
+    ),
+  };
+
+  return (
+    <>
+      {/* Hero həmişə ən üstdə */}
+      <Hero />
+
+      {/* Admin-də müəyyən olunmuş sıra ilə qalan bölmələr */}
+      {order.map((key) => (
+        <React.Fragment key={key}>{sectionMap[key]}</React.Fragment>
+      ))}
     </>
   );
 };

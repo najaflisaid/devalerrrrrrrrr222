@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Save, ToggleLeft, ToggleRight, Image as ImageIcon, Upload, X } from 'lucide-react';
+import { Loader2, Save, ToggleLeft, ToggleRight, Image as ImageIcon, Upload, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import {
@@ -45,6 +45,199 @@ const MultiLangField: React.FC<{
     </div>
   </div>
 );
+
+/** Reusable section wrapper with header + enable/disable toggle. */
+const SectionEditor: React.FC<{
+  title: string;
+  description: string;
+  testid: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  children: React.ReactNode;
+}> = ({ title, description, testid, enabled, onToggle, children }) => (
+  <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5" data-testid={testid}>
+    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggle(!enabled)}
+        className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-black"
+      >
+        {enabled ? <ToggleRight className="h-6 w-6 text-green-600" /> : <ToggleLeft className="h-6 w-6 text-gray-400" />}
+        {enabled ? 'Aktivdir' : 'Deaktivdir'}
+      </button>
+    </div>
+    {children}
+  </div>
+);
+
+/** Multi-select product picker (search + chip list). */
+const ProductPicker: React.FC<{
+  label: string;
+  products: Product[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  maxCount?: number;
+  testidPrefix: string;
+}> = ({ label, products, selected, onChange, maxCount = 12, testidPrefix }) => {
+  const [q, setQ] = useState('');
+  const getName = (p: Product) =>
+    typeof p.name === 'string' ? (p.name as unknown as string) : p.name.az || p.name.en || '';
+  const filtered = products.filter((p) => {
+    if (!q.trim()) return true;
+    const s = q.toLowerCase();
+    return getName(p).toLowerCase().includes(s) || (p.brand || '').toLowerCase().includes(s);
+  });
+  const toggle = (id: string) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter((x) => x !== id));
+    } else {
+      if (selected.length >= maxCount) return;
+      onChange([...selected, id]);
+    }
+  };
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return (
+    <div data-testid={testidPrefix}>
+      <Label>{label}</Label>
+      {selected.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {selected.map((id, i) => {
+            const p = byId.get(id);
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white rounded-full text-xs"
+                data-testid={`${testidPrefix}-chip-${i}`}
+              >
+                <span className="font-mono opacity-60">{i + 1}.</span>
+                {p ? `${p.brand ? p.brand + ' · ' : ''}${getName(p)}` : id}
+                <button
+                  type="button"
+                  onClick={() => toggle(id)}
+                  className="ml-1 opacity-70 hover:opacity-100"
+                  aria-label="Sil"
+                >
+                  ✕
+                </button>
+              </span>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-xs text-gray-500 hover:text-black underline ml-1"
+          >
+            Hamısını təmizlə
+          </button>
+        </div>
+      )}
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Məhsul axtar (ad və ya brend)..."
+        className="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
+        data-testid={`${testidPrefix}-search`}
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-72 overflow-y-auto border border-gray-100 rounded-lg p-3 bg-gray-50">
+        {filtered.slice(0, 120).map((p) => {
+          const isSel = selected.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => toggle(p.id)}
+              className={`text-left text-xs px-2.5 py-2 rounded-lg border transition-colors ${
+                isSel
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-900'
+              }`}
+              data-testid={`${testidPrefix}-option-${p.id}`}
+            >
+              <div className="font-semibold truncate">{p.brand || '—'}</div>
+              <div className="truncate opacity-80">{getName(p)}</div>
+              <div className="mt-1 tabular-nums opacity-70">{p.price?.toFixed(0)} AZN</div>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        Seçilmiş: {selected.length} / {maxCount}
+      </p>
+    </div>
+  );
+};
+
+/** Section order list with up/down arrows. */
+const SECTION_LABELS: Record<string, string> = {
+  collectionTiles: 'Kateqoriyalar (Collection Tiles)',
+  bestSellers: 'Best Sellers carousel',
+  heroSecondary: 'İkinci Hero (Hero Secondary)',
+  redCarpet: 'Red Carpet Ready',
+  ambassador: 'Ambassador editorial',
+  featuredStory: 'Featured Story (editorial split)',
+  giftFinder: 'Hədiyyə tapıcı kartı',
+  brandShowcase: 'Brand Showcase',
+  homeProductBanners: 'Home Product Banners',
+  homeBlogSection: 'News & Stories (blog grid)',
+  newsTiles: 'News Tiles',
+  categoryBanner: 'Category Banner',
+};
+
+const SectionOrderList: React.FC<{
+  order: string[];
+  onChange: (o: string[]) => void;
+}> = ({ order, onChange }) => {
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= order.length) return;
+    const copy = [...order];
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+    onChange(copy);
+  };
+  return (
+    <div className="space-y-2">
+      {order.map((key, i) => (
+        <div
+          key={key}
+          className="flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"
+          data-testid={`section-order-row-${key}`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-gray-400 w-6">{i + 1}.</span>
+            <span className="text-sm text-gray-800">{SECTION_LABELS[key] || key}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => move(i, -1)}
+              disabled={i === 0}
+              className="p-1.5 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Yuxarı"
+              data-testid={`section-order-up-${key}`}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => move(i, 1)}
+              disabled={i === order.length - 1}
+              className="p-1.5 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Aşağı"
+              data-testid={`section-order-down-${key}`}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const HomeSectionsTab: React.FC = () => {
   const [data, setData] = useState<HomepageSections>(DEFAULT_HOMEPAGE_SECTIONS);
@@ -811,6 +1004,291 @@ const HomeSectionsTab: React.FC = () => {
             })}
           </div>
         </div>
+      </div>
+
+      {/* ============ FEATURED STORY ============ */}
+      <SectionEditor
+        title="Featured Story (Editorial split)"
+        description="Sol şəkil + sağ editorial mətn — admin tərəfindən idarə olunan."
+        testid="home-sections-featured-story"
+        enabled={data.featuredStory?.enabled !== false}
+        onToggle={(v) =>
+          setData({
+            ...data,
+            featuredStory: {
+              ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!),
+              enabled: v,
+            },
+          })
+        }
+      >
+        <MultiLangField
+          label="Eyebrow (kiçik üst yazı)"
+          value={data.featuredStory?.eyebrow ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!.eyebrow}
+          onChange={(v) =>
+            setData({
+              ...data,
+              featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), eyebrow: v },
+            })
+          }
+        />
+        <MultiLangField
+          label="Başlıq (sətr keçidi üçün Enter)"
+          textarea
+          value={data.featuredStory?.title ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!.title}
+          onChange={(v) =>
+            setData({
+              ...data,
+              featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), title: v },
+            })
+          }
+        />
+        <MultiLangField
+          label="Mətn"
+          textarea
+          value={data.featuredStory?.body ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!.body}
+          onChange={(v) =>
+            setData({
+              ...data,
+              featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), body: v },
+            })
+          }
+        />
+        <div>
+          <Label>Şəkil URL</Label>
+          <input
+            type="text"
+            value={data.featuredStory?.imageUrl ?? ''}
+            onChange={(e) =>
+              setData({
+                ...data,
+                featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), imageUrl: e.target.value },
+              })
+            }
+            placeholder="https://..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="featured-story-image-url"
+          />
+        </div>
+        <MultiLangField
+          label="CTA mətni"
+          value={data.featuredStory?.ctaLabel ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!.ctaLabel}
+          onChange={(v) =>
+            setData({
+              ...data,
+              featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), ctaLabel: v },
+            })
+          }
+        />
+        <div>
+          <Label>CTA Link</Label>
+          <input
+            type="text"
+            value={data.featuredStory?.ctaLink ?? ''}
+            onChange={(e) =>
+              setData({
+                ...data,
+                featuredStory: { ...(data.featuredStory ?? DEFAULT_HOMEPAGE_SECTIONS.featuredStory!), ctaLink: e.target.value },
+              })
+            }
+            placeholder="/products"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="featured-story-cta-link"
+          />
+        </div>
+      </SectionEditor>
+
+      {/* ============ AMBASSADOR ============ */}
+      <SectionEditor
+        title="Ambassador (brend siması)"
+        description="Editorial split + 6 məhsula qədər mini-carousel."
+        testid="home-sections-ambassador"
+        enabled={data.ambassador?.enabled !== false}
+        onToggle={(v) =>
+          setData({
+            ...data,
+            ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), enabled: v },
+          })
+        }
+      >
+        <MultiLangField
+          label="Eyebrow"
+          value={data.ambassador?.eyebrow ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!.eyebrow}
+          onChange={(v) =>
+            setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), eyebrow: v } })
+          }
+        />
+        <MultiLangField
+          label="Başlıq (sətr keçidi üçün Enter)"
+          textarea
+          value={data.ambassador?.title ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!.title}
+          onChange={(v) =>
+            setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), title: v } })
+          }
+        />
+        <MultiLangField
+          label="Mətn"
+          textarea
+          value={data.ambassador?.body ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!.body}
+          onChange={(v) =>
+            setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), body: v } })
+          }
+        />
+        <div>
+          <Label>Şəkil URL</Label>
+          <input
+            type="text"
+            value={data.ambassador?.imageUrl ?? ''}
+            onChange={(e) =>
+              setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), imageUrl: e.target.value } })
+            }
+            placeholder="https://..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="ambassador-image-url"
+          />
+        </div>
+        <MultiLangField
+          label="CTA mətni"
+          value={data.ambassador?.ctaLabel ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!.ctaLabel}
+          onChange={(v) =>
+            setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), ctaLabel: v } })
+          }
+        />
+        <div>
+          <Label>CTA Link</Label>
+          <input
+            type="text"
+            value={data.ambassador?.ctaLink ?? ''}
+            onChange={(e) =>
+              setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), ctaLink: e.target.value } })
+            }
+            placeholder="/products"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="ambassador-cta-link"
+          />
+        </div>
+
+        <ProductPicker
+          label="Mini-carousel məhsulları (maks. 6 seçin; boş olsa bestsellers fallback)"
+          products={products}
+          selected={data.ambassador?.productIds ?? []}
+          onChange={(ids) =>
+            setData({ ...data, ambassador: { ...(data.ambassador ?? DEFAULT_HOMEPAGE_SECTIONS.ambassador!), productIds: ids } })
+          }
+          maxCount={6}
+          testidPrefix="ambassador-products"
+        />
+      </SectionEditor>
+
+      {/* ============ GIFT FINDER ============ */}
+      <SectionEditor
+        title="Hədiyyə tapıcı kartı"
+        description="Mərkəzi card: dairəvi illüstrasiya + başlıq + CTA."
+        testid="home-sections-gift-finder"
+        enabled={data.giftFinder?.enabled !== false}
+        onToggle={(v) =>
+          setData({
+            ...data,
+            giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), enabled: v },
+          })
+        }
+      >
+        <MultiLangField
+          label="Eyebrow"
+          value={data.giftFinder?.eyebrow ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!.eyebrow}
+          onChange={(v) =>
+            setData({ ...data, giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), eyebrow: v } })
+          }
+        />
+        <MultiLangField
+          label="Başlıq"
+          value={data.giftFinder?.title ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!.title}
+          onChange={(v) =>
+            setData({ ...data, giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), title: v } })
+          }
+        />
+        <MultiLangField
+          label="Mətn"
+          textarea
+          value={data.giftFinder?.body ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!.body}
+          onChange={(v) =>
+            setData({ ...data, giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), body: v } })
+          }
+        />
+        <MultiLangField
+          label="CTA mətni"
+          value={data.giftFinder?.ctaLabel ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!.ctaLabel}
+          onChange={(v) =>
+            setData({ ...data, giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), ctaLabel: v } })
+          }
+        />
+        <div>
+          <Label>CTA Link</Label>
+          <input
+            type="text"
+            value={data.giftFinder?.ctaLink ?? ''}
+            onChange={(e) =>
+              setData({ ...data, giftFinder: { ...(data.giftFinder ?? DEFAULT_HOMEPAGE_SECTIONS.giftFinder!), ctaLink: e.target.value } })
+            }
+            placeholder="/gift-cards"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="gift-finder-cta-link"
+          />
+        </div>
+      </SectionEditor>
+
+      {/* ============ RED CARPET ============ */}
+      <SectionEditor
+        title="Red Carpet Ready (ikinci məhsul carousel)"
+        description="Tematik məhsul carousel — admin manuel olaraq 8–12 məhsul seçir."
+        testid="home-sections-red-carpet"
+        enabled={data.redCarpet?.enabled !== false}
+        onToggle={(v) =>
+          setData({ ...data, redCarpet: { ...(data.redCarpet ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!), enabled: v } })
+        }
+      >
+        <MultiLangField
+          label="Eyebrow"
+          value={data.redCarpet?.eyebrow ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!.eyebrow}
+          onChange={(v) =>
+            setData({ ...data, redCarpet: { ...(data.redCarpet ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!), eyebrow: v } })
+          }
+        />
+        <MultiLangField
+          label="Başlıq"
+          value={data.redCarpet?.title ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!.title}
+          onChange={(v) =>
+            setData({ ...data, redCarpet: { ...(data.redCarpet ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!), title: v } })
+          }
+        />
+        <ProductPicker
+          label="Carousel məhsulları (8–12 məhsul seçin; boş olsa ən bahalı 12 məhsul fallback)"
+          products={products}
+          selected={data.redCarpet?.productIds ?? []}
+          onChange={(ids) =>
+            setData({ ...data, redCarpet: { ...(data.redCarpet ?? DEFAULT_HOMEPAGE_SECTIONS.redCarpet!), productIds: ids } })
+          }
+          maxCount={12}
+          testidPrefix="redcarpet-products"
+        />
+      </SectionEditor>
+
+      {/* ============ SECTION ORDER ============ */}
+      <div
+        className="bg-white border border-gray-200 rounded-xl p-6 space-y-4"
+        data-testid="home-sections-order"
+      >
+        <div className="border-b border-gray-100 pb-3">
+          <h3 className="text-lg font-semibold text-gray-900">Bölmələrin sırası</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Ana səhifədə bölmələrin görünmə sırasını yuxarı/aşağı düymələri ilə tənzimləyin.
+            Hero həmişə ən üstdə qalır.
+          </p>
+        </div>
+        <SectionOrderList
+          order={data.sectionOrder ?? DEFAULT_HOMEPAGE_SECTIONS.sectionOrder!}
+          onChange={(o) => setData({ ...data, sectionOrder: o })}
+        />
       </div>
 
       <div className="flex justify-end">

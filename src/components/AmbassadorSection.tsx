@@ -5,56 +5,57 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { productService } from '../services/productService';
 import { Product } from '../types';
+import { getHomepageSections, HomepageSections } from '../services/contentService';
 import ProductCarousel from './ProductCarousel';
 
 /**
- * AmbassadorSection — Omega "Aaron Taylor-Johnson wears a Moonwatch" tipli
- * editorial split + alt məhsul carousel.
- *
- *  - Sol: tam yüksəklikdə ambassador şəkli (parallax-sız, sadə)
- *  - Sağ: kiçik etiket + böyük Playfair başlıq + qısa təsvir + 3 məhsul mini-carousel
- *  - Arxa fon: dərin işıqlı krem; lüks editorial hiss
+ * AmbassadorSection — Omega tipli editorial split + mini product carousel.
+ * Admin tab-dan idarə olunur (eyebrow, title, body, image, CTA, link,
+ * productIds (manual seçim), enabled).
  */
 const AmbassadorSection: React.FC = () => {
   const { i18n } = useTranslation();
+  const [data, setData] = useState<HomepageSections['ambassador'] | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const data = await productService.getBestSellers(8);
-        let list = data;
-        if (!list || list.length === 0) {
-          const all = await productService.getAll();
-          list = all.slice(0, 8);
+        const [sec, all] = await Promise.all([getHomepageSections(), productService.getAll()]);
+        if (sec.ambassador) {
+          setData(sec.ambassador);
+          const ids = sec.ambassador.productIds || [];
+          if (ids.length > 0) {
+            // Admin-selected products, sıra seçim sırası ilə
+            const byId = new Map(all.map((p) => [p.id, p]));
+            setProducts(ids.map((id) => byId.get(id)).filter(Boolean) as Product[]);
+          } else {
+            // Fallback: bestsellers
+            const bs = await productService.getBestSellers(8);
+            setProducts(bs && bs.length > 0 ? bs : all.slice(0, 6));
+          }
         }
-        setProducts(list);
       } catch (e) {
-        console.error('Error loading ambassador products:', e);
+        console.error('Ambassador load error:', e);
       }
     })();
   }, []);
 
+  if (!data || data.enabled === false) return null;
+
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  const eyebrow = lang === 'ru' ? 'АМБАССАДОР' : lang === 'en' ? 'AMBASSADOR' : 'BREND SİMASI';
-  const title =
-    lang === 'ru'
-      ? 'Время носить\nсвой характер'
-      : lang === 'en'
-      ? 'Wear your\ncharacter'
-      : 'Xarakterini\ngöstər';
-  const body =
-    lang === 'ru'
-      ? 'Часы — больше, чем аксессуар. Это — отражение того, кем вы являетесь, и обещание того, кем вы становитесь. Каждое изделие в нашей коллекции — это история, которая ждёт своего автора.'
-      : lang === 'en'
-      ? 'A timepiece is more than an accessory. It is a reflection of who you are — and a promise of who you are becoming. Every piece in our collection is a story waiting for its author.'
-      : 'Saat — yalnız aksesuar deyil. O, sizin kim olduğunuzun əksi və kim olacağınızın vədidir. Kolleksiyamızdakı hər əsər müəllifini gözləyən bir hekayədir.';
-  const cta = lang === 'ru' ? 'Смотреть коллекцию' : lang === 'en' ? 'View collection' : 'Kolleksiyaya bax';
+  const eyebrow = data.eyebrow[lang] || data.eyebrow.az;
+  const title = data.title[lang] || data.title.az;
+  const body = data.body[lang] || data.body.az;
+  const cta = data.ctaLabel[lang] || data.ctaLabel.az;
+  const link = data.ctaLink || '/products';
+  const imageUrl =
+    data.imageUrl ||
+    'https://images.unsplash.com/photo-1507081323647-4d250478b919?auto=format&fit=crop&w=1400&q=85';
 
   return (
     <section className="relative bg-[#F4ECE0]" data-testid="dv-ambassador">
       <div className="grid grid-cols-1 lg:grid-cols-12">
-        {/* IMAGE column */}
         <motion.div
           className="relative lg:col-span-6 min-h-[480px] md:min-h-[640px] overflow-hidden bg-[#0A0A0A]"
           initial={{ opacity: 0 }}
@@ -63,8 +64,8 @@ const AmbassadorSection: React.FC = () => {
           transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
         >
           <motion.img
-            src="https://images.unsplash.com/photo-1507081323647-4d250478b919?auto=format&fit=crop&w=1400&q=85"
-            alt="Brand ambassador"
+            src={imageUrl}
+            alt={title}
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover"
             initial={{ scale: 1.1 }}
@@ -78,7 +79,6 @@ const AmbassadorSection: React.FC = () => {
           />
         </motion.div>
 
-        {/* TEXT + MINI CAROUSEL column */}
         <div className="lg:col-span-6 px-6 sm:px-10 md:px-14 lg:px-16 py-14 md:py-20 lg:py-24 flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, x: 30 }}
@@ -99,7 +99,7 @@ const AmbassadorSection: React.FC = () => {
               {body}
             </p>
             <Link
-              to="/products"
+              to={link}
               className="group mt-7 md:mt-9 inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-black"
               data-testid="ambassador-cta"
             >
@@ -111,7 +111,6 @@ const AmbassadorSection: React.FC = () => {
             </Link>
           </motion.div>
 
-          {/* Mini carousel of 3 picks */}
           {products.length > 0 && (
             <div className="mt-10 md:mt-14">
               <ProductCarousel products={products.slice(0, 6)} testIdPrefix="ambassador" />

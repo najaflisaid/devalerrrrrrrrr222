@@ -193,6 +193,60 @@ File: `/app/src/components/CollectionTiles.tsx`
   tile-lar atılır — nəticədə 4 təmiz kart render olunur.
 - Framer Motion `whileInView` + `staggerChildren` ilə kartlar 36px-dən qalxır.
 
+## Bu sessiya (Tam admin-managed ana səhifə)
+
+Problem statement: "admin panelden ana sehifedeki herbirseyi idare etmek olsun".
+
+### contentService.ts — HomepageSections genişləndirildi
+File: `/app/src/services/contentService.ts`
+- Yeni interface field-lər:
+  - `featuredStory`: {enabled, eyebrow{az,ru,en}, title{az,ru,en} (whitespace-pre-line dəstəyi ilə), body{az,ru,en}, imageUrl, ctaLabel{az,ru,en}, ctaLink}
+  - `ambassador`: yuxarıdakı + `productIds: string[]` (manual 6 məhsul)
+  - `giftFinder`: enabled, eyebrow, title, body, ctaLabel, ctaLink
+  - `redCarpet`: enabled, eyebrow, title, `productIds: string[]` (8–12 manual)
+  - `sectionOrder: string[]` — section key-lər istənilən sıra ilə (Hero həmişə ən üstdə qalır)
+- `DEFAULT_HOMEPAGE_SECTIONS`-a hamısı üçün məntiqli defaults yazıldı.
+- `getHomepageSections` partial data + defaults merge edir; eyni mexanizm yeni
+  field-lər üçün də işləyir.
+
+### Section komponentləri admin-aware refactor
+- `FeaturedStorySection.tsx` — bütün mətnlər/şəkil/CTA admin data-dan oxunur;
+  scroll-linked parallax + animasiyalar saxlanılıb.
+- `AmbassadorSection.tsx` — eyni + `productIds` boş olsa fallback bestsellers,
+  doluysa məhsul carousel admin seçim sırası ilə render edir.
+- `GiftFinderSection.tsx` — eyrow/title/body/cta hamısı admin-managed.
+- `RedCarpetSection.tsx` — eyrow/title/`productIds` admin-managed; boş olarsa
+  fallback ən bahalı 12 məhsul.
+- Hər biri `enabled === false` olduqda `null` qaytarır.
+
+### App.tsx — bölmələri admin sırasına görə render
+- `HomePage` indi `getHomepageSections().sectionOrder` ilə bölmələri dinamik
+  sıralayır. Hero hardcoded ən üstdə qalır.
+- Default order ilə yeni section key əlavə olunduqda forward-compatible
+  (`sec.sectionOrder + DEFAULT.filter(missing)`).
+
+### HomeSectionsTab — admin UI 5 yeni blok
+File: `/app/src/components/admin/HomeSectionsTab.tsx`
+- Helper komponentlər: `SectionEditor` (header + enable/disable toggle wrapper),
+  `ProductPicker` (axtarış inputu + chip list + scrollable seçim grid; maxCount
+  konfiqurasiyalı), `SectionOrderList` (12 section adlı sıralama, ArrowUp/Down
+  düymələri ilə move).
+- Əlavə olunan bloklar:
+  1. **Featured Story**: eyrebrow/title (textarea, \n dəstəyi)/body/imageUrl/
+     ctaLabel/ctaLink + enable toggle.
+  2. **Ambassador**: yuxarıdakı + ProductPicker (6 maks).
+  3. **Hədiyyə tapıcı**: eyrebrow/title/body/ctaLabel/ctaLink.
+  4. **Red Carpet**: eyrebrow/title + ProductPicker (12 maks).
+  5. **Bölmələrin sırası**: 12 section üçün up/down arrow ilə yenidən sırala.
+- Bütün form field-lərində unikal `data-testid` (`featured-story-image-url`,
+  `ambassador-products`, `section-order-up-{key}` və s.).
+
+### Validation
+- TypeScript: dəyişdirdiyim fayllarda yeni xəta yoxdur (yalnız pre-existing
+  `Features` import / pre-existing `index` unused).
+- Playwright: bütün 9 əsas section data-testid-i mövcud, console error yox,
+  Hero refined counter işləyir.
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.

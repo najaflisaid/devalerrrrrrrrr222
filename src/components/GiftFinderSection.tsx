@@ -1,36 +1,43 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { getHomepageSections, HomepageSections } from '../services/contentService';
 
 /**
- * GiftFinderSection — Omega "Find the perfect gift" tipli mərkəzi tip kart.
- *  - Dairəvi gradient illüstrasiya + ikon (mərkəzi)
- *  - Üstdə kiçik eyebrow, böyük başlıq, qısa təsvir, CTA
- *  - Cream lüks fon
+ * GiftFinderSection — Omega "Find the perfect gift" tipli mərkəzi kart.
+ * Admin tab-dan idarə olunur (eyebrow, title, body, CTA, link, enabled).
  */
 const GiftFinderSection: React.FC = () => {
   const { i18n } = useTranslation();
-  const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+  const [data, setData] = useState<HomepageSections['giftFinder'] | null>(null);
 
-  const eyebrow = lang === 'ru' ? 'ПОДБОР ПОДАРКА' : lang === 'en' ? 'GIFT FINDER' : 'HƏDİYYƏ TAPICI';
-  const title =
-    lang === 'ru' ? 'Найдите идеальный подарок' : lang === 'en' ? 'Find the perfect gift' : 'Mükəmməl hədiyyəni tapın';
-  const body =
-    lang === 'ru'
-      ? 'Если вы знаете, для кого и зачем — наш помощник подберёт идеальный подарок за несколько кликов.'
-      : lang === 'en'
-      ? "If you know who you're buying for and why, our Gift Finder will help you find the perfect present in just a few clicks."
-      : 'Kimə və niyə hədiyyə axtardığınızı bilirsinizsə, bir neçə kliklə ideal hədiyyəni tapmaqda kömək edəcəyik.';
-  const cta = lang === 'ru' ? 'Подобрать подарок' : lang === 'en' ? 'Find your gift' : 'Hədiyyəni tap';
+  useEffect(() => {
+    (async () => {
+      try {
+        const sec = await getHomepageSections();
+        if (sec.giftFinder) setData(sec.giftFinder);
+      } catch (e) {
+        console.error('GiftFinder load error:', e);
+      }
+    })();
+  }, []);
+
+  if (!data || data.enabled === false) return null;
+
+  const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+  const eyebrow = data.eyebrow[lang] || data.eyebrow.az;
+  const title = data.title[lang] || data.title.az;
+  const body = data.body[lang] || data.body.az;
+  const cta = data.ctaLabel[lang] || data.ctaLabel.az;
+  const link = data.ctaLink || '/gift-cards';
 
   return (
     <section
       className="relative bg-white py-20 md:py-28 overflow-hidden"
       data-testid="dv-gift-finder"
     >
-      {/* Ambient warm orbs */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full opacity-[0.08] blur-3xl"
@@ -44,7 +51,6 @@ const GiftFinderSection: React.FC = () => {
         viewport={{ once: true, margin: '-10%' }}
         transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Circular illustration */}
         <motion.div
           className="relative mx-auto w-[180px] h-[180px] md:w-[220px] md:h-[220px] mb-8 md:mb-12"
           initial={{ opacity: 0, scale: 0.85 }}
@@ -52,18 +58,15 @@ const GiftFinderSection: React.FC = () => {
           viewport={{ once: true, margin: '-10%' }}
           transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* Outer ring */}
           <span
             aria-hidden="true"
             className="absolute inset-0 rounded-full border border-[#C9A961]/40"
             style={{ animation: 'dv-spin-slow 32s linear infinite' }}
           />
-          {/* Inner ring */}
           <span
             aria-hidden="true"
             className="absolute inset-6 rounded-full border border-[#C9A961]/30"
           />
-          {/* Center gradient disc */}
           <span
             aria-hidden="true"
             className="absolute inset-10 rounded-full"
@@ -72,11 +75,9 @@ const GiftFinderSection: React.FC = () => {
                 'radial-gradient(circle, rgba(201,169,97,0.22) 0%, rgba(201,169,97,0.05) 60%, transparent 100%)',
             }}
           />
-          {/* Gift icon */}
           <span className="absolute inset-0 flex items-center justify-center text-[#C9A961]">
             <Gift className="w-10 h-10 md:w-14 md:h-14" strokeWidth={1.1} />
           </span>
-          {/* Subtle dot accents around the ring */}
           {[0, 1, 2, 3].map((i) => (
             <span
               key={i}
@@ -108,7 +109,7 @@ const GiftFinderSection: React.FC = () => {
         </p>
 
         <Link
-          to="/gift-cards"
+          to={link}
           className="group mt-9 md:mt-12 inline-flex items-center gap-3 px-8 md:px-10 py-3.5 md:py-4 border border-black text-black hover:bg-black hover:text-white transition-colors duration-500 text-[11px] md:text-[12px] uppercase tracking-[0.28em] font-medium"
           data-testid="gift-finder-cta"
         >

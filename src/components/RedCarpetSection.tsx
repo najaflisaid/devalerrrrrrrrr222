@@ -5,27 +5,36 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { productService } from '../services/productService';
 import { Product } from '../types';
+import { getHomepageSections, HomepageSections } from '../services/contentService';
 import ProductCarousel from './ProductCarousel';
 
 /**
  * RedCarpetSection — Omega "Red Carpet Ready" tipli ikinci tematik məhsul carousel-i.
- *  - Lüks / yüksək qiymətli məhsullardan seçim göstərir
- *  - Üstdə minimal başlıq, alt yazı yox (Omega kimi)
- *  - Cream/işıqlı arxa fon
+ * Admin tab-dan idarə olunur: eyebrow, title, productIds (manual seçim), enabled.
+ * productIds boş olarsa, fallback olaraq ən bahalı 12 məhsul göstərilir.
  */
 const RedCarpetSection: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const [data, setData] = useState<HomepageSections['redCarpet'] | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const all = await productService.getAll();
-        // Lüks seçim: ən yüksək qiymətli 12 məhsul (qızılı/lüks hissi)
-        const sorted = [...all].sort((a, b) => (b.price || 0) - (a.price || 0));
-        setProducts(sorted.slice(0, 12));
+        const [sec, all] = await Promise.all([getHomepageSections(), productService.getAll()]);
+        if (sec.redCarpet) {
+          setData(sec.redCarpet);
+          const ids = sec.redCarpet.productIds || [];
+          if (ids.length > 0) {
+            const byId = new Map(all.map((p) => [p.id, p]));
+            setProducts(ids.map((id) => byId.get(id)).filter(Boolean) as Product[]);
+          } else {
+            const sorted = [...all].sort((a, b) => (b.price || 0) - (a.price || 0));
+            setProducts(sorted.slice(0, 12));
+          }
+        }
       } catch (e) {
         console.error('Error loading red carpet products:', e);
       } finally {
@@ -34,11 +43,11 @@ const RedCarpetSection: React.FC = () => {
     })();
   }, []);
 
-  if (loading || products.length === 0) return null;
+  if (!data || data.enabled === false || loading || products.length === 0) return null;
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  const surtitle = lang === 'ru' ? 'ВЫБОР РЕДАКЦИИ' : lang === 'en' ? "EDITOR'S PICK" : 'REDAKSİYANIN SEÇİMİ';
-  const title = lang === 'ru' ? 'Готовы к красной дорожке' : lang === 'en' ? 'Red carpet ready' : 'Qırmızı xalçaya hazır';
+  const eyebrow = data.eyebrow[lang] || data.eyebrow.az;
+  const title = data.title[lang] || data.title.az;
   const viewAll = lang === 'ru' ? 'Все' : lang === 'en' ? 'View all' : 'Hamısı';
 
   return (
@@ -55,7 +64,7 @@ const RedCarpetSection: React.FC = () => {
             <div className="flex items-center gap-3 mb-3 md:mb-4">
               <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
               <p className="text-[10px] md:text-[11px] tracking-[0.32em] uppercase text-[#C9A961] font-medium">
-                {surtitle}
+                {eyebrow}
               </p>
             </div>
             <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight">
