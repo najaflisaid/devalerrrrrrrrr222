@@ -54,7 +54,7 @@ const AmbassadorSection: React.FC = () => {
     'https://images.unsplash.com/photo-1507081323647-4d250478b919?auto=format&fit=crop&w=1400&q=85';
 
   return (
-    <section className="relative bg-[#F4ECE0]" data-testid="dv-ambassador">
+    <section className="relative bg-white" data-testid="dv-ambassador">
       <div className="grid grid-cols-1 lg:grid-cols-12">
         <motion.div
           className="relative lg:col-span-6 min-h-[480px] md:min-h-[640px] overflow-hidden bg-[#0A0A0A]"
