@@ -220,7 +220,7 @@ const CollectionTiles: React.FC = () => {
                 <Link
                   key={tile.id || idx}
                   to={tile.link_url || '/products'}
-                  className="group relative block shrink-0 snap-start overflow-hidden bg-[#0A0A0A] aspect-[4/5] w-[38%]"
+                  className="group relative block shrink-0 snap-start overflow-hidden bg-[#0A0A0A] aspect-[7/9] w-[38%]"
                   data-testid={`dv-collection-tile-m-${tile.id || idx}`}
                 >
                   {tile.video_url ? (
