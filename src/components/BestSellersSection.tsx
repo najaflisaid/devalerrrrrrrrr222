@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../types';
@@ -22,9 +23,8 @@ const BestSellersSection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Scroll-reveal ref-ləri
+  // Scroll-reveal ref-ləri (grid framer-motion-a keçirildi)
   const header = useReveal<HTMLDivElement>();
-  const grid = useReveal<HTMLDivElement>({ threshold: 0.05 });
   const footer = useReveal<HTMLDivElement>();
 
   const getProductName = (product: Product): string => {
@@ -118,15 +118,19 @@ const BestSellersSection: React.FC = () => {
           )}
         </div>
 
-        {/* === PRODUCTS GRID (full-width, scroll-staggered) === */}
-        <div
-          ref={grid.ref}
-          className={`dv-scroll-stagger grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-14 ${
-            grid.revealed ? 'dv-scroll-in' : ''
-          }`}
+        {/* === PRODUCTS GRID (framer-motion stagger reveal + zoom) === */}
+        <motion.div
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10 md:gap-x-8 md:gap-y-16"
           data-testid="bestsellers-grid"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-10%' }}
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+          }}
         >
-          {products.map((product, idx) => {
+          {products.map((product) => {
             const onSale = !!product.salePrice && product.salePrice < product.price;
             const price = onSale ? product.salePrice! : product.price;
             const name = getProductName(product);
@@ -136,10 +140,18 @@ const BestSellersSection: React.FC = () => {
               : 0;
 
             return (
-              <div
+              <motion.div
                 key={product.id}
-                style={{ ['--dv-i' as any]: idx % 8 }}
                 data-testid={`bestseller-card-${product.id}`}
+                variants={{
+                  hidden: { opacity: 0, y: 32, scale: 0.96 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+                  },
+                }}
               >
                 <button
                   type="button"
@@ -240,10 +252,10 @@ const BestSellersSection: React.FC = () => {
                     </span>
                   </div>
                 </button>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* === BOTTOM CTA === */}
         <div

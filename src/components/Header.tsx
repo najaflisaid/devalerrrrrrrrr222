@@ -427,11 +427,31 @@ const Header: React.FC = () => {
     }
   };
 
+  // Şəffaf header sürüşməyə görə (ana səhifədə hero üzərində şəffaf, scroll edəndə ağ)
+  const [isAtTop, setIsAtTop] = useState<boolean>(typeof window !== 'undefined' ? window.scrollY < 80 : true);
+  const [isHomePage, setIsHomePage] = useState<boolean>(typeof window !== 'undefined' ? window.location.pathname === '/' : true);
+  useEffect(() => {
+    const onScroll = () => setIsAtTop(window.scrollY < 80);
+    const onPath = () => setIsHomePage(window.location.pathname === '/');
+    onPath();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('popstate', onPath);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('popstate', onPath);
+    };
+  }, []);
+  const transparentMode = isHomePage && isAtTop;
+
   return (
     <>
       {/* Main Header */}
       <header
-        className="dv-main-header sticky top-0 z-50 bg-white border-b border-gray-100"
+        className={`dv-main-header z-50 transition-all duration-500 ${
+          transparentMode
+            ? 'fixed top-0 left-0 right-0 bg-transparent border-b border-transparent dv-header-transparent'
+            : 'sticky top-0 bg-white border-b border-gray-100 dv-header-solid'
+        }`}
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="dv-header-row flex items-center justify-between h-16">

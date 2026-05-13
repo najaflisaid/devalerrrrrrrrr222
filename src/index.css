@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -54,6 +54,40 @@
 
 
 
+/* === Transparent header (hero üzərində ağ ikonlar + mətn) === */
+.dv-header-transparent {
+  backdrop-filter: blur(0);
+}
+.dv-header-transparent,
+.dv-header-transparent a,
+.dv-header-transparent button:not(.bg-rose-100):not([class*="bg-rose"]):not([class*="bg-amber"]),
+.dv-header-transparent span:not([class*="bg-rose"]):not([class*="bg-amber"]) {
+  color: #ffffff;
+}
+.dv-header-transparent svg {
+  color: #ffffff;
+  stroke: #ffffff;
+}
+/* Logo şəkli — transparent header rejimində ağ filter */
+.dv-header-transparent img[alt="De Valeur"] {
+  filter: brightness(0) invert(1);
+}
+/* Yumşaq keçid solid moda qayıtmaqla */
+.dv-main-header {
+  transition: background-color 500ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 500ms cubic-bezier(0.22, 1, 0.36, 1),
+              margin-bottom 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dv-main-header img,
+.dv-main-header svg,
+.dv-main-header a,
+.dv-main-header span,
+.dv-main-header button {
+  transition: color 500ms ease, filter 500ms ease;
+}
+
+
+
 /* === FONT SYSTEM ===
    Single font everywhere: Montserrat Light (300 weight) */
 
@@ -65,8 +99,9 @@ body {
 }
 
 .font-playfair {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 300;
+  font-family: 'Playfair Display', 'Montserrat', serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 * {

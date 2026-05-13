@@ -2,55 +2,93 @@
 
 ## Problem statement
 > 1. "best sellers bolmunu ana sehifede daha yaxsi et ve sagdaki sekli sil"
-> 2. "ana sehifeni eyni bu dizaynda et ama asagi etdikde scrolu animasiya ile gelsin" (Omega referansı ilə)
-> 3. "ANA sehifeni bahali markalarin sayti kimi et bloglar falanda olsun ana sehifede en cox satilanlar daha yaxsi olsun"
+> 2. "ana sehifeni eyni bu dizaynda et ama asagi etdikde scrolu animasiya ile gelsin"
+> 3. "ANA sehifeni bahali markalarin sayti kimi et bloglar falanda olsun"
+> 4. **Hero Section** — tam ekran, mərkəzdə məhsul, "SEAMASTER PLANET OCEAN" tipli incə tipoqrafiya
+> 5. **Scroll Animasiyaları** — fade-in + yüngül zoom + axıcı staggered keçidlər
+> 6. **Rəng Palitrası** — təmiz ağ fon, tünd boz/qara mətnlər, qızıl/metalik vurğular
+> 7. **Whitespace** — məhsul kartları böyük boşluqlarla
+> 8. **"Discover" düymələri** — hover-də rəng/altxətt animation
+> 9. **Naviqasiya** — şəffaf hero üzərində, scroll-da sabitləşir
+> 10. **Texniki**: Framer Motion / GSAP, Montserrat + Playfair Display
 
 ## Tech stack
 - Vite + React + TypeScript
 - TailwindCSS, Lucide icons
+- **Framer Motion 12.38** — premium scroll animasiyaları (yağ kimi axıcı)
 - Firebase Firestore (məhsullar, blog_posts, banners, brands)
 - i18next (az / ru / en)
+- Fontlar: **Playfair Display** (başlıqlar) + **Montserrat** (UI)
 
 ## Ana səhifə arxitekturası (lüks brend axını)
 
 ```
-1. Hero                  — full-bleed banner / video carousel
-2. CollectionTiles       — horizontal scroll tiles (admin-managed)
-3. BestSellersSection    — ⭐ premium editorial grid (yenidən qurulmuş)
-4. FeaturedStorySection  — ⭐ yeni: Omega tipli half-half image+text
+1. Hero                  — cinematic full-bleed (88vh), Ken Burns zoom + Playfair typography
+2. CollectionTiles       — horizontal scroll tiles
+3. BestSellersSection    — premium editorial grid + framer stagger reveal
+4. FeaturedStorySection  — Omega tipli half-half + scroll-linked parallax (useScroll/useTransform)
 5. BrandShowcase         — premium brendlər
 6. HomeProductBanners    — "Signature Selection" banner grid
-7. HomeBlogSection       — ⭐ yeni: ana səhifədə Jurnal (3 ən son blog yazısı)
+7. HomeBlogSection       — "Jurnal" editorial blog feed (1 feature + 2 stack)
 8. NewsTiles             — admin elanlar
 9. CategoryBanner        — kateqoriya çağırışı
 ```
 
-## Bu sessiyada görülmüş işlər
+## Bu sessiyada görülmüş işlər (Luxury brand redesign)
 
-### Bu iterasiya (ana səhifə luxury-brand redesign)
-- **YENİ**: `FeaturedStorySection.tsx` — half-half image + editorial text bölmə (KOLLEKSİYA HEKAYƏSİ eyebrow + Atelyelərdə doğulan zaman başlığı + body + CTA).
-- **YENİ**: `HomeBlogSection.tsx` — ana səhifədə "JURNAL" editorial blok. 1 böyük feature + 2 yığcam stack. Firestore `blog_posts` collection-undan götürür. İllüstrasiya, tarix, başlıq, snippet, "Oxu →" CTA.
-- **YENİLƏNDİ**: `BestSellersSection.tsx` — luxury off-white `#FAF9F7` background + 2 ambient gold orb decoration. Fallback əlavə edildi — əgər heç bir məhsul `isBestseller=true` deyilsə, ümumi məhsullardan ilk 12-ni göstərir (bölmə boş qalmasın).
-- **YENİLƏNDİ**: `App.tsx` HomePage — bölmələr yeni lüks brend ardıcıllığında düzüldü.
+### Hero (tamamilə yenidən yazıldı)
+File: `/app/src/components/Hero.tsx`
+- Cinematic tam yüksəklik (`clamp(560px, 88vh, 920px)`) full-bleed image/video.
+- Framer Motion ilə Ken Burns yumşaq zoom (initial scale 1.12 → 1.0, duration = slide duration).
+- AnimatePresence ilə crossfade slide keçidləri (cubic-bezier 0.22,1,0.36,1).
+- Editorial overlay: surtitle (uppercase tracking-[0.4em]) + böyük Playfair başlıq (clamp 34px → 84px) + "Discover the collection" CTA with underline.
+- Slide counter "01 / 02" + gold accent xətlər.
+- Animated scroll hint xətti (infinite scaleY pulse).
 
-### Əvvəlki iterasiyalar
-- `useReveal` hook + `RevealOnScroll` wrapper + universal `dv-scroll-*` CSS sistem.
-- BestSellersSection-da sağdakı banner-aside silindi, full-width editorial grid quruldu (4 col desktop / 3 col tablet / 2 col mobil), watch-style kartlar.
-- CSS toqquşması (`dv-reveal` → `dv-scroll-reveal`) düzəldildi, 1.2s failsafe.
+### FeaturedStorySection (yenidən yazıldı)
+File: `/app/src/components/FeaturedStorySection.tsx`
+- Framer Motion `useScroll` + `useTransform` ilə scroll-linked parallax:
+  - Şəkil: y 0 → -12%, scale 1.15 → 1.0 (bölmə tam ekranı keçəndə)
+  - Mətn: y 8% → -4% (əksinə yumşaq qalxma)
+- whileInView staggered fade-in: eyebrow → title → body → CTA (0.15s gecikmə ilə).
+
+### BestSellersSection (framer motion ilə əlavə polish)
+File: `/app/src/components/BestSellersSection.tsx`
+- Grid framer-motion variants ilə staggered fade-up + zoom (opacity 0 + y 32 + scale 0.96 → 1.0).
+- Daha çox whitespace (`gap-x-5/8 gap-y-10/16`).
+- Luxury off-white background `#FAF9F7` + 2 ambient gold orb.
+
+### Header (transparent / solid yumşaq keçid)
+File: `/app/src/components/Header.tsx` + `/app/src/index.css`
+- Home page-də scrollY < 80 olarkən: `position: fixed` + `bg-transparent` + ağ ikonlar/mətnlər + logo `filter: invert(1)`.
+- Scroll edildikdə və ya başqa səhifələrdə: `position: sticky` + ağ bg + qara mətnlər.
+- 500ms cubic-bezier keçid.
+
+### Global stil
+File: `/app/src/index.css`
+- Playfair Display @import (400/500/600 + italic).
+- `.font-playfair` indi əsl Playfair font-family.
+- `.dv-header-transparent` üçün universal stil sistemi.
+- Scroll-reveal `dv-scroll-*` sistemi (toqquşmasız).
+
+### App routing
+File: `/app/src/App.tsx`
+- HomePage 9-blok ardıcıllığında lüks brend axını ilə (Hero → Collections → BestSellers → FeaturedStory → Brands → ProductBanners → Blog → News → CategoryBanner).
+- FeaturedStorySection və HomeBlogSection daxili reveal-larına malikdir.
 
 ## Build/preview qeydləri
-- Vite dev server təmiz kompilyasiya edir (HMR işləyir).
-- Preview Firestore-da məhsullar var (524 docs), amma heç biri `isBestseller=true` deyil — fallback işləyir.
-- Hero banner data yox → Hero placeholder cream görünür.
-- Blog posts boş ola bilər → HomeBlogSection yalnız yazı varsa render olunur.
+- Vite təmiz kompilyasiya, HMR işləyir.
+- Firestore-da 524 məhsul var, lakin heç biri `isBestseller=true` deyil — fallback ümumi məhsullardan ilk 12-ni istifadə edir.
+- Hero default fallback: 2 Unsplash şəkli (Seamaster Planet Ocean + L'Heure Bleue) admin banner data olmadıqda göstərilir.
 
 ## Backlog (P1 / P2)
-- [ ] Hero sliderinə Ken Burns / parallax effekti.
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.
+- [ ] Newsletter signup bölməsi (Footer üstü).
 - [ ] CategoryBanner üçün stagger animasiya.
 - [ ] "Quick view" modal Best Sellers kartlarında.
 - [ ] HomeBlogSection title/CTA admin tərəfindən tərcümə oluna bilsin.
+- [ ] B2B üçün xüsusi alt-header bar.
 
 ## Pre-existing TS xəbərdarlıqları
-- Bu sessiyada yenidən toxunulmadı, mövcud unused-vars / strict-null xətaları AdminPanel, Header, AiChatWidget-də qalır.
+AdminPanel.tsx, Header.tsx, AiChatWidget.tsx-də mövcud unused-vars / strict-null xətaları (bu sessiyada toxunulmadı).
