@@ -46,40 +46,7 @@ const Hero: React.FC = () => {
         videoUrl: (b as any).videoUrl,
         duration: (b as any).duration || 6,
       }))
-    : ([
-        {
-          image:
-            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=2400&q=85',
-          title: 'SEAMASTER PLANET OCEAN',
-          subtitle:
-            lang === 'ru'
-              ? 'Коллекция, рождённая морем'
-              : lang === 'en'
-              ? 'A collection born of the sea'
-              : 'Dənizdən doğulan kolleksiya',
-          link: '/products',
-          buttonText:
-            lang === 'ru' ? 'Открыть коллекцию' : lang === 'en' ? 'Discover the collection' : 'Kolleksiyaya bax',
-          mediaType: 'image' as const,
-          duration: 7,
-        },
-        {
-          image:
-            'https://images.unsplash.com/photo-1547996160-81dfa63595aa?auto=format&fit=crop&w=2400&q=85',
-          title: 'L\u2019HEURE BLEUE',
-          subtitle:
-            lang === 'ru'
-              ? 'Артистизм каждой детали'
-              : lang === 'en'
-              ? 'The artistry of every detail'
-              : 'Hər detalın ustalığı',
-          link: '/products',
-          buttonText:
-            lang === 'ru' ? 'Открыть коллекцию' : lang === 'en' ? 'Discover the collection' : 'Kolleksiyaya bax',
-          mediaType: 'image' as const,
-          duration: 7,
-        },
-      ] as any);
+    : [];
 
   useEffect(() => {
     if (slides.length === 0) return;
@@ -102,6 +69,20 @@ const Hero: React.FC = () => {
   };
 
   const current: any = slides[currentSlide];
+
+  // Bannerlər yüklənənə qədər və ya admin heç bir banner əlavə etmədikdə —
+  // boş tünd bir bölmə göstər (heç bir placeholder şəkil/mətn YOXDUR).
+  if (!current) {
+    return (
+      <section
+        ref={heroRef}
+        className="relative w-full bg-black"
+        data-testid="dv-hero"
+        style={{ height: 'clamp(560px, 88vh, 920px)' }}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <section
