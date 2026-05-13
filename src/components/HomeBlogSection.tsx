@@ -22,7 +22,7 @@ interface BlogPost {
  *  - Editorial typography + scroll-reveal animasiya
  */
 const HomeBlogSection: React.FC = () => {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,25 +37,31 @@ const HomeBlogSection: React.FC = () => {
         const snap = await getDocs(collection(db, 'blog_posts'));
         const blogs = snap.docs.map((d) => {
           const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-          };
-        }) as BlogPost[];
+          // createdAt həm Firestore Timestamp, həm də ISO string ola bilər
+          let createdAt: Date;
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate();
+          } else if (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') {
+            createdAt = new Date(data.createdAt);
+          } else {
+            createdAt = new Date();
+          }
+          return { ...data, id: d.id, createdAt } as BlogPost;
+        });
         const sorted = blogs.sort(
           (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
         );
         setPosts(sorted.slice(0, 3));
       } catch (err) {
-        console.error('HomeBlogSection load error:', err);
+        console.error('[HomeBlogSection] load error:', err);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  if (loading || posts.length === 0) return null;
+  // Səhv halında bölməni gizlət. Loading-də bölmə skeleton ilə görünür (boş qalmasın).
+  if (!loading && posts.length === 0) return null;
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
   const getText = (val: { az?: string; ru?: string; en?: string } | undefined): string => {
@@ -97,6 +103,11 @@ const HomeBlogSection: React.FC = () => {
     lang === 'ru' ? 'Все статьи' : lang === 'en' ? 'All stories' : 'Bütün yazılar';
 
   const [featured, ...rest] = posts;
+
+  // Loading vəziyyəti üçün skeleton placeholder-lar
+  const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
+    <div className={`bg-black/[0.04] animate-pulse ${className}`} aria-hidden="true" />
+  );
 
   return (
     <section
@@ -146,7 +157,32 @@ const HomeBlogSection: React.FC = () => {
           </Link>
         </div>
 
+        {/* === Loading skeleton (blogs yüklənənə qədər) === */}
+        {loading && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12" data-testid="home-blog-loading">
+            <div className="lg:col-span-7">
+              <Skeleton className="aspect-[4/3] md:aspect-[16/11] w-full" />
+              <Skeleton className="mt-5 h-3 w-32" />
+              <Skeleton className="mt-3 h-8 w-3/4" />
+              <Skeleton className="mt-3 h-4 w-2/3" />
+            </div>
+            <div className="lg:col-span-5 flex flex-col gap-8">
+              {[0, 1].map((i) => (
+                <div key={i} className="flex flex-col sm:flex-row gap-4">
+                  <Skeleton className="w-full sm:w-[45%] aspect-[4/3] shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* === Editorial 2-column grid: 1 large feature + 2 stack === */}
+        {!loading && featured && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
           {/* FEATURED — large left tile */}
           <div
@@ -243,6 +279,7 @@ const HomeBlogSection: React.FC = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* Mobile View all */}
         <div
