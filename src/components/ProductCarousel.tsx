@@ -15,11 +15,14 @@ import { Product } from '../types';
 interface ProductCarouselProps {
   products: Product[];
   testIdPrefix?: string;
+  /** Override per-card flex-basis at each breakpoint. */
+  cardBasis?: string;
 }
 
 const ProductCarousel: React.FC<ProductCarouselProps> = ({
   products,
   testIdPrefix = 'pc',
+  cardBasis = 'basis-[78%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]',
 }) => {
   const { i18n } = useTranslation();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -107,7 +110,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
           return (
             <div
               key={product.id}
-              className="snap-start shrink-0 basis-[78%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]"
+              className={`snap-start shrink-0 ${cardBasis}`}
               data-testid={`${testIdPrefix}-card-${product.id}`}
             >
               <Link

@@ -113,7 +113,11 @@ const AmbassadorSection: React.FC = () => {
 
           {products.length > 0 && (
             <div className="mt-10 md:mt-14">
-              <ProductCarousel products={products.slice(0, 6)} testIdPrefix="ambassador" />
+              <ProductCarousel
+                products={products.slice(0, 6)}
+                testIdPrefix="ambassador"
+                cardBasis="basis-[78%] sm:basis-[60%] md:basis-[46%] lg:basis-[48%]"
+              />
             </div>
           )}
         </div>
