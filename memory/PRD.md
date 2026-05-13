@@ -247,6 +247,26 @@ File: `/app/src/components/admin/HomeSectionsTab.tsx`
 - Playwright: bütün 9 əsas section data-testid-i mövcud, console error yox,
   Hero refined counter işləyir.
 
+### FeaturedStorySection — mobil görünüş düzəlişi (bu kiçik iterasiya)
+File: `/app/src/components/FeaturedStorySection.tsx`
+Problem: mobil görünüşdə image column-un explicit hündürlüyü yox idi —
+`<div>` absolute-positioned image-i ehtiva edirdi və grid-cols-1-də sıxılırdı
+(0px boy). Title isə 34px ilə dar ekranda 2 sətrə düşür, boş yer dolurdu.
+
+Həll:
+- Image column-a aspect ratio verildi: `aspect-[4/5] sm:aspect-[16/10]
+  lg:aspect-auto` — mobil-də şəkil tam görünür.
+- Mobil-də parallax `y: textY` deaktiv edildi (`isMobile` resize listener ilə);
+  parallax yalnız lg+ ekranlarda işləyir.
+- Title responsive: `text-[26px] sm:text-[38px] md:text-[56px] lg:text-[68px]`
+  — kiçik ekranlarda daha kompakt.
+- Padding/margin azaldıldı mobil-də (`py-10 sm:py-14 md:py-20`),
+  eyebrow tracking və ölçü incələşdirildi.
+- Image üzərinə vertikal gradient overlay (mobil) → horizontal (desktop).
+
+Playwright (390x844 viewport) ilə doğrulandı — şəkil 4:5, başlıq və CTA təmiz,
+overflow yox.
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.

@@ -12,6 +12,15 @@ const FeaturedStorySection: React.FC = () => {
   const { i18n } = useTranslation();
   const ref = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<HomepageSections['featuredStory'] | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -53,9 +62,9 @@ const FeaturedStorySection: React.FC = () => {
 
   return (
     <section ref={ref} className="relative bg-white" data-testid="dv-featured-story">
-      <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px] md:min-h-[720px]">
-        {/* IMAGE column */}
-        <div className="relative overflow-hidden bg-[#0A0A0A]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:min-h-[720px]">
+        {/* IMAGE column — mobil üçün aspect ratio ilə hündürlük təminatı */}
+        <div className="relative overflow-hidden bg-[#0A0A0A] aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto">
           <motion.div
             className="absolute inset-0"
             style={{ y: imgY, scale: imgScale }}
@@ -69,36 +78,36 @@ const FeaturedStorySection: React.FC = () => {
             />
           </motion.div>
           <div
-            className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/30 lg:from-black/20 to-transparent pointer-events-none"
             aria-hidden="true"
           />
         </div>
 
-        {/* TEXT column */}
+        {/* TEXT column — mobil-də parallax olmaz, daha kompakt padding/title */}
         <motion.div
           className="flex items-center bg-white"
-          style={{ y: textY }}
+          style={isMobile ? undefined : { y: textY }}
           initial={{ opacity: 0, x: 40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-15%' }}
           transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="px-6 sm:px-10 md:px-14 lg:px-20 py-16 md:py-24 max-w-[620px]">
+          <div className="px-5 sm:px-10 md:px-14 lg:px-20 py-10 sm:py-14 md:py-20 lg:py-24 max-w-[620px] w-full">
             <motion.div
-              className="flex items-center gap-3 mb-5 md:mb-7"
+              className="flex items-center gap-3 mb-4 md:mb-7"
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-15%' }}
               transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
-              <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium">
+              <span className="h-px w-7 md:w-12 bg-[#C9A961]" aria-hidden="true" />
+              <p className="text-[10px] md:text-[11px] tracking-[0.32em] md:tracking-[0.36em] uppercase text-[#C9A961] font-medium">
                 {surtitle}
               </p>
             </motion.div>
 
             <motion.h2
-              className="font-playfair text-[34px] sm:text-[42px] md:text-[56px] lg:text-[68px] font-light text-black leading-[1.0] tracking-tight whitespace-pre-line"
+              className="font-playfair text-[26px] sm:text-[38px] md:text-[56px] lg:text-[68px] font-light text-black leading-[1.05] tracking-tight whitespace-pre-line"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-15%' }}
@@ -108,7 +117,7 @@ const FeaturedStorySection: React.FC = () => {
             </motion.h2>
 
             <motion.p
-              className="mt-6 md:mt-9 text-sm md:text-base lg:text-[17px] text-black/65 leading-[1.75] max-w-[520px]"
+              className="mt-4 sm:mt-6 md:mt-9 text-[13px] sm:text-sm md:text-base lg:text-[17px] text-black/65 leading-[1.7] md:leading-[1.75] max-w-[520px]"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-15%' }}
@@ -126,7 +135,7 @@ const FeaturedStorySection: React.FC = () => {
               <a
                 href={link}
                 onClick={handleLink}
-                className="group mt-9 md:mt-12 inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-black"
+                className="group mt-7 md:mt-12 inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.28em] md:tracking-[0.32em] font-medium text-black"
                 data-testid="featured-story-cta"
               >
                 <span className="relative pb-1.5">
