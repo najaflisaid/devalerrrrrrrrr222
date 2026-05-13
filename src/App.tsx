@@ -13,6 +13,7 @@ import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
 import HomeBlogSection from './components/HomeBlogSection';
 import FeaturedStorySection from './components/FeaturedStorySection';
+import HeroRisingPanel from './components/HeroRisingPanel';
 import RevealOnScroll from './components/RevealOnScroll';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
@@ -62,12 +63,12 @@ const HomePage: React.FC = () => {
       {/* 1) Hero — full-bleed banner / video */}
       <Hero />
 
-      {/* 2) Collections strip — Hero üzərinə "qapaq" kimi yüksələn animasiya
-          (CollectionTiles daxili olaraq scroll-overlap animasiyasına malikdir) */}
-      <CollectionTiles />
-
-      {/* 3) Best Sellers — premium editorial grid (öz daxili reveal-ı var) */}
-      <BestSellersSection />
+      {/* 2-3) Rising panel — bir az scroll edən kimi Hero üzərinə yumşaq yüksələn qapaq:
+          CollectionTiles (SAATLAR/DƏRİ MƏHSULLAR/AKSESUARLAR/QƏLƏMLƏR) + Best Sellers */}
+      <HeroRisingPanel>
+        <CollectionTiles />
+        <BestSellersSection />
+      </HeroRisingPanel>
 
       {/* 4) Featured Story — Omega/Cartier tipli half-half editorial split */}
       <FeaturedStorySection />
