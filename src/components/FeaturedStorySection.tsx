@@ -64,9 +64,9 @@ const FeaturedStorySection: React.FC = () => {
     <section ref={ref} className="relative bg-white" data-testid="dv-featured-story">
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:min-h-[720px]">
         {/* IMAGE column — desktop-da SAĞDA (lg:order-2), mobil-də üstdə qalır */}
-        <div className="relative overflow-hidden bg-white aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto lg:bg-[#0A0A0A] lg:order-2">
+        <div className="relative overflow-hidden bg-white aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-auto lg:order-2">
           <motion.div
-            className="absolute inset-0"
+            className="absolute -inset-y-[10%] inset-x-0 lg:-inset-y-[15%]"
             style={isMobile ? undefined : { y: imgY, scale: imgScale }}
             transition={{ type: 'tween' }}
           >
