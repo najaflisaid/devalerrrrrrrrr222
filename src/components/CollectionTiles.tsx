@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from '../hooks/useInView';
 import { getHomepageSections, DEFAULT_HOMEPAGE_SECTIONS } from '../services/contentService';
 
@@ -86,14 +87,94 @@ const CollectionTiles: React.FC = () => {
   const canNext = pageIndex < pageCount - 1;
 
   return (
-    <section
-      ref={ref}
-      className="relative pt-3 md:pt-4 bg-white overflow-hidden"
-      data-testid="dv-collection-tiles"
+    <CollectionTilesWithOverlap
+      sectionRef={ref}
+      showArrows={showArrows}
+      canPrev={canPrev}
+      canNext={canNext}
+      pageIndex={pageIndex}
+      goToPage={goToPage}
+      tiles={tiles}
+      lang={lang}
+      inView={inView}
+      trackRef={trackRef}
+    />
+  );
+};
+
+interface CollectionTilesInnerProps {
+  sectionRef: any;
+  showArrows: boolean;
+  canPrev: boolean;
+  canNext: boolean;
+  pageIndex: number;
+  goToPage: (p: number) => void;
+  tiles: Tile[];
+  lang: 'az' | 'ru' | 'en';
+  inView: boolean;
+  trackRef: React.RefObject<HTMLDivElement>;
+}
+
+/**
+ * Daxili komponent — scroll-overlap effekti üçün ayrılır.
+ *  - Bölmə Hero-nun alt hissəsinə üst-üstə düşür (negative margin-top + rounded-t)
+ *  - Framer-motion useScroll ilə scroll edildikcə yumşaq yuxarı qalxır (translateY 80px → 0)
+ *  - z-index Hero-dan yuxarıdır, ona görə Hero üzərinə "qapaq" kimi yığılır
+ */
+const CollectionTilesWithOverlap: React.FC<CollectionTilesInnerProps> = ({
+  sectionRef,
+  showArrows,
+  canPrev,
+  canNext,
+  pageIndex,
+  goToPage,
+  tiles,
+  lang,
+  inView,
+  trackRef,
+}) => {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: wrapperRef,
+    offset: ['start end', 'start start'],
+  });
+  // Scroll edildikcə bölmə 80px aşağıdan başlayıb 0-a qədər yuxarı qalxır
+  const translateY = useTransform(scrollYProgress, [0, 1], [80, 0]);
+  // Eyni vaxtda alt kölgə güclənir ki, Hero-dan ayrıldığı daha hiss olunsun
+  const shadowOpacity = useTransform(scrollYProgress, [0, 1], [0, 0.18]);
+
+  return (
+    <motion.div
+      ref={wrapperRef}
+      className="relative z-10 -mt-12 md:-mt-20 lg:-mt-24"
+      style={{ y: translateY }}
     >
+      {/* Top shadow ribbon — Hero ilə ayrıldığını yumşaq vurğulayır */}
+      <motion.div
+        aria-hidden="true"
+        className="absolute -top-8 left-0 right-0 h-8 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.18), rgba(0,0,0,0))',
+          opacity: shadowOpacity,
+        }}
+      />
+
+      <section
+        ref={sectionRef as any}
+        className="relative bg-white rounded-t-[28px] md:rounded-t-[40px] pt-6 md:pt-10 overflow-hidden"
+        data-testid="dv-collection-tiles"
+      >
+        {/* İncə qızıl üst xətt — luxury detal */}
+        <div
+          aria-hidden="true"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-12 md:w-16 h-px"
+          style={{ background: 'linear-gradient(to right, transparent, #C9A961, transparent)' }}
+        />
+
       {/* Top arrows row (heading text removed per design) */}
       {showArrows && (
-        <div className={`flex items-center justify-end px-1.5 mb-2 md:mb-3 dv-reveal ${inView ? 'is-in' : ''}`}>
+        <div className={`flex items-center justify-end px-3 sm:px-5 mb-3 md:mb-4 dv-reveal ${inView ? 'is-in' : ''}`}>
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -186,7 +267,8 @@ const CollectionTiles: React.FC = () => {
       {/* Gray transition strip — extends the BestSellers gray bg upward from
           right where the 2nd row of collection tiles ends */}
       <div className="h-3 md:h-4 bg-[#F4F4F4]" aria-hidden="true" />
-    </section>
+      </section>
+    </motion.div>
   );
 };
 

@@ -62,10 +62,9 @@ const HomePage: React.FC = () => {
       {/* 1) Hero — full-bleed banner / video */}
       <Hero />
 
-      {/* 2) Collections strip — horizontal scroll tiles */}
-      <RevealOnScroll variant="up">
-        <CollectionTiles />
-      </RevealOnScroll>
+      {/* 2) Collections strip — Hero üzərinə "qapaq" kimi yüksələn animasiya
+          (CollectionTiles daxili olaraq scroll-overlap animasiyasına malikdir) */}
+      <CollectionTiles />
 
       {/* 3) Best Sellers — premium editorial grid (öz daxili reveal-ı var) */}
       <BestSellersSection />
