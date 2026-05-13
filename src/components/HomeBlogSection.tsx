@@ -11,12 +11,15 @@ interface BlogPost {
   title: { az: string; ru: string; en?: string };
   content: { az: string; ru: string; en?: string };
   image: string;
+  category?: { az?: string; ru?: string; en?: string } | string;
   createdAt: Date;
 }
 
 /**
- * HomeBlogSection — Ana səhifədə editorial "Journal" bölməsi.
- * Framer Motion `whileInView` ilə yumşaq fade-up reveal (etibarlı, dv-scroll-reveal class-larından asılı deyil).
+ * HomeBlogSection — Omega "News & Stories" tipli 4-lü minimal grid.
+ *  - Hər kart: kvadrat şəkil + kateqoriya etiketi + başlıq + qısa təsvir
+ *  - Şəkil hover-də yumşaq zoom
+ *  - Mobil 1 sütun, planşet 2, desktop 4
  */
 const HomeBlogSection: React.FC = () => {
   const { i18n } = useTranslation();
@@ -37,7 +40,7 @@ const HomeBlogSection: React.FC = () => {
           return { ...data, id: d.id, createdAt } as BlogPost;
         });
         const sorted = blogs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        setPosts(sorted.slice(0, 3));
+        setPosts(sorted.slice(0, 4));
       } catch (err) {
         console.error('[HomeBlogSection] load error:', err);
       } finally {
@@ -49,8 +52,9 @@ const HomeBlogSection: React.FC = () => {
   if (!loading && posts.length === 0) return null;
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  const getText = (val: { az?: string; ru?: string; en?: string } | undefined): string => {
+  const getText = (val: { az?: string; ru?: string; en?: string } | string | undefined): string => {
     if (!val) return '';
+    if (typeof val === 'string') return val;
     return (val as any)[lang] || val.az || val.en || val.ru || '';
   };
 
@@ -59,76 +63,32 @@ const HomeBlogSection: React.FC = () => {
   const truncate = (text: string, max: number) =>
     text.length <= max ? text : text.substring(0, max).trim() + '…';
 
-  const fmtDate = (d: Date) => {
-    const months = {
-      az: ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'],
-      ru: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
-      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    };
-    const m = months[lang] || months.az;
-    return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
-  };
-
-  const surtitle = lang === 'ru' ? 'ЖУРНАЛ' : lang === 'en' ? 'JOURNAL' : 'JURNAL';
-  const sectionTitle =
-    lang === 'ru'
-      ? 'Истории, вдохновляющие стиль'
-      : lang === 'en'
-      ? 'Stories that inspire style'
-      : 'Stili ilhamlandıran hekayələr';
-  const sectionSubtitle =
-    lang === 'ru'
-      ? 'Эксклюзивные материалы о брендах, мастерстве и культуре роскоши'
-      : lang === 'en'
-      ? 'Exclusive features on brands, craftsmanship and the culture of luxury'
-      : 'Brendlər, ustalıq və lüks mədəniyyəti haqqında eksklüziv materiallar';
-  const readMore = lang === 'ru' ? 'Читать' : lang === 'en' ? 'Read more' : 'Oxu';
-  const viewAll = lang === 'ru' ? 'Все статьи' : lang === 'en' ? 'All stories' : 'Bütün yazılar';
-
-  const [featured, ...rest] = posts;
-
-  // Framer Motion variants — fade-up
-  const fadeUp: any = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } },
-  };
-  const stagger: any = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
-  };
+  const title =
+    lang === 'ru' ? 'Новости и истории' : lang === 'en' ? 'News & Stories' : 'Xəbərlər və hekayələr';
+  const viewAll = lang === 'ru' ? 'Все статьи' : lang === 'en' ? 'See all articles' : 'Hamısına bax';
+  const defaultCategory = lang === 'ru' ? 'Истории' : lang === 'en' ? 'Stories' : 'Hekayələr';
 
   return (
-    <section className="relative bg-white py-16 md:py-28" data-testid="dv-home-blog">
+    <section className="relative bg-white py-16 md:py-24" data-testid="dv-home-blog">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        {/* === Header (HƏMİŞƏ GÖRÜNÜR — animasiya yalnız mount-da) === */}
+        {/* Header */}
         <motion.div
-          className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10 md:mb-16"
+          className="flex items-end justify-between gap-6 mb-10 md:mb-14"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10%' }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div>
-            <div className="flex items-center gap-3 mb-3 md:mb-5">
-              <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
-              <p className="text-[10px] md:text-[11px] tracking-[0.32em] uppercase text-[#C9A961] font-medium">
-                {surtitle}
-              </p>
-            </div>
-            <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight max-w-3xl">
-              {sectionTitle}
-            </h2>
-            <p className="mt-3 md:mt-5 text-xs sm:text-sm md:text-base text-black/55 max-w-xl leading-relaxed">
-              {sectionSubtitle}
-            </p>
-          </div>
+          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight">
+            {title}
+          </h2>
 
           <Link
             to="/blog"
-            className="hidden md:inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap"
-            data-testid="home-blog-view-all-desktop"
+            className="inline-flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2"
+            data-testid="home-blog-view-all"
           >
-            <span className="relative pb-1">
+            <span className="relative pb-1 hidden sm:inline">
               {viewAll}
               <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-black/70" />
             </span>
@@ -139,135 +99,73 @@ const HomeBlogSection: React.FC = () => {
           </Link>
         </motion.div>
 
-        {/* === Loading skeleton === */}
+        {/* Loading skeleton */}
         {loading && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12" data-testid="home-blog-loading">
-            <div className="lg:col-span-7">
-              <div className="aspect-[4/3] md:aspect-[16/11] w-full bg-black/[0.04] animate-pulse" />
-              <div className="mt-5 h-3 w-32 bg-black/[0.06] animate-pulse" />
-              <div className="mt-3 h-8 w-3/4 bg-black/[0.06] animate-pulse" />
-              <div className="mt-3 h-4 w-2/3 bg-black/[0.06] animate-pulse" />
-            </div>
-            <div className="lg:col-span-5 flex flex-col gap-8">
-              {[0, 1].map((i) => (
-                <div key={i} className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-[45%] aspect-[4/3] shrink-0 bg-black/[0.04] animate-pulse" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-3 w-20 bg-black/[0.06] animate-pulse" />
-                    <div className="h-5 w-full bg-black/[0.06] animate-pulse" />
-                    <div className="h-5 w-2/3 bg-black/[0.06] animate-pulse" />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8" data-testid="home-blog-loading">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i}>
+                <div className="aspect-[5/4] w-full bg-black/[0.04] animate-pulse" />
+                <div className="mt-4 h-3 w-20 bg-black/[0.06] animate-pulse" />
+                <div className="mt-3 h-5 w-full bg-black/[0.06] animate-pulse" />
+                <div className="mt-2 h-4 w-2/3 bg-black/[0.06] animate-pulse" />
+              </div>
+            ))}
           </div>
         )}
 
-        {/* === Editorial 2-column grid: 1 large feature + 2 stack === */}
-        {!loading && featured && (
+        {/* 4-up grid */}
+        {!loading && posts.length > 0 && (
           <motion.div
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-10%' }}
-            variants={stagger}
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+            }}
+            data-testid="home-blog-grid"
           >
-            {/* FEATURED */}
-            <motion.div className="lg:col-span-7" variants={fadeUp} data-testid="home-blog-featured">
-              <Link to={`/blog/${featured.id}`} className="group block">
-                <div className="relative aspect-[4/3] md:aspect-[16/11] overflow-hidden bg-[#F5F5F5]">
-                  {featured.image && (
-                    <img
-                      src={featured.image}
-                      alt={getText(featured.title)}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.06]"
-                    />
-                  )}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent pointer-events-none"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="pt-5 md:pt-7">
-                  <p className="text-[10px] md:text-[11px] uppercase tracking-[0.28em] text-[#C9A961] font-medium">
-                    {fmtDate(featured.createdAt)}
-                  </p>
-                  <h3 className="mt-3 md:mt-4 font-playfair text-xl sm:text-2xl md:text-[32px] lg:text-[36px] font-light text-black leading-[1.1] tracking-tight">
-                    {getText(featured.title)}
-                  </h3>
-                  <p className="mt-3 md:mt-4 text-sm md:text-base text-black/60 leading-relaxed line-clamp-2 max-w-2xl">
-                    {truncate(stripHtml(getText(featured.content)), 200)}
-                  </p>
-                  <span className="mt-4 md:mt-5 inline-flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.28em] font-semibold text-black">
-                    <span className="relative pb-1">
-                      {readMore}
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 bottom-0 h-px w-full bg-black/70"
+            {posts.map((post, idx) => (
+              <motion.article
+                key={post.id}
+                data-testid={`home-blog-card-${idx}`}
+                variants={{
+                  hidden: { opacity: 0, y: 28 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+                  },
+                }}
+              >
+                <Link to={`/blog/${post.id}`} className="group block">
+                  <div className="relative aspect-[5/4] overflow-hidden bg-[#F5F5F5]">
+                    {post.image && (
+                      <img
+                        src={post.image}
+                        alt={getText(post.title)}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
                       />
-                    </span>
-                    <ArrowRight
-                      className="w-3.5 h-3.5 transition-transform duration-500 group-hover:translate-x-1.5"
-                      strokeWidth={1.6}
-                    />
-                  </span>
-                </div>
-              </Link>
-            </motion.div>
-
-            {/* SIDE STACK */}
-            <div className="lg:col-span-5 flex flex-col gap-8 md:gap-10" data-testid="home-blog-side">
-              {rest.map((post, idx) => (
-                <motion.div
-                  key={post.id}
-                  variants={fadeUp}
-                  data-testid={`home-blog-side-${idx}`}
-                >
-                  <Link to={`/blog/${post.id}`} className="group flex flex-col sm:flex-row gap-4 md:gap-6">
-                    <div className="relative w-full sm:w-[45%] aspect-[4/3] overflow-hidden bg-[#F5F5F5] shrink-0">
-                      {post.image && (
-                        <img
-                          src={post.image}
-                          alt={getText(post.title)}
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.07]"
-                        />
-                      )}
-                    </div>
-                    <div className="flex-1 flex flex-col justify-center">
-                      <p className="text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[#C9A961] font-medium">
-                        {fmtDate(post.createdAt)}
-                      </p>
-                      <h4 className="mt-2 md:mt-3 font-playfair text-base sm:text-lg md:text-[22px] font-light text-black leading-[1.15] tracking-tight line-clamp-3 group-hover:text-black/85 transition-colors">
-                        {getText(post.title)}
-                      </h4>
-                      <span className="mt-2 md:mt-3 inline-flex items-center gap-1.5 text-[9px] md:text-[10px] uppercase tracking-[0.28em] font-semibold text-black/70 group-hover:text-black">
-                        {readMore}
-                        <ArrowRight
-                          className="w-3 h-3 transition-transform duration-500 group-hover:translate-x-1"
-                          strokeWidth={1.6}
-                        />
-                      </span>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+                    )}
+                  </div>
+                  <div className="pt-4 md:pt-5">
+                    <p className="text-[10px] md:text-[11px] uppercase tracking-[0.24em] text-[#C9A961] font-medium">
+                      {getText(post.category) || defaultCategory}
+                    </p>
+                    <h3 className="mt-2 md:mt-3 font-playfair text-base md:text-[20px] font-light text-black leading-[1.2] tracking-tight line-clamp-2 group-hover:text-black/85 transition-colors">
+                      {getText(post.title)}
+                    </h3>
+                    <p className="mt-2 md:mt-3 text-xs md:text-[13px] text-black/55 leading-relaxed line-clamp-2">
+                      {truncate(stripHtml(getText(post.content)), 110)}
+                    </p>
+                  </div>
+                </Link>
+              </motion.article>
+            ))}
           </motion.div>
         )}
-
-        {/* Mobile View all */}
-        <div className="mt-10 md:hidden flex justify-center">
-          <Link
-            to="/blog"
-            className="inline-flex items-center gap-2 px-7 py-3 border border-black text-black text-[11px] uppercase tracking-[0.28em] font-medium hover:bg-black hover:text-white transition-colors duration-500"
-            data-testid="home-blog-view-all-mobile"
-          >
-            <span>{viewAll}</span>
-            <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.6} />
-          </Link>
-        </div>
       </div>
     </section>
   );

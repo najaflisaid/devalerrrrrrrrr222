@@ -8,12 +8,12 @@ import { Product } from '../types';
 import ProductCarousel from './ProductCarousel';
 
 /**
- * BestSellersSection — Omega "Best Sellers" tipli horizontal məhsul carousel-i.
- *  - Üstdə incə editorial başlıq
- *  - Sağda "Hamısı" CTA (Omega-da prev/next + view all)
- *  - Aşağıda ProductCarousel (snap-x scroll + ox düymələri)
+ * RedCarpetSection — Omega "Red Carpet Ready" tipli ikinci tematik məhsul carousel-i.
+ *  - Lüks / yüksək qiymətli məhsullardan seçim göstərir
+ *  - Üstdə minimal başlıq, alt yazı yox (Omega kimi)
+ *  - Cream/işıqlı arxa fon
  */
-const BestSellersSection: React.FC = () => {
+const RedCarpetSection: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,15 +22,12 @@ const BestSellersSection: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await productService.getBestSellers(12);
-        if (data && data.length > 0) {
-          setProducts(data);
-        } else {
-          const all = await productService.getAll();
-          setProducts(all.slice(0, 12));
-        }
+        const all = await productService.getAll();
+        // Lüks seçim: ən yüksək qiymətli 12 məhsul (qızılı/lüks hissi)
+        const sorted = [...all].sort((a, b) => (b.price || 0) - (a.price || 0));
+        setProducts(sorted.slice(0, 12));
       } catch (e) {
-        console.error('Error loading best sellers:', e);
+        console.error('Error loading red carpet products:', e);
       } finally {
         setLoading(false);
       }
@@ -40,12 +37,12 @@ const BestSellersSection: React.FC = () => {
   if (loading || products.length === 0) return null;
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  const surtitle = lang === 'ru' ? 'БЕСТСЕЛЛЕРЫ' : 'BEST SELLERS';
-  const title = lang === 'ru' ? 'Лучшие выборы' : lang === 'en' ? 'Best sellers' : 'Ən çox seçilənlər';
+  const surtitle = lang === 'ru' ? 'ВЫБОР РЕДАКЦИИ' : lang === 'en' ? "EDITOR'S PICK" : 'REDAKSİYANIN SEÇİMİ';
+  const title = lang === 'ru' ? 'Готовы к красной дорожке' : lang === 'en' ? 'Red carpet ready' : 'Qırmızı xalçaya hazır';
   const viewAll = lang === 'ru' ? 'Все' : lang === 'en' ? 'View all' : 'Hamısı';
 
   return (
-    <section className="relative bg-[#FAF9F7] py-16 md:py-24" data-testid="dv-bestsellers">
+    <section className="relative bg-white py-16 md:py-24" data-testid="dv-red-carpet">
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         <motion.div
           className="flex items-end justify-between gap-6 mb-8 md:mb-12"
@@ -57,10 +54,7 @@ const BestSellersSection: React.FC = () => {
           <div>
             <div className="flex items-center gap-3 mb-3 md:mb-4">
               <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
-              <p
-                className="text-[10px] md:text-[11px] tracking-[0.32em] uppercase text-[#C9A961] font-medium"
-                data-testid="bestsellers-eyebrow"
-              >
+              <p className="text-[10px] md:text-[11px] tracking-[0.32em] uppercase text-[#C9A961] font-medium">
                 {surtitle}
               </p>
             </div>
@@ -71,25 +65,22 @@ const BestSellersSection: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate('/products?sort=bestsellers')}
+            onClick={() => navigate('/products')}
             className="hidden md:inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2"
-            data-testid="bestsellers-view-all-btn"
+            data-testid="redcarpet-view-all"
           >
             <span className="relative pb-1">
               {viewAll}
               <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-black/70" />
             </span>
-            <ArrowRight
-              className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1.5"
-              strokeWidth={1.6}
-            />
+            <ArrowRight className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1.5" strokeWidth={1.6} />
           </button>
         </motion.div>
 
-        <ProductCarousel products={products} testIdPrefix="bestsellers" />
+        <ProductCarousel products={products} testIdPrefix="redcarpet" />
       </div>
     </section>
   );
 };
 
-export default BestSellersSection;
+export default RedCarpetSection;

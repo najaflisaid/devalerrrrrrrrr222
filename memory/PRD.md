@@ -107,6 +107,63 @@ kimi yuxari gelsinler."
 Validation: Manual playwright screenshot — kiçik wheel(50px) scroll → 756px-ə
 auto-snap; geri scroll(25px) → 0-a auto-snap. Console error yox.
 
+## Bu sessiya (Omega-style ana səhifə redesign)
+
+Problem statement: "ana sehife eyni https://www.omegawatches.com/ bunun kimi olsun".
+
+### App.tsx — HomePage axını dəyişdirildi (rising panel silindi)
+File: `/app/src/App.tsx`
+Yeni axın:
+1. Hero (stacked two-line title)
+2. CollectionTiles
+3. BestSellersSection (horizontal carousel)
+4. **HeroSecondary** (NEW) — ikinci kolleksiya banneri
+5. **RedCarpetSection** (NEW) — "Qırmızı xalçaya hazır" ikinci tematik carousel
+6. **AmbassadorSection** (NEW) — split editorial + mini product carousel
+7. FeaturedStorySection
+8. **GiftFinderSection** (NEW) — mərkəzi dairəvi kart + Gift ikon
+9. BrandShowcase, HomeProductBanners
+10. HomeBlogSection (yenidən yazıldı: 4-lü minimal grid)
+11. NewsTiles, CategoryBanner
+
+`HeroRisingPanel` (auto-snap rising effekti) artıq import olunmur — Omega kimi
+adi yumşaq scroll. Fayl saxlanılıb, lakin istifadə olunmur.
+
+### Yeni komponentlər
+- `/app/src/components/ProductCarousel.tsx` — generic horizontal məhsul carousel
+  (snap-x scroll-snap + prev/next ox düymələri + lazy image hover-swap).
+- `/app/src/components/HeroSecondary.tsx` — Omega "Constellation | Observatory"
+  tipli ikinci hero; admin home banner-lərinin indeksi >= 1 olanları istifadə edir.
+- `/app/src/components/RedCarpetSection.tsx` — ikinci tematik məhsul carousel
+  (top-price məhsullar, ProductCarousel istifadə edir).
+- `/app/src/components/AmbassadorSection.tsx` — sol şəkil + sağ editorial + 6
+  məhsul mini-carousel; cream `#F4ECE0` arxa fon.
+- `/app/src/components/GiftFinderSection.tsx` — mərkəzi card, dairəvi animasiyalı
+  gold rings + Gift Lucide icon + ambient gradient orb.
+
+### Yenidən yazılmış komponentlər
+- `BestSellersSection.tsx` — grid-dən horizontal carousel-ə keçirildi
+  (ProductCarousel istifadə edir, sağda "Hamısı" CTA).
+- `HomeBlogSection.tsx` — Omega "News & Stories" tipli 4-lü minimal grid; hər
+  kart: kvadrat şəkil + kateqoriya etiketi (#C9A961) + Playfair başlıq +
+  qısa təsvir. Mobil 1 sütun, planşet 2, desktop 4.
+- `Hero.tsx` — başlıq stacked two-line layout-a (Omega "seamaster | planet ocean"
+  tipli) keçirildi: title `|` və ya `/` ilə bölünür → 1-ci sətr italic ortadan
+  böyük, 2-ci sətr daha böyük standart Playfair.
+
+### CSS
+- `dv-spin-slow` keyframe əlavə olundu (GiftFinderSection dairəvi animasiya);
+  `prefers-reduced-motion` deaktiv edir.
+
+### Validation
+- 8 əsas bölmə DOM-da görünür və düzgün pozisiyalarda (test ID-lər ilə yoxlandı):
+  dv-hero @ 0, dv-bestsellers @ 1792, dv-hero-secondary @ 2576,
+  dv-red-carpet @ 3496, dv-ambassador @ 4279, dv-featured-story @ 5208,
+  dv-gift-finder @ 5928, dv-home-blog @ 7328. Total page height: 9556px.
+- Screenshot-da bütün bölmələr Omega-stil təsdiqləndi.
+- Firestore connection bir dəfə xəbərdarlıq verir (network), data offline cache
+  vasitəsi ilə uğurla yüklənir.
+
 ## Backlog (P1 / P2)
 - [ ] FeaturedStorySection-u admin-managed et (image + title + body + CTA Firestore-dan).
 - [ ] Best Sellers altında "Just sold" social-proof ticker.

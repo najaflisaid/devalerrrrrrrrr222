@@ -52,6 +52,15 @@
   }
 }
 
+/* Slow continuous rotation — used by GiftFinderSection circular illustration */
+@keyframes dv-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="dv-spin-slow"] { animation: none !important; }
+}
+
 
 
 /* === Transparent header (hero üzərində ağ ikonlar + mətn) === */

@@ -4,16 +4,19 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import BrandSlider from './components/BrandSlider';
 import Hero from './components/Hero';
+import HeroSecondary from './components/HeroSecondary';
 import Features from './components/Features';
 import CategoryBanner from './components/CategoryBanner';
 import HomeProductBanners from './components/HomeProductBanners';
 import BestSellersSection from './components/BestSellersSection';
+import RedCarpetSection from './components/RedCarpetSection';
+import AmbassadorSection from './components/AmbassadorSection';
+import GiftFinderSection from './components/GiftFinderSection';
 import BrandShowcase from './components/BrandShowcase';
 import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
 import HomeBlogSection from './components/HomeBlogSection';
 import FeaturedStorySection from './components/FeaturedStorySection';
-import HeroRisingPanel from './components/HeroRisingPanel';
 import RevealOnScroll from './components/RevealOnScroll';
 import AdminPanel from './components/admin/AdminPanel';
 import AdminLogin from './components/auth/AdminLogin';
@@ -60,38 +63,49 @@ import './i18n';
 const HomePage: React.FC = () => {
   return (
     <>
-      {/* 1) Hero — full-bleed banner / video */}
+      {/* 1) Hero #1 — full-bleed banner / video (Omega tipli stacked title) */}
       <Hero />
 
-      {/* 2-3) Rising panel — bir az scroll edən kimi Hero üzərinə yumşaq yüksələn qapaq:
-          CollectionTiles (SAATLAR/DƏRİ MƏHSULLAR/AKSESUARLAR/QƏLƏMLƏR) + Best Sellers */}
-      <HeroRisingPanel>
-        <CollectionTiles />
-        <BestSellersSection />
-      </HeroRisingPanel>
+      {/* 2) Collection tiles — kateqoriyalar */}
+      <CollectionTiles />
 
-      {/* 4) Featured Story — Omega/Cartier tipli half-half editorial split */}
+      {/* 3) Best Sellers — Omega tipli horizontal carousel */}
+      <BestSellersSection />
+
+      {/* 4) Hero #2 — ikinci kolleksiya banneri (admin tərəfindən idarə olunan) */}
+      <HeroSecondary />
+
+      {/* 5) Red Carpet Ready — ikinci tematik məhsul carousel */}
+      <RedCarpetSection />
+
+      {/* 6) Ambassador editorial — split layout + mini product carousel */}
+      <AmbassadorSection />
+
+      {/* 7) Featured Story — half-half editorial split */}
       <FeaturedStorySection />
 
-      {/* 5) Brand showcase — premium brendlər */}
+      {/* 8) Gift Finder — mərkəzi dairəvi kart */}
+      <GiftFinderSection />
+
+      {/* 9) Brand showcase */}
       <RevealOnScroll variant="up">
         <BrandShowcase />
       </RevealOnScroll>
 
-      {/* 6) Product banners (Signature Selection) */}
+      {/* 10) Product banners (Signature Selection) */}
       <RevealOnScroll variant="up">
         <HomeProductBanners />
       </RevealOnScroll>
 
-      {/* 7) Journal — ana səhifədə blog yazıları */}
+      {/* 11) News & Stories — Omega tipli 4-lü minimal grid */}
       <HomeBlogSection />
 
-      {/* 8) News tiles — admin-managed elanlar / yeniliklər */}
+      {/* 12) News tiles — admin-managed elanlar */}
       <RevealOnScroll variant="up">
         <NewsTiles />
       </RevealOnScroll>
 
-      {/* 9) Category banner — kateqoriya çağırışı */}
+      {/* 13) Category banner — kateqoriya çağırışı */}
       <RevealOnScroll variant="up">
         <CategoryBanner />
       </RevealOnScroll>

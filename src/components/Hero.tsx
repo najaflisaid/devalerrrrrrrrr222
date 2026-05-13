@@ -162,13 +162,30 @@ const Hero: React.FC = () => {
               </motion.p>
             )}
             <motion.h1
-              className="font-playfair text-[34px] sm:text-[48px] md:text-[68px] lg:text-[84px] font-light leading-[0.96] tracking-tight"
+              className="font-playfair font-light leading-[0.92] tracking-tight"
               style={{ textShadow: '0 2px 32px rgba(0,0,0,0.35)' }}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
             >
-              {current?.title || ''}
+              {(() => {
+                const t = current?.title || '';
+                const parts = t.split(/\s*[|/]\s*/);
+                const l1 = parts[0] || '';
+                const l2 = parts.slice(1).join(' ');
+                return (
+                  <>
+                    <span className="block text-[28px] sm:text-[40px] md:text-[56px] lg:text-[68px] italic text-white/85">
+                      {l1}
+                    </span>
+                    {l2 && (
+                      <span className="block text-[38px] sm:text-[52px] md:text-[78px] lg:text-[96px] mt-1 md:mt-2">
+                        {l2}
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </motion.h1>
 
             <motion.button
