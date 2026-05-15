@@ -325,7 +325,6 @@ const SECTION_LABELS: Record<string, string> = {
   ambassador: 'Ambassador editorial',
   featuredStory: 'Featured Story (editorial split)',
   giftFinder: 'Hədiyyə tapıcı kartı',
-  brandShowcase: 'Brand Showcase',
   homeProductBanners: 'Home Product Banners',
   homeBlogSection: 'News & Stories (blog grid)',
   newsTiles: 'News Tiles',
@@ -335,7 +334,12 @@ const SECTION_LABELS: Record<string, string> = {
 const SectionOrderList: React.FC<{
   order: string[];
   onChange: (o: string[]) => void;
-}> = ({ order, onChange }) => {
+}> = ({ order: rawOrder, onChange: setOrder }) => {
+  // brandShowcase bölməsi silinib — order siyahısından da çıxarılır
+  const order = rawOrder.filter((k) => k !== 'brandShowcase');
+  const onChange = (next: string[]) => {
+    setOrder(next.filter((k) => k !== 'brandShowcase'));
+  };
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= order.length) return;
@@ -391,7 +395,6 @@ const HomeSectionsTab: React.FC = () => {
   const [status, setStatus] = useState<string>('');
   type SubTab =
     | 'order'
-    | 'brandShowcase'
     | 'collectionTiles'
     | 'newsTiles'
     | 'featuredStory'
@@ -402,7 +405,6 @@ const HomeSectionsTab: React.FC = () => {
 
   const SUB_TABS: { id: SubTab; label: string }[] = [
     { id: 'order', label: 'Bölmə sırası' },
-    { id: 'brandShowcase', label: 'Brendlər vitrinı' },
     { id: 'collectionTiles', label: 'Kateqoriya kartları' },
     { id: 'newsTiles', label: 'Yeniliklər (News)' },
     { id: 'featuredStory', label: 'Featured Story' },
@@ -503,8 +505,8 @@ const HomeSectionsTab: React.FC = () => {
         ))}
       </div>
 
-      {/* --- Brand Showcase --- */}
-      {activeSub === 'brandShowcase' && (
+      {/* --- Brand Showcase (silindi) --- */}
+      {false && (
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5" data-testid="home-sections-brand-showcase">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div>

@@ -479,7 +479,6 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     'ambassador',
     'featuredStory',
     'giftFinder',
-    'brandShowcase',
     'homeProductBanners',
     'homeBlogSection',
     'newsTiles',
