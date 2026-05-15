@@ -100,7 +100,7 @@ const GiftFinderSection: React.FC = () => {
           <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
         </div>
 
-        <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] font-light text-black leading-[1.05] tracking-tight">
+        <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] font-light text-black leading-[1.05] tracking-tight whitespace-pre-line">
           {title}
         </h2>
 

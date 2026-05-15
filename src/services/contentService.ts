@@ -447,18 +447,18 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
   },
   giftFinder: {
     enabled: true,
-    eyebrow: { az: 'HƏDİYYƏ TAPICI', ru: 'ПОДБОР ПОДАРКА', en: 'GIFT FINDER' },
+    eyebrow: { az: 'HƏDİYYƏ KARTI', ru: 'ПОДАРОЧНАЯ КАРТА', en: 'GIFT CARD' },
     title: {
-      az: 'Mükəmməl hədiyyəni tapın',
-      ru: 'Найдите идеальный подарок',
-      en: 'Find the perfect gift',
+      az: 'Sevdiklərinizə\nhədiyyə edin',
+      ru: 'Подарите близким\nнезабываемый момент',
+      en: 'Give a memorable\ngift',
     },
     body: {
-      az: 'Kimə və niyə hədiyyə axtardığınızı bilirsinizsə, bir neçə kliklə ideal hədiyyəni tapmaqda kömək edəcəyik.',
-      ru: 'Если вы знаете, для кого и зачем — наш помощник подберёт идеальный подарок за несколько кликов.',
-      en: "If you know who you're buying for and why, our Gift Finder will help you find the perfect present in just a few clicks.",
+      az: 'Doğru anı seçmək çətindir, lakin doğru hədiyyəni vermək asandır. De Valeur hədiyyə kartı ilə sevdiyiniz insana seçim azadlığı bəxş edin — istənilən məbləğdə, istənilən kolleksiyaya keçərlidir.',
+      ru: 'Выбрать момент сложно — подарить идеальный подарок просто. Подарочная карта De Valeur даёт свободу выбора: любая сумма, действует на всю коллекцию.',
+      en: 'Choosing the moment is hard — giving the perfect gift is easy. A De Valeur gift card offers freedom of choice: any amount, valid across the entire collection.',
     },
-    ctaLabel: { az: 'Hədiyyəni tap', ru: 'Подобрать подарок', en: 'Find your gift' },
+    ctaLabel: { az: 'Hədiyyə et', ru: 'Подарить', en: 'Send a gift' },
     ctaLink: '/gift-cards',
   },
   redCarpet: {

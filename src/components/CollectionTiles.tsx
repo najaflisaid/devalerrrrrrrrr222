@@ -62,11 +62,11 @@ const CollectionTiles: React.FC = () => {
     lang === 'ru' ? 'НАШИ КОЛЛЕКЦИИ' : lang === 'en' ? 'OUR COLLECTIONS' : 'KOLLEKSİYALARIMIZ';
   const heading =
     lang === 'ru' ? 'Категории' : lang === 'en' ? 'Categories' : 'Kateqoriyalar';
-  const discoverCta = lang === 'ru' ? 'Открыть' : lang === 'en' ? 'Discover' : 'Kəşf et';
+  const discoverCta = lang === 'ru' ? 'Перейти' : lang === 'en' ? 'Go' : 'Keçid et';
 
   return (
     <section
-      className="relative bg-white pt-16 md:pt-24 pb-16 md:pb-24"
+      className="relative bg-white pt-16 md:pt-24 pb-0"
       data-testid="dv-collection-tiles"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
@@ -164,12 +164,6 @@ const CollectionTiles: React.FC = () => {
 
                   {/* Bottom editorial caption */}
                   <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7 text-white">
-                    {/* Gold accent line that grows on hover */}
-                    <span
-                      aria-hidden="true"
-                      className="block h-px w-8 bg-[#C9A961] mb-4 origin-left transition-transform duration-700 ease-out group-hover:scale-x-[2.5]"
-                    />
-
                     <h3
                       className="font-playfair text-[22px] sm:text-[24px] lg:text-[28px] font-light leading-[1.1] tracking-tight"
                       style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}
@@ -250,10 +244,6 @@ const CollectionTiles: React.FC = () => {
                     className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none"
                   />
                   <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                    <span
-                      aria-hidden="true"
-                      className="block h-px w-7 bg-[#C9A961] mb-3"
-                    />
                     <h3
                       className="font-playfair text-xl font-light leading-tight"
                       style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}

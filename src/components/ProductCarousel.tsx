@@ -31,7 +31,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
   const [canNext, setCanNext] = useState(true);
 
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
-  const detailsLabel = lang === 'ru' ? 'Подробнее' : lang === 'en' ? 'Details' : 'Detallar';
+  const detailsLabel = lang === 'ru' ? 'Посмотреть' : lang === 'en' ? 'View' : 'Bax';
 
   const getName = (p: Product): string => {
     if (typeof p.name === 'string') return p.name as unknown as string;
@@ -116,7 +116,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
             >
               <Link
                 to={`/product/${product.id}`}
-                className="group block bg-white"
+                className="group block bg-white rounded-sm transition-shadow duration-500 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.35)]"
               >
                 {/* Image canvas */}
                 <div className="relative aspect-square w-full overflow-hidden bg-[#FAFAFA]">
@@ -152,16 +152,16 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                 </div>
 
                 {/* Meta */}
-                <div className="pt-4 md:pt-5 px-1">
+                <div className="pt-3 md:pt-3.5 px-2 pb-3">
                   {brand && (
                     <p className="text-[10px] md:text-[11px] tracking-[0.18em] uppercase text-black font-semibold">
                       {brand}
                     </p>
                   )}
-                  <h3 className="mt-1.5 text-[12px] md:text-[13.5px] font-light text-black/65 leading-snug line-clamp-2 min-h-[2.6em]">
+                  <h3 className="mt-0.5 text-[12px] md:text-[13.5px] font-light text-black/65 leading-snug line-clamp-2 min-h-[2.6em]">
                     {name}
                   </h3>
-                  <div className="mt-2 flex items-baseline gap-2 tabular-nums">
+                  <div className="mt-0.5 flex items-baseline gap-2 tabular-nums">
                     {onSale ? (
                       <>
                         <span className="text-[13px] md:text-[15px] font-medium text-[#C9A961]">
@@ -177,8 +177,8 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       </span>
                     )}
                   </div>
-                  <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black">
-                    <span className="relative pb-1">
+                  <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black">
+                    <span className="relative pb-0.5">
                       {detailsLabel}
                       <span
                         aria-hidden="true"

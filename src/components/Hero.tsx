@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBanners, Banner } from '../services/bannerService';
@@ -188,27 +188,29 @@ const Hero: React.FC = () => {
               })()}
             </motion.h1>
 
-            <motion.button
-              type="button"
-              onClick={() => handleLink(current?.link)}
-              className="mt-7 md:mt-10 group/btn inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-white"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
-              data-testid="dv-hero-cta"
-            >
-              <span className="relative pb-1.5">
-                {current?.buttonText || (lang === 'ru' ? 'Открыть коллекцию' : lang === 'en' ? 'Discover the collection' : 'Kolleksiyaya bax')}
-                <span
-                  aria-hidden="true"
-                  className="absolute left-0 bottom-0 h-px w-full bg-white origin-left transition-transform duration-500"
+            {current?.buttonText && (
+              <motion.button
+                type="button"
+                onClick={() => handleLink(current?.link)}
+                className="mt-7 md:mt-10 group/btn inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-white"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
+                data-testid="dv-hero-cta"
+              >
+                <span className="relative pb-1.5">
+                  {current.buttonText}
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 bottom-0 h-px w-full bg-white origin-left transition-transform duration-500"
+                  />
+                </span>
+                <ArrowRight
+                  className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover/btn:translate-x-1.5"
+                  strokeWidth={1.4}
                 />
-              </span>
-              <ArrowRight
-                className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover/btn:translate-x-1.5"
-                strokeWidth={1.4}
-              />
-            </motion.button>
+              </motion.button>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -234,114 +236,6 @@ const Hero: React.FC = () => {
           </button>
         </>
       )}
-
-      {/* === Slide counter & progress (Editorial, Omega-tipli rafine versiya) === */}
-      {slides.length > 1 && (
-        <div
-          className="absolute bottom-8 md:bottom-14 right-5 md:right-12 z-20 flex flex-col items-end gap-3 md:gap-4 select-none"
-          data-testid="dv-hero-counter"
-        >
-          {/* Big current number + total */}
-          <div className="flex items-baseline gap-2">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={`num-${currentSlide}`}
-                className="font-playfair italic text-white leading-none tabular-nums text-[42px] sm:text-[52px] md:text-[64px]"
-                style={{ textShadow: '0 2px 18px rgba(0,0,0,0.45)' }}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {String(currentSlide + 1).padStart(2, '0')}
-              </motion.span>
-            </AnimatePresence>
-            <span className="text-white/45 text-[10px] md:text-[11px] tracking-[0.32em] font-light tabular-nums uppercase">
-              / {String(slides.length).padStart(2, '0')}
-            </span>
-          </div>
-
-          {/* Auto-cycle progress bar (resets per slide) */}
-          <div
-            className="relative w-[120px] md:w-[180px] h-px bg-white/15 overflow-hidden"
-            aria-hidden="true"
-          >
-            <motion.span
-              key={`pb-${currentSlide}`}
-              className="absolute inset-y-0 left-0"
-              style={{ background: 'linear-gradient(to right, #C9A961, #E8D08F)' }}
-              initial={{ width: '0%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: current?.duration || 6, ease: 'linear' }}
-            />
-          </div>
-
-          {/* Clickable dot pagination */}
-          <div className="flex items-center gap-2.5">
-            {slides.map((_: any, index: number) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className="group/dot flex items-center justify-center w-4 h-4"
-                aria-label={`Go to slide ${index + 1}`}
-                data-testid={`dv-hero-indicator-${index}`}
-              >
-                <span
-                  className="block rounded-full transition-all duration-500 group-hover/dot:scale-125"
-                  style={{
-                    width: index === currentSlide ? 8 : 4,
-                    height: index === currentSlide ? 8 : 4,
-                    backgroundColor:
-                      index === currentSlide ? '#D4AF37' : 'rgba(255,255,255,0.4)',
-                    boxShadow:
-                      index === currentSlide
-                        ? '0 0 0 4px rgba(212,175,55,0.18)'
-                        : 'none',
-                  }}
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* === Scroll hint — refined editorial mouse-wheel indicator === */}
-      <motion.button
-        type="button"
-        onClick={() => {
-          const h = window.innerHeight || 800;
-          window.scrollTo({ top: Math.round(h * 0.86), behavior: 'smooth' });
-        }}
-        className="group/scroll absolute bottom-6 md:bottom-12 left-1/2 -translate-x-1/2 z-20 hidden sm:flex flex-col items-center text-white/75 hover:text-white transition-colors"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.6, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-        aria-label={lang === 'ru' ? 'Прокрутка вниз' : lang === 'en' ? 'Scroll down' : 'Aşağı sürüşdür'}
-        data-testid="dv-hero-scroll-hint"
-      >
-        <span className="text-[9px] md:text-[10px] uppercase tracking-[0.42em] mb-3 md:mb-4 font-light text-white/80">
-          {lang === 'ru' ? 'Прокрутка' : lang === 'en' ? 'Scroll' : 'Aşağı'}
-        </span>
-
-        {/* Vertical track with animated gold dot (mouse-wheel hint) */}
-        <span
-          className="relative block w-px h-10 md:h-12 overflow-hidden"
-          aria-hidden="true"
-          style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(255,255,255,0.35), rgba(255,255,255,0.05))' }}
-        >
-          <motion.span
-            className="absolute left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-[#D4AF37]"
-            style={{ boxShadow: '0 0 8px rgba(212,175,55,0.6)' }}
-            animate={{ y: [-2, 44, -2], opacity: [0, 1, 0] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        </span>
-
-        <ChevronDown
-          className="w-3.5 h-3.5 md:w-4 md:h-4 mt-2 md:mt-2.5 transition-transform duration-500 group-hover/scroll:translate-y-1"
-          strokeWidth={1.1}
-        />
-      </motion.button>
     </section>
   );
 };
