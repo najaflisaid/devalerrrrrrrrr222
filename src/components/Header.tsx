@@ -668,7 +668,7 @@ const Header: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-5">
+            <div className={`flex items-center gap-2 sm:gap-3 md:gap-5 ${isMobileMenuOpen ? 'invisible md:visible' : ''}`}>
               {/* Search — FIRST */}
               <button
                 onClick={() => setShowSearch(true)}
@@ -886,10 +886,11 @@ const Header: React.FC = () => {
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <>
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <>
             <div
               className={`fixed inset-0 z-50 bg-black/55 dv-menu-backdrop ${isMobileMenuClosing ? 'is-closing' : ''}`}
               onClick={closeMobileMenu}
@@ -1200,7 +1201,6 @@ const Header: React.FC = () => {
             </div>
           </>
         )}
-      </header>
 
       <CartDrawer open={showCartDrawer} onClose={() => setShowCartDrawer(false)} />
 
