@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
+import { Search, User, ShoppingBag, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -464,7 +464,7 @@ const Header: React.FC = () => {
               aria-label="Menu"
               data-testid="mobile-menu-toggle"
             >
-              <Menu className="h-6 w-6" strokeWidth={1.25} />
+              <Menu className="h-6 w-6" strokeWidth={1} />
             </button>
 
             {/* Logo - Always centered (mobile + desktop) */}
@@ -676,7 +676,7 @@ const Header: React.FC = () => {
                 aria-label="Search"
                 data-testid="header-search-btn"
               >
-                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
+                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1} />
               </button>
 
               {/* Language Hover Dropdown (desktop) — bridge prevents gap-flicker */}
@@ -726,7 +726,7 @@ const Header: React.FC = () => {
                     }}
                     className="relative p-1"
                   >
-                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
+                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1} />
                     {b2bNotifications.length > 0 && !notificationsRead && (
                       <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                         {b2bNotifications.length}
@@ -787,7 +787,7 @@ const Header: React.FC = () => {
                     aria-label="Account"
                     data-testid="header-account-btn"
                   >
-                    <User className="h-5 w-5" strokeWidth={1.25} />
+                    <User className="h-5 w-5" strokeWidth={1} />
                   </button>
                   {showLoginDropdown && (
                     <div className="dv-light-reset absolute left-1/2 -translate-x-1/2 top-full bg-white border border-black/10 shadow-lg min-w-[160px] z-50" data-testid="account-dropdown">
@@ -823,7 +823,7 @@ const Header: React.FC = () => {
                     aria-label="Account"
                     data-testid="header-account-loggedin-btn"
                   >
-                    <User className="h-5 w-5" strokeWidth={1.25} />
+                    <User className="h-5 w-5" strokeWidth={1} />
                     <span className="text-sm text-gray-700 font-normal max-w-[140px] truncate">{userName}</span>
                   </button>
                   {showLoginDropdown && (
@@ -859,7 +859,7 @@ const Header: React.FC = () => {
               )}
 
               <button onClick={() => setShowCartDrawer(true)} className="relative p-1 -m-1" aria-label="Cart" data-testid="header-cart-btn">
-                <ShoppingCart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1.25} />
+                <ShoppingBag className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1} />
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white">
                     {getTotalItems()}
@@ -873,7 +873,7 @@ const Header: React.FC = () => {
                 title="Wishlist"
                 data-testid="header-wishlist-btn"
               >
-                <Heart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" strokeWidth={1.25} />
+                <Heart className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900 transition-colors" strokeWidth={1} />
                 {wishlistCount > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] leading-none rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold ring-2 ring-white"
