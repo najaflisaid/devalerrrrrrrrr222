@@ -51,12 +51,12 @@ const HomeProductBanners: React.FC = () => {
         data-testid="dv-home-banners"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-          {/* Heading — CollectionTiles ilə eyni editorial stil (left-aligned, böyük Playfair) */}
-          <div className="flex flex-col items-start text-left mb-5 md:mb-8 dv-reveal is-in">
+          {/* Heading — digər bölmə başlıqları kimi, ortada */}
+          <div className="flex flex-col items-center text-center mb-5 md:mb-8 dv-reveal is-in">
             <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium mb-2 md:mb-3">
               {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
             </p>
-            <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] lg:text-[64px] font-light text-black leading-[1.0] tracking-tight">
+            <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight">
               {heading}
             </h2>
           </div>

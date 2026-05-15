@@ -71,21 +71,21 @@ const HomeBlogSection: React.FC = () => {
   return (
     <section className="relative bg-white py-16 md:py-24" data-testid="dv-home-blog">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        {/* Header */}
+        {/* Header — desktop-da başlıq ortada, "Hamısına bax" sağda */}
         <motion.div
-          className="flex items-end justify-between gap-6 mb-10 md:mb-14"
+          className="relative flex items-end md:items-center justify-between md:justify-center gap-6 mb-10 md:mb-14"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10%' }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight">
+          <h2 className="font-playfair text-2xl sm:text-3xl md:text-[42px] lg:text-[52px] font-light text-black leading-[1.05] tracking-tight md:text-center">
             {title}
           </h2>
 
           <Link
             to="/blog"
-            className="inline-flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2"
+            className="inline-flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2"
             data-testid="home-blog-view-all"
           >
             <span className="relative pb-1 hidden sm:inline">
