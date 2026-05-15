@@ -389,6 +389,27 @@ const HomeSectionsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string>('');
+  type SubTab =
+    | 'order'
+    | 'brandShowcase'
+    | 'collectionTiles'
+    | 'newsTiles'
+    | 'featuredStory'
+    | 'ambassador'
+    | 'giftFinder'
+    | 'redCarpet';
+  const [activeSub, setActiveSub] = useState<SubTab>('order');
+
+  const SUB_TABS: { id: SubTab; label: string }[] = [
+    { id: 'order', label: 'Bölmə sırası' },
+    { id: 'brandShowcase', label: 'Brendlər vitrinı' },
+    { id: 'collectionTiles', label: 'Kateqoriya kartları' },
+    { id: 'newsTiles', label: 'Yeniliklər (News)' },
+    { id: 'featuredStory', label: 'Featured Story' },
+    { id: 'ambassador', label: 'Ambassador' },
+    { id: 'giftFinder', label: 'Hədiyyə tapıcı' },
+    { id: 'redCarpet', label: 'Red Carpet' },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -463,7 +484,27 @@ const HomeSectionsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* Sub-tab navigation */}
+      <div className="flex flex-wrap gap-2 bg-gray-100 p-1.5 rounded-lg" data-testid="home-sections-subtabs">
+        {SUB_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setActiveSub(t.id)}
+            className={`px-3.5 py-1.5 text-sm rounded-md transition-colors ${
+              activeSub === t.id
+                ? 'bg-black text-white shadow-sm'
+                : 'text-gray-700 hover:bg-white hover:text-black'
+            }`}
+            data-testid={`home-sub-${t.id}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* --- Brand Showcase --- */}
+      {activeSub === 'brandShowcase' && (
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5" data-testid="home-sections-brand-showcase">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div>
@@ -579,8 +620,10 @@ const HomeSectionsTab: React.FC = () => {
         </div>
 
       </div>
+      )}
 
       {/* ==================== Collection Tiles ==================== */}
+      {activeSub === 'collectionTiles' && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5" data-testid="home-sections-collection-tiles">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div>
@@ -898,8 +941,10 @@ const HomeSectionsTab: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* ==================== News Tiles (Yeniliklər) ==================== */}
+      {activeSub === 'newsTiles' && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5" data-testid="home-sections-news-tiles">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div>
@@ -1149,8 +1194,10 @@ const HomeSectionsTab: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* ============ FEATURED STORY ============ */}
+      {activeSub === 'featuredStory' && (
       <SectionEditor
         title="Featured Story (Editorial split)"
         description="Sol şəkil + sağ editorial mətn — admin tərəfindən idarə olunan."
@@ -1241,8 +1288,10 @@ const HomeSectionsTab: React.FC = () => {
           />
         </div>
       </SectionEditor>
+      )}
 
       {/* ============ AMBASSADOR ============ */}
+      {activeSub === 'ambassador' && (
       <SectionEditor
         title="Ambassador (brend siması)"
         description="Editorial split + 6 məhsula qədər mini-carousel."
@@ -1323,8 +1372,10 @@ const HomeSectionsTab: React.FC = () => {
           testidPrefix="ambassador-products"
         />
       </SectionEditor>
+      )}
 
       {/* ============ GIFT FINDER ============ */}
+      {activeSub === 'giftFinder' && (
       <SectionEditor
         title="Hədiyyə tapıcı kartı"
         description="Mərkəzi card: dairəvi illüstrasiya + başlıq + CTA."
@@ -1380,8 +1431,10 @@ const HomeSectionsTab: React.FC = () => {
           />
         </div>
       </SectionEditor>
+      )}
 
       {/* ============ RED CARPET ============ */}
+      {activeSub === 'redCarpet' && (
       <SectionEditor
         title="Red Carpet Ready (ikinci məhsul carousel)"
         description="Tematik məhsul carousel — admin manuel olaraq 8–12 məhsul seçir."
@@ -1416,8 +1469,10 @@ const HomeSectionsTab: React.FC = () => {
           testidPrefix="redcarpet-products"
         />
       </SectionEditor>
+      )}
 
       {/* ============ SECTION ORDER ============ */}
+      {activeSub === 'order' && (
       <div
         className="bg-white border border-gray-200 rounded-xl p-6 space-y-4"
         data-testid="home-sections-order"
@@ -1434,6 +1489,7 @@ const HomeSectionsTab: React.FC = () => {
           onChange={(o) => setData({ ...data, sectionOrder: o })}
         />
       </div>
+      )}
 
       <div className="flex justify-end">
         <button

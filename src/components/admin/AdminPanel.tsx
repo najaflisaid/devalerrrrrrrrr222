@@ -37,7 +37,6 @@ import CampaignsTab from './CampaignsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
-import BestSellersBannerTab from './BestSellersBannerTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
@@ -1373,7 +1372,6 @@ const AdminPanel: React.FC = () => {
       items: [
         { id: 'campaigns', label: 'Endirim Kampaniyaları', icon: Sparkles },
         { id: 'creditCalculator', label: 'Kredit Kalkulyatoru', icon: Percent },
-        { id: 'bestSellersBanner', label: 'Bestseller Banner', icon: ImageIcon },
         { id: 'banners', label: 'Bannerlər', icon: ImageIcon },
         { id: 'productBanners', label: 'Məhsul Bannerləri', icon: ImageIcon },
         { id: 'homeSections', label: 'Ana Səhifə Bölmələri', icon: Edit },
@@ -3312,10 +3310,6 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'creditCalculator' && (
           <CreditCalculatorTab />
-        )}
-
-        {activeTab === 'bestSellersBanner' && (
-          <BestSellersBannerTab />
         )}
 
         {activeTab === 'banners' && (
