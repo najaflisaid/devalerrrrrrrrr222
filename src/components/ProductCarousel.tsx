@@ -41,14 +41,6 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
     return p.name[lang] || p.name.az || p.name.en || '';
   };
 
-  const getDescription = (p: Product): string => {
-    if (!p.description) return '';
-    if (typeof p.description === 'string') return p.description as unknown as string;
-    const raw = p.description[lang] || p.description.az || p.description.en || '';
-    // Yalnız 1 sətirə uyğun qısa hissə (material/növ/rəng kimi) — uzun mətnləri kəs
-    return raw.split('\n')[0].trim();
-  };
-
   const updateButtons = () => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -115,7 +107,6 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
       >
         {products.map((product) => {
           const name = getName(product);
-          const description = getDescription(product);
           const brand = product.brand || '';
           const onSale = !!product.salePrice && product.salePrice < product.price;
           const price = onSale ? product.salePrice! : product.price;
@@ -167,32 +158,32 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
 
                 {/* Meta — minimal (catalog) variant */}
                 {variant === 'minimal' ? (
-                  <div className="pt-4 md:pt-5 px-2 pb-5 text-left">
+                  <div className="dv-card-text pt-3 md:pt-4 px-2 pb-4 text-left leading-tight">
                     {brand && (
-                      <p className="text-[11px] md:text-[12px] tracking-[0.18em] uppercase text-gray-700 font-normal">
+                      <p className="text-[13px] md:text-[15px] tracking-[0.14em] uppercase text-gray-900 font-semibold leading-tight">
                         {brand}
                       </p>
                     )}
-                    <h3 className="mt-1.5 text-[12px] md:text-[13.5px] font-light text-gray-500 leading-snug line-clamp-1">
-                      {name}
-                    </h3>
-                    {description && (
-                      <p className="mt-1 text-[11px] md:text-[12px] font-light text-gray-400 leading-snug line-clamp-1">
-                        {description}
+                    {product.category && (
+                      <p className="mt-0.5 text-[10px] md:text-[11px] tracking-[0.16em] uppercase text-gray-500 font-medium leading-tight">
+                        {product.category}
                       </p>
                     )}
-                    <div className="mt-5 md:mt-6 flex items-baseline gap-2 tabular-nums">
+                    <h3 className="mt-1 text-[12px] md:text-[13px] font-normal text-gray-600 leading-tight line-clamp-1">
+                      {name}
+                    </h3>
+                    <div className="mt-1 flex items-baseline gap-2 tabular-nums">
                       {onSale ? (
                         <>
-                          <span className="text-[15px] md:text-[17px] font-semibold text-black">
+                          <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
                             {price.toFixed(0)} ₼
                           </span>
-                          <span className="text-[12px] md:text-[13px] text-gray-400 line-through font-light">
+                          <span className="text-[11px] md:text-[12px] text-gray-400 line-through font-light">
                             {product.price.toFixed(0)} ₼
                           </span>
                         </>
                       ) : (
-                        <span className="text-[15px] md:text-[17px] font-semibold text-black">
+                        <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
                           {price.toFixed(0)} ₼
                         </span>
                       )}

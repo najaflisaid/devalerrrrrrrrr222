@@ -101,7 +101,7 @@ const HomeBlogSection: React.FC = () => {
 
         {/* Loading skeleton */}
         {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8" data-testid="home-blog-loading">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8" data-testid="home-blog-loading">
             {[0, 1, 2, 3].map((i) => (
               <div key={i}>
                 <div className="aspect-[5/4] w-full bg-black/[0.04] animate-pulse" />
@@ -113,10 +113,10 @@ const HomeBlogSection: React.FC = () => {
           </div>
         )}
 
-        {/* 4-up grid */}
+        {/* Mobile: yan-yana scroll; SM+: grid */}
         {!loading && posts.length > 0 && (
           <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10"
+            className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 md:gap-10 overflow-x-auto sm:overflow-visible snap-x snap-mandatory sm:snap-none -mx-4 sm:mx-0 px-4 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-10%' }}
@@ -130,6 +130,7 @@ const HomeBlogSection: React.FC = () => {
               <motion.article
                 key={post.id}
                 data-testid={`home-blog-card-${idx}`}
+                className="snap-start shrink-0 basis-[60%] sm:basis-auto sm:shrink"
                 variants={{
                   hidden: { opacity: 0, y: 28 },
                   visible: {
@@ -150,14 +151,14 @@ const HomeBlogSection: React.FC = () => {
                       />
                     )}
                   </div>
-                  <div className="pt-4 md:pt-5">
-                    <p className="text-[10px] md:text-[11px] uppercase tracking-[0.24em] text-[#C9A961] font-medium">
+                  <div className="pt-3 sm:pt-4 md:pt-5">
+                    <p className="text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-[0.22em] sm:tracking-[0.24em] text-[#C9A961] font-medium">
                       {getText(post.category) || defaultCategory}
                     </p>
-                    <h3 className="mt-2 md:mt-3 font-playfair text-base md:text-[20px] font-light text-black leading-[1.2] tracking-tight line-clamp-2 group-hover:text-black/85 transition-colors">
+                    <h3 className="mt-1.5 sm:mt-2 md:mt-3 font-playfair text-sm sm:text-base md:text-[20px] font-light text-black leading-[1.2] tracking-tight line-clamp-2 group-hover:text-black/85 transition-colors">
                       {getText(post.title)}
                     </h3>
-                    <p className="mt-2 md:mt-3 text-xs md:text-[13px] text-black/55 leading-relaxed line-clamp-2">
+                    <p className="mt-1.5 sm:mt-2 md:mt-3 text-[11px] sm:text-xs md:text-[13px] text-black/55 leading-relaxed line-clamp-2">
                       {truncate(stripHtml(getText(post.content)), 110)}
                     </p>
                   </div>
