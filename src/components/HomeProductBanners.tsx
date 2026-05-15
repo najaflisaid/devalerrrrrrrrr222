@@ -50,24 +50,13 @@ const HomeProductBanners: React.FC = () => {
         className="relative pt-6 md:pt-12 pb-8 md:pb-14 bg-white overflow-hidden"
         data-testid="dv-home-banners"
       >
-        {/* Ambient gold orb */}
-        <div
-          className="dv-orb"
-          style={{ width: 540, height: 540, top: '-20%', left: '50%', marginLeft: -270, opacity: 0.08 }}
-          aria-hidden="true"
-        />
-
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-          {/* Heading — BestSellers ilə eyni stil (eyebrow + uppercase h2) */}
-          <div className="text-center mb-5 md:mb-8 dv-reveal is-in">
-            <div className="inline-flex items-center mb-2">
-              <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-              <span className="mx-2.5 text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] dv-shimmer font-semibold whitespace-nowrap">
-                {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
-              </span>
-              <span className="inline-block w-6 h-[1px]" style={{ background: '#D4AF37' }} />
-            </div>
-            <h2 className="font-playfair text-xs sm:text-sm md:text-base lg:text-lg font-light text-black tracking-[0.1em] leading-[1.1] uppercase max-w-4xl mx-auto px-2" style={{ wordSpacing: '-0.05em' }}>
+          {/* Heading — CollectionTiles ilə eyni editorial stil (left-aligned, böyük Playfair) */}
+          <div className="flex flex-col items-start text-left mb-5 md:mb-8 dv-reveal is-in">
+            <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium mb-2 md:mb-3">
+              {t('homeBanners.eyebrow', { defaultValue: 'Signature Selection' })}
+            </p>
+            <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] lg:text-[64px] font-light text-black leading-[1.0] tracking-tight">
               {heading}
             </h2>
           </div>

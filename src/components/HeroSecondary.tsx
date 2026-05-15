@@ -163,10 +163,6 @@ const HeroSecondary: React.FC = () => {
             >
               <span className="relative pb-1.5">
                 {buttonText}
-                <span
-                  aria-hidden="true"
-                  className="absolute left-0 bottom-0 h-px w-full bg-white origin-left transition-transform duration-500"
-                />
               </span>
               <ArrowRight
                 className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover/btn:translate-x-1.5"

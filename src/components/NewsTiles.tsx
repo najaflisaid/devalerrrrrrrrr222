@@ -101,8 +101,8 @@ const NewsTiles: React.FC = () => {
       className="relative pb-3 md:pb-4 bg-white overflow-hidden"
       data-testid="dv-news-tiles"
     >
-      {/* Gray transition strip — continues BestSellers gray bg down to where the news images begin */}
-      <div className="bg-[#F4F4F4] pt-1.5 md:pt-2 pb-1.5 md:pb-2">
+      {/* White transition strip (previously gray) */}
+      <div className="bg-white pt-1.5 md:pt-2 pb-1.5 md:pb-2">
         {showArrows && (
           <div className={`flex items-center justify-end px-1.5 dv-reveal ${inView ? 'is-in' : ''}`}>
             <div className="flex items-center gap-1">

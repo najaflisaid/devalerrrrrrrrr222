@@ -278,3 +278,26 @@ overflow yox.
 
 ## Pre-existing TS xəbərdarlıqları
 AdminPanel.tsx, Header.tsx, AiChatWidget.tsx-də mövcud unused-vars / strict-null xətaları (bu sessiyada toxunulmadı).
+
+## Session: Home Page UI Refinements (Jan 2026)
+
+### Tələblər (user request - AZ)
+1. CollectionTiles ("kolleksiyalarımız") ilə yuxarıdakı banner (Hero) arasında boşluq yarat.
+2. RedCarpet ("REDAKSİYANIN SEÇİMİ") sözünü biraz yuxarı qaldır.
+3. ProductCard normal görünüşə kölgə, hover-də daha güclü kölgə.
+4. HomeProductBanners ("SEÇİLMİŞ KOLLEKSİYA / PRESTİJİNİZƏ DƏYƏR QATAN DETALLAR")
+   — ağ fon, fontlar yuxarıdakı CollectionTiles header-i kimi (left-aligned, böyük Playfair),
+   `---` qızılı yan xətləri silindi.
+5. NewsTiles ("Yeniliklər") arxa fon boz `bg-[#F4F4F4]` → `bg-white`.
+6. HeroSecondary CTA "Bax / Kolleksiyaya bax" altındakı bağ underline silindi.
+
+### Dəyişiklik nöqtələri
+- `src/components/CollectionTiles.tsx` — `pt-6 md:pt-10` → `pt-16 md:pt-24` (banner ilə bosluq).
+- `src/components/RedCarpetSection.tsx` — `pt-6 md:pt-10` → `pt-0 md:pt-2` (eyebrow yuxarı qalxır).
+- `src/components/ProductCard.tsx` — base `shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)]`,
+  hover `shadow-[0_28px_60px_-18px_rgba(0,0,0,0.38)]`.
+- `src/components/HomeProductBanners.tsx` — dv-orb silindi, eyebrow + heading
+  CollectionTiles ilə eyni stil (left-aligned, böyük Playfair), gold `---` yan xətlər silindi.
+- `src/components/NewsTiles.tsx` — top strip `bg-[#F4F4F4]` → `bg-white`.
+- `src/components/HeroSecondary.tsx` — CTA button-un altındakı `absolute h-px bg-white` underline silindi.
+

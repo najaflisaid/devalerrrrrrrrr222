@@ -51,7 +51,7 @@ const RedCarpetSection: React.FC = () => {
   const viewAll = lang === 'ru' ? 'Все' : lang === 'en' ? 'View all' : 'Hamısı';
 
   return (
-    <section className="relative bg-white pt-6 md:pt-10 pb-12 md:pb-20" data-testid="dv-red-carpet">
+    <section className="relative bg-white pt-0 md:pt-2 pb-12 md:pb-20" data-testid="dv-red-carpet">
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         <motion.div
           className="flex items-end justify-between gap-6 mb-5 md:mb-8"

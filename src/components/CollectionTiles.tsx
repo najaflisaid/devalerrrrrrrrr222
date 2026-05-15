@@ -66,7 +66,7 @@ const CollectionTiles: React.FC = () => {
 
   return (
     <section
-      className="relative bg-white pt-6 md:pt-10 pb-0"
+      className="relative bg-white pt-16 md:pt-24 pb-0"
       data-testid="dv-collection-tiles"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
