@@ -195,7 +195,7 @@ const CollectionTiles: React.FC = () => {
         </motion.div>
 
         {/* Mobile horizontal scroll-snap fallback */}
-        <div className="md:hidden -mx-4">
+        <div className="md:hidden -mx-4 mt-4">
           <div
             className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-4 pb-2"
             style={{ scrollbarWidth: 'none' }}
@@ -241,9 +241,9 @@ const CollectionTiles: React.FC = () => {
                     aria-hidden="true"
                     className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none"
                   />
-                  <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                  <div className="absolute inset-x-0 bottom-0 p-3 text-white">
                     <h3
-                      className="font-playfair text-xl font-light leading-tight"
+                      className="font-playfair text-[13px] font-light leading-tight break-words"
                       style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}
                     >
                       {titleText}

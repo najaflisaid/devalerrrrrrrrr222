@@ -15,10 +15,10 @@
 .dv-homepage [class*="font-mono"] {
   font-family: inherit !important;
 }
-/* Məhsul kartı mətnləri Urbanist olur (Playfair üst-qaydasını ləğv edir) */
+/* Məhsul kartı mətnləri Helvetica Now / Helvetica Neue olur (Playfair üst-qaydasını ləğv edir) */
 .dv-homepage .dv-card-text,
 .dv-homepage .dv-card-text * {
-  font-family: 'Urbanist', sans-serif !important;
+  font-family: 'Helvetica Now Text', 'Helvetica Now', 'Helvetica Neue', Helvetica, 'Inter', Arial, sans-serif !important;
 }
 
 /* === SCROLL REVEAL ANIMATIONS (dv-scroll-* — mövcud dv-reveal-dən fərqli ki, toqquşma olmasın) ===

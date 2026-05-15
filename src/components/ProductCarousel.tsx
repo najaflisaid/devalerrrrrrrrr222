@@ -160,13 +160,8 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                 {variant === 'minimal' ? (
                   <div className="dv-card-text pt-3 md:pt-4 px-2 pb-4 text-center md:text-left leading-tight">
                     {brand && (
-                      <p className="text-[15px] md:text-[16px] tracking-[0.10em] uppercase text-gray-900 font-bold leading-tight">
+                      <p className="text-[12px] md:text-[13px] tracking-[0.08em] uppercase text-gray-900 font-semibold leading-tight">
                         {brand}
-                      </p>
-                    )}
-                    {product.category && (
-                      <p className="mt-0.5 text-[10px] md:text-[11px] tracking-[0.16em] uppercase text-gray-500 font-medium leading-tight">
-                        {product.category}
                       </p>
                     )}
                     <h3 className="mt-1 text-[12px] md:text-[13px] font-normal text-gray-600 leading-tight line-clamp-1">
