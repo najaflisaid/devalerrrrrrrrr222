@@ -85,7 +85,7 @@ const RedCarpetSection: React.FC = () => {
           </button>
         </motion.div>
 
-        <ProductCarousel products={products} testIdPrefix="redcarpet" />
+        <ProductCarousel products={products} testIdPrefix="redcarpet" variant="minimal" />
       </div>
     </section>
   );

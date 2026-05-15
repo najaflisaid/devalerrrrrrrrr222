@@ -41,6 +41,14 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
     return p.name[lang] || p.name.az || p.name.en || '';
   };
 
+  const getDescription = (p: Product): string => {
+    if (!p.description) return '';
+    if (typeof p.description === 'string') return p.description as unknown as string;
+    const raw = p.description[lang] || p.description.az || p.description.en || '';
+    // Yalnız 1 sətirə uyğun qısa hissə (material/növ/rəng kimi) — uzun mətnləri kəs
+    return raw.split('\n')[0].trim();
+  };
+
   const updateButtons = () => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -107,6 +115,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
       >
         {products.map((product) => {
           const name = getName(product);
+          const description = getDescription(product);
           const brand = product.brand || '';
           const onSale = !!product.salePrice && product.salePrice < product.price;
           const price = onSale ? product.salePrice! : product.price;
@@ -122,7 +131,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                 className="group block bg-white rounded-sm transition-shadow duration-500 hover:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.35)]"
               >
                 {/* Image canvas */}
-                <div className="relative aspect-square w-full overflow-hidden bg-[#FAFAFA]">
+                <div className={`relative w-full overflow-hidden ${variant === 'minimal' ? 'aspect-[3/4] bg-white' : 'aspect-square bg-[#FAFAFA]'}`}>
                   <span
                     aria-hidden="true"
                     className="absolute top-3 right-3 md:top-4 md:right-4 z-[2] text-black/30 group-hover:text-black/80 transition-colors"
@@ -135,7 +144,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-contain p-6 md:p-10 transition-transform duration-[1100ms] ease-out group-hover:scale-[1.06]"
+                    className={`absolute inset-0 w-full h-full object-contain transition-transform duration-[1100ms] ease-out group-hover:scale-[1.06] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
                   />
                   {product.images?.[1] && (
                     <img
@@ -144,56 +153,93 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
+                      className={`absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
                     />
                   )}
 
-                  <span
-                    aria-hidden="true"
-                    className="absolute bottom-0 left-0 h-px w-full bg-black scale-x-0 origin-left transition-transform duration-700 ease-out group-hover:scale-x-100"
-                  />
+                  {variant !== 'minimal' && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-0 h-px w-full bg-black scale-x-0 origin-left transition-transform duration-700 ease-out group-hover:scale-x-100"
+                    />
+                  )}
                 </div>
 
-                {/* Meta */}
-                <div className="pt-3 md:pt-3.5 px-2 pb-3">
-                  {brand && (
-                    <p className="text-[10px] md:text-[11px] tracking-[0.18em] uppercase text-black font-semibold">
-                      {brand}
-                    </p>
-                  )}
-                  <h3 className="mt-0.5 text-[12px] md:text-[13.5px] font-light text-black/65 leading-snug line-clamp-2 min-h-[2.6em]">
-                    {name}
-                  </h3>
-                  <div className="mt-0.5 flex items-baseline gap-2 tabular-nums">
-                    {onSale ? (
-                      <>
-                        <span className="text-[13px] md:text-[15px] font-medium text-[#C9A961]">
+                {/* Meta — minimal (catalog) variant */}
+                {variant === 'minimal' ? (
+                  <div className="pt-4 md:pt-5 px-2 pb-5 text-left">
+                    {brand && (
+                      <p className="text-[11px] md:text-[12px] tracking-[0.18em] uppercase text-gray-700 font-normal">
+                        {brand}
+                      </p>
+                    )}
+                    <h3 className="mt-1.5 text-[12px] md:text-[13.5px] font-light text-gray-500 leading-snug line-clamp-1">
+                      {name}
+                    </h3>
+                    {description && (
+                      <p className="mt-1 text-[11px] md:text-[12px] font-light text-gray-400 leading-snug line-clamp-1">
+                        {description}
+                      </p>
+                    )}
+                    <div className="mt-5 md:mt-6 flex items-baseline gap-2 tabular-nums">
+                      {onSale ? (
+                        <>
+                          <span className="text-[15px] md:text-[17px] font-semibold text-black">
+                            {price.toFixed(0)} ₼
+                          </span>
+                          <span className="text-[12px] md:text-[13px] text-gray-400 line-through font-light">
+                            {product.price.toFixed(0)} ₼
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[15px] md:text-[17px] font-semibold text-black">
+                          {price.toFixed(0)} ₼
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Meta — default variant (with "Bax" link) */
+                  <div className="pt-3 md:pt-3.5 px-2 pb-3">
+                    {brand && (
+                      <p className="text-[10px] md:text-[11px] tracking-[0.18em] uppercase text-black font-semibold">
+                        {brand}
+                      </p>
+                    )}
+                    <h3 className="mt-0.5 text-[12px] md:text-[13.5px] font-light text-black/65 leading-snug line-clamp-2 min-h-[2.6em]">
+                      {name}
+                    </h3>
+                    <div className="mt-0.5 flex items-baseline gap-2 tabular-nums">
+                      {onSale ? (
+                        <>
+                          <span className="text-[13px] md:text-[15px] font-medium text-[#C9A961]">
+                            {price.toFixed(0)} AZN
+                          </span>
+                          <span className="text-[11px] md:text-[12px] text-black/35 line-through font-light">
+                            {product.price.toFixed(0)} AZN
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[13px] md:text-[15px] font-medium text-black">
                           {price.toFixed(0)} AZN
                         </span>
-                        <span className="text-[11px] md:text-[12px] text-black/35 line-through font-light">
-                          {product.price.toFixed(0)} AZN
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[13px] md:text-[15px] font-medium text-black">
-                        {price.toFixed(0)} AZN
+                      )}
+                    </div>
+                    <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black">
+                      <span className="relative pb-0.5">
+                        {detailsLabel}
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 bottom-0 h-px w-full bg-black/70"
+                        />
                       </span>
-                    )}
-                  </div>
-                  <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black" style={{ display: variant === 'minimal' ? 'none' : undefined }}>
-                    <span className="relative pb-0.5">
-                      {detailsLabel}
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 bottom-0 h-px w-full bg-black/70"
+                      <ArrowRight
+                        className="w-3 h-3 transition-transform duration-500 group-hover:translate-x-1"
+                        strokeWidth={1.6}
                       />
                     </span>
-                    <ArrowRight
-                      className="w-3 h-3 transition-transform duration-500 group-hover:translate-x-1"
-                      strokeWidth={1.6}
-                    />
-                  </span>
-                </div>
+                  </div>
+                )}
               </Link>
             </div>
           );
