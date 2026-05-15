@@ -44,15 +44,23 @@ const CampaignPopup: React.FC = () => {
       p.startsWith('/payment')
     ) return;
 
-    // Sessiyada artıq göstərilibsə təkrar göstərmirik
+    // Hər unikal kampaniya üçün ayrı sessiya açarı —
+    // admin kampaniyanı yeniləyəndə popup yenidən görünür
+    const updatedAt = (campaign as any).updatedAt;
+    const stamp =
+      (updatedAt && typeof updatedAt.toMillis === 'function' && updatedAt.toMillis()) ||
+      (updatedAt && updatedAt.seconds) ||
+      campaign.name ||
+      'default';
+    const sessionKey = `${SESSION_KEY}_${stamp}`;
     try {
-      if (sessionStorage.getItem(SESSION_KEY)) return;
+      if (sessionStorage.getItem(sessionKey)) return;
     } catch { /* noop */ }
 
     const delayMs = Math.max(1, campaign.popup.delaySec || 5) * 1000;
     const timer = setTimeout(() => {
       setShow(true);
-      try { sessionStorage.setItem(SESSION_KEY, '1'); } catch { /* noop */ }
+      try { sessionStorage.setItem(sessionKey, '1'); } catch { /* noop */ }
     }, delayMs);
     return () => clearTimeout(timer);
   }, [campaign, location.pathname]);

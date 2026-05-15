@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, User, ShoppingCart, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
@@ -18,6 +18,7 @@ import type { Product } from '../types';
 const Header: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { getTotalItems, getUserDiscount, clearCart } = useCart();
   const { count: wishlistCount } = useWishlist();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -429,18 +430,18 @@ const Header: React.FC = () => {
 
   // Şəffaf header sürüşməyə görə (ana səhifədə hero üzərində şəffaf, scroll edəndə ağ)
   const [isAtTop, setIsAtTop] = useState<boolean>(typeof window !== 'undefined' ? window.scrollY < 80 : true);
-  const [isHomePage, setIsHomePage] = useState<boolean>(typeof window !== 'undefined' ? window.location.pathname === '/' : true);
+  const isHomePage = location.pathname === '/';
   useEffect(() => {
     const onScroll = () => setIsAtTop(window.scrollY < 80);
-    const onPath = () => setIsHomePage(window.location.pathname === '/');
-    onPath();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('popstate', onPath);
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('popstate', onPath);
     };
   }, []);
+  // Hər path dəyişikliyində isAtTop yenidən hesablanır (route değişdikdə səhifə üst-də olur)
+  useEffect(() => {
+    setIsAtTop(window.scrollY < 80);
+  }, [location.pathname]);
   const transparentMode = isHomePage && isAtTop;
 
   return (
