@@ -180,12 +180,18 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
   return { rows, errors };
 };
 
+// Stok tətbiq rejimi:
+//   'replace' → fayldakı miqdar saytdakı stoku tam əvəz edir (köhnə davranış)
+//   'add'     → fayldakı miqdar mövcud stokun ÜZƏRİNƏ gəlir (artırır)
+type StockMode = 'replace' | 'add';
+
 // ───── Komponent ─────
 const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [parsing, setParsing] = useState(false);
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [stockMode, setStockMode] = useState<StockMode>('replace');
   // Sistemdəki kateqoriya və brendlər (parse zamanı yoxlamaq üçün)
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [dbBrands, setDbBrands] = useState<string[]>([]);
@@ -305,7 +311,11 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       //    (və faylda göstərilibsə `visibleTo`) dəyişir
       await Promise.all(
         result.updated.map((m) => {
-          const patch: Record<string, any> = { stock: Math.max(0, m.newStock) };
+          const finalStock =
+            stockMode === 'add'
+              ? Math.max(0, m.oldStock + m.newStock)
+              : Math.max(0, m.newStock);
+          const patch: Record<string, any> = { stock: finalStock };
           if (m.row.visibility !== null) {
             patch.visibleTo = m.row.visibility;
           }
@@ -392,6 +402,62 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
         </div>
       </div>
 
+      <div className="mb-3 rounded-lg border border-amber-200 bg-white/70 p-3" data-testid="product-import-stock-mode">
+        <p className="text-xs font-semibold text-gray-800 mb-2">
+          Stok rejimi — mövcud məhsulu fayl ilə müqayisə edəndə nə baş versin?
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <label
+            className={`flex-1 flex items-start gap-2 px-3 py-2 rounded-lg cursor-pointer border text-sm transition-colors ${
+              stockMode === 'replace'
+                ? 'border-amber-500 bg-amber-50'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+            data-testid="stock-mode-replace-label"
+          >
+            <input
+              type="radio"
+              name="stock-mode"
+              value="replace"
+              checked={stockMode === 'replace'}
+              onChange={() => setStockMode('replace')}
+              className="mt-0.5 accent-amber-600"
+              data-testid="stock-mode-replace"
+            />
+            <span>
+              <span className="font-medium text-gray-900">Stoku yenilə (əvəz et)</span>
+              <span className="block text-[11px] text-gray-600 mt-0.5">
+                Saytdakı miqdar fayldakı dəyərlə əvəz olunur. Məs: saytda 1, faylda 2 → nəticə 2.
+              </span>
+            </span>
+          </label>
+          <label
+            className={`flex-1 flex items-start gap-2 px-3 py-2 rounded-lg cursor-pointer border text-sm transition-colors ${
+              stockMode === 'add'
+                ? 'border-emerald-500 bg-emerald-50'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+            data-testid="stock-mode-add-label"
+          >
+            <input
+              type="radio"
+              name="stock-mode"
+              value="add"
+              checked={stockMode === 'add'}
+              onChange={() => setStockMode('add')}
+              className="mt-0.5 accent-emerald-600"
+              data-testid="stock-mode-add"
+            />
+            <span>
+              <span className="font-medium text-gray-900">Stoku artır (üzərinə əlavə et)</span>
+              <span className="block text-[11px] text-gray-600 mt-0.5">
+                Fayldakı miqdar mövcud stokun üzərinə gəlir. Məs: saytda 1, faylda 2 → nəticə 3.
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <input
           ref={fileRef}
@@ -431,7 +497,9 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               <p className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-emerald-600" />
                 Stok yenilənəcək ({result.updated.length})
-                <span className="text-[11px] text-gray-500 font-normal">— kateqoriya/qiymət köhnə qalır</span>
+                <span className="text-[11px] text-gray-500 font-normal">
+                  — {stockMode === 'add' ? 'üzərinə əlavə olunacaq' : 'fayldakı dəyər ilə əvəz olunacaq'} · kateqoriya/qiymət köhnə qalır
+                </span>
               </p>
               <div className="max-h-60 overflow-y-auto border border-emerald-100 rounded-lg divide-y divide-gray-100 bg-white">
                 {result.updated.map((m, i) => (
@@ -449,7 +517,24 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                       </span>
                     )}
                     <span className="font-mono tabular-nums">
-                      {m.oldStock} → <span className={m.newStock !== m.oldStock ? 'text-amber-700 font-bold' : ''}>{m.newStock}</span>
+                      {(() => {
+                        const finalStock =
+                          stockMode === 'add'
+                            ? Math.max(0, m.oldStock + m.newStock)
+                            : Math.max(0, m.newStock);
+                        return (
+                          <>
+                            {m.oldStock}
+                            {stockMode === 'add' && (
+                              <span className="text-emerald-700"> + {m.newStock}</span>
+                            )}
+                            {' '}→{' '}
+                            <span className={finalStock !== m.oldStock ? 'text-amber-700 font-bold' : ''}>
+                              {finalStock}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </span>
                   </div>
                 ))}
