@@ -304,6 +304,7 @@ const AdminPanel: React.FC = () => {
   const [showEditBlog, setShowEditBlog] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [showAddPartner, setShowAddPartner] = useState(false);
+  const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('all');
@@ -1130,6 +1131,41 @@ const AdminPanel: React.FC = () => {
         alert('Xəta baş verdi: ' + (error as Error).message);
       }
     }
+  };
+
+  const handleUpdatePartner = async () => {
+    if (!editingPartnerId) return;
+    if (!newPartner.name) {
+      alert('Ən azı ad daxil edin (loqo URL-i istəyə bağlıdır)');
+      return;
+    }
+    try {
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      await updateDoc(doc(db, 'partners', editingPartnerId), {
+        name: newPartner.name,
+        logo: newPartner.logo || '',
+        website: newPartner.website || null,
+      });
+      await loadData({ silent: true });
+      setNewPartner({ name: '', logo: '', website: '' });
+      setEditingPartnerId(null);
+      setShowAddPartner(false);
+      alert('Tərəfdaş yeniləndi!');
+    } catch (error) {
+      console.error('Error updating partner:', error);
+      alert('Xəta baş verdi: ' + (error as Error).message);
+    }
+  };
+
+  const handleStartEditPartner = (partner: Partner) => {
+    setEditingPartnerId(partner.id!);
+    setNewPartner({
+      name: partner.name || '',
+      logo: partner.logo || '',
+      website: partner.website || '',
+    });
+    setShowAddPartner(true);
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -2674,7 +2710,16 @@ const AdminPanel: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Tərəfdaşlar ({partners.length})</h2>
               <button
-                onClick={() => setShowAddPartner(!showAddPartner)}
+                onClick={() => {
+                  if (editingPartnerId) {
+                    // edit rejimini ləğv et
+                    setEditingPartnerId(null);
+                    setNewPartner({ name: '', logo: '', website: '' });
+                    setShowAddPartner(false);
+                  } else {
+                    setShowAddPartner(!showAddPartner);
+                  }
+                }}
                 className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
               >
                 <Plus className="h-5 w-5" />
@@ -2685,8 +2730,17 @@ const AdminPanel: React.FC = () => {
             {showAddPartner && (
               <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Yeni Tərəfdaş</h3>
-                  <button onClick={() => setShowAddPartner(false)} className="text-gray-400 hover:text-gray-600">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {editingPartnerId ? 'Tərəfdaşı redaktə et' : 'Yeni Tərəfdaş'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowAddPartner(false);
+                      setEditingPartnerId(null);
+                      setNewPartner({ name: '', logo: '', website: '' });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
                     <X className="h-6 w-6" />
                   </button>
                 </div>
@@ -2711,7 +2765,17 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                       placeholder="https://example.com/logo.jpg"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Boş saxlasanız, saytın "Tərəfdaşlarımız" səhifəsində şəkil əvəzinə tərəfdaşın adı premium tipoqrafiya ilə göstəriləcək.</p>
+                    <p className="text-xs text-gray-500 mt-1">Şəkili birbaşa link (URL) ilə əlavə edin. Boş saxlasanız, saytın "Tərəfdaşlarımız" səhifəsində şəkil əvəzinə tərəfdaşın adı premium tipoqrafiya ilə göstəriləcək.</p>
+                    {newPartner.logo && (
+                      <div className="mt-3 inline-block bg-white border border-gray-200 rounded-lg p-2">
+                        <img
+                          src={newPartner.logo}
+                          alt="Logo preview"
+                          className="h-16 w-auto object-contain"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vebsayt</label>
@@ -2726,10 +2790,10 @@ const AdminPanel: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={handleAddPartner}
+                  onClick={editingPartnerId ? handleUpdatePartner : handleAddPartner}
                   className="mt-6 w-full bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-all font-medium shadow-md hover:shadow-lg"
                 >
-                  Tərəfdaş əlavə et
+                  {editingPartnerId ? 'Dəyişiklikləri saxla' : 'Tərəfdaş əlavə et'}
                 </button>
               </div>
             )}
@@ -2743,29 +2807,41 @@ const AdminPanel: React.FC = () => {
               ) : (
                 partners.map((partner) => (
                   <div key={partner.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {partner.logo ? (
-                        <img src={partner.logo} alt={partner.name} className="w-12 h-12 object-contain rounded" />
+                        <img src={partner.logo} alt={partner.name} className="w-12 h-12 object-contain rounded flex-shrink-0" />
                       ) : (
-                        <div className="w-12 h-12 rounded border border-gray-300 flex items-center justify-center text-[10px] uppercase tracking-wider text-gray-500 font-medium bg-white">
+                        <div className="w-12 h-12 rounded border border-gray-300 flex items-center justify-center text-[10px] uppercase tracking-wider text-gray-500 font-medium bg-white flex-shrink-0">
                           Mətn
                         </div>
                       )}
-                      <div>
-                        <p className="font-medium text-gray-900">{partner.name}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{partner.name}</p>
                         {partner.website && (
-                          <a href={partner.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-gray-700">
+                          <a href={partner.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-gray-700 truncate block">
                             {partner.website}
                           </a>
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeletePartner(partner.id!)}
-                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleStartEditPartner(partner)}
+                        className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-all"
+                        title="Redaktə et"
+                        data-testid={`partner-edit-${partner.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePartner(partner.id!)}
+                        className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
+                        title="Sil"
+                        data-testid={`partner-delete-${partner.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
