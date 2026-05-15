@@ -51,10 +51,10 @@ const RedCarpetSection: React.FC = () => {
   const viewAll = lang === 'ru' ? 'Все' : lang === 'en' ? 'View all' : 'Hamısı';
 
   return (
-    <section className="relative bg-white py-16 md:py-24" data-testid="dv-red-carpet">
+    <section className="relative bg-white pt-6 md:pt-10 pb-12 md:pb-20" data-testid="dv-red-carpet">
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         <motion.div
-          className="flex items-end justify-between gap-6 mb-8 md:mb-12"
+          className="flex items-end justify-between gap-6 mb-5 md:mb-8"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10%' }}

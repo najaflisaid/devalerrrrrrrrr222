@@ -45,7 +45,7 @@ const BestSellersSection: React.FC = () => {
   const viewAll = lang === 'ru' ? 'Все' : lang === 'en' ? 'View all' : 'Hamısı';
 
   return (
-    <section className="relative bg-[#FAF9F7] py-16 md:py-24" data-testid="dv-bestsellers">
+    <section className="relative bg-white py-16 md:py-24" data-testid="dv-bestsellers">
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         <motion.div
           className="flex items-end justify-between gap-6 mb-8 md:mb-12"

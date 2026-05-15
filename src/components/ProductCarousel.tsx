@@ -135,7 +135,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    className={`absolute inset-0 w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.08] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
+                    className={`absolute inset-0 w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.08] ${variant === 'minimal' ? 'p-2 md:p-5' : 'p-6 md:p-10'}`}
                   />
                   {product.images?.[1] && (
                     <img
@@ -144,7 +144,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className={`absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-hover:delay-[1500ms] group-hover:scale-[1.08] [transition-property:opacity,transform] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
+                      className={`absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-hover:delay-[1500ms] group-hover:scale-[1.08] [transition-property:opacity,transform] ${variant === 'minimal' ? 'p-2 md:p-5' : 'p-6 md:p-10'}`}
                     />
                   )}
 
@@ -158,9 +158,9 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
 
                 {/* Meta — minimal (catalog) variant */}
                 {variant === 'minimal' ? (
-                  <div className="dv-card-text pt-3 md:pt-4 px-2 pb-4 text-left leading-tight">
+                  <div className="dv-card-text pt-3 md:pt-4 px-2 pb-4 text-center md:text-left leading-tight">
                     {brand && (
-                      <p className="text-[13px] md:text-[15px] tracking-[0.14em] uppercase text-gray-900 font-semibold leading-tight">
+                      <p className="text-[15px] md:text-[16px] tracking-[0.10em] uppercase text-gray-900 font-bold leading-tight">
                         {brand}
                       </p>
                     )}
@@ -172,10 +172,10 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                     <h3 className="mt-1 text-[12px] md:text-[13px] font-normal text-gray-600 leading-tight line-clamp-1">
                       {name}
                     </h3>
-                    <div className="mt-1 flex items-baseline gap-2 tabular-nums">
+                    <div className="mt-1.5 flex items-baseline gap-2 tabular-nums justify-center md:justify-start">
                       {onSale ? (
                         <>
-                          <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
+                          <span className="text-[14px] md:text-[16px] font-bold text-black leading-tight">
                             {price.toFixed(0)} AZN
                           </span>
                           <span className="text-[11px] md:text-[12px] text-gray-400 line-through font-light">
@@ -183,7 +183,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                           </span>
                         </>
                       ) : (
-                        <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
+                        <span className="text-[14px] md:text-[16px] font-bold text-black leading-tight">
                           {price.toFixed(0)} AZN
                         </span>
                       )}

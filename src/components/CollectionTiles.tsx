@@ -72,13 +72,13 @@ const CollectionTiles: React.FC = () => {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         {/* Editorial header */}
         <motion.div
-          className="flex flex-col items-center text-center mb-5 md:mb-8"
+          className="flex flex-col items-start text-left mb-5 md:mb-8"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10%' }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center justify-center mb-2 md:mb-3">
+          <div className="flex items-center mb-2 md:mb-3">
             <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium">
               {eyebrow}
             </p>
