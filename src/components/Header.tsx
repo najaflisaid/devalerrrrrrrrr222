@@ -482,7 +482,11 @@ const Header: React.FC = () => {
             <nav className="hidden md:flex items-center space-x-5">
               <Link
                 to="/gift-cards"
-                className="dv-giftcard-btn group relative inline-flex items-center gap-1.5 border border-[#8B0000]/90 px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal text-[#8B0000] overflow-hidden transition-all duration-300 hover:shadow-[0_6px_16px_-6px_rgba(139,0,0,0.45)] active:scale-[0.98] whitespace-nowrap"
+                className={`dv-giftcard-btn group relative inline-flex items-center gap-1.5 border px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal overflow-hidden transition-all duration-300 active:scale-[0.98] whitespace-nowrap ${
+                  transparentMode
+                    ? 'border-white/90 text-white hover:shadow-[0_6px_16px_-6px_rgba(255,255,255,0.35)]'
+                    : 'border-[#8B0000]/90 text-[#8B0000] hover:shadow-[0_6px_16px_-6px_rgba(139,0,0,0.45)]'
+                }`}
                 data-testid="header-gift-cards-link"
               >
                 {/* Mirror / shine sweep — appears on hover */}

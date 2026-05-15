@@ -135,7 +135,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                     alt={name}
                     loading="lazy"
                     decoding="async"
-                    className={`absolute inset-0 w-full h-full object-contain transition-transform duration-[1100ms] ease-out group-hover:scale-[1.06] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
+                    className={`absolute inset-0 w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.08] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
                   />
                   {product.images?.[1] && (
                     <img
@@ -144,7 +144,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className={`absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
+                      className={`absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-hover:delay-[1500ms] group-hover:scale-[1.08] [transition-property:opacity,transform] ${variant === 'minimal' ? 'p-4 md:p-6' : 'p-6 md:p-10'}`}
                     />
                   )}
 
@@ -176,15 +176,15 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       {onSale ? (
                         <>
                           <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
-                            {price.toFixed(0)} ₼
+                            {price.toFixed(0)} AZN
                           </span>
                           <span className="text-[11px] md:text-[12px] text-gray-400 line-through font-light">
-                            {product.price.toFixed(0)} ₼
+                            {product.price.toFixed(0)} AZN
                           </span>
                         </>
                       ) : (
                         <span className="text-[14px] md:text-[16px] font-semibold text-black leading-tight">
-                          {price.toFixed(0)} ₼
+                          {price.toFixed(0)} AZN
                         </span>
                       )}
                     </div>

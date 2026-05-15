@@ -60,16 +60,15 @@ const GiftFinderSection: React.FC = () => {
         >
           <span
             aria-hidden="true"
-            className="absolute inset-0 rounded-full border border-[#C9A961]/40"
-            style={{ animation: 'dv-spin-slow 32s linear infinite' }}
+            className="absolute inset-0 border border-[#C9A961]/40"
           />
           <span
             aria-hidden="true"
-            className="absolute inset-6 rounded-full border border-[#C9A961]/30"
+            className="absolute inset-6 border border-[#C9A961]/30"
           />
           <span
             aria-hidden="true"
-            className="absolute inset-10 rounded-full"
+            className="absolute inset-10"
             style={{
               background:
                 'radial-gradient(circle, rgba(201,169,97,0.22) 0%, rgba(201,169,97,0.05) 60%, transparent 100%)',
@@ -82,7 +81,7 @@ const GiftFinderSection: React.FC = () => {
             <span
               key={i}
               aria-hidden="true"
-              className="absolute w-1.5 h-1.5 rounded-full bg-[#C9A961]/60"
+              className="absolute w-1.5 h-1.5 bg-[#C9A961]/60"
               style={{
                 top: '50%',
                 left: '50%',
