@@ -66,24 +66,22 @@ const CollectionTiles: React.FC = () => {
 
   return (
     <section
-      className="relative bg-white pt-16 md:pt-24 pb-0"
+      className="relative bg-white pt-6 md:pt-10 pb-0"
       data-testid="dv-collection-tiles"
     >
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
         {/* Editorial header */}
         <motion.div
-          className="flex flex-col items-center text-center mb-10 md:mb-16"
+          className="flex flex-col items-center text-center mb-5 md:mb-8"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10%' }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center justify-center gap-3 md:gap-4 mb-4 md:mb-6">
-            <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
+          <div className="flex items-center justify-center mb-2 md:mb-3">
             <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium">
               {eyebrow}
             </p>
-            <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
           </div>
           <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] lg:text-[64px] font-light text-black leading-[1.0] tracking-tight">
             {heading}

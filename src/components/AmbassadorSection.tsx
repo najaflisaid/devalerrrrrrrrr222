@@ -86,8 +86,7 @@ const AmbassadorSection: React.FC = () => {
             viewport={{ once: true, margin: '-15%' }}
             transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex items-center gap-3 mb-5 md:mb-7">
-              <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
+            <div className="mb-5 md:mb-7">
               <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium">
                 {eyebrow}
               </p>

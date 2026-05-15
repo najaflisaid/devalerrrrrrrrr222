@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* === Homepage typography: One font (Playfair Display) for entire homepage === */
+.dv-homepage,
+.dv-homepage * {
+  font-family: 'Playfair Display', serif !important;
+}
+/* Keep icons (svg, lucide) and pure number monospace untouched */
+.dv-homepage svg,
+.dv-homepage .lucide,
+.dv-homepage [class*="font-mono"] {
+  font-family: inherit !important;
+}
+
 /* === SCROLL REVEAL ANIMATIONS (dv-scroll-* — mövcud dv-reveal-dən fərqli ki, toqquşma olmasın) ===
    Scroll edərkən bölmələrin yumşaq görünməsi üçün universal sistem.
    useReveal() hook-u ilə birgə istifadə olunur. */

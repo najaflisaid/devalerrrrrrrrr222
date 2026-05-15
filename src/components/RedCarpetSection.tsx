@@ -61,8 +61,7 @@ const RedCarpetSection: React.FC = () => {
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
           <div>
-            <div className="flex items-center gap-3 mb-3 md:mb-4">
-              <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
+            <div className="mb-3 md:mb-4">
               <p className="text-[10px] md:text-[11px] tracking-[0.32em] uppercase text-[#C9A961] font-medium">
                 {eyebrow}
               </p>

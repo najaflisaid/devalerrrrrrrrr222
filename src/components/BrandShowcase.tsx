@@ -109,11 +109,9 @@ const BrandShowcase: React.FC = () => {
         {/* Heading */}
         <div className={`text-center mb-10 md:mb-16 dv-reveal ${inView ? 'is-in' : ''}`}>
           <div className="inline-flex items-center mb-4">
-            <span className="inline-block w-8 h-[1px]" style={{ background: '#b8914c' }} />
-            <span className="mx-3 text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-semibold whitespace-nowrap" style={{ color: '#8c6c34' }}>
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-semibold whitespace-nowrap" style={{ color: '#8c6c34' }}>
               {copy.eyebrow[lang]}
             </span>
-            <span className="inline-block w-8 h-[1px]" style={{ background: '#b8914c' }} />
           </div>
           <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-[1.05] mb-5 text-black">
             {copy.title[lang]}

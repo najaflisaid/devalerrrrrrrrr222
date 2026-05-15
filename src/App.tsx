@@ -127,7 +127,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="dv-homepage font-playfair">
       {/* Hero həmişə ən üstdə */}
       <Hero />
 
@@ -135,7 +135,7 @@ const HomePage: React.FC = () => {
       {order.map((key) => (
         <React.Fragment key={key}>{sectionMap[key]}</React.Fragment>
       ))}
-    </>
+    </div>
   );
 };
 

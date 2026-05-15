@@ -92,12 +92,10 @@ const GiftFinderSection: React.FC = () => {
           ))}
         </motion.div>
 
-        <div className="flex items-center justify-center gap-3 mb-4 md:mb-6">
-          <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
+        <div className="flex items-center justify-center mb-4 md:mb-6">
           <p className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase text-[#C9A961] font-medium">
             {eyebrow}
           </p>
-          <span className="h-px w-8 md:w-12 bg-[#C9A961]" aria-hidden="true" />
         </div>
 
         <h2 className="font-playfair text-3xl sm:text-4xl md:text-[52px] font-light text-black leading-[1.05] tracking-tight whitespace-pre-line">

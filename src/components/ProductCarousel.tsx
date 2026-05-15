@@ -17,6 +17,8 @@ interface ProductCarouselProps {
   testIdPrefix?: string;
   /** Override per-card flex-basis at each breakpoint. */
   cardBasis?: string;
+  /** 'default' shows "Bax" link; 'minimal' hides it for catalog-style cards */
+  variant?: 'default' | 'minimal';
 }
 
 const ProductCarousel: React.FC<ProductCarouselProps> = ({
@@ -24,6 +26,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
   testIdPrefix = 'pc',
   // Mobil: 2 kart + 3-cünün yarısı görünür (basis ~36%, gap-5 nəzərə alınmaqla).
   cardBasis = 'basis-[36%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]',
+  variant = 'default',
 }) => {
   const { i18n } = useTranslation();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -177,7 +180,7 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
                       </span>
                     )}
                   </div>
-                  <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black">
+                  <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-[0.22em] font-semibold text-black/80 group-hover:text-black" style={{ display: variant === 'minimal' ? 'none' : undefined }}>
                     <span className="relative pb-0.5">
                       {detailsLabel}
                       <span
