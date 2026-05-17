@@ -322,7 +322,9 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
 
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 6000);
+      // 25 saniyə timeout — OpenAI bəzən soyuq başlanğıcda 8-15 saniyə çəkə bilir.
+      // Daha əvvəl 6 saniyə idi və yavaş cavablar fallback-ə düşürdü.
+      const timer = setTimeout(() => ctrl.abort(), 25000);
       const res = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
