@@ -290,10 +290,12 @@ const buildSystemMessage = (req: ChatRequest): string => {
 };
 
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
+  // Vercel deploy-da env variable lazım deyil — `window.location.origin` istifadə olunur
+  // çünki `/api/chat` Vercel serverless function-u eyni domendədir.
   const BACKEND_URL: string =
     (import.meta as any).env?.VITE_BACKEND_URL ||
     (import.meta as any).env?.REACT_APP_BACKEND_URL ||
-    '';
+    (typeof window !== 'undefined' ? window.location.origin : '');
 
   const sessionId =
     req.sessionId ||

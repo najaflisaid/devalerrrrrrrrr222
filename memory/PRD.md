@@ -301,3 +301,41 @@ AdminPanel.tsx, Header.tsx, AiChatWidget.tsx-də mövcud unused-vars / strict-nu
 - `src/components/NewsTiles.tsx` — top strip `bg-[#F4F4F4]` → `bg-white`.
 - `src/components/HeroSecondary.tsx` — CTA button-un altındakı `absolute h-px bg-white` underline silindi.
 
+
+## Session: Vercel Deploy Düzəlişi (Jan 2026)
+
+### Problem (user, AZ)
+"odenis sehifesine getmir ve ai chat gorsenmir sayti deploy edirem amma sonra gorsenmir mobildede pcdada ele etki gorsensin itmesin deploy etdikdede"
+
+**Səbəb:** Lokal `.env` faylları `.gitignore`-da olduğu üçün Vercel-də deploy zamanı `VITE_OPENAI_API_KEY` və `VITE_BACKEND_URL` mövcud olmurdu. Üstəlik, mövcud `vercel.json`-da kritik bug vardı: `/(.*)` rewrite qaydası `/api/*` çağırışlarını da `index.html`-ə yönləndirirdi → backend mövcud olsa belə API-lər deploy-da işləməyəcəkdi.
+
+### Həll: Vercel Serverless Functions
+
+Yeni `/app/api/` qovluğunda Node.js serverless function-lar əlavə edildi. Bunlar Vercel deploy zamanı avtomatik aktivləşir — heç bir əlavə backend hosting və ya environment variable konfiqurasiyası lazım deyil.
+
+**Əlavə olunmuş fayllar:**
+- `/app/api/chat.js` — De Valeur AI satış chat (OpenAI gpt-4o-mini, açar serverside hardcoded)
+- `/app/api/epoint/create-payment.js` — Əsas ödəniş yönləndirməsi
+- `/app/api/epoint/widget-url.js` — Apple Pay/Google Pay widget URL
+- `/app/api/epoint/verify-callback.js` — Epoint signature doğrulaması
+- `/app/api/epoint/get-status.js` — Ödəniş statusu yoxlama
+
+**Frontend dəyişikliyi:**
+- `/app/src/services/aiChatService.ts` — `BACKEND_URL` indi `window.location.origin`-ə fallback edir (env variable olmadıqda). Vercel-də deploy edildikdə `https://devaleur.az/api/chat` çağırılır.
+- `/app/src/services/epointPaymentService.ts` — artıq `window.location.origin` fallback istifadə edirdi.
+
+**vercel.json düzəlişi:**
+- Köhnə `"source": "/(.*)"` rewrite → `"source": "/((?!api/).*)"` — `/api/*` istisna olunur ki, serverless function-lar düzgün çalışsın.
+
+### İstifadə (deploy zamanı)
+1. GitHub-a push et (Save to Github)
+2. Vercel-də mövcud devaleur.az project-i avtomatik build edir
+3. Heç bir env variable əlavə etmək lazım deyil — hər şey self-contained
+4. Build sonrası: `https://devaleur.az/api/chat` və `https://devaleur.az/api/epoint/*` aktivləşir
+
+### Test (lokalda)
+- `yarn build` uğurla 13 saniyədə tamamlanır (dist 2.2MB → 571KB gzip)
+- Lokal dev server-də AI chat launcher görsənir (data-testid="ai-chat-launcher")
+- Backend mövcud olduğu üçün lokalda Emergent backend istifadə olunur (preview mode)
+- Production-da isə avtomatik /api/* (Vercel serverless) istifadə olunur
+
