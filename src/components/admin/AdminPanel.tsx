@@ -1026,21 +1026,55 @@ const AdminPanel: React.FC = () => {
     }
 
     try {
-      const { doc, updateDoc } = await import('firebase/firestore');
+      const { doc, updateDoc, collection, getDocs, writeBatch } = await import('firebase/firestore');
       const { db } = await import('../../lib/firebase');
+
+      // Köhnə adları topla (məhsulların migrasiyası üçün)
+      const original = categories.find((c: any) => c.id === editingCategory.id) as any;
+      const oldNames: string[] = [];
+      if (original) {
+        if (original.nameAz) oldNames.push(original.nameAz);
+        if (original.nameRu && !oldNames.includes(original.nameRu)) oldNames.push(original.nameRu);
+        if (original.nameEn && !oldNames.includes(original.nameEn)) oldNames.push(original.nameEn);
+        if (original.name && !oldNames.includes(original.name)) oldNames.push(original.name);
+      }
+
+      const newAz = editingCategory.nameAz.trim();
+      const newRu = editingCategory.nameRu.trim() || newAz;
+      const newEn = editingCategory.nameEn.trim() || newAz;
+
+      // 1) Kateqoriyanı yenilə
       await updateDoc(doc(db, 'categories', editingCategory.id), {
-        name: {
-          az: editingCategory.nameAz.trim(),
-          ru: editingCategory.nameRu.trim() || editingCategory.nameAz.trim(),
-          en: editingCategory.nameEn.trim() || editingCategory.nameAz.trim()
-        },
+        name: { az: newAz, ru: newRu, en: newEn },
         parentId: editingCategory.parentId || null
       });
+
+      // 2) Köhnə adı daşıyan məhsulları tap və yeni AZ adına çevir (məhsullar itməsin)
+      let migratedCount = 0;
+      if (oldNames.length > 0 && !oldNames.every((n) => n === newAz)) {
+        const productsSnap = await getDocs(collection(db, 'products'));
+        const batch = writeBatch(db);
+        productsSnap.docs.forEach((d) => {
+          const data = d.data() as any;
+          const cat = data?.category;
+          if (typeof cat === 'string' && oldNames.includes(cat) && cat !== newAz) {
+            batch.update(d.ref, { category: newAz });
+            migratedCount += 1;
+          }
+        });
+        if (migratedCount > 0) {
+          await batch.commit();
+        }
+      }
 
       await loadData({ silent: true });
       setShowEditCategory(false);
       setEditingCategory(null);
-      alert('Kateqoriya uğurla yeniləndi!');
+      alert(
+        migratedCount > 0
+          ? `Kateqoriya yeniləndi! ${migratedCount} məhsul yeni ada uyğunlaşdırıldı.`
+          : 'Kateqoriya uğurla yeniləndi!'
+      );
     } catch (error) {
       console.error('Error updating category:', error);
       alert('Xəta baş verdi: ' + (error as Error).message);
@@ -2246,16 +2280,46 @@ const AdminPanel: React.FC = () => {
                       return;
                     }
                     try {
-                      const { updateDoc, doc } = await import('firebase/firestore');
+                      const { updateDoc, doc, collection, getDocs, writeBatch } = await import('firebase/firestore');
                       const { db } = await import('../../lib/firebase');
+
+                      // Köhnə brend adını tap (məhsulların migrasiyası üçün)
+                      const original = brands.find((b: any) => b.id === editingBrand.id) as any;
+                      const oldName: string = original?.name || '';
+                      const newName: string = String(editingBrand.name).trim();
+
+                      // 1) Brendi yenilə
                       await updateDoc(doc(db, 'brands', editingBrand.id), {
-                        name: editingBrand.name,
+                        name: newName,
                         logo: editingBrand.logo || ''
                       });
+
+                      // 2) Köhnə brend adı ilə əlaqəli məhsulları yeni ada uyğunlaşdır (məhsullar itməsin)
+                      let migratedCount = 0;
+                      if (oldName && oldName !== newName) {
+                        const productsSnap = await getDocs(collection(db, 'products'));
+                        const batch = writeBatch(db);
+                        productsSnap.docs.forEach((d) => {
+                          const data = d.data() as any;
+                          const br = data?.brand;
+                          if (typeof br === 'string' && br === oldName) {
+                            batch.update(d.ref, { brand: newName });
+                            migratedCount += 1;
+                          }
+                        });
+                        if (migratedCount > 0) {
+                          await batch.commit();
+                        }
+                      }
+
                       setShowEditBrand(false);
                       setEditingBrand(null);
                       loadData({ silent: true });
-                      alert('Marka yeniləndi!');
+                      alert(
+                        migratedCount > 0
+                          ? `Marka yeniləndi! ${migratedCount} məhsul yeni brend adına uyğunlaşdırıldı.`
+                          : 'Marka yeniləndi!'
+                      );
                     } catch (error) {
                       console.error('Error updating brand:', error);
                       alert('Xəta baş verdi');
