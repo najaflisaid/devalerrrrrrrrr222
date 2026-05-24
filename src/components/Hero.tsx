@@ -104,14 +104,15 @@ const Hero: React.FC = () => {
             <motion.video
               key={`v-${currentSlide}`}
               src={current.videoUrl}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ objectPosition: 'center center' }}
               autoPlay
               loop
               muted
               playsInline
               preload="auto"
               controls={false}
-              initial={{ scale: 1.08 }}
+              initial={{ scale: 1 }}
               animate={{ scale: 1 }}
               transition={{ duration: 8, ease: 'linear' }}
             />
@@ -120,10 +121,11 @@ const Hero: React.FC = () => {
               key={`i-${currentSlide}`}
               src={current?.image}
               alt={current?.title || 'Hero'}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover object-center md:object-cover"
+              style={{ objectPosition: 'center center' }}
               loading="eager"
-              initial={{ scale: 1.12 }}
-              animate={{ scale: 1.0 }}
+              initial={{ scale: 1 }}
+              animate={{ scale: 1 }}
               transition={{ duration: (current?.duration || 7), ease: 'linear' }}
             />
           )}
