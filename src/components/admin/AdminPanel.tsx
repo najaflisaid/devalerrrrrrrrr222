@@ -1395,6 +1395,16 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  // Əgər aktiv tab icazəli deyilsə, ilk icazəli tab-a keç
+  // (Rules of Hooks — bütün hook çağırışları erkən return-dən əvvəl olmalıdır)
+  useEffect(() => {
+    if (currentAdminPermissions === undefined) return;
+    if (currentAdminPermissions.length === 0) return;
+    if (!currentAdminPermissions.includes(activeTab)) {
+      setActiveTab(currentAdminPermissions[0]);
+    }
+  }, [currentAdminPermissions, activeTab]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -1493,15 +1503,6 @@ const AdminPanel: React.FC = () => {
         : group.items.filter((item) => currentAdminPermissions.includes(item.id)),
     }))
     .filter((group) => group.items.length > 0);
-
-  // Əgər aktiv tab icazəli deyilsə, ilk icazəli tab-a keç
-  useEffect(() => {
-    if (currentAdminPermissions === undefined) return;
-    const allAllowed = filteredTabGroups.flatMap((g) => g.items.map((i) => i.id));
-    if (allAllowed.length > 0 && !allAllowed.includes(activeTab)) {
-      setActiveTab(allAllowed[0]);
-    }
-  }, [currentAdminPermissions, activeTab]);
 
   return (
     <div className="min-h-screen bg-gray-50">
