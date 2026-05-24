@@ -73,6 +73,32 @@ const CartPage: React.FC = () => {
       window.removeEventListener('focus', sync);
     };
   }, []);
+
+  // Epoint-dən geri qayıdanda (back button / bfcache) loading state sıfırlansın
+  // və sayt firlandı vəziyyətdə qalmasın
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      // bfcache-dən bərpa olunduqda və ya səhifə yenidən görünəndə
+      if (e.persisted || sessionStorage.getItem('pending_epoint_order_id')) {
+        setLoading(false);
+        setWidgetUrl(null);
+        // Epoint-ə getmişdi amma ödəniş tamamlanmadı — sessiyanı təmizlə
+        sessionStorage.removeItem('pending_epoint_order_id');
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && sessionStorage.getItem('pending_epoint_order_id')) {
+        // Səhifə yenidən görünür və Epoint sessiyası açıq qalıb — loading-i sıfırla
+        setLoading(false);
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
   useEffect(() => {
     if (showCheckout) setIsLoggedIn(!!localStorage.getItem('userId'));
   }, [showCheckout]);
@@ -616,9 +642,21 @@ const CartPage: React.FC = () => {
               <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-black animate-spin"></div>
             </div>
             <h3 className="font-medium text-black text-base mb-1">Ödəniş hazırlanır...</h3>
-            <p className="text-xs text-black/55 leading-relaxed">
+            <p className="text-xs text-black/55 leading-relaxed mb-4">
               Sizi təhlükəsiz ödəniş səhifəsinə yönləndiririk.
             </p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(false);
+                setWidgetUrl(null);
+                sessionStorage.removeItem('pending_epoint_order_id');
+              }}
+              className="text-[11px] uppercase tracking-[0.18em] text-black/45 hover:text-black/80 transition-colors underline-offset-2 hover:underline"
+              data-testid="payment-loading-cancel-btn"
+            >
+              Ləğv et
+            </button>
           </div>
         </div>
       )}
