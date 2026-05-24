@@ -76,6 +76,12 @@ const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('products');
+  // Cari admin istifadəçi və onun icazələri (undefined → super-admin / hamısı açıq)
+  const [currentAdminPermissions, setCurrentAdminPermissions] = useState<string[] | undefined>(undefined);
+  // Permission düzəltmə modalı üçün state
+  const [permissionsTarget, setPermissionsTarget] = useState<{
+    userId: string; userName: string; permissions: string[];
+  } | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [b2bRequests, setB2bRequests] = useState<B2BRequest[]>([]);
@@ -461,6 +467,24 @@ const AdminPanel: React.FC = () => {
     } catch {
       /* ignore */
     }
+
+    // Cari adminin icazələrini yüklə (yalnız müəyyən tabları görsün)
+    (async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) return;
+        const u = await userService.getUserById(userId);
+        if (u && u.role === 'admin' && Array.isArray(u.adminPermissions)) {
+          setCurrentAdminPermissions(u.adminPermissions);
+        } else {
+          // super-admin və ya geriyə uyğunluq — bütün tablar açıq
+          setCurrentAdminPermissions(undefined);
+        }
+      } catch {
+        setCurrentAdminPermissions(undefined);
+      }
+    })();
+
     loadData();
   }, [navigate]);
 
@@ -1460,6 +1484,25 @@ const AdminPanel: React.FC = () => {
     },
   ];
 
+  // Cari adminin görə biləcəyi tablar — icazələri filter et
+  const filteredTabGroups = tabGroups
+    .map((group) => ({
+      label: group.label,
+      items: currentAdminPermissions === undefined
+        ? group.items
+        : group.items.filter((item) => currentAdminPermissions.includes(item.id)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  // Əgər aktiv tab icazəli deyilsə, ilk icazəli tab-a keç
+  useEffect(() => {
+    if (currentAdminPermissions === undefined) return;
+    const allAllowed = filteredTabGroups.flatMap((g) => g.items.map((i) => i.id));
+    if (allAllowed.length > 0 && !allAllowed.includes(activeTab)) {
+      setActiveTab(allAllowed[0]);
+    }
+  }, [currentAdminPermissions, activeTab]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -1485,7 +1528,7 @@ const AdminPanel: React.FC = () => {
             data-testid="admin-sidebar"
           >
             <nav className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-4">
-              {tabGroups.map((group) => (
+              {filteredTabGroups.map((group) => (
                 <div key={group.label}>
                   <div className="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                     {group.label}
@@ -3802,6 +3845,24 @@ const AdminPanel: React.FC = () => {
                       >
                         <ShieldCheck className="h-4 w-4" />
                       </button>
+                      {user.role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            setPermissionsTarget({
+                              userId: user.id,
+                              userName: `${user.name || ''} ${user.surname || ''}`.trim() || user.email || '',
+                              permissions: Array.isArray((user as any).adminPermissions)
+                                ? [...((user as any).adminPermissions as string[])]
+                                : [],
+                            });
+                          }}
+                          title="Admin icazələrini düzəlt"
+                          className="p-2 text-gray-400 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all"
+                          data-testid={`edit-permissions-${user.id}`}
+                        >
+                          <Lock className="h-4 w-4" />
+                        </button>
+                      )}
                       {user.role !== 'admin' && (
                         <button
                           onClick={() => handleDeleteUser(user.id, `${user.name} ${user.surname}`)}
@@ -3925,6 +3986,119 @@ const AdminPanel: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Admin icazələri modalı */}
+      {permissionsTarget && (
+        <div className="fixed inset-0 bg-black/50 z-[120] flex items-center justify-center p-4" data-testid="permissions-modal">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Admin İcazələri</h3>
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">{permissionsTarget.userName}</span> üçün hansı bölmələrə icazə verirsiniz?
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Heç biri seçilməsə — istifadəçi admin panelə girə bilməz. Bütün bölmələri seçməsən, super-admin sayılmır.
+              </p>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto flex-1">
+              <div className="space-y-5">
+                {tabGroups.map((group) => (
+                  <div key={group.label}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                        {group.label}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const groupIds = group.items.map((i) => i.id);
+                          const allSelected = groupIds.every((id) => permissionsTarget.permissions.includes(id));
+                          const next = allSelected
+                            ? permissionsTarget.permissions.filter((p) => !groupIds.includes(p))
+                            : Array.from(new Set([...permissionsTarget.permissions, ...groupIds]));
+                          setPermissionsTarget({ ...permissionsTarget, permissions: next });
+                        }}
+                        className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium"
+                        data-testid={`toggle-group-${group.label}`}
+                      >
+                        {group.items.every((i) => permissionsTarget.permissions.includes(i.id))
+                          ? 'Hamısını sil'
+                          : 'Hamısını seç'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {group.items.map((item) => {
+                        const checked = permissionsTarget.permissions.includes(item.id);
+                        const Icon = item.icon;
+                        return (
+                          <label
+                            key={item.id}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                              checked
+                                ? 'border-indigo-300 bg-indigo-50'
+                                : 'border-gray-200 bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...permissionsTarget.permissions, item.id]
+                                  : permissionsTarget.permissions.filter((p) => p !== item.id);
+                                setPermissionsTarget({ ...permissionsTarget, permissions: next });
+                              }}
+                              className="w-4 h-4 text-indigo-600 rounded"
+                              data-testid={`perm-${item.id}`}
+                            />
+                            <Icon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-700">{item.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                Seçilmiş: <span className="font-semibold text-gray-900">{permissionsTarget.permissions.length}</span> bölmə
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPermissionsTarget(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+                  data-testid="permissions-cancel"
+                >
+                  Ləğv et
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await userService.setAdminPermissions(
+                        permissionsTarget.userId,
+                        permissionsTarget.permissions
+                      );
+                      setPermissionsTarget(null);
+                      await loadData({ silent: true });
+                      showToast('İcazələr yeniləndi', 'success');
+                    } catch (err: any) {
+                      showToast('Xəta: ' + (err?.message || 'Bilinməyən'), 'error');
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800"
+                  data-testid="permissions-save"
+                >
+                  Yadda saxla
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

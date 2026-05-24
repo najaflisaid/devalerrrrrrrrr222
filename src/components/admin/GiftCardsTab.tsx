@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Gift, Plus, Trash2, Save, X } from 'lucide-react';
+import { Gift, Plus, Trash2, Save, X, Send, Copy, Check, MessageCircle, ExternalLink } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
+import { createGiftCardPromoCode, type PromoCode } from '../../services/promoCodeService';
 import type { Product } from '../../types';
 
 interface FormState {
@@ -36,6 +37,19 @@ const GiftCardsTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(empty);
+
+  // Influencer/Bloger üçün hədiyyə kartı göndərmə state-i
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendForm, setSendForm] = useState({
+    recipientName: '',
+    recipientPhone: '',
+    amount: '',
+    message: '',
+    senderName: 'DE VALEUR',
+  });
+  const [sendingCard, setSendingCard] = useState(false);
+  const [sentCard, setSentCard] = useState<PromoCode | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -149,13 +163,32 @@ const GiftCardsTab: React.FC = () => {
             Müştərilər bu kartı alanda hesabları üçün avtomatik unikal promo kod yaranır.
           </p>
         </div>
-        <button
-          onClick={startNew}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-          data-testid="gift-cards-add-btn"
-        >
-          <Plus className="w-4 h-4" /> Yeni Hədiyyə Kartı
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setSentCard(null);
+              setSendForm({
+                recipientName: '',
+                recipientPhone: '',
+                amount: '',
+                message: '',
+                senderName: 'DE VALEUR',
+              });
+              setShowSendModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+            data-testid="send-influencer-card-btn"
+          >
+            <Send className="w-4 h-4" /> Influencer-ə Göndər
+          </button>
+          <button
+            onClick={startNew}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+            data-testid="gift-cards-add-btn"
+          >
+            <Plus className="w-4 h-4" /> Yeni Hədiyyə Kartı
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -321,6 +354,242 @@ const GiftCardsTab: React.FC = () => {
                 <Save className="w-4 h-4" />
                 {saving ? 'Yadda saxlanılır...' : 'Yadda saxla'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === Influencer-ə Hədiyyə Kartı Göndər Modalı === */}
+      {showSendModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 px-4" data-testid="send-influencer-modal">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Send className="w-5 h-5 text-amber-600" />
+                  Influencer-ə Hədiyyə Kartı Göndər
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Bloger / influencer üçün ödənişsiz hədiyyə kartı yaradın və paylaşma linki əldə edin
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Bağla"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!sentCard ? (
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Alıcının adı *</label>
+                    <input
+                      type="text"
+                      value={sendForm.recipientName}
+                      onChange={(e) => setSendForm({ ...sendForm, recipientName: e.target.value })}
+                      placeholder="Məs: Aysel Quliyeva"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
+                      data-testid="send-recipient-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Məbləğ (AZN) *</label>
+                    <input
+                      type="number"
+                      value={sendForm.amount}
+                      onChange={(e) => setSendForm({ ...sendForm, amount: e.target.value })}
+                      placeholder="500"
+                      min={1}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
+                      data-testid="send-amount"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    WhatsApp nömrəsi <span className="text-gray-400 font-normal">(istəyə bağlı)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={sendForm.recipientPhone}
+                    onChange={(e) => setSendForm({ ...sendForm, recipientPhone: e.target.value })}
+                    placeholder="+994551234567"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-mono"
+                    data-testid="send-phone"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Daxil edilərsə, hazır WhatsApp linki yaranar
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Göndərənin adı</label>
+                  <input
+                    type="text"
+                    value={sendForm.senderName}
+                    onChange={(e) => setSendForm({ ...sendForm, senderName: e.target.value })}
+                    placeholder="DE VALEUR"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Şəxsi mesaj</label>
+                  <textarea
+                    rows={3}
+                    value={sendForm.message}
+                    onChange={(e) => setSendForm({ ...sendForm, message: e.target.value })}
+                    placeholder="Əməkdaşlığımız üçün təşəkkür edirik..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
+                    data-testid="send-message"
+                  />
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                  <strong>Qeyd:</strong> Bu kart admin tərəfindən pulsuz yaradılır (heç bir ödəniş alınmır). Alıcı paylaşma linki ilə kodu görəcək və checkout-da promo kod kimi istifadə edə biləcək.
+                </div>
+              </div>
+            ) : (
+              /* Card yaradıldıqdan sonra paylaşma ekranı */
+              <div className="p-6 space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
+                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Check className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="text-sm font-semibold text-emerald-900">Hədiyyə kartı yaradıldı!</p>
+                  <p className="text-xs text-emerald-700 mt-1">
+                    Aşağıdakı link və ya kodu paylaşa bilərsiniz
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-950 to-black rounded-xl p-5 text-center text-white">
+                  <p className="text-[10px] tracking-[0.3em] uppercase text-amber-300/80 mb-1">Kod</p>
+                  <p className="font-mono text-3xl tracking-[0.3em] mb-2">{sentCard.code}</p>
+                  <p className="text-xs text-amber-200/80">Dəyər: {sentCard.amountAZN || 0} AZN</p>
+                </div>
+
+                {(() => {
+                  const shareUrl = `${window.location.origin}/gift-card/${sentCard.code}`;
+                  const waText = encodeURIComponent(
+                    `${sendForm.recipientName || 'Hörmətli istifadəçi'}, sizə DE VALEUR-dan ${sentCard.amountAZN} AZN dəyərində hədiyyə kartı göndərildi! ${shareUrl}`
+                  );
+                  const waPhone = sendForm.recipientPhone.replace(/\D/g, '');
+                  const waLink = waPhone
+                    ? `https://wa.me/${waPhone}?text=${waText}`
+                    : `https://wa.me/?text=${waText}`;
+                  return (
+                    <>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Paylaşma linki</p>
+                        <p className="text-xs font-mono text-gray-800 break-all mb-2">{shareUrl}</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(shareUrl);
+                                setCopiedLink(true);
+                                setTimeout(() => setCopiedLink(false), 2000);
+                              } catch { /* ignore */ }
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-gray-300 rounded hover:bg-gray-50"
+                            data-testid="copy-share-link"
+                          >
+                            {copiedLink ? (
+                              <><Check className="w-3.5 h-3.5 text-emerald-600" /> Kopyalandı</>
+                            ) : (
+                              <><Copy className="w-3.5 h-3.5" /> Linki kopyala</>
+                            )}
+                          </button>
+                          <a
+                            href={shareUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-white border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Aç
+                          </a>
+                        </div>
+                      </div>
+
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors"
+                        data-testid="send-via-whatsapp"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        {sendForm.recipientPhone ? 'WhatsApp ilə birbaşa göndər' : 'WhatsApp ilə paylaş'}
+                      </a>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div className="flex gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+              {!sentCard ? (
+                <>
+                  <button
+                    onClick={() => setShowSendModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-white"
+                  >
+                    Ləğv et
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const amount = parseFloat(sendForm.amount);
+                      if (!sendForm.recipientName.trim()) {
+                        alert('Alıcının adını daxil edin');
+                        return;
+                      }
+                      if (!amount || amount <= 0) {
+                        alert('Düzgün məbləğ daxil edin');
+                        return;
+                      }
+                      setSendingCard(true);
+                      try {
+                        const created = await createGiftCardPromoCode(
+                          amount,
+                          'admin_influencer',
+                          undefined,
+                          {
+                            senderName: sendForm.senderName.trim() || 'DE VALEUR',
+                            recipientName: sendForm.recipientName.trim(),
+                            recipientPhone: sendForm.recipientPhone.trim(),
+                            message: sendForm.message.trim(),
+                            source: 'admin_influencer',
+                          }
+                        );
+                        setSentCard(created);
+                      } catch (e: any) {
+                        alert('Kart yaradılmadı: ' + (e?.message || 'Bilinməyən xəta'));
+                      } finally {
+                        setSendingCard(false);
+                      }
+                    }}
+                    disabled={sendingCard}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium disabled:opacity-60"
+                    data-testid="create-influencer-card"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sendingCard ? 'Yaradılır...' : 'Kart Yarat və Paylaş'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowSendModal(false)}
+                  className="w-full px-4 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+                  data-testid="close-send-modal"
+                >
+                  Bağla
+                </button>
+              )}
             </div>
           </div>
         </div>

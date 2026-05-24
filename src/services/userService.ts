@@ -141,6 +141,41 @@ export const userService = {
     }
   },
 
+  // Admin user üçün detallı icazələri saxla. Boş array → bütün tablara icazəsi yoxdur,
+  // undefined → super-admin / geriyə uyğunluq (bütün tablar açıq).
+  async setAdminPermissions(userId: string, permissions: string[]): Promise<void> {
+    const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+    if (!usersSnapshot.empty) {
+      await updateDoc(usersSnapshot.docs[0].ref, { adminPermissions: permissions });
+    } else {
+      throw new Error('İstifadəçi tapılmadı');
+    }
+  },
+
+  // localStorage userId ilə istifadəçi məlumatını gətir (admin icazələri üçün lazımdır)
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+      if (usersSnapshot.empty) return null;
+      const data = usersSnapshot.docs[0].data() as any;
+      return {
+        id: data.id,
+        email: data.email || '',
+        name: data.name || '',
+        surname: data.surname || '',
+        phone: data.phone || '',
+        role: data.role || 'customer',
+        status: data.status,
+        isB2BApproved: data.isB2BApproved,
+        adminPermissions: Array.isArray(data.adminPermissions) ? data.adminPermissions : undefined,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+      } as User;
+    } catch (err) {
+      console.error('getUserById error:', err);
+      return null;
+    }
+  },
+
   async updateUserDiscount(
     userId: string,
     discountPercentage: number,

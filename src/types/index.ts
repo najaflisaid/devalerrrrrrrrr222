@@ -33,9 +33,12 @@ export interface User {
   name: string;
   surname: string;
   phone?: string;
-  role: 'customer' | 'b2b' | 'admin';
+  role: 'customer' | 'b2b' | 'admin' | 'super_admin';
   status?: 'active' | 'inactive';
   isB2BApproved?: boolean;
+  // Detallı admin icazələri — boş və ya undefined olduqda super-admin sayılır
+  // (mövcud adminlərin uyğunluğu üçün)
+  adminPermissions?: string[];
   createdAt: Date;
 }
 

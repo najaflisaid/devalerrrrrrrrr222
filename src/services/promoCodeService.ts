@@ -56,6 +56,15 @@ export interface PromoCode {
     userEmail?: string;
     userName?: string;
   };
+  // Hədiyyə kartı paylaşma metadatası — `/gift-card/[code]` səhifəsində göstərilir
+  giftCardShare?: {
+    senderName?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    recipientEmail?: string;
+    message?: string;
+    source?: 'purchase' | 'admin_influencer'; // satınalmadan və ya admin tərəfindən
+  };
   usedBy?: {
     userId?: string;
     userEmail?: string;
@@ -204,7 +213,15 @@ export const validatePromoCode = async (
 export const createGiftCardPromoCode = async (
   amountAZN: number,
   createdBy?: string,
-  assignedTo?: { userId: string; userEmail?: string; userName?: string }
+  assignedTo?: { userId: string; userEmail?: string; userName?: string },
+  giftCardShare?: {
+    senderName?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    recipientEmail?: string;
+    message?: string;
+    source?: 'purchase' | 'admin_influencer';
+  }
 ): Promise<PromoCode> => {
   if (!amountAZN || amountAZN <= 0) {
     throw new Error('Gift kart məbləği 0-dan böyük olmalıdır');
@@ -233,11 +250,39 @@ export const createGiftCardPromoCode = async (
             },
           }
         : {}),
+      ...(giftCardShare
+        ? {
+            giftCardShare: {
+              senderName: giftCardShare.senderName || '',
+              recipientName: giftCardShare.recipientName || '',
+              recipientPhone: giftCardShare.recipientPhone || '',
+              recipientEmail: giftCardShare.recipientEmail || '',
+              message: giftCardShare.message || '',
+              source: giftCardShare.source || 'purchase',
+            },
+          }
+        : {}),
     };
     await setDoc(ref, data);
     return data;
   }
   throw new Error('Unikal gift kart kodu yaratmaq mümkün olmadı');
+};
+
+// Hədiyyə kartı kodunu public olaraq oxumaq üçün — `/gift-card/[code]` səhifəsi istifadə edir.
+// Yalnız isGiftCard=true olan kodları qaytarır; başqa kod tapılsa null qaytarır.
+export const getGiftCardByCode = async (code: string): Promise<PromoCode | null> => {
+  try {
+    const ref = doc(db, COLLECTION, code);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    const data = snap.data() as PromoCode;
+    if (!data.isGiftCard) return null;
+    return data;
+  } catch (err) {
+    console.error('getGiftCardByCode error:', err);
+    return null;
+  }
 };
 
 /**

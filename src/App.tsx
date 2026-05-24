@@ -48,6 +48,7 @@ const PaymentResultPage = React.lazy(() => import('./pages/PaymentResultPage'));
 const WishlistPage = React.lazy(() => import('./pages/WishlistPage'));
 const GiftCardsPage = React.lazy(() => import('./pages/GiftCardsPage'));
 const GiftCardCheckoutPage = React.lazy(() => import('./pages/GiftCardCheckoutPage'));
+const GiftCardSharePage = React.lazy(() => import('./pages/GiftCardSharePage'));
 const WorkerLogin = React.lazy(() => import('./pages/workers/WorkerLogin'));
 const WorkerDashboard = React.lazy(() => import('./pages/workers/WorkerDashboard'));
 const AiChatWidget = React.lazy(() => import('./components/AiChatWidget'));
@@ -156,6 +157,7 @@ const AppContent: React.FC = () => {
             <Route path="/b2b-request" element={<B2BRequestForm />} />
             <Route path="/b2b-login" element={<B2BLogin />} />
             <Route path="/delivery" element={<DeliveryPage />} />
+            <Route path="/gift-card/:code" element={<GiftCardSharePage />} />
             <Route path="/*" element={
               <>
                 <Header />

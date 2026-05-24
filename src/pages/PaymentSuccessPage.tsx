@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Loader2, Package, Gift, Copy, Check } from 'lucide-react';
+import { CheckCircle2, Loader2, Package, Gift, Copy, Check, Share2, MessageCircle } from 'lucide-react';
 import { verifyRedirectPayload } from '../services/epointPaymentService';
 import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -71,12 +71,29 @@ const PaymentSuccessPage: React.FC = () => {
 
             if (!isGift || !amount) continue;
 
+            // Sifariş üzərində hədiyyə kartı metadata var (göndərən/alıcı/mesaj)
+            const shareMeta = orderData.giftCardMeta as
+              | { senderName?: string; recipientName?: string; recipientPhone?: string; message?: string }
+              | undefined;
+
             // Generate one promo code per quantity
             const qty = Number(it.quantity || 1);
             for (let q = 0; q < qty; q++) {
-              const created = await createGiftCardPromoCode(amount, 'gift-card-purchase', orderData.userId
-                ? { userId: orderData.userId, userEmail: orderData.customerEmail, userName: orderData.customerName }
-                : undefined
+              const created = await createGiftCardPromoCode(
+                amount,
+                'gift-card-purchase',
+                orderData.userId
+                  ? { userId: orderData.userId, userEmail: orderData.customerEmail, userName: orderData.customerName }
+                  : undefined,
+                shareMeta
+                  ? {
+                      senderName: shareMeta.senderName || orderData.customerName || '',
+                      recipientName: shareMeta.recipientName || '',
+                      recipientPhone: shareMeta.recipientPhone || '',
+                      message: shareMeta.message || '',
+                      source: 'purchase',
+                    }
+                  : undefined
               );
               issued.push({ code: created.code, amount });
             }
@@ -237,33 +254,67 @@ const PaymentSuccessPage: React.FC = () => {
               Bu kodları alış-veriş zamanı promo kod kimi istifadə edə bilərsiniz. Hər kod yalnız bir dəfə işlədilir.
             </p>
             <div className="space-y-2">
-              {giftCodes.map((g, i) => (
-                <div
-                  key={`${g.code}-${i}`}
-                  className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2.5"
-                  data-testid={`gift-code-row-${i}`}
-                >
-                  <div className="min-w-0">
-                    <p className="font-mono text-base font-semibold text-gray-900 tracking-widest">{g.code}</p>
-                    <p className="text-xs text-gray-500">Dəyər: {g.amount.toFixed(2)} AZN</p>
-                  </div>
-                  <button
-                    onClick={() => handleCopy(g.code)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded hover:bg-gray-800"
-                    data-testid={`gift-code-copy-${i}`}
+              {giftCodes.map((g, i) => {
+                const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/gift-card/${g.code}`;
+                const waText = encodeURIComponent(`Sizə DE VALEUR hədiyyə kartı göndərildi! ${shareUrl}`);
+                return (
+                  <div
+                    key={`${g.code}-${i}`}
+                    className="bg-white border border-amber-200 rounded-lg p-3"
+                    data-testid={`gift-code-row-${i}`}
                   >
-                    {copied === g.code ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" /> Köçürüldü
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" /> Köçür
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="min-w-0">
+                        <p className="font-mono text-base font-semibold text-gray-900 tracking-widest">{g.code}</p>
+                        <p className="text-xs text-gray-500">Dəyər: {g.amount.toFixed(2)} AZN</p>
+                      </div>
+                      <button
+                        onClick={() => handleCopy(g.code)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded hover:bg-gray-800"
+                        data-testid={`gift-code-copy-${i}`}
+                      >
+                        {copied === g.code ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" /> Köçürüldü
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" /> Köçür
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-100">
+                      <a
+                        href={`https://wa.me/?text=${waText}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                        data-testid={`gift-code-whatsapp-${i}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp ilə göndər
+                      </a>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            setCopied(`link-${g.code}`);
+                            setTimeout(() => setCopied(null), 2000);
+                          } catch { /* ignore */ }
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                        data-testid={`gift-code-share-link-${i}`}
+                      >
+                        {copied === `link-${g.code}` ? (
+                          <><Check className="w-3.5 h-3.5" /> Link kopyalandı</>
+                        ) : (
+                          <><Share2 className="w-3.5 h-3.5" /> Linki paylaş</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

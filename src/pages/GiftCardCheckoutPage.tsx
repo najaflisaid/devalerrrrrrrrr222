@@ -150,6 +150,14 @@ const GiftCardCheckoutPage: React.FC = () => {
         ]
           .filter(Boolean)
           .join('\n'),
+        // Hədiyyə kartı metadata — PaymentSuccessPage promo kod yaratdıqda istifadə edir
+        // ki, qarşı tərəfə paylaşma səhifəsində göndərənin və alıcının adı görünsün.
+        giftCardMeta: {
+          senderName: meta.senderName || buyerName || '',
+          recipientName: meta.recipientName || '',
+          recipientPhone: meta.recipientPhone || '',
+          message: meta.message || '',
+        },
         items: [
           {
             productId: `custom-giftcard-${meta.amount}`,
