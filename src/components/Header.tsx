@@ -659,14 +659,9 @@ const Header: React.FC = () => {
                                       <li key={`${hoveredCategory || 'all'}-${brand}`}>
                                         <button
                                           onClick={() => {
-                                            if (hoveredCategory) {
-                                              const params = new URLSearchParams();
-                                              params.set('brand', brand);
-                                              params.set('category', hoveredCategory);
-                                              navigate(`/products?${params.toString()}`);
-                                            } else {
-                                              navigate(`/brand/${toBrandSlug(brand)}`);
-                                            }
+                                            // Birbaşa brendin öz səhifəsinə yönləndir — kateqoriyada məhsul olmasa belə
+                                            // brendin bütün məhsulları görünsün (boş səhifə olmasın)
+                                            navigate(`/brand/${toBrandSlug(brand)}`);
                                             setShowDropdown(false);
                                           }}
                                           style={{ ['--dv-i' as any]: idx }}

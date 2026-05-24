@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { productService } from '../services/productService';
 import { fromBrandSlug } from '../utils/brandSlug';
-import type { Product } from '../types';
 
 /**
  * BrandPage artıq müstəqil layout deyil — filter UI-nın həmişə görünməsi üçün
@@ -19,10 +18,29 @@ const BrandPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const all: Product[] = await productService.getAll();
-        const knownBrands = Array.from(
-          new Set(all.map((p) => p.brand).filter(Boolean) as string[])
-        );
+        const [all, brandsSnap] = await Promise.all([
+          productService.getAll(),
+          (async () => {
+            try {
+              const { collection, getDocs } = await import('firebase/firestore');
+              const { db } = await import('../lib/firebase');
+              const s = await getDocs(collection(db, 'brands'));
+              return s.docs.map((d) => {
+                const data = d.data() as any;
+                const n = typeof data.name === 'object'
+                  ? (data.name.az || data.name.ru || data.name.en || '')
+                  : data.name;
+                return String(n || '').trim();
+              }).filter(Boolean);
+            } catch {
+              return [] as string[];
+            }
+          })(),
+        ]);
+        // Həm məhsullardakı, həm Firestore-dakı brendləri birləşdir — beləliklə
+        // admin yenidən təyin etdiyi, lakin hələ məhsulu olmayan brendlər də tanınır
+        const productBrands = (all.map((p) => p.brand).filter(Boolean) as string[]);
+        const knownBrands = Array.from(new Set([...productBrands, ...brandsSnap]));
         const canonical = fromBrandSlug(brand || '', knownBrands);
         if (cancelled) return;
         if (canonical) {
