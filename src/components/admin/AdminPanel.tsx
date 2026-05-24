@@ -392,7 +392,7 @@ const AdminPanel: React.FC = () => {
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
   });
 
-  const [newBrand, setNewBrand] = useState({ name: '', logo: '' });
+  const [newBrand, setNewBrand] = useState<{ name: string; logo: string; categoryNames: string[] }>({ name: '', logo: '', categoryNames: [] });
   const [newCategory, setNewCategory] = useState({ nameAz: '', nameRu: '', nameEn: '', parentId: '' });
   const [showEditCategory, setShowEditCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
@@ -476,9 +476,10 @@ const AdminPanel: React.FC = () => {
           id: doc.id,
           name: name,
           logo: data.logo,
+          categoryNames: Array.isArray(data.categoryNames) ? data.categoryNames : [],
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt instanceof Date ? data.createdAt : new Date())
-        };
-      }) as Brand[];
+        } as Brand;
+      });
     } catch (error) {
       console.error('Error loading brands:', error);
       return [];
@@ -848,11 +849,12 @@ const AdminPanel: React.FC = () => {
       await addDoc(collection(db, 'brands'), {
         name: newBrand.name.trim(),
         logo: newBrand.logo.trim() || null,
+        categoryNames: newBrand.categoryNames || [],
         createdAt: new Date()
       });
 
       await loadData({ silent: true });
-      setNewBrand({ name: '', logo: '' });
+      setNewBrand({ name: '', logo: '', categoryNames: [] });
       setShowAddBrand(false);
       alert('Marka uğurla əlavə edildi!');
     } catch (error) {
@@ -1872,8 +1874,23 @@ const AdminPanel: React.FC = () => {
                     </label>
                     <select
                       value={newProduct.brand}
-                      onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
+                      onChange={(e) => {
+                        const selectedBrandName = e.target.value;
+                        // Brend dəyişdikdə əlaqəli kateqoriyanı avtomatik doldur (admin əl ilə dəyişə bilər)
+                        const brandObj = brands.find((b: any) => b.name === selectedBrandName) as any;
+                        const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                        // Yalnız boş olduqda və ya bu brend digərinə dəyişdirildikdə avtomatik doldur
+                        let autoCategory = newProduct.category;
+                        if (brandCats.length > 0) {
+                          // Əgər mövcud kateqoriya bu brendin kateqoriyalarından deyilsə — yenisini seç
+                          if (!brandCats.includes(autoCategory)) {
+                            autoCategory = brandCats[0];
+                          }
+                        }
+                        setNewProduct({ ...newProduct, brand: selectedBrandName, category: autoCategory });
+                      }}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      data-testid="new-product-brand-select"
                     >
                       <option value="">Brend seçin</option>
                       {brands.map(brand => (
@@ -1884,6 +1901,15 @@ const AdminPanel: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                       Kateqoriya *
+                      {(() => {
+                        const brandObj = brands.find((b: any) => b.name === newProduct.brand) as any;
+                        const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                        return brandCats.length > 0 ? (
+                          <span className="text-[10px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
+                            Brend üçün avtomatik
+                          </span>
+                        ) : null;
+                      })()}
                       <button
                         type="button"
                         onClick={() => setShowAddCategory(true)}
@@ -1896,11 +1922,35 @@ const AdminPanel: React.FC = () => {
                       value={newProduct.category}
                       onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                      data-testid="new-product-category-select"
                     >
                       <option value="">Kateqoriya seçin</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
+                      {(() => {
+                        const brandObj = brands.find((b: any) => b.name === newProduct.brand) as any;
+                        const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                        // Brendin kateqoriyaları varsa — yuxarıda onları göstər, sonra qalanları
+                        const isBrandCat = (c: any) => brandCats.includes(c.nameAz || c.name);
+                        const preferred = categories.filter(isBrandCat);
+                        const others = categories.filter((c) => !isBrandCat(c));
+                        return (
+                          <>
+                            {preferred.length > 0 && (
+                              <optgroup label="Brendə uyğun">
+                                {preferred.map(cat => (
+                                  <option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {others.length > 0 && (
+                              <optgroup label={preferred.length > 0 ? 'Digər kateqoriyalar' : 'Bütün kateqoriyalar'}>
+                                {others.map(cat => (
+                                  <option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </>
+                        );
+                      })()}
                     </select>
                   </div>
                   <div>
@@ -2014,8 +2064,28 @@ const AdminPanel: React.FC = () => {
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Brend * <button type="button" onClick={() => setShowAddBrand(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.brand} onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Brend seçin</option>{brands.map(brand => (<option key={brand.id} value={brand.name}>{brand.name}</option>))}</select></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Kateqoriya * <button type="button" onClick={() => setShowAddCategory(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.category} onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="">Kateqoriya seçin</option>{categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Brend * <button type="button" onClick={() => setShowAddBrand(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.brand} onChange={(e) => {
+                    const selectedBrandName = e.target.value;
+                    const brandObj = brands.find((b: any) => b.name === selectedBrandName) as any;
+                    const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                    let autoCategory = editProduct.category;
+                    if (brandCats.length > 0 && !brandCats.includes(autoCategory)) {
+                      autoCategory = brandCats[0];
+                    }
+                    setEditProduct({ ...editProduct, brand: selectedBrandName, category: autoCategory });
+                  }} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" data-testid="edit-product-brand-select"><option value="">Brend seçin</option>{brands.map(brand => (<option key={brand.id} value={brand.name}>{brand.name}</option>))}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Kateqoriya *{(() => {
+                    const brandObj = brands.find((b: any) => b.name === editProduct.brand) as any;
+                    const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                    return brandCats.length > 0 ? (<span className="text-[10px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">Brend üçün avtomatik</span>) : null;
+                  })()} <button type="button" onClick={() => setShowAddCategory(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.category} onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" data-testid="edit-product-category-select"><option value="">Kateqoriya seçin</option>{(() => {
+                    const brandObj = brands.find((b: any) => b.name === editProduct.brand) as any;
+                    const brandCats: string[] = Array.isArray(brandObj?.categoryNames) ? brandObj.categoryNames : [];
+                    const isBrandCat = (c: any) => brandCats.includes(c.nameAz || c.name);
+                    const preferred = categories.filter(isBrandCat);
+                    const others = categories.filter((c) => !isBrandCat(c));
+                    return (<>{preferred.length > 0 && (<optgroup label="Brendə uyğun">{preferred.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}{others.length > 0 && (<optgroup label={preferred.length > 0 ? 'Digər kateqoriyalar' : 'Bütün kateqoriyalar'}>{others.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}</>);
+                  })()}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label>{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
                   <div className="md:col-span-2 flex gap-6"><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.isBestseller} onChange={(e) => setEditProduct({ ...editProduct, isBestseller: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Ən çox satılan</span></label><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.comingSoon || false} onChange={(e) => setEditProduct({ ...editProduct, comingSoon: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Tezliklə gələcək</span></label></div>
@@ -2223,6 +2293,50 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kateqoriyalar <span className="text-gray-400 font-normal">(birdən çox seçə bilərsiniz)</span>
+                    </label>
+                    <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-white">
+                      {categories.length === 0 ? (
+                        <p className="text-sm text-gray-500">Əvvəlcə kateqoriya yaradın.</p>
+                      ) : (
+                        categories
+                          .slice()
+                          .sort((a: any, b: any) => {
+                            const ap = a.parentId ? 1 : 0;
+                            const bp = b.parentId ? 1 : 0;
+                            if (ap !== bp) return ap - bp;
+                            return String(a.name).localeCompare(String(b.name));
+                          })
+                          .map((cat: any) => {
+                            const parent = cat.parentId ? categories.find((c: any) => c.id === cat.parentId) : null;
+                            const label = parent ? `${parent.name} → ${cat.name}` : cat.name;
+                            const checked = newBrand.categoryNames.includes(cat.nameAz || cat.name);
+                            const value = cat.nameAz || cat.name;
+                            return (
+                              <label key={cat.id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                      ? [...newBrand.categoryNames, value]
+                                      : newBrand.categoryNames.filter((n) => n !== value);
+                                    setNewBrand({ ...newBrand, categoryNames: next });
+                                  }}
+                                  data-testid={`new-brand-cat-${cat.id}`}
+                                />
+                                <span className="text-sm text-gray-700">{label}</span>
+                              </label>
+                            );
+                          })
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      Məhsul əlavə edərkən bu brendi seçəndə kateqoriya avtomatik dolacaq (admin yenə də əl ilə dəyişə bilər).
+                    </p>
+                  </div>
                 </div>
 
                 <button
@@ -2271,6 +2385,52 @@ const AdminPanel: React.FC = () => {
                       <img src={editingBrand.logo} alt="Preview" className="mt-2 w-16 h-16 object-contain rounded border" />
                     )}
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kateqoriyalar <span className="text-gray-400 font-normal">(birdən çox seçə bilərsiniz)</span>
+                    </label>
+                    <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-white">
+                      {categories.length === 0 ? (
+                        <p className="text-sm text-gray-500">Əvvəlcə kateqoriya yaradın.</p>
+                      ) : (
+                        categories
+                          .slice()
+                          .sort((a: any, b: any) => {
+                            const ap = a.parentId ? 1 : 0;
+                            const bp = b.parentId ? 1 : 0;
+                            if (ap !== bp) return ap - bp;
+                            return String(a.name).localeCompare(String(b.name));
+                          })
+                          .map((cat: any) => {
+                            const parent = cat.parentId ? categories.find((c: any) => c.id === cat.parentId) : null;
+                            const label = parent ? `${parent.name} → ${cat.name}` : cat.name;
+                            const value = cat.nameAz || cat.name;
+                            const current: string[] = Array.isArray(editingBrand.categoryNames) ? editingBrand.categoryNames : [];
+                            const checked = current.includes(value);
+                            return (
+                              <label key={cat.id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                      ? [...current, value]
+                                      : current.filter((n) => n !== value);
+                                    setEditingBrand({ ...editingBrand, categoryNames: next });
+                                  }}
+                                  data-testid={`edit-brand-cat-${cat.id}`}
+                                />
+                                <span className="text-sm text-gray-700">{label}</span>
+                              </label>
+                            );
+                          })
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      Məhsul əlavə edərkən bu brendi seçəndə kateqoriya avtomatik dolacaq.
+                    </p>
+                  </div>
                 </div>
 
                 <button
@@ -2288,10 +2448,11 @@ const AdminPanel: React.FC = () => {
                       const oldName: string = original?.name || '';
                       const newName: string = String(editingBrand.name).trim();
 
-                      // 1) Brendi yenilə
+                      // 1) Brendi yenilə (categoryNames daxil olmaqla)
                       await updateDoc(doc(db, 'brands', editingBrand.id), {
                         name: newName,
-                        logo: editingBrand.logo || ''
+                        logo: editingBrand.logo || '',
+                        categoryNames: Array.isArray(editingBrand.categoryNames) ? editingBrand.categoryNames : []
                       });
 
                       // 2) Köhnə brend adı ilə əlaqəli məhsulları yeni ada uyğunlaşdır (məhsullar itməsin)
@@ -2341,11 +2502,25 @@ const AdminPanel: React.FC = () => {
               ) : (
                 brands.map((brand) => (
                   <div key={brand.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {brand.logo && (
-                        <img src={brand.logo} alt={brand.name} className="w-10 h-10 object-contain rounded" />
+                        <img src={brand.logo} alt={brand.name} className="w-10 h-10 object-contain rounded flex-shrink-0" />
                       )}
-                      <span className="font-medium text-gray-900">{brand.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-gray-900 block truncate">{brand.name}</span>
+                        {Array.isArray((brand as any).categoryNames) && (brand as any).categoryNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(brand as any).categoryNames.slice(0, 4).map((cn: string) => (
+                              <span key={cn} className="text-[10px] bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{cn}</span>
+                            ))}
+                            {(brand as any).categoryNames.length > 4 && (
+                              <span className="text-[10px] text-gray-500">+{(brand as any).categoryNames.length - 4}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 italic">Kateqoriya təyin edilməyib</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
