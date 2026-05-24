@@ -156,19 +156,56 @@ const Header: React.FC = () => {
   const loadCategoriesAndBrands = async () => {
     try {
       const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
-      const [products, tree] = await Promise.all([
+      const [products, tree, brandsFromDb] = await Promise.all([
         productService.getAll(),
         getCategoryTree(lang),
+        (async () => {
+          // Admin paneldə brend → kateqoriya əlaqəsi: Firestore brands collection-dan yüklə
+          try {
+            const { collection, getDocs } = await import('firebase/firestore');
+            const { db } = await import('../lib/firebase');
+            const snap = await getDocs(collection(db, 'brands'));
+            return snap.docs.map((d) => {
+              const data = d.data() as any;
+              const name = typeof data.name === 'object'
+                ? (data.name.az || data.name.ru || data.name.en || '')
+                : data.name;
+              return {
+                name: String(name || '').trim(),
+                categoryNames: Array.isArray(data.categoryNames) ? data.categoryNames as string[] : [],
+              };
+            }).filter((b) => b.name);
+          } catch (e) {
+            console.error('Error loading brands from DB:', e);
+            return [] as { name: string; categoryNames: string[] }[];
+          }
+        })(),
       ]);
       const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
-      const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
+      // Brendlər: həm məhsullardan, həm Firestore brands collection-dan birlikdə
+      const productBrandSet = new Set<string>(products.map(p => p.brand).filter(Boolean));
+      brandsFromDb.forEach(b => productBrandSet.add(b.name));
+      const uniqueBrands = Array.from(productBrandSet);
+
       // Hər kategoriya üçün o kategoriyaya aid brendləri qruplaşdır (kategori adı ilə index)
       const byCat: Record<string, string[]> = {};
+
+      // 1) Məhsullardan: brend → məhsulun kateqoriyası
       products.forEach(p => {
         if (!p.category || !p.brand) return;
         if (!byCat[p.category]) byCat[p.category] = [];
         if (!byCat[p.category].includes(p.brand)) byCat[p.category].push(p.brand);
       });
+
+      // 2) Admin paneldən təyin olunmuş brend → kateqoriya əlaqəsi (məhsul olmasa belə görünsün)
+      brandsFromDb.forEach((b) => {
+        (b.categoryNames || []).forEach((catName) => {
+          if (!catName) return;
+          if (!byCat[catName]) byCat[catName] = [];
+          if (!byCat[catName].includes(b.name)) byCat[catName].push(b.name);
+        });
+      });
+
       Object.keys(byCat).forEach(k => byCat[k].sort((a, b) => a.localeCompare(b, 'az')));
       // Parent kategori üçün — onun bütün alt-kategoriyalarındakı brendlər də daxil olur
       const enrichBrandsForParents = (node: CategoryNode) => {
