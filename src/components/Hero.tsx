@@ -60,6 +60,24 @@ const Hero: React.FC = () => {
     };
   }, [currentSlide, slides.length]);
 
+  // Növbəti slayd-ı əvvəlcədən yüklə — keçid anında qaralma və ləngimə olmasın
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const next = slides[(currentSlide + 1) % slides.length] as any;
+    if (!next) return;
+    if (next.mediaType === 'video' && next.videoUrl) {
+      const v = document.createElement('video');
+      v.src = next.videoUrl;
+      v.preload = 'auto';
+      v.muted = true;
+      // Load metadata + frames to memory; browser cache will serve instantly when slide swaps
+      try { v.load(); } catch { /* noop */ }
+    } else if (next.image) {
+      const img = new Image();
+      img.src = next.image;
+    }
+  }, [currentSlide, slides]);
+
   const nextSlide = () => setCurrentSlide((p) => (p + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((p) => (p - 1 + slides.length) % slides.length);
   const handleLink = (link?: string) => {
@@ -91,14 +109,17 @@ const Hero: React.FC = () => {
       data-testid="dv-hero"
       style={{ height: 'clamp(560px, 88vh, 920px)' }}
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         <motion.div
           key={currentSlide}
           className="absolute inset-0"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{
+            opacity: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
+          }}
+          style={{ willChange: 'opacity' }}
         >
           {current?.mediaType === 'video' && current.videoUrl ? (
             <motion.video
@@ -144,14 +165,14 @@ const Hero: React.FC = () => {
 
       {/* === Editorial overlay text === */}
       <div className="relative z-[5] h-full flex items-end pb-20 md:pb-28 px-4 sm:px-8 md:px-16 lg:px-24">
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <motion.div
             key={`text-${currentSlide}`}
-            className="max-w-2xl text-white"
-            initial={{ opacity: 0, y: 40 }}
+            className="max-w-2xl text-white absolute bottom-20 md:bottom-28 left-4 sm:left-8 md:left-16 lg:left-24 right-4 sm:right-8 md:right-auto"
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
           >
             {current?.subtitle && (
               <motion.p
