@@ -423,13 +423,9 @@ const CartPage: React.FC = () => {
         }
         await startEpointPayment({ orderId, amount: total });
       } catch (signErr: any) {
-        try {
-          const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
-          await fsUpdate(fsDocRef(fsDb, 'customer_orders', orderId), {
-            status: 'payment_failed',
-            paymentStatus: 'failed',
-          });
-        } catch { /* ignore */ }
+        // Ödəniş başlatma uğursuzdursa belə, sifariş "pending_payment" statusunda qalır
+        // və müştəri "Sifarişlərim" hissəsindən yenidən ödəyə bilər. Statusu "payment_failed"
+        // qoymuruq ki, müştəri yenidən ödəmə imkanını itirməsin.
         sessionStorage.removeItem('pending_epoint_order_id');
         throw signErr;
       }
@@ -438,19 +434,14 @@ const CartPage: React.FC = () => {
         return; // Widget mode handled inline above
       }
 
-      const watchdog = window.setTimeout(async () => {
-        try {
-          const { doc: fsDocRef, updateDoc: fsUpdate } = await import('firebase/firestore');
-          await fsUpdate(fsDocRef(fsDb, 'customer_orders', orderId), {
-            status: 'payment_failed',
-            paymentStatus: 'failed',
-          });
-        } catch { /* ignore */ }
+      const watchdog = window.setTimeout(() => {
+        // Ödəniş səhifəsi açıla bilmədi — istifadəçiyə xəbər ver, amma sifariş
+        // bazada "pending_payment" statusunda qalır ki, "Sifarişlərim"-dən yenidən ödəyə bilsin
         sessionStorage.removeItem('pending_epoint_order_id');
-        setErrorMessage('Ödəniş səhifəsi açıla bilmədi. Zəhmət olmasa internet bağlantınızı yoxlayın və yenidən cəhd edin.');
+        setErrorMessage('Ödəniş səhifəsi açıla bilmədi. Sifarişiniz "Sifarişlərim" bölməsində ödəniş gözləyir — istənilən vaxt yenidən cəhd edə bilərsiniz.');
         setShowError(true);
         setLoading(false);
-        setTimeout(() => setShowError(false), 6000);
+        setTimeout(() => setShowError(false), 7000);
       }, 8000);
       const cancelWatchdog = () => window.clearTimeout(watchdog);
       window.addEventListener('beforeunload', cancelWatchdog, { once: true });

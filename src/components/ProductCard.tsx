@@ -75,7 +75,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
             alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
             loading="lazy"
             decoding="async"
-            className={`w-full h-full object-cover transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 ${
+            style={{ backgroundColor: '#ffffff' }}
+            className={`w-full h-full object-contain p-2 bg-white transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 ${
               hasSecondImage ? 'group-hover:opacity-0' : ''
             }`}
           />
@@ -86,7 +87,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               aria-hidden="true"
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-105"
+              style={{ backgroundColor: '#ffffff' }}
+              className="absolute inset-0 w-full h-full object-contain p-2 bg-white opacity-0 transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:scale-105"
             />
           )}
 

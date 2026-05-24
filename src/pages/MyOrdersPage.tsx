@@ -220,6 +220,7 @@ const MyOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [signOrderId, setSignOrderId] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [profileExtra, setProfileExtra] = useState<{
@@ -649,11 +650,51 @@ const MyOrdersPage: React.FC = () => {
                           )}
 
                           {order.status === 'pending_payment' && (
-                            <div className="my-3 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                              <Clock className="h-5 w-5 text-amber-600" />
-                              <p className="text-sm text-amber-700">
-                                Ödəniş gözləyir. Tezliklə təsdiqlənəcək.
+                            <div className="my-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-5 w-5 text-amber-600" />
+                                <p className="text-sm text-amber-800 font-medium">
+                                  Ödəniş gözləyir
+                                </p>
+                              </div>
+                              <p className="text-xs text-amber-700 mb-3 leading-relaxed">
+                                Bu sifariş üçün ödəniş tamamlanmayıb. İndi yenidən ödəyə bilərsiniz.
                               </p>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    setPayingOrderId(order.id!);
+                                    const { startEpointPayment } = await import('../services/epointPaymentService');
+                                    sessionStorage.setItem('pending_epoint_order_id', order.id!);
+                                    await startEpointPayment({
+                                      orderId: order.id!,
+                                      amount: order.totalAmount,
+                                      description: `DE VALEUR sifariş #${(order.id || '').slice(0, 10)}`,
+                                    });
+                                  } catch (err: any) {
+                                    console.error('Retry payment error:', err);
+                                    sessionStorage.removeItem('pending_epoint_order_id');
+                                    alert('Ödəniş başladıla bilmədi: ' + (err?.message || 'Naməlum xəta'));
+                                    setPayingOrderId(null);
+                                  }
+                                }}
+                                disabled={payingOrderId === order.id}
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                data-testid={`retry-payment-btn-${order.id}`}
+                              >
+                                {payingOrderId === order.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Ödəniş səhifəsi açılır...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CreditCard className="h-4 w-4" />
+                                    Yenidən Ödə
+                                  </>
+                                )}
+                              </button>
                             </div>
                           )}
 
@@ -665,7 +706,7 @@ const MyOrdersPage: React.FC = () => {
                                   <img
                                     src={item.image}
                                     alt={item.productName}
-                                    className="w-12 h-12 object-cover rounded-md flex-shrink-0"
+                                    className="w-12 h-12 object-contain bg-white border border-gray-100 rounded-md flex-shrink-0 p-0.5"
                                   />
                                 ) : (
                                   <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">

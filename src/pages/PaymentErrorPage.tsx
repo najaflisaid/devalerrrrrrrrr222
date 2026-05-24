@@ -1,21 +1,15 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { XCircle, RotateCw } from 'lucide-react';
 
 const PaymentErrorPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const pendingId = sessionStorage.getItem('pending_epoint_order_id');
-    if (pendingId) {
-      updateDoc(doc(db, 'customer_orders', pendingId), {
-        status: 'payment_failed',
-        paymentStatus: 'failed',
-      }).catch(() => undefined);
-      sessionStorage.removeItem('pending_epoint_order_id');
-    }
+    // Ödəniş uğursuz/ləğv olunsa belə sifariş bazada "pending_payment" statusu ilə qalır.
+    // Beləliklə müştəri "Sifarişlərim" hissəsindən sifarişə tıklayıb yenidən ödəniş edə bilər.
+    // pending_epoint_order_id sessiya açarı təmizlənir ki, səbət axını yenilənsin.
+    sessionStorage.removeItem('pending_epoint_order_id');
   }, []);
 
   return (
@@ -25,16 +19,20 @@ const PaymentErrorPage: React.FC = () => {
           <XCircle className="h-12 w-12 text-red-600" />
         </div>
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Ödəniş uğursuz oldu</h1>
-        <p className="text-gray-600 mb-6">
-          Hər hansı problem olduqda yenidən cəhd edə və ya başqa kart istifadə edə bilərsiniz.
+        <p className="text-gray-600 mb-2">
+          Sifarişiniz <strong>ödəniş gözləyir</strong> statusunda saxlanıldı.
+        </p>
+        <p className="text-gray-500 text-sm mb-6">
+          Səbətiniz silinmədi — yenidən cəhd edə və ya başqa kart istifadə edə bilərsiniz.
         </p>
         <div className="flex flex-col gap-2">
           <button
             onClick={() => navigate('/cart')}
-            className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800"
+            className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
             data-testid="payment-error-retry-btn"
           >
-            Yenidən ödə
+            <RotateCw className="h-4 w-4" />
+            Səbətə qayıt və yenidən ödə
           </button>
           <button
             onClick={() => navigate('/my-orders')}

@@ -140,7 +140,7 @@ const ProductDetailsPage: React.FC = () => {
               <img
                 src={product.images[0]}
                 alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-4 bg-white"
               />
             </div>
 
@@ -148,9 +148,9 @@ const ProductDetailsPage: React.FC = () => {
               {product.images.map((image, idx) => (
                 <button
                   key={idx}
-                  className="bg-gray-50 rounded-lg overflow-hidden aspect-square border-2 border-transparent hover:border-gray-300 transition-colors"
+                  className="bg-white rounded-lg overflow-hidden aspect-square border-2 border-gray-100 hover:border-gray-300 transition-colors"
                 >
-                  <img src={image} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img src={image} alt={`View ${idx + 1}`} className="w-full h-full object-contain p-2 bg-white" />
                 </button>
               ))}
             </div>
