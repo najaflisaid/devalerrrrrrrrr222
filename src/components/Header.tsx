@@ -425,7 +425,7 @@ const Header: React.FC = () => {
         const brand = (p.brand || '').toLowerCase();
         return nameAz.includes(q) || nameRu.includes(q) || nameEn.includes(q) || brand.includes(q);
       })
-      .slice(0, 8);
+      .slice(0, 24);
     setSearchResults(matches);
     setHighlightIndex(matches.length > 0 ? 0 : -1);
     void lang;
@@ -1249,91 +1249,157 @@ const Header: React.FC = () => {
       {showLoginModal && <CustomerLogin onClose={() => setShowLoginModal(false)} />}
 
       {showSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-24" onClick={closeSearchModal}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>
-            <form onSubmit={handleSearch} className="p-6">
-              <div className="flex items-center gap-4">
-                <Search className="h-6 w-6 text-gray-400" />
+        <div className="fixed inset-0 bg-white z-[100] overflow-y-auto dv-light-reset" data-testid="header-search-overlay">
+          {/* Top bar: logo center + close right */}
+          <div className="relative flex items-center justify-center px-4 sm:px-8 py-5 border-b border-black/[0.05]">
+            <img
+              src="https://i.hizliresim.com/tmu65g6.png"
+              alt="De Valeur"
+              className="h-9 sm:h-10"
+            />
+            <button
+              type="button"
+              onClick={closeSearchModal}
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 p-2 -m-2 text-black/60 hover:text-black transition-colors"
+              data-testid="header-search-close-btn"
+              aria-label="Close search"
+            >
+              <X className="h-5 w-5" strokeWidth={1.25} />
+            </button>
+          </div>
+
+          {/* Search input — centered, pill */}
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-black/55" strokeWidth={1.25} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  onBlur={() => {
-                    // Müştəri OK/axtar düyməsi basmasa belə yazdığı sözü analitikaya yaz —
-                    // bəzən dropdown-dakı məhsula klik etmədən modal-dan çıxırlar.
-                    const q = searchQuery.trim();
-                    if (q.length >= 2) {
-                      import('../services/analyticsService').then(({ trackSearch }) =>
-                        trackSearch(q).catch(() => undefined)
-                      );
-                    }
-                  }}
-                  placeholder={t('header.search')}
-                  className="flex-1 text-lg outline-none text-gray-900 placeholder-gray-400"
+                  placeholder={t('header.searchPlaceholder', { defaultValue: 'Search for…' })}
+                  className="w-full pl-14 pr-14 py-4 text-[15px] font-futura text-black placeholder-black/45 bg-white border border-black/35 rounded-full focus:border-black focus:outline-none transition-colors"
                   autoFocus
                   data-testid="header-search-input"
                 />
-
-                <button
-                  type="button"
-                  onClick={closeSearchModal}
-                  className="text-gray-400 hover:text-gray-600"
-                  data-testid="header-search-close-btn"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 p-1 text-black/45 hover:text-black"
+                    aria-label="Clear"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
+            </form>
 
-              {searchQuery && searchResults.length > 0 && (
-                <ul
-                  className="mt-4 max-h-96 overflow-y-auto divide-y divide-gray-100 border-t border-gray-100"
-                  data-testid="header-search-results"
-                >
-                  {searchResults.map((p, idx) => {
-                    const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
-                    const displayName = p.name?.[lang] || p.name?.az || p.name?.en || '';
-                    const isActive = idx === highlightIndex;
-                    return (
-                      <li key={p.id}>
+            {/* Trending searches — only when no query */}
+            {!searchQuery && categories.length > 0 && (
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3" data-testid="header-search-trending">
+                <span className="font-futura text-[11px] uppercase tracking-[0.22em] text-black/55">
+                  {t('header.trendingSearches', { defaultValue: 'Trend axtarışlar' })}
+                </span>
+                {categories.slice(0, 5).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setSearchQuery(c)}
+                    className="font-futura text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 capitalize transition-colors"
+                    data-testid={`header-search-trending-${c}`}
+                  >
+                    {getCategoryTranslation(c)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Results / Default grid */}
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pb-16">
+            {(() => {
+              const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+              const isQuery = !!searchQuery.trim();
+
+              // Default grid — top bestsellers + newest (visible only). Capped at 12.
+              const defaultGrid = !isQuery
+                ? allProducts
+                    .filter((p) => p.isEnabled !== false && !p.comingSoon)
+                    .sort((a, b) => {
+                      const aScore = (a.isBestseller ? 2 : 0) + ((a.stock ?? 0) > 0 ? 1 : 0);
+                      const bScore = (b.isBestseller ? 2 : 0) + ((b.stock ?? 0) > 0 ? 1 : 0);
+                      return bScore - aScore;
+                    })
+                    .slice(0, 12)
+                : [];
+
+              if (isQuery && searchResults.length === 0) {
+                return (
+                  <div className="text-center py-20" data-testid="header-search-no-results">
+                    <p className="font-futura text-[14px] text-black/55">
+                      {t('common.noResults', 'Nəticə tapılmadı')}
+                    </p>
+                  </div>
+                );
+              }
+
+              const productsToShow = isQuery ? searchResults : defaultGrid;
+              if (productsToShow.length === 0) return null;
+
+              return (
+                <>
+                  <h3 className="font-futura text-[15px] sm:text-[16px] text-black mb-6 capitalize" data-testid="header-search-section-title">
+                    {isQuery
+                      ? t('header.searchResults', { defaultValue: 'Nəticələr' })
+                      : t('header.featuredProducts', { defaultValue: 'Seçilmiş məhsullar' })}
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-3 sm:gap-x-5 gap-y-8" data-testid="header-search-results">
+                    {productsToShow.map((p) => {
+                      const displayName = p.name?.[lang] || p.name?.az || p.name?.en || '';
+                      const price = p.salePrice ?? p.price;
+                      return (
                         <button
+                          key={p.id}
                           type="button"
                           onClick={() => goToProduct(p)}
-                          onMouseEnter={() => setHighlightIndex(idx)}
-                          className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${
-                            isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
-                          }`}
+                          className="group text-left"
                           data-testid={`header-search-result-${p.id}`}
                         >
-                          {p.images?.[0] ? (
-                            <img
-                              src={p.images[0]}
-                              alt={displayName}
-                              className="w-12 h-12 object-cover rounded bg-gray-50 flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded bg-gray-100 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
-                            <div className="text-xs text-gray-500 truncate">{p.brand}</div>
+                          <div className="relative w-full aspect-square bg-[#f5f5f5] overflow-hidden mb-3">
+                            {p.images?.[0] ? (
+                              <img
+                                src={p.images[0]}
+                                alt={displayName}
+                                className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-black/30">N/A</div>
+                            )}
+                            {p.isBestseller && (
+                              <span className="absolute top-2 left-2 bg-black text-white text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 font-futura">
+                                {t('common.bestseller', { defaultValue: 'Bestseller' })}
+                              </span>
+                            )}
                           </div>
-                          <div className="text-sm font-semibold text-gray-900 flex-shrink-0">
-                            {(p.salePrice ?? p.price)} AZN
-                          </div>
+                          <p className="font-futura text-[11px] uppercase tracking-[0.14em] text-black/55 mb-1 truncate">
+                            {p.brand}
+                          </p>
+                          <p className="font-futura text-[13px] text-black leading-tight line-clamp-2 mb-1.5 group-hover:underline underline-offset-4">
+                            {displayName}
+                          </p>
+                          <p className="font-futura text-[13px] text-black/75">
+                            {price?.toFixed(2)} AZN
+                          </p>
                         </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              {searchQuery && searchResults.length === 0 && (
-                <div className="mt-4 text-center text-sm text-gray-500 py-6" data-testid="header-search-no-results">
-                  {t('common.noResults', 'Nəticə tapılmadı')}
-                </div>
-              )}
-            </form>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
