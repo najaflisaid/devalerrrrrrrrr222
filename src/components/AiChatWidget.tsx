@@ -641,25 +641,35 @@ const AiChatWidget: React.FC = () => {
               setBubbleVisible(false);
               setBubbleDismissed(true);
             }}
-            className="dv-ai-launcher dv-ai-launcher-live group relative flex items-center justify-center w-12 h-12 rounded-full bg-white transition-all duration-300 overflow-visible"
+            className="dv-ai-launcher-pill group relative inline-flex items-center gap-2.5 pl-2 pr-4 h-12 rounded-full bg-white border border-black/10 hover:border-[#D4AF37] hover:shadow-[0_6px_22px_-6px_rgba(212,175,55,0.45)] transition-all duration-300 overflow-visible"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
-            {/* Animated gold ring */}
-            <span aria-hidden="true" className="dv-ai-ring absolute inset-0 rounded-full" />
-            {/* Logo — full image, contained inside the circle so D and R aren't clipped */}
-            <span className="absolute inset-[3px] rounded-full overflow-hidden flex items-center justify-center bg-white z-[1]">
+            {/* Logo circle */}
+            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white overflow-hidden flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(212,175,55,0.5)' }}>
               <img
                 src="https://i.hizliresim.com/tmu65g6.png"
                 alt="De Valeur"
-                className="w-[80%] h-[80%] object-contain"
+                className="w-[78%] h-[78%] object-contain"
                 draggable={false}
               />
+              {/* Pulsing online indicator (green) */}
+              <span aria-hidden="true" className="dv-ai-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+              <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500" />
             </span>
-            {/* Pulsing online indicator (green light) */}
-            <span aria-hidden="true" className="dv-ai-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white z-[2]" />
-            <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 z-[1]" />
+            <span className="font-futura text-[13px] font-medium text-black/90 whitespace-nowrap tracking-wide">
+              Chat with us
+            </span>
+            <svg
+              className="h-3.5 w-3.5 text-black/55 transition-transform duration-300 group-hover:-translate-y-0.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
           </button>
         </div>
       )}

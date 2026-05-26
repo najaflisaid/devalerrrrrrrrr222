@@ -515,26 +515,9 @@ const Header: React.FC = () => {
               </Link>
             </div>
 
-            {/* Desktop Navigation - Left aligned */}
-            <nav className="hidden md:flex items-center space-x-5">
-              <Link
-                to="/gift-cards"
-                className={`dv-giftcard-btn group relative inline-flex items-center gap-1.5 border px-3 py-1 text-[11px] uppercase tracking-[0.08em] font-normal overflow-hidden transition-all duration-300 active:scale-[0.98] whitespace-nowrap ${
-                  transparentMode
-                    ? 'border-white/90 text-white hover:shadow-[0_6px_16px_-6px_rgba(255,255,255,0.35)]'
-                    : 'border-[#8B0000]/90 text-[#8B0000] hover:shadow-[0_6px_16px_-6px_rgba(139,0,0,0.45)]'
-                }`}
-                data-testid="header-gift-cards-link"
-              >
-                {/* Mirror / shine sweep — appears on hover */}
-                <span aria-hidden="true" className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100" />
-                <Gift className="relative h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.5} />
-                <span className="relative">
-                  {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
-                </span>
-              </Link>
-
-              {/* Brendlər Dropdown — opens on click, auto-closes when mouse leaves the panel */}
+            {/* Desktop Navigation - Left aligned (LV-style: Menu | Search | Gift Card) */}
+            <nav className="hidden md:flex items-center gap-7">
+              {/* Brendlər Dropdown rebadged as "Menu" with hamburger icon */}
               <div
                 className="relative py-[22px] -my-[22px] px-3 -mx-3"
               >
@@ -546,13 +529,15 @@ const Header: React.FC = () => {
                       handleDropdownEnter();
                     }
                   }}
-                  className="flex items-center text-black hover:text-gray-700 font-normal text-sm tracking-wide whitespace-nowrap transition-colors"
-                  style={{ textTransform: 'uppercase' }}
+                  className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura ${
+                    transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
+                  }`}
                   data-testid="header-brands-link"
                   aria-expanded={showDropdown}
                   aria-haspopup="menu"
                 >
-                  {t('header.brands', { defaultValue: 'Brendlər' })}
+                  <Menu className="h-[18px] w-[18px]" strokeWidth={1.25} />
+                  <span>{t('header.menu', { defaultValue: 'Menu' })}</span>
                 </button>
 
                 {showDropdown && (
@@ -687,13 +672,38 @@ const Header: React.FC = () => {
                 )}
               </div>
 
+              {/* Search — icon + text (LV-style, left aligned) */}
+              <button
+                onClick={() => setShowSearch(true)}
+                className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura ${
+                  transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
+                }`}
+                aria-label="Search"
+                data-testid="header-search-text-btn"
+              >
+                <Search className="h-[18px] w-[18px]" strokeWidth={1.25} />
+                <span>{t('header.search', { defaultValue: 'Search' })}</span>
+              </button>
+
+              {/* Hədiyyə kartı — left aligned with icon + label */}
+              <Link
+                to="/gift-cards"
+                className={`dv-giftcard-btn group relative inline-flex items-center gap-2 text-[13px] font-normal whitespace-nowrap transition-colors font-futura ${
+                  transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-[#8B0000]'
+                }`}
+                data-testid="header-gift-cards-link"
+              >
+                <Gift className="h-[18px] w-[18px] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.25} />
+                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
+              </Link>
+
               {isLoggedIn && userRole === 'b2b' && (
-                <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+                <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
                   {t('header.myOrders')}
                 </Link>
               )}
               {isLoggedIn && userRole === 'admin' && (
-                <Link to="/admin" className="dv-navlink text-gray-900 hover:text-gray-600 font-medium text-sm whitespace-nowrap">
+                <Link to="/admin" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
                   {t('header.admin')}
                 </Link>
               )}
@@ -701,14 +711,14 @@ const Header: React.FC = () => {
 
             {/* Right Actions */}
             <div className={`flex items-center gap-2 sm:gap-3 md:gap-5 ${isMobileMenuOpen ? 'invisible md:visible' : ''}`}>
-              {/* Search — FIRST */}
+              {/* Mobile search button (only on mobile, desktop has Search in left nav) */}
               <button
                 onClick={() => setShowSearch(true)}
-                className="p-1 -m-1"
+                className="md:hidden p-1 -m-1"
                 aria-label="Search"
                 data-testid="header-search-btn"
               >
-                <Search className="h-5 w-5 md:h-5 md:w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1} />
+                <Search className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-900" strokeWidth={1} />
               </button>
 
               {/* Language Hover Dropdown (desktop) — bridge prevents gap-flicker */}
