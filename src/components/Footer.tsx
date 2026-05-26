@@ -234,19 +234,26 @@ const Footer: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    {hasChildren && isOpen && (
-                      <ul className="mt-1.5 ml-3 space-y-1.5 border-l border-black/10 pl-3">
-                        {cat.children.map((sub) => (
-                          <li key={sub}>
-                            <button
-                              onClick={() => navigate(`/products?category=${encodeURIComponent(sub)}`)}
-                              className="text-[12.5px] md:text-[13px] text-black/55 hover:text-black transition-colors text-left"
-                            >
-                              {sub}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                    {hasChildren && (
+                      <div
+                        className="grid transition-[grid-template-rows] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
+                        style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+                      >
+                        <div className="overflow-hidden min-h-0">
+                          <ul className="mt-1.5 ml-3 space-y-1.5 border-l border-black/10 pl-3">
+                            {cat.children.map((sub) => (
+                              <li key={sub}>
+                                <button
+                                  onClick={() => navigate(`/products?category=${encodeURIComponent(sub)}`)}
+                                  className="text-[12.5px] md:text-[13px] text-black/55 hover:text-black transition-colors text-left"
+                                >
+                                  {sub}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
                     )}
                   </li>
                 );

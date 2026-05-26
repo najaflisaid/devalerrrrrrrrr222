@@ -984,102 +984,119 @@ const Header: React.FC = () => {
                       <span className="text-[12px] uppercase tracking-[0.18em] text-black font-normal">{t('header.brands', { defaultValue: 'Brendlər' })}</span>
                       <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileProductsOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
                     </button>
-                    {mobileProductsOpen && (
-                      <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
-                        {/* Top-level kategoriyalar (parent) — əgər categoryTree boşdursa fallback olaraq düz categories siyahısı */}
-                        {(categoryTree.length > 0
-                          ? categoryTree.map(node => ({ key: node.id, name: node.name, displayName: node.name, lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean), children: node.children }))
-                          : categories.map(c => ({ key: c, name: c, displayName: getCategoryTranslation(c), lookupNames: [c], children: [] as CategoryNode[] }))
-                        ).map((cat) => {
-                          const isOpen = mobileCategoryOpen === cat.key;
-                          // Bu kategoriyaya aid brendlər (parent isə alt-larından da daxil)
-                          const catBrands = Array.from(new Set(cat.lookupNames.flatMap(n => productsByCategory[n] || [])))
-                            .sort((a, b) => a.localeCompare(b, 'az'));
-                          return (
-                            <div key={cat.key} className="border-b border-gray-50 last:border-0">
-                              <button
-                                onClick={() => {
-                                  setMobileCategoryOpen(isOpen ? null : cat.key);
-                                  setMobileSubCategoryOpen(null);
-                                }}
-                                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded transition-colors text-left"
-                                data-testid={`mobile-category-toggle-${cat.name}`}
-                              >
-                                <span>{cat.displayName}</span>
-                                <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
-                              </button>
-                              {isOpen && (
-                                <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
-                                  {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
-                                  {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
-                                    const subOpen = mobileSubCategoryOpen === sub.id;
-                                    const subLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
-                                    const subBrands = Array.from(new Set(subLookups.flatMap(n => productsByCategory[n] || [])))
-                                      .sort((a, b) => a.localeCompare(b, 'az'));
-                                    return (
-                                      <div key={sub.id}>
-                                        <button
-                                          onClick={() => setMobileSubCategoryOpen(subOpen ? null : sub.id)}
-                                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded text-left"
-                                          data-testid={`mobile-subcategory-toggle-${sub.name}`}
-                                        >
-                                          <span>{sub.name}</span>
-                                          <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
-                                        </button>
-                                        {subOpen && (
-                                          <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
-                                            {subBrands.length > 0 ? subBrands.map(b => (
-                                              <button
-                                                key={`${sub.id}-${b}`}
-                                                onClick={() => {
-                                                  const params = new URLSearchParams();
-                                                  params.set('brand', b);
-                                                  params.set('category', sub.nameAz || sub.name);
-                                                  navigate(`/products?${params.toString()}`);
-                                                  closeMobileMenu();
-                                                  window.scrollTo({ top: 0, behavior: 'auto' });
-                                                }}
-                                                className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
-                                              >
-                                                {b}
-                                              </button>
-                                            )) : (
-                                              <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
-                                            )}
+                    {/* Smooth accordion (CSS grid-rows trick) */}
+                    <div
+                      className="grid transition-[grid-template-rows] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
+                      style={{ gridTemplateRows: mobileProductsOpen ? '1fr' : '0fr' }}
+                    >
+                      <div className="overflow-hidden min-h-0">
+                        <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
+                          {/* Top-level kategoriyalar (parent) — əgər categoryTree boşdursa fallback olaraq düz categories siyahısı */}
+                          {(categoryTree.length > 0
+                            ? categoryTree.map(node => ({ key: node.id, name: node.name, displayName: node.name, lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean), children: node.children }))
+                            : categories.map(c => ({ key: c, name: c, displayName: getCategoryTranslation(c), lookupNames: [c], children: [] as CategoryNode[] }))
+                          ).map((cat) => {
+                            const isOpen = mobileCategoryOpen === cat.key;
+                            // Bu kategoriyaya aid brendlər (parent isə alt-larından da daxil)
+                            const catBrands = Array.from(new Set(cat.lookupNames.flatMap(n => productsByCategory[n] || [])))
+                              .sort((a, b) => a.localeCompare(b, 'az'));
+                            return (
+                              <div key={cat.key} className="border-b border-gray-50 last:border-0">
+                                <button
+                                  onClick={() => {
+                                    setMobileCategoryOpen(isOpen ? null : cat.key);
+                                    setMobileSubCategoryOpen(null);
+                                  }}
+                                  className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded transition-colors text-left"
+                                  data-testid={`mobile-category-toggle-${cat.name}`}
+                                >
+                                  <span>{cat.displayName}</span>
+                                  <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
+                                </button>
+                                {/* Smooth nested accordion */}
+                                <div
+                                  className="grid transition-[grid-template-rows] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
+                                  style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+                                >
+                                  <div className="overflow-hidden min-h-0">
+                                    <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
+                                      {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
+                                      {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
+                                        const subOpen = mobileSubCategoryOpen === sub.id;
+                                        const subLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
+                                        const subBrands = Array.from(new Set(subLookups.flatMap(n => productsByCategory[n] || [])))
+                                          .sort((a, b) => a.localeCompare(b, 'az'));
+                                        return (
+                                          <div key={sub.id}>
+                                            <button
+                                              onClick={() => setMobileSubCategoryOpen(subOpen ? null : sub.id)}
+                                              className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded text-left"
+                                              data-testid={`mobile-subcategory-toggle-${sub.name}`}
+                                            >
+                                              <span>{sub.name}</span>
+                                              <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${subOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
+                                            </button>
+                                            <div
+                                              className="grid transition-[grid-template-rows] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
+                                              style={{ gridTemplateRows: subOpen ? '1fr' : '0fr' }}
+                                            >
+                                              <div className="overflow-hidden min-h-0">
+                                                <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
+                                                  {subBrands.length > 0 ? subBrands.map(b => (
+                                                    <button
+                                                      key={`${sub.id}-${b}`}
+                                                      onClick={() => {
+                                                        const params = new URLSearchParams();
+                                                        params.set('brand', b);
+                                                        params.set('category', sub.nameAz || sub.name);
+                                                        navigate(`/products?${params.toString()}`);
+                                                        closeMobileMenu();
+                                                        window.scrollTo({ top: 0, behavior: 'auto' });
+                                                      }}
+                                                      className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
+                                                    >
+                                                      {b}
+                                                    </button>
+                                                  )) : (
+                                                    <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                                        );
+                                      })}
 
-                                  {/* Birbaşa brendlər (alt-kategoriyaya aid olmayan, və ya alt-kategoriyalı parent üçün toplam brendlər) */}
-                                  {(!cat.children || cat.children.length === 0) && (
-                                    catBrands.length > 0 ? catBrands.map(b => (
-                                      <button
-                                        key={`${cat.key}-${b}`}
-                                        onClick={() => {
-                                          const params = new URLSearchParams();
-                                          params.set('brand', b);
-                                          params.set('category', cat.lookupNames[0] || cat.name);
-                                          navigate(`/products?${params.toString()}`);
-                                          closeMobileMenu();
-                                          window.scrollTo({ top: 0, behavior: 'auto' });
-                                        }}
-                                        className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
-                                      >
-                                        {b}
-                                      </button>
-                                    )) : (
-                                      <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
-                                    )
-                                  )}
+                                      {/* Birbaşa brendlər (alt-kategoriyaya aid olmayan) */}
+                                      {(!cat.children || cat.children.length === 0) && (
+                                        catBrands.length > 0 ? catBrands.map(b => (
+                                          <button
+                                            key={`${cat.key}-${b}`}
+                                            onClick={() => {
+                                              const params = new URLSearchParams();
+                                              params.set('brand', b);
+                                              params.set('category', cat.lookupNames[0] || cat.name);
+                                              navigate(`/products?${params.toString()}`);
+                                              closeMobileMenu();
+                                              window.scrollTo({ top: 0, behavior: 'auto' });
+                                            }}
+                                            className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
+                                          >
+                                            {b}
+                                          </button>
+                                        )) : (
+                                          <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
