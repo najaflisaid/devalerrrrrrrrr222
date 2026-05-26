@@ -659,7 +659,7 @@ const AiChatWidget: React.FC = () => {
               <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500" />
             </span>
             <span className="font-futura text-[13px] font-medium text-black/90 whitespace-nowrap tracking-wide">
-              Chat with us
+              {lang === 'en' ? 'Chat with us' : lang === 'ru' ? 'Напишите нам' : 'Bizə yaz'}
             </span>
             <svg
               className="h-3.5 w-3.5 text-black/55 transition-transform duration-300 group-hover:-translate-y-0.5"

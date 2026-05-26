@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
+import { getCategoryTree, CategoryNode } from '../services/categoryService';
 import { toBrandSlug } from '../utils/brandSlug';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -22,9 +23,10 @@ interface SiteSettings {
 }
 
 const Footer: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryNodes, setCategoryNodes] = useState<{ name: string; isChild: boolean }[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [settings, setSettings] = useState<SiteSettings>({
@@ -41,7 +43,8 @@ const Footer: React.FC = () => {
   useEffect(() => {
     loadCategoriesAndBrands();
     loadSettings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
 
   const loadSettings = async () => {
     try {
@@ -58,17 +61,38 @@ const Footer: React.FC = () => {
 
   const loadCategoriesAndBrands = async () => {
     try {
-      const products = await productService.getAll();
+      const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+      const [products, tree] = await Promise.all([
+        productService.getAll(),
+        getCategoryTree(lang),
+      ]);
       const cats = Array.from(new Set(products.map((p: any) => p.category).filter(Boolean))) as string[];
       const brs = Array.from(new Set(products.map((p: any) => p.brand).filter(Boolean))) as string[];
+
+      // Flatten hierarchy: parent + sub-categories — preserve EXACT casing as admin entered
+      const flat: { name: string; isChild: boolean }[] = [];
+      const walk = (nodes: CategoryNode[], depth = 0) => {
+        nodes.forEach((n) => {
+          flat.push({ name: n.name, isChild: depth > 0 });
+          if (n.children?.length) walk(n.children, depth + 1);
+        });
+      };
+      walk(tree);
+
+      // Also include any product-only categories that aren't in the tree
+      flat.forEach((c) => {
+        const idx = cats.findIndex((x) => x.toLowerCase() === c.name.toLowerCase());
+        if (idx >= 0) cats.splice(idx, 1);
+      });
+      cats.forEach((c) => flat.push({ name: c, isChild: false }));
+
+      setCategoryNodes(flat);
       setCategories(cats.sort());
       setBrands(brs.sort());
     } catch (e) {
       console.error('Footer cats/brands failed', e);
     }
   };
-
-  const getCategoryTranslation = (cat: string) => cat;
 
   const toggle = (key: string) => setOpenSection((prev) => (prev === key ? null : key));
 
@@ -177,16 +201,16 @@ const Footer: React.FC = () => {
           {/* Kateqoriyalar */}
           <FooterSection id="categories" title={t('header.categories')}>
             <ul className="space-y-2.5 md:space-y-2.5">
-              {categories.length === 0 && (
+              {categoryNodes.length === 0 && (
                 <li className="text-xs text-black/40">—</li>
               )}
-              {categories.map((category) => (
-                <li key={category}>
+              {categoryNodes.map((cat, idx) => (
+                <li key={`${cat.name}-${idx}`}>
                   <button
-                    onClick={() => navigate(`/products?category=${encodeURIComponent(category)}`)}
-                    className="text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left capitalize"
+                    onClick={() => navigate(`/products?category=${encodeURIComponent(cat.name)}`)}
+                    className={`text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left ${cat.isChild ? 'pl-3 text-black/55' : ''}`}
                   >
-                    {getCategoryTranslation(category)}
+                    {cat.isChild ? `– ${cat.name}` : cat.name}
                   </button>
                 </li>
               ))}

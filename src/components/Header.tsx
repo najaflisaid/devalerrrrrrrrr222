@@ -587,7 +587,7 @@ const Header: React.FC = () => {
                                         setShowDropdown(false);
                                       }}
                                       style={{ ['--dv-i' as any]: idx }}
-                                      className={`dv-mega-link group flex w-full text-left items-center justify-between gap-2 text-sm py-2 capitalize transition-colors ${
+                                      className={`dv-mega-link group flex w-full text-left items-center justify-between gap-2 text-sm py-2 transition-colors ${
                                         isHovered ? 'text-black font-medium' : 'text-gray-700 hover:text-black'
                                       }`}
                                       data-testid={`menu-category-${cat.lookupName}`}
@@ -632,7 +632,7 @@ const Header: React.FC = () => {
                                                 setShowDropdown(false);
                                               }}
                                               style={{ ['--dv-i' as any]: idx }}
-                                              className="dv-mega-link group block w-full text-left text-sm text-gray-800 hover:text-amber-700 py-1.5 transition-colors capitalize font-medium"
+                                              className="dv-mega-link group block w-full text-left text-sm text-gray-800 hover:text-amber-700 py-1.5 transition-colors font-medium"
                                               data-testid={`menu-subcategory-${sub.name}`}
                                             >
                                               <span className="dv-mega-text">› {sub.name}</span>
@@ -647,7 +647,7 @@ const Header: React.FC = () => {
                                   <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-4 font-semibold flex items-center gap-2">
                                     {hoveredCategory ? (
                                       <>
-                                        <span className="capitalize text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
+                                        <span className="text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
                                         <span className="text-gray-400">/ {t('header.brands')}</span>
                                       </>
                                     ) : (
@@ -1003,7 +1003,7 @@ const Header: React.FC = () => {
                                 className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded transition-colors text-left"
                                 data-testid={`mobile-category-toggle-${cat.name}`}
                               >
-                                <span className="capitalize">{cat.displayName}</span>
+                                <span>{cat.displayName}</span>
                                 <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
                               </button>
                               {isOpen && (
@@ -1021,7 +1021,7 @@ const Header: React.FC = () => {
                                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded text-left"
                                           data-testid={`mobile-subcategory-toggle-${sub.name}`}
                                         >
-                                          <span className="capitalize">{sub.name}</span>
+                                          <span>{sub.name}</span>
                                           <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${subOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
                                         </button>
                                         {subOpen && (
@@ -1321,11 +1321,11 @@ const Header: React.FC = () => {
                   <button
                     key={c}
                     type="button"
-                    onClick={() => setSearchQuery(getCategoryTranslation(c))}
-                    className="font-futura text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 capitalize transition-colors"
+                    onClick={() => setSearchQuery(c)}
+                    className="font-futura text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
                     data-testid={`header-search-trending-${c}`}
                   >
-                    {getCategoryTranslation(c)}
+                    {c}
                   </button>
                 ))}
               </div>
