@@ -641,13 +641,15 @@ const AiChatWidget: React.FC = () => {
               setBubbleVisible(false);
               setBubbleDismissed(true);
             }}
-            className="dv-ai-launcher-pill group relative inline-flex items-center gap-2.5 pl-2 pr-4 h-12 rounded-full bg-white border border-black/10 hover:border-[#D4AF37] hover:shadow-[0_6px_22px_-6px_rgba(212,175,55,0.45)] transition-all duration-300 overflow-visible"
+            className="dv-ai-launcher-pill group relative inline-flex items-center gap-2.5 pl-2 pr-4 h-12 rounded-full bg-white border border-[#D4AF37]/60 hover:border-[#D4AF37] shadow-[0_8px_24px_-8px_rgba(212,175,55,0.45)] hover:shadow-[0_12px_28px_-8px_rgba(212,175,55,0.6)] transition-all duration-300 overflow-visible"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
             data-testid="ai-chat-launcher"
           >
+            {/* Animated gold ring around the logo */}
+            <span aria-hidden="true" className="dv-ai-ring absolute left-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full pointer-events-none" />
             {/* Logo circle */}
-            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white overflow-hidden flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(212,175,55,0.5)' }}>
+            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white overflow-hidden flex-shrink-0 z-[1]" style={{ boxShadow: '0 0 0 1px rgba(212,175,55,0.55)' }}>
               <img
                 src="https://i.hizliresim.com/tmu65g6.png"
                 alt="De Valeur"
@@ -655,8 +657,8 @@ const AiChatWidget: React.FC = () => {
                 draggable={false}
               />
               {/* Pulsing online indicator (green) */}
-              <span aria-hidden="true" className="dv-ai-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-              <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span aria-hidden="true" className="dv-ai-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white z-[2]" />
+              <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 z-[1]" />
             </span>
             <span className="font-futura text-[13px] font-medium text-black/90 whitespace-nowrap tracking-wide">
               {lang === 'en' ? 'Chat with us' : lang === 'ru' ? 'Напишите нам' : 'Bizə yaz'}

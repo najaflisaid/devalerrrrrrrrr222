@@ -702,16 +702,28 @@ const Header: React.FC = () => {
                 <span>{t('header.search', { defaultValue: 'Search' })}</span>
               </button>
 
-              {/* Hədiyyə kartı — left aligned with icon + label */}
+              {/* Hədiyyə kartı — çərçivəli (LV-style) + güzgü/shine effekti */}
               <Link
                 to="/gift-cards"
-                className={`dv-giftcard-btn group relative inline-flex items-center gap-2 text-[13px] font-normal whitespace-nowrap transition-colors font-futura ${
-                  transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-[#8B0000]'
+                className={`dv-giftcard-btn group relative inline-flex items-center gap-2 px-4 py-1.5 text-[12px] font-normal whitespace-nowrap transition-all duration-300 font-futura overflow-hidden border ${
+                  transparentMode
+                    ? 'text-white border-white/70 hover:border-white hover:shadow-[0_6px_20px_-6px_rgba(255,255,255,0.4)]'
+                    : 'text-[#8B0000] border-[#8B0000]/80 hover:border-[#8B0000] hover:shadow-[0_6px_20px_-6px_rgba(139,0,0,0.4)]'
                 }`}
                 data-testid="header-gift-cards-link"
               >
-                <Gift className="h-[18px] w-[18px] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.25} />
-                <span>{t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}</span>
+                {/* Mirror / shine sweep — appears on hover */}
+                <span
+                  aria-hidden="true"
+                  className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-3/4 w-3/4 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100"
+                />
+                <Gift
+                  className="relative h-[15px] w-[15px] transition-transform duration-300 group-hover:rotate-[-8deg]"
+                  strokeWidth={1.4}
+                />
+                <span className="relative">
+                  {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
+                </span>
               </Link>
 
               {isLoggedIn && userRole === 'b2b' && (
