@@ -58,7 +58,9 @@ const Header: React.FC = () => {
   const [productsByCategory, setProductsByCategory] = useState<Record<string, string[]>>({});
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   // Mobil menyu üçün açıq/qapalı state-lər
-  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
+  // Mobile menu opens with the brands/categories panel already expanded so the
+  // user lands directly on the category list (no extra tap needed).
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(true);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState<string | null>(null);
   const [mobileSubCategoryOpen, setMobileSubCategoryOpen] = useState<string | null>(null);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null); // legacy, unused – retained only to avoid cascading changes
@@ -512,7 +514,7 @@ const Header: React.FC = () => {
             {/* Mobile Menu Button */}
             <button
               className={`md:hidden flex-shrink-0 p-2 -ml-2 relative z-[51] transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-              onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); }}
+              onClick={() => { setIsMobileMenuClosing(false); setIsMobileMenuOpen(true); setMobileProductsOpen(true); }}
               aria-label="Menu"
               data-testid="mobile-menu-toggle"
             >

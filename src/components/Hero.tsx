@@ -238,9 +238,6 @@ const Hero: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Admin edit link — only for admin users */}
-      <AdminEditBannerLink />
-
       {/* Nav arrows */}
       {slides.length > 1 && (
         <>
@@ -263,27 +260,6 @@ const Hero: React.FC = () => {
         </>
       )}
     </section>
-  );
-};
-
-/**
- * Floating admin-only "Banner-ləri redaktə et" link.
- * Görünüşü: yuxarı-sağda yüngül glass pill, yalnız admin/super_admin üçün görünür.
- */
-const AdminEditBannerLink: React.FC = () => {
-  const role = (typeof window !== 'undefined' && localStorage.getItem('userRole')) || '';
-  if (role !== 'admin' && role !== 'super_admin') return null;
-  return (
-    <a
-      href="/admin/banners"
-      className="absolute top-20 right-4 md:right-6 z-[6] inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/90 backdrop-blur-md border border-white/40 text-[11px] uppercase tracking-[0.18em] text-black font-futura font-medium hover:bg-white transition-all shadow-lg"
-      data-testid="hero-admin-edit-banner"
-    >
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
-      Banner-i redaktə et
-    </a>
   );
 };
 

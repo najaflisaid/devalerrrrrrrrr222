@@ -26,7 +26,8 @@ const Footer: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
-  const [categoryNodes, setCategoryNodes] = useState<{ name: string; isChild: boolean }[]>([]);
+  const [categoryNodes, setCategoryNodes] = useState<{ name: string; children: string[] }[]>([]);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
   const [brands, setBrands] = useState<string[]>([]);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [settings, setSettings] = useState<SiteSettings>({
@@ -69,24 +70,25 @@ const Footer: React.FC = () => {
       const cats = Array.from(new Set(products.map((p: any) => p.category).filter(Boolean))) as string[];
       const brs = Array.from(new Set(products.map((p: any) => p.brand).filter(Boolean))) as string[];
 
-      // Flatten hierarchy: parent + sub-categories — preserve EXACT casing as admin entered
-      const flat: { name: string; isChild: boolean }[] = [];
-      const walk = (nodes: CategoryNode[], depth = 0) => {
-        nodes.forEach((n) => {
-          flat.push({ name: n.name, isChild: depth > 0 });
-          if (n.children?.length) walk(n.children, depth + 1);
-        });
-      };
-      walk(tree);
+      // Build parent->children list. Preserve EXACT casing as admin entered.
+      const parents: { name: string; children: string[] }[] = tree.map((n) => ({
+        name: n.name,
+        children: (n.children || []).map((c) => c.name),
+      }));
 
-      // Also include any product-only categories that aren't in the tree
-      flat.forEach((c) => {
-        const idx = cats.findIndex((x) => x.toLowerCase() === c.name.toLowerCase());
-        if (idx >= 0) cats.splice(idx, 1);
+      // Add any product-only categories that aren't in the tree as parent-only
+      const knownNames = new Set<string>();
+      parents.forEach((p) => {
+        knownNames.add(p.name.toLowerCase());
+        p.children.forEach((c) => knownNames.add(c.toLowerCase()));
       });
-      cats.forEach((c) => flat.push({ name: c, isChild: false }));
+      cats.forEach((c) => {
+        if (!knownNames.has(c.toLowerCase())) {
+          parents.push({ name: c, children: [] });
+        }
+      });
 
-      setCategoryNodes(flat);
+      setCategoryNodes(parents);
       setCategories(cats.sort());
       setBrands(brs.sort());
     } catch (e) {
@@ -204,16 +206,51 @@ const Footer: React.FC = () => {
               {categoryNodes.length === 0 && (
                 <li className="text-xs text-black/40">—</li>
               )}
-              {categoryNodes.map((cat, idx) => (
-                <li key={`${cat.name}-${idx}`}>
-                  <button
-                    onClick={() => navigate(`/products?category=${encodeURIComponent(cat.name)}`)}
-                    className={`text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left ${cat.isChild ? 'pl-3 text-black/55' : ''}`}
-                  >
-                    {cat.isChild ? `– ${cat.name}` : cat.name}
-                  </button>
-                </li>
-              ))}
+              {categoryNodes.map((cat) => {
+                const hasChildren = cat.children.length > 0;
+                const isOpen = !!expandedCats[cat.name];
+                return (
+                  <li key={cat.name}>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => navigate(`/products?category=${encodeURIComponent(cat.name)}`)}
+                        className="text-[13px] md:text-sm text-black/65 hover:text-black transition-colors text-left flex-1"
+                      >
+                        {cat.name}
+                      </button>
+                      {hasChildren && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCats((s) => ({ ...s, [cat.name]: !s[cat.name] }))}
+                          className="p-1 -mr-1 text-black/45 hover:text-black transition-colors"
+                          aria-label={isOpen ? 'Collapse' : 'Expand'}
+                          aria-expanded={isOpen}
+                          data-testid={`footer-cat-toggle-${cat.name}`}
+                        >
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                            strokeWidth={1.5}
+                          />
+                        </button>
+                      )}
+                    </div>
+                    {hasChildren && isOpen && (
+                      <ul className="mt-1.5 ml-3 space-y-1.5 border-l border-black/10 pl-3">
+                        {cat.children.map((sub) => (
+                          <li key={sub}>
+                            <button
+                              onClick={() => navigate(`/products?category=${encodeURIComponent(sub)}`)}
+                              className="text-[12.5px] md:text-[13px] text-black/55 hover:text-black transition-colors text-left"
+                            >
+                              {sub}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </FooterSection>
 
