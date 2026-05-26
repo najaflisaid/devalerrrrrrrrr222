@@ -401,12 +401,15 @@ const Header: React.FC = () => {
     setHighlightIndex(-1);
   };
 
-  // Load products when search modal opens
+  // Preload products on mount so search is instant and trending-category
+  // clicks (e.g. "SAAT") always return results — avoiding a race condition
+  // where the filter runs before products finish loading.
   useEffect(() => {
-    if (showSearch && allProducts.length === 0) {
+    if (allProducts.length === 0) {
       productService.getAll().then(setAllProducts).catch(() => setAllProducts([]));
     }
-  }, [showSearch, allProducts.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter products as user types + analytics tracking (debounced)
   useEffect(() => {
@@ -423,7 +426,19 @@ const Header: React.FC = () => {
         const nameRu = p.name?.ru?.toLowerCase() || '';
         const nameEn = p.name?.en?.toLowerCase() || '';
         const brand = (p.brand || '').toLowerCase();
-        return nameAz.includes(q) || nameRu.includes(q) || nameEn.includes(q) || brand.includes(q);
+        const category = (p.category || '').toLowerCase();
+        // Also match the translated/localized category name so that
+        // typing or selecting a localized trending term (e.g. "Saat", "Çantalar")
+        // returns the correct products in any UI language.
+        const categoryLocalized = getCategoryTranslation(p.category || '').toLowerCase();
+        return (
+          nameAz.includes(q) ||
+          nameRu.includes(q) ||
+          nameEn.includes(q) ||
+          brand.includes(q) ||
+          category.includes(q) ||
+          categoryLocalized.includes(q)
+        );
       })
       .slice(0, 24);
     setSearchResults(matches);
@@ -1302,11 +1317,11 @@ const Header: React.FC = () => {
                 <span className="font-futura text-[11px] uppercase tracking-[0.22em] text-black/55">
                   {t('header.trendingSearches', { defaultValue: 'Trend axtarışlar' })}
                 </span>
-                {categories.slice(0, 5).map((c) => (
+                {categories.slice(0, 6).map((c) => (
                   <button
                     key={c}
                     type="button"
-                    onClick={() => setSearchQuery(c)}
+                    onClick={() => setSearchQuery(getCategoryTranslation(c))}
                     className="font-futura text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 capitalize transition-colors"
                     data-testid={`header-search-trending-${c}`}
                   >
@@ -1336,6 +1351,8 @@ const Header: React.FC = () => {
                 : [];
 
               if (isQuery && searchResults.length === 0) {
+                // Don't show "no results" while products are still loading
+                if (allProducts.length === 0) return null;
                 return (
                   <div className="text-center py-20" data-testid="header-search-no-results">
                     <p className="font-futura text-[14px] text-black/55">
@@ -1367,7 +1384,7 @@ const Header: React.FC = () => {
                           className="group text-left"
                           data-testid={`header-search-result-${p.id}`}
                         >
-                          <div className="relative w-full aspect-square bg-[#f5f5f5] overflow-hidden mb-3">
+                          <div className="relative w-full aspect-square bg-white overflow-hidden mb-3">
                             {p.images?.[0] ? (
                               <img
                                 src={p.images[0]}
@@ -1377,11 +1394,6 @@ const Header: React.FC = () => {
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xs text-black/30">N/A</div>
-                            )}
-                            {p.isBestseller && (
-                              <span className="absolute top-2 left-2 bg-black text-white text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 font-futura">
-                                {t('common.bestseller', { defaultValue: 'Bestseller' })}
-                              </span>
                             )}
                           </div>
                           <p className="font-futura text-[11px] uppercase tracking-[0.14em] text-black/55 mb-1 truncate">
