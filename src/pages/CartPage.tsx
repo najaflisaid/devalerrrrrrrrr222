@@ -681,12 +681,19 @@ const CartPage: React.FC = () => {
   };
 
   const handleB2BOrder = async () => {
-    setLoading(true);
+    // OPTİMİSTİK UI: müştəri "Sifariş ver" düyməsinə basan kimi
+    // uğurlu bildiriş DƏRHAL göstərilir. Bütün Firestore yazıları və email
+    // göndərilməsi fonda baş verir, beləliklə müştəri heç gözləmir.
     try {
       const userName = localStorage.getItem('userName') || 'B2B Müştəri';
       const userEmail = localStorage.getItem('userEmail') || '';
       const userPhone = localStorage.getItem('userPhone') || '';
-      if (!userEmail) throw new Error('İstifadəçi email tapılmadı');
+      if (!userEmail) {
+        setErrorMessage('İstifadəçi email tapılmadı');
+        setShowError(true);
+        setTimeout(() => setShowError(false), 5000);
+        return;
+      }
 
       const orderItems = items.map(item => {
         const regularPrice = isB2BUser
@@ -718,50 +725,58 @@ const CartPage: React.FC = () => {
         notes: customerNote.trim() || ''
       };
 
-      const createdOrder = await createB2BOrder(order);
-
+      // 1) İNSTANT UI YENİLƏNMƏSİ — müştəri DƏRHAL uğurlu bildiriş görür.
       clearCart();
       setCustomerNote('');
       setShowSuccess(true);
-      setLoading(false);
 
-      sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber)
-        .catch((emailError) => console.warn('Email göndərilə bilmədi:', emailError));
+      // 2) Firestore yazıları və email — TAMAMİLƏ FONDA, müştəri gözləmir.
+      (async () => {
+        try {
+          const createdOrder = await createB2BOrder(order);
+          // Email — fire-and-forget
+          sendB2BOrderEmail(order, createdOrder.id, createdOrder.orderNumber)
+            .catch((emailError) => console.warn('Email göndərilə bilmədi:', emailError));
 
-      if (userDataStr) {
-        const ud = JSON.parse(userDataStr);
-        if (ud.discountUsageType === 'once' && userDiscount > 0 && ud.id) {
-          (async () => {
-            try {
-              const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
-              const { db } = await import('../lib/firebase');
-              const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', ud.id)));
-              if (!usersSnapshot.empty) {
-                await updateDoc(usersSnapshot.docs[0].ref, { discountUsed: true });
-                ud.discountUsed = true;
-                localStorage.setItem('userData', JSON.stringify(ud));
-              }
-            } catch (e) { console.warn('Discount update failed:', e); }
-          })();
+          // Birdəfəlik endirim istifadəsi — fonda
+          if (userDataStr) {
+            const ud = JSON.parse(userDataStr);
+            if (ud.discountUsageType === 'once' && userDiscount > 0 && ud.id) {
+              try {
+                const { collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+                const { db } = await import('../lib/firebase');
+                const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', ud.id)));
+                if (!usersSnapshot.empty) {
+                  await updateDoc(usersSnapshot.docs[0].ref, { discountUsed: true });
+                  ud.discountUsed = true;
+                  localStorage.setItem('userData', JSON.stringify(ud));
+                }
+              } catch (e) { console.warn('Discount update failed:', e); }
+            }
+          }
+        } catch (bgError) {
+          console.error('B2B order background write failed:', bgError);
+          // Fonda xəta baş verdi — müştəriyə sakit şəkildə xəbər ver
+          setShowSuccess(false);
+          setErrorMessage('Sifariş göndərilə bilmədi. Zəhmət olmasa yenidən cəhd edin.');
+          setShowError(true);
+          setTimeout(() => setShowError(false), 5000);
         }
-      }
+      })();
 
+      // 3) 2.5 saniyə sonra uğur bildirişini bağla və yönləndir
       setTimeout(() => {
         setShowSuccess(false);
         navigate('/products');
       }, 2500);
-      return;
     } catch (error: any) {
       console.error('Order error:', error);
       let message = 'Sifariş göndərilə bilmədi. ';
       if (error.message) message += error.message;
-      else if (error.code === 'permission-denied') message += 'İcazə xətası. Zəhmət olmasa yenidən daxil olun.';
       else message += 'Zəhmət olmasa yenidən cəhd edin.';
       setErrorMessage(message);
       setShowError(true);
       setTimeout(() => setShowError(false), 5000);
-    } finally {
-      setLoading(false);
     }
   };
 

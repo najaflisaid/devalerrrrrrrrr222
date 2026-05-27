@@ -23,31 +23,18 @@ export interface B2BOrder {
 }
 
 export const createB2BOrder = async (order: B2BOrder) => {
-  console.log('Creating B2B order in Firestore:', order);
+  console.log('Creating B2B order in Firestore (fast path):', order);
   const ordersRef = collection(db, 'b2bOrders');
 
-  // Sequential order number — quota xətası olarsa, timestamp əsaslı fallback istifadə olunur.
-  // Bu sifariş yaradılmasını bloklamamalıdır.
-  const counterRef = doc(db, 'counters', 'b2bOrders');
-  let orderNumber: number;
-  try {
-    orderNumber = await runTransaction(db, async (tx) => {
-      const snap = await tx.get(counterRef);
-      const current = snap.exists() ? Number(snap.data().value || 0) : 0;
-      const next = current + 1;
-      tx.set(counterRef, { value: next });
-      return next;
-    });
-  } catch (counterError) {
-    // Quota və ya digər səhv halında — sayğacı keç, timestamp əsaslı nömrə qoy
-    console.warn('Order counter transaction failed, using timestamp fallback:', counterError);
-    orderNumber = Number(String(Date.now()).slice(-8)); // son 8 rəqəm
-  }
+  // FAST PATH: timestamp-based orderNumber — heç bir əlavə round-trip yoxdur.
+  // Sayğac (counters/b2bOrders) yenilənməsi fonda baş verir, sifariş yaradılmasını
+  // bloklamır.
+  const orderNumber = Number(String(Date.now()).slice(-8));
 
   // Calculate subtotal (before discount)
   const subtotal = order.items.reduce((sum, item) => sum + (item.regularPrice * item.quantity), 0);
 
-  // Sifariş sənədini yaradırıq — bu CƏHD UĞURSUZ olarsa, tam xəta atılmalıdır.
+  // KRİTİK YOL: yalnız 1 Firestore round-trip — addDoc.
   const docRef = await addDoc(ordersRef, {
     ...order,
     orderNumber,
@@ -57,11 +44,10 @@ export const createB2BOrder = async (order: B2BOrder) => {
   });
   console.log('B2B order created with ID:', docRef.id, 'orderNumber:', orderNumber);
 
-  // Stok yenilənməsi sifarişin yaradılmasından SONRA fonda baş verir.
-  // Quota və ya icazə xətası olarsa, sifariş yenə də uğurlu sayılır.
-  // Hər məhsul üçün ayrıca try/catch — birinin uğursuzluğu digərlərini bloklamasın.
+  // FONDAKI İŞLƏR — sifariş artıq uğurlu sayılır, bunlar UI gözləməsinə təsir etmir.
   setTimeout(() => {
     (async () => {
+      // 1) Stok yenilənməsi — hər məhsul üçün ayrıca try/catch.
       for (const item of order.items) {
         try {
           const productRef = doc(db, 'products', item.productId);
@@ -71,6 +57,17 @@ export const createB2BOrder = async (order: B2BOrder) => {
         } catch (stockError) {
           console.warn(`Stock update failed for ${item.productId} (sifariş uğurla yaradılıb):`, stockError);
         }
+      }
+      // 2) Sayğacı statistik məqsədlərlə fonda artırırıq — uğursuz olsa belə əhəmiyyəti yoxdur.
+      try {
+        const counterRef = doc(db, 'counters', 'b2bOrders');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(counterRef);
+          const current = snap.exists() ? Number(snap.data().value || 0) : 0;
+          tx.set(counterRef, { value: current + 1 });
+        });
+      } catch (counterError) {
+        console.warn('Counter background update failed (ignored):', counterError);
       }
     })();
   }, 0);
