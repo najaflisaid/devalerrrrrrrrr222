@@ -142,7 +142,7 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
       {activeCards.length > 0 && (
         <section data-testid="installment-cards">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Taksitlə al</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {activeCards.map((c) => {
               const sortedMonths = [...c.months].sort((a, b) => a - b);
               const sel = cardSelectedMonths[c.id] ?? sortedMonths[sortedMonths.length - 1];
