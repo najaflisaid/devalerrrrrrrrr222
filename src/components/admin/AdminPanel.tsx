@@ -376,6 +376,7 @@ const AdminPanel: React.FC = () => {
     isBestseller: false,
     stock: '',
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
+    imageScale: 1,
   });
 
   const [editProduct, setEditProduct] = useState({
@@ -397,6 +398,7 @@ const AdminPanel: React.FC = () => {
     isBestseller: false,
     comingSoon: false,
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
+    imageScale: 1,
   });
 
   const [newBrand, setNewBrand] = useState<{ name: string; logo: string; categoryNames: string[] }>({ name: '', logo: '', categoryNames: [] });
@@ -739,6 +741,7 @@ const AdminPanel: React.FC = () => {
         isBestseller: newProduct.isBestseller,
         stock: Math.max(0, parseInt(newProduct.stock) || 0),
         visibleTo: newProduct.visibleTo,
+        imageScale: newProduct.imageScale || 1,
         createdAt: new Date()
       };
 
@@ -763,6 +766,7 @@ const AdminPanel: React.FC = () => {
         isBestseller: false,
         stock: '',
         visibleTo: 'all',
+        imageScale: 1,
       });
       setShowAddProduct(false);
       alert('Məhsul uğurla əlavə edildi!');
@@ -795,6 +799,7 @@ const AdminPanel: React.FC = () => {
       comingSoon: (product as any).comingSoon || false,
       stock: product.stock?.toString() || '0',
       visibleTo: product.visibleTo || 'all',
+      imageScale: typeof product.imageScale === 'number' && product.imageScale > 0 ? product.imageScale : 1,
     });
     setShowEditProduct(true);
   };
@@ -846,6 +851,7 @@ const AdminPanel: React.FC = () => {
         comingSoon: editProduct.comingSoon,
         stock: Math.max(0, parseInt(editProduct.stock) || 0),
         visibleTo: editProduct.visibleTo,
+        imageScale: editProduct.imageScale || 1,
       };
 
       await updateDoc(doc(db, 'products', editingProduct.id), updatedProduct);
@@ -1770,74 +1776,78 @@ const AdminPanel: React.FC = () => {
             )}
 
             {showAddProduct && (
-              <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
-                <div className="flex justify-between items-center mb-4">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+                <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-bold text-gray-900">Yeni Məhsul</h3>
                   <button onClick={() => setShowAddProduct(false)} className="text-gray-400 hover:text-gray-600">
                     <X className="h-6 w-6" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ad (Az) *</label>
-                    <input
-                      type="text"
-                      value={newProduct.nameAz}
-                      onChange={(e) => setNewProduct({ ...newProduct, nameAz: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Məhsulun adı"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Ad (Az) *</label>
+                      <input
+                        type="text"
+                        value={newProduct.nameAz}
+                        onChange={(e) => setNewProduct({ ...newProduct, nameAz: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                        placeholder="Məhsulun adı"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Ad (Ru)</label>
+                      <input
+                        type="text"
+                        value={newProduct.nameRu}
+                        onChange={(e) => setNewProduct({ ...newProduct, nameRu: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                        placeholder="Название продукта"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Ad (En)</label>
+                      <input
+                        type="text"
+                        value={newProduct.nameEn}
+                        onChange={(e) => setNewProduct({ ...newProduct, nameEn: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                        placeholder="Product Name"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ad (Ru)</label>
-                    <input
-                      type="text"
-                      value={newProduct.nameRu}
-                      onChange={(e) => setNewProduct({ ...newProduct, nameRu: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Название продукта"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ad (En)</label>
-                    <input
-                      type="text"
-                      value={newProduct.nameEn}
-                      onChange={(e) => setNewProduct({ ...newProduct, nameEn: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Product Name"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Az)</label>
-                    <textarea
-                      value={newProduct.descAz}
-                      onChange={(e) => setNewProduct({ ...newProduct, descAz: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Məhsulun təsviri"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Ru)</label>
-                    <textarea
-                      value={newProduct.descRu}
-                      onChange={(e) => setNewProduct({ ...newProduct, descRu: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Описание продукта"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (En)</label>
-                    <textarea
-                      value={newProduct.descEn}
-                      onChange={(e) => setNewProduct({ ...newProduct, descEn: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                      placeholder="Product Description"
-                    />
+                  <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Az)</label>
+                      <textarea
+                        value={newProduct.descAz}
+                        onChange={(e) => setNewProduct({ ...newProduct, descAz: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y"
+                        placeholder="Məhsulun təsviri"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Ru)</label>
+                      <textarea
+                        value={newProduct.descRu}
+                        onChange={(e) => setNewProduct({ ...newProduct, descRu: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y"
+                        placeholder="Описание продукта"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (En)</label>
+                      <textarea
+                        value={newProduct.descEn}
+                        onChange={(e) => setNewProduct({ ...newProduct, descEn: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y"
+                        placeholder="Product Description"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət ( AZN) *</label>
@@ -2021,6 +2031,8 @@ const AdminPanel: React.FC = () => {
                       brand={newProduct.brand}
                       price={newProduct.price}
                       salePrice={newProduct.salePrice}
+                      scale={newProduct.imageScale}
+                      onScaleChange={(s) => setNewProduct({ ...newProduct, imageScale: s })}
                     />
                     <div className="mt-3" />
                     {newProduct.images.map((img, index) => (
@@ -2100,21 +2112,25 @@ const AdminPanel: React.FC = () => {
 
             {showEditProduct && editingProduct && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-                <div className="bg-white rounded-xl p-6 my-8 border-2 border-blue-200 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-4 border-b border-gray-200">
+                <div className="bg-white rounded-xl p-4 my-8 border-2 border-blue-200 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center mb-3 sticky top-0 bg-white pb-3 border-b border-gray-200">
                     <h3 className="text-lg font-bold text-gray-900">Məhsulu Redaktə Et</h3>
                     <button onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="text-gray-400 hover:text-gray-600">
                       <X className="h-6 w-6" />
                     </button>
                   </div>
                   <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Ad (Az) *</label><input type="text" value={editProduct.nameAz} onChange={(e) => setEditProduct({ ...editProduct, nameAz: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun adı" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Ad (Ru)</label><input type="text" value={editProduct.nameRu} onChange={(e) => setEditProduct({ ...editProduct, nameRu: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Название продукта" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Ad (En)</label><input type="text" value={editProduct.nameEn} onChange={(e) => setEditProduct({ ...editProduct, nameEn: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Name" /></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun təsviri" /></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (Ru)</label><textarea value={editProduct.descRu} onChange={(e) => setEditProduct({ ...editProduct, descRu: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Описание продукта" /></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Təsvir (En)</label><textarea value={editProduct.descEn} onChange={(e) => setEditProduct({ ...editProduct, descEn: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Description" /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Az) *</label><input type="text" value={editProduct.nameAz} onChange={(e) => setEditProduct({ ...editProduct, nameAz: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun adı" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Ru)</label><input type="text" value={editProduct.nameRu} onChange={(e) => setEditProduct({ ...editProduct, nameRu: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Название продукта" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (En)</label><input type="text" value={editProduct.nameEn} onChange={(e) => setEditProduct({ ...editProduct, nameEn: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Name" /></div>
+                  </div>
+                  <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Məhsulun təsviri" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Ru)</label><textarea value={editProduct.descRu} onChange={(e) => setEditProduct({ ...editProduct, descRu: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Описание продукта" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (En)</label><textarea value={editProduct.descEn} onChange={(e) => setEditProduct({ ...editProduct, descEn: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Product Description" /></div>
+                  </div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Normal Qiymət ( AZN) *</label><input type="number" step="0.01" min="0" value={editProduct.price} onChange={(e) => setEditProduct({ ...editProduct, price: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
@@ -2143,7 +2159,7 @@ const AdminPanel: React.FC = () => {
                     return (<>{preferred.length > 0 && (<optgroup label="Brendə uyğun">{preferred.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}{others.length > 0 && (<optgroup label={preferred.length > 0 ? 'Digər kateqoriyalar' : 'Bütün kateqoriyalar'}>{others.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}</>);
                   })()}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} /><div className="mt-3" />{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
+                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} scale={editProduct.imageScale} onScaleChange={(s) => setEditProduct({ ...editProduct, imageScale: s })} /><div className="mt-3" />{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
                   <div className="md:col-span-2 flex gap-6"><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.isBestseller} onChange={(e) => setEditProduct({ ...editProduct, isBestseller: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Ən çox satılan</span></label><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.comingSoon || false} onChange={(e) => setEditProduct({ ...editProduct, comingSoon: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Tezliklə gələcək</span></label></div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Məhsul görünəcək istifadəçilər</label>

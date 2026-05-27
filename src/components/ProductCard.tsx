@@ -63,6 +63,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   // Stok 0 → bütün istifadəçilərə "Mövcud deyil" göstər
   const isOutOfStock = product.stock === 0;
   const hasSecondImage = !!product.images[1];
+  const imgScale = typeof product.imageScale === 'number' && product.imageScale > 0 ? product.imageScale : 1;
 
   return (
     <div className="group relative">
@@ -70,16 +71,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
         <div
           className={`relative bg-white border border-black/[0.04] aspect-square rounded-md overflow-hidden ${compact ? 'mb-2' : 'mb-4'} shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)] transition-all duration-500 ease-out group-hover:shadow-[0_28px_60px_-18px_rgba(0,0,0,0.38)] group-hover:-translate-y-1 group-hover:border-black/10`}
         >
-          <img
-            src={product.images[0]}
-            alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
-            loading="lazy"
-            decoding="async"
-            style={{ backgroundColor: '#ffffff' }}
-            className={`w-full h-full object-contain p-2 bg-white transition-all duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 ${
+          <div
+            className={`absolute inset-0 transition-transform duration-[1600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 ${
               hasSecondImage ? 'group-hover:opacity-0' : ''
             }`}
-          />
+            style={{ transitionProperty: 'transform, opacity' }}
+          >
+            <img
+              src={product.images[0]}
+              alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
+              loading="lazy"
+              decoding="async"
+              style={{ backgroundColor: '#ffffff', transform: `scale(${imgScale})`, transformOrigin: 'center center' }}
+              className="w-full h-full object-contain p-2 bg-white"
+            />
+          </div>
           {hasSecondImage && (
             <img
               src={product.images[1]}

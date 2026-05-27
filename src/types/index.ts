@@ -24,6 +24,7 @@ export interface Product {
   comingSoon?: boolean;
   stock: number;
   visibleTo?: 'all' | 'b2b' | 'customer';
+  imageScale?: number;
   createdAt: Date;
 }
 

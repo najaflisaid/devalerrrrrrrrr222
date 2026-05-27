@@ -52,3 +52,20 @@
 - **Auto-tərcümə (Az→Ru/En)**: Növbəti iteration üçün təxirə salındı (user istəyi).
 - Modified: `/app/src/components/admin/AdminPanel.tsx` (filter wrapper, stock default + onFocus, sort by createdAt, date display, preview integration, Calendar icon import).
 - Added: `/app/src/components/admin/ProductImagePreview.tsx`.
+
+## Update (2026-01-27 v2) — Image Zoom + Compact Form
+- **Şəkil zoom + grid overlay + saytda saxlama**:
+  - `ProductImagePreview` komponentinə zoom slider (0.5×–2.0×, step 0.05), zoom-in/out düymələri, sıfırlama (`RotateCcw`), və 3×3 köməkçi grid overlay (rule-of-thirds) toggle əlavə edildi.
+  - Admin tənzimlədiyi miqyas `imageScale` (number, default 1) sahəsində Firestore-da məhsulla birgə yadda saxlanır.
+  - Saytda `ProductCard`-da 1-ci şəklə `transform: scale(imageScale)` tətbiq edilir — admin paneldə görünüş saytda eyni olur.
+  - Wrapper div ilə hover-scale 5% effekti qorunur (kompozit miqyas).
+- **Forma kompaktlaşdırma**:
+  - Ad (Az/Ru/En) **yan-yana 3 sütun**, Təsvir (Az/Ru/En) **yan-yana 3 sütun** (rows=2).
+  - Label `text-xs`, input `py-2 text-sm`, container padding `p-4`, gap `gap-3` — daha az scroll, daha az göz yorulması.
+  - Edit modal `max-w-5xl`, daha geniş və alçaq.
+- Modified:
+  - `/app/src/types/index.ts` (Product `imageScale?: number`)
+  - `/app/src/components/admin/ProductImagePreview.tsx` (zoom controls, grid overlay, onScaleChange callback)
+  - `/app/src/components/admin/AdminPanel.tsx` (compact form layout, imageScale state in newProduct/editProduct, handleAdd/handleUpdate/handleEditProductClick persist scale)
+  - `/app/src/components/ProductCard.tsx` (wrapper div for compound scale, imgScale inline transform)
+
