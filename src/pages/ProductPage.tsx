@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import CreditCalculator from '../components/CreditCalculator';
 import ProductReviews from '../components/ProductReviews';
+import SimilarProducts from '../components/SimilarProducts';
 import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
 
@@ -16,6 +17,7 @@ const ProductPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isB2BUser, setIsB2BUser] = useState(false);
@@ -38,6 +40,7 @@ const ProductPage: React.FC = () => {
     setLoading(true);
     try {
       const products = await productService.getAll();
+      setAllProducts(products);
       const foundProduct = products.find((p) => p.id === productId);
       setProduct(foundProduct || null);
       if (foundProduct) {
@@ -406,6 +409,13 @@ const ProductPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Similar models (variants / colours) — auto-detected by model
+            prefix (USPA 2111-01 → USPA 2111-02, …) with brand + category
+            fallback. */}
+        {allProducts.length > 1 && (
+          <SimilarProducts current={product} all={allProducts} />
+        )}
 
         {/* Reviews */}
         <div className="mt-16 lg:mt-24 border-t border-black/10 pt-12">

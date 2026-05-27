@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import CreditCalculator from '../components/CreditCalculator';
 import ProductReviews from '../components/ProductReviews';
+import SimilarProducts from '../components/SimilarProducts';
 import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
 
@@ -16,6 +17,7 @@ const ProductDetailsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { addToCart, addNotification } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isB2BUser, setIsB2BUser] = useState(false);
@@ -30,8 +32,9 @@ const ProductDetailsPage: React.FC = () => {
   const loadProduct = async () => {
     try {
       if (!productId) return;
-      const allProducts = await productService.getAll();
-      const found = allProducts.find(p => p.id === productId);
+      const allProductsList = await productService.getAll();
+      setAllProducts(allProductsList);
+      const found = allProductsList.find(p => p.id === productId);
       if (found) {
         setProduct(found);
         const name = found.name?.az || found.name?.en || '';
@@ -321,6 +324,10 @@ const ProductDetailsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {product && allProducts.length > 1 && (
+          <SimilarProducts current={product} all={allProducts} />
+        )}
 
         {product && (
           <div className="max-w-4xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
