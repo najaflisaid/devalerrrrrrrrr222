@@ -561,15 +561,23 @@ const Header: React.FC = () => {
                 </button>
 
                 {showDropdown && (
-                  <div
-                    className={`fixed left-0 right-0 z-50 dv-megamenu dv-light-reset${isDropdownClosing ? ' is-closing' : ''}`}
-                    style={{ top: 64 }}
-                    onMouseEnter={handleDropdownEnter}
-                    onMouseLeave={handleDropdownLeave}
-                  >
-                    {/* invisible bridge to prevent hover gap between trigger and panel */}
-                    <div className="h-3 -mt-3" aria-hidden="true" />
-                    <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)]">
+                  <>
+                    {/* Backdrop overlay — dims rest of the page (LV-style) */}
+                    <div
+                      className={`fixed left-0 right-0 bottom-0 z-40 bg-black/40 transition-opacity duration-300 ${isDropdownClosing ? 'opacity-0' : 'opacity-100'}`}
+                      style={{ top: 64 }}
+                      onMouseEnter={handleDropdownLeave}
+                      aria-hidden="true"
+                    />
+                    <div
+                      className={`fixed left-0 bottom-0 z-50 dv-megamenu dv-light-reset${isDropdownClosing ? ' is-closing' : ''}`}
+                      style={{ top: 64 }}
+                      onMouseEnter={handleDropdownEnter}
+                      onMouseLeave={handleDropdownLeave}
+                    >
+                      {/* invisible bridge to prevent hover gap between trigger and panel */}
+                      <div className="h-3 -mt-3 w-[300px]" aria-hidden="true" />
+                      <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)] h-[calc(100vh-64px)] overflow-y-auto">
                       {(() => {
                         const categoryItems = categoryTree.length > 0
                           ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name, node: n }))
@@ -591,7 +599,7 @@ const Header: React.FC = () => {
                           : (hoveredSubcategory ? brands : []);
 
                         return (
-                          <div className="flex items-stretch min-h-[480px]">
+                          <div className="flex items-stretch min-h-full">
                             {/* Column 1 — Categories (always visible) */}
                             <div className="dv-mega-col w-[300px] py-10 px-10">
                               <ul className="space-y-1">
@@ -714,6 +722,7 @@ const Header: React.FC = () => {
                       })()}
                     </div>
                   </div>
+                  </>
                 )}
               </div>
 
