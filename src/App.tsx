@@ -24,7 +24,6 @@ const AdminLogin = React.lazy(() => import('./components/auth/AdminLogin'));
 const B2BRequestForm = React.lazy(() => import('./components/auth/B2BRequestForm'));
 const B2BLogin = React.lazy(() => import('./components/auth/B2BLogin'));
 const ProductPage = React.lazy(() => import('./pages/ProductPage'));
-const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
 const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
 const CartPage = React.lazy(() => import('./pages/CartPage'));
 const AboutPage = React.lazy(() => import('./pages/AboutPage'));
@@ -167,7 +166,7 @@ const AppContent: React.FC = () => {
                       <Route path="/" element={<HomePage />} />
                       <Route path="/products" element={<ProductsPage />} />
                       <Route path="/product/:id" element={<ProductPage />} />
-                      <Route path="/products/:productId" element={<ProductDetailsPage />} />
+                      <Route path="/products/:id" element={<ProductPage />} />
                       <Route path="/cart" element={<CartPage />} />
                       <Route path="/about" element={<AboutPage />} />
                       <Route path="/blog" element={<BlogPage />} />

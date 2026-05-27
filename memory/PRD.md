@@ -37,3 +37,8 @@
 ## Future / Backlog
 - Apple Pay native button outside iframe (Payment Request API direct) for one-tap on iOS Safari.
 - "Remember me" on login tab to skip auth on subsequent same-device purchases.
+
+
+## Update (2026-01-27)
+- Unified product page design: `/products/:id` route (from homepage banners & search) now uses the same `ProductPage` component as `/product/:id` (from filter/listing). Both routes render identical UI including green "Kreditlə Al" button.
+- Modified: /app/src/App.tsx (removed ProductDetailsPage import, unified route to ProductPage).
