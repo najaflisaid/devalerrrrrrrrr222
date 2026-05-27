@@ -1127,10 +1127,7 @@ const Header: React.FC = () => {
                                                     <button
                                                       key={`${sub.id}-${b}`}
                                                       onClick={() => {
-                                                        const params = new URLSearchParams();
-                                                        params.set('brand', b);
-                                                        params.set('category', sub.nameAz || sub.name);
-                                                        navigate(`/products?${params.toString()}`);
+                                                        navigate(`/brand/${toBrandSlug(b)}`);
                                                         closeMobileMenu();
                                                         window.scrollTo({ top: 0, behavior: 'auto' });
                                                       }}
@@ -1154,10 +1151,7 @@ const Header: React.FC = () => {
                                           <button
                                             key={`${cat.key}-${b}`}
                                             onClick={() => {
-                                              const params = new URLSearchParams();
-                                              params.set('brand', b);
-                                              params.set('category', cat.lookupNames[0] || cat.name);
-                                              navigate(`/products?${params.toString()}`);
+                                              navigate(`/brand/${toBrandSlug(b)}`);
                                               closeMobileMenu();
                                               window.scrollTo({ top: 0, behavior: 'auto' });
                                             }}
