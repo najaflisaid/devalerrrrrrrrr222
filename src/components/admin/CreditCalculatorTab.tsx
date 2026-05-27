@@ -434,9 +434,9 @@ const CreditCalculatorTab: React.FC = () => {
               >
                 <div className="flex items-start gap-4">
                   {/* Logo */}
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 w-[110px]">
                     <div
-                      className="w-16 h-16 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden"
+                      className="w-16 h-16 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden mx-auto"
                       style={{ backgroundColor: c.bgColor || '#fff' }}
                     >
                       {c.logoUrl ? (
@@ -449,9 +449,9 @@ const CreditCalculatorTab: React.FC = () => {
                         <ImageIcon className="h-6 w-6 text-gray-300" />
                       )}
                     </div>
-                    <label className="mt-2 inline-flex items-center gap-1 px-2 h-7 rounded border border-gray-300 bg-white text-[11px] text-gray-700 cursor-pointer hover:bg-gray-50">
+                    <label className="mt-2 w-full inline-flex items-center justify-center gap-1 px-2 h-7 rounded border border-gray-300 bg-white text-[11px] text-gray-700 cursor-pointer hover:bg-gray-50">
                       <Upload className="h-3 w-3" />
-                      {uploadingCardId === c.id ? 'Yüklənir...' : 'Loqo'}
+                      {uploadingCardId === c.id ? 'Yüklənir...' : 'Loqo yüklə'}
                       <input
                         type="file"
                         accept="image/*"
@@ -460,6 +460,25 @@ const CreditCalculatorTab: React.FC = () => {
                         data-testid={`cc-card-logo-${c.id}`}
                       />
                     </label>
+                    {/* Paste-by-URL alternative */}
+                    <input
+                      type="url"
+                      value={c.logoUrl || ''}
+                      onChange={(e) => updateCard(c.id, { logoUrl: e.target.value.trim() })}
+                      placeholder="və ya şəkil URL-i"
+                      className="mt-1.5 w-full h-7 px-2 border border-gray-300 rounded text-[11px] bg-white focus:border-gray-900 focus:outline-none"
+                      data-testid={`cc-card-logo-url-${c.id}`}
+                    />
+                    {c.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => updateCard(c.id, { logoUrl: '' })}
+                        className="mt-1 w-full text-[10px] text-gray-500 hover:text-red-600 underline-offset-2 hover:underline"
+                        data-testid={`cc-card-logo-clear-${c.id}`}
+                      >
+                        Loqonu sil
+                      </button>
+                    )}
                   </div>
 
                   {/* Inputs */}

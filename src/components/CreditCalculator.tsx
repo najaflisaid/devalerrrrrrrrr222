@@ -173,10 +173,11 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
                         src={c.logoUrl}
                         alt={c.name}
                         className="max-w-full max-h-full object-contain p-0.5"
+                        loading="lazy"
                       />
                     ) : (
-                      <span className="text-white text-[10px] font-bold">
-                        {(c.name || '?').slice(0, 2)}
+                      <span className="text-white text-[9px] font-bold leading-none text-center px-0.5">
+                        {(c.name || '?').slice(0, 3).toUpperCase()}
                       </span>
                     )}
                   </div>
