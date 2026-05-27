@@ -64,6 +64,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
   const isOutOfStock = product.stock === 0;
   const hasSecondImage = !!product.images[1];
   const imgScale = typeof product.imageScale === 'number' && product.imageScale > 0 ? product.imageScale : 1;
+  const imgOffsetX = typeof product.imageOffsetX === 'number' ? product.imageOffsetX : 0;
+  const imgOffsetY = typeof product.imageOffsetY === 'number' ? product.imageOffsetY : 0;
 
   return (
     <div className="group relative">
@@ -82,7 +84,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showB2BPrice = false
               alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
               loading="lazy"
               decoding="async"
-              style={{ backgroundColor: '#ffffff', transform: `scale(${imgScale})`, transformOrigin: 'center center' }}
+              style={{ backgroundColor: '#ffffff', transform: `translate(${imgOffsetX}%, ${imgOffsetY}%) scale(${imgScale})`, transformOrigin: 'center center' }}
               className="w-full h-full object-contain p-2 bg-white"
             />
           </div>

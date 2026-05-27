@@ -25,6 +25,8 @@ export interface Product {
   stock: number;
   visibleTo?: 'all' | 'b2b' | 'customer';
   imageScale?: number;
+  imageOffsetX?: number;
+  imageOffsetY?: number;
   createdAt: Date;
 }
 

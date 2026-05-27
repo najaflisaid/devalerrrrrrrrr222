@@ -377,6 +377,8 @@ const AdminPanel: React.FC = () => {
     stock: '',
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
     imageScale: 1,
+    imageOffsetX: 0,
+    imageOffsetY: 0,
   });
 
   const [editProduct, setEditProduct] = useState({
@@ -399,6 +401,8 @@ const AdminPanel: React.FC = () => {
     comingSoon: false,
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
     imageScale: 1,
+    imageOffsetX: 0,
+    imageOffsetY: 0,
   });
 
   const [newBrand, setNewBrand] = useState<{ name: string; logo: string; categoryNames: string[] }>({ name: '', logo: '', categoryNames: [] });
@@ -742,6 +746,8 @@ const AdminPanel: React.FC = () => {
         stock: Math.max(0, parseInt(newProduct.stock) || 0),
         visibleTo: newProduct.visibleTo,
         imageScale: newProduct.imageScale || 1,
+        imageOffsetX: newProduct.imageOffsetX || 0,
+        imageOffsetY: newProduct.imageOffsetY || 0,
         createdAt: new Date()
       };
 
@@ -767,6 +773,8 @@ const AdminPanel: React.FC = () => {
         stock: '',
         visibleTo: 'all',
         imageScale: 1,
+        imageOffsetX: 0,
+        imageOffsetY: 0,
       });
       setShowAddProduct(false);
       alert('Məhsul uğurla əlavə edildi!');
@@ -800,6 +808,8 @@ const AdminPanel: React.FC = () => {
       stock: product.stock?.toString() || '0',
       visibleTo: product.visibleTo || 'all',
       imageScale: typeof product.imageScale === 'number' && product.imageScale > 0 ? product.imageScale : 1,
+      imageOffsetX: typeof product.imageOffsetX === 'number' ? product.imageOffsetX : 0,
+      imageOffsetY: typeof product.imageOffsetY === 'number' ? product.imageOffsetY : 0,
     });
     setShowEditProduct(true);
   };
@@ -852,6 +862,8 @@ const AdminPanel: React.FC = () => {
         stock: Math.max(0, parseInt(editProduct.stock) || 0),
         visibleTo: editProduct.visibleTo,
         imageScale: editProduct.imageScale || 1,
+        imageOffsetX: editProduct.imageOffsetX || 0,
+        imageOffsetY: editProduct.imageOffsetY || 0,
       };
 
       await updateDoc(doc(db, 'products', editingProduct.id), updatedProduct);
@@ -2032,7 +2044,10 @@ const AdminPanel: React.FC = () => {
                       price={newProduct.price}
                       salePrice={newProduct.salePrice}
                       scale={newProduct.imageScale}
+                      offsetX={newProduct.imageOffsetX}
+                      offsetY={newProduct.imageOffsetY}
                       onScaleChange={(s) => setNewProduct({ ...newProduct, imageScale: s })}
+                      onOffsetChange={(x, y) => setNewProduct({ ...newProduct, imageOffsetX: x, imageOffsetY: y })}
                     />
                     <div className="mt-3" />
                     {newProduct.images.map((img, index) => (
@@ -2159,7 +2174,7 @@ const AdminPanel: React.FC = () => {
                     return (<>{preferred.length > 0 && (<optgroup label="Brendə uyğun">{preferred.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}{others.length > 0 && (<optgroup label={preferred.length > 0 ? 'Digər kateqoriyalar' : 'Bütün kateqoriyalar'}>{others.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}</>);
                   })()}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} scale={editProduct.imageScale} onScaleChange={(s) => setEditProduct({ ...editProduct, imageScale: s })} /><div className="mt-3" />{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
+                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} scale={editProduct.imageScale} offsetX={editProduct.imageOffsetX} offsetY={editProduct.imageOffsetY} onScaleChange={(s) => setEditProduct({ ...editProduct, imageScale: s })} onOffsetChange={(x, y) => setEditProduct({ ...editProduct, imageOffsetX: x, imageOffsetY: y })} /><div className="mt-3" />{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
                   <div className="md:col-span-2 flex gap-6"><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.isBestseller} onChange={(e) => setEditProduct({ ...editProduct, isBestseller: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Ən çox satılan</span></label><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.comingSoon || false} onChange={(e) => setEditProduct({ ...editProduct, comingSoon: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Tezliklə gələcək</span></label></div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Məhsul görünəcək istifadəçilər</label>

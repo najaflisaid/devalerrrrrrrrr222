@@ -69,3 +69,17 @@
   - `/app/src/components/admin/AdminPanel.tsx` (compact form layout, imageScale state in newProduct/editProduct, handleAdd/handleUpdate/handleEditProductClick persist scale)
   - `/app/src/components/ProductCard.tsx` (wrapper div for compound scale, imgScale inline transform)
 
+
+## Update (2026-01-27 v3) — Pan (Drag) ilə mərkəz tənzimləməsi
+- **Drag ilə pan**: Önizləmə şəklini admin klikləyib sürüklədikdə şəkil mərkəzi yerini dəyişir. Cursor `grab` / `grabbing` arasında keçir. Touch (mobil) də dəstəklənir (window-level listenerlər istifadə olunur — admin imkanı dışına çıxsa belə drag düzgün bitir).
+- **Dəqiq daxiletmə**: X və Y offset üçün ayrı number inputlar (% halında, ±50 bound) — admin dəqiq mərkəz qoya bilər.
+- **Reset hamısı**: Tək düymə ilə scale=1 və offset=0,0 qaytarılır.
+- **Saytda eyni görünüş**: `ProductCard`-da artıq `transform: translate(Xoff%, Yoff%) scale(scale)` tətbiq olunur — admin paneldə nə görünüş seçilsə, saytda kartda da eyni mərkəz və miqyas görünür.
+- Drag aktiv olanda `transition: none` qoyulur ki, hərəkət rəvan və canlı olsun.
+- "Sürüklə" ipucu (Move ikonu + tooltip) yalnız ilkin halda göstərilir, admin nəyi nə üçün edəcəyini başa düşür.
+- Modified:
+  - `/app/src/types/index.ts` (Product `imageOffsetX?: number; imageOffsetY?: number;`)
+  - `/app/src/components/admin/ProductImagePreview.tsx` (drag handlers, X/Y inputs, reset-all, "Sürüklə" hint)
+  - `/app/src/components/admin/AdminPanel.tsx` (newProduct/editProduct state + add/update + edit-click hydrate)
+  - `/app/src/components/ProductCard.tsx` (translate + scale kompozit transform)
+

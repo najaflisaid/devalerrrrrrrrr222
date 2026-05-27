@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Heart, ImageOff, Grid3x3, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ShoppingCart, Heart, ImageOff, Grid3x3, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
 
 interface ProductImagePreviewProps {
   imageUrl: string;
@@ -8,14 +8,20 @@ interface ProductImagePreviewProps {
   price?: string | number;
   salePrice?: string | number;
   scale?: number;
+  offsetX?: number;
+  offsetY?: number;
   onScaleChange?: (scale: number) => void;
+  onOffsetChange?: (x: number, y: number) => void;
 }
 
 /**
  * Saytda ProductCard-ın 1-ci şəkli necə görünəcəyini tam olaraq replika edir.
- * Admin URL əlavə edən kimi şəklin saytda necə oturduğunu görür, zoom edə bilər,
- * grid overlay ilə kompozisiyanı yoxlayır və saytda eyni miqyasda saxlamaq üçün
- * "Bu görünüşü saxla" düyməsi ilə dəyəri yadda saxlayır.
+ * Admin URL əlavə edən kimi şəklin saytda necə oturduğunu görür və:
+ *  - Zoom slider (0.5×–2.0×) ilə miqyas tənzimləyir
+ *  - Şəkli klikləyib sürükləyərək (drag) mərkəzi mövqeləndirir
+ *  - 3×3 grid overlay ilə kompozisiyanı yoxlayır
+ * Bütün dəyişikliklər (scale + offsetX + offsetY) məhsulla birgə Firestore-da
+ * yadda saxlanır və saytda eyni görünür.
  */
 const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
   imageUrl,
@@ -24,18 +30,28 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
   price,
   salePrice,
   scale = 1,
+  offsetX = 0,
+  offsetY = 0,
   onScaleChange,
+  onOffsetChange,
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [localScale, setLocalScale] = useState<number>(scale);
+  const [localOffsetX, setLocalOffsetX] = useState<number>(offsetX);
+  const [localOffsetY, setLocalOffsetY] = useState<number>(offsetY);
+  const [isPanning, setIsPanning] = useState(false);
 
-  // External scale dəyişikliyini izlə (məsələn yeni məhsul üçün reset)
-  React.useEffect(() => {
-    setLocalScale(scale);
-  }, [scale]);
+  // Drag state — pan üçün başlanğıc koordinatlar və başlanğıc offsetlər
+  const panStart = useRef<{ x: number; y: number; offX: number; offY: number; w: number; h: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Xarici prop dəyişikliyini izlə (məs: yeni məhsul üçün reset)
+  useEffect(() => { setLocalScale(scale); }, [scale]);
+  useEffect(() => { setLocalOffsetX(offsetX); }, [offsetX]);
+  useEffect(() => { setLocalOffsetY(offsetY); }, [offsetY]);
 
   const hasUrl = !!imageUrl && imageUrl.trim() !== '';
   const numericPrice = typeof price === 'string' ? parseFloat(price) || 0 : price || 0;
@@ -44,11 +60,75 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
   const displayPrice = showSale ? numericSale : numericPrice;
   const discountPct = showSale ? Math.round(((numericPrice - numericSale) / numericPrice) * 100) : 0;
 
+  // Bounds (% in image's own size space). ±50% normal limit.
+  const clampOff = (v: number) => Math.max(-50, Math.min(50, Math.round(v * 10) / 10));
+
   const updateScale = (next: number) => {
     const clamped = Math.max(0.5, Math.min(2.5, Math.round(next * 100) / 100));
     setLocalScale(clamped);
     onScaleChange?.(clamped);
   };
+
+  const updateOffset = (x: number, y: number) => {
+    const cx = clampOff(x);
+    const cy = clampOff(y);
+    setLocalOffsetX(cx);
+    setLocalOffsetY(cy);
+    onOffsetChange?.(cx, cy);
+  };
+
+  // === PAN (DRAG) ===
+  const beginPan = (clientX: number, clientY: number) => {
+    if (!containerRef.current || !hasUrl || errored) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    panStart.current = {
+      x: clientX,
+      y: clientY,
+      offX: localOffsetX,
+      offY: localOffsetY,
+      w: rect.width,
+      h: rect.height,
+    };
+    setIsPanning(true);
+  };
+
+  const movePan = (clientX: number, clientY: number) => {
+    if (!isPanning || !panStart.current) return;
+    const { x, y, offX, offY, w, h } = panStart.current;
+    // Pixel delta → % of container
+    const dxPct = ((clientX - x) / w) * 100;
+    const dyPct = ((clientY - y) / h) * 100;
+    updateOffset(offX + dxPct, offY + dyPct);
+  };
+
+  const endPan = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      panStart.current = null;
+    }
+  };
+
+  // Global mouseup/move listeners — admin imkanı dışına çıxsa belə drag düzgün bitsin
+  useEffect(() => {
+    if (!isPanning) return;
+    const onMove = (e: MouseEvent) => movePan(e.clientX, e.clientY);
+    const onUp = () => endPan();
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) movePan(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTouchEnd = () => endPan();
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onTouchEnd);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPanning]);
 
   // Şəklin saytdakı görünüşünə dair tövsiyə
   let sizeHint: { tone: 'good' | 'warn' | 'bad'; text: string } | null = null;
@@ -58,7 +138,7 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
     if (w < 400 || h < 400) {
       sizeHint = { tone: 'bad', text: `Çox kiçik: ${w}×${h}px · saytda bulanıq görünə bilər. Tövsiyə: 800×800px+` };
     } else if (Math.abs(ratio - 1) > 0.25) {
-      sizeHint = { tone: 'warn', text: `Qeyri-kvadrat: ${w}×${h}px (nisbət ${ratio.toFixed(2)}) · ətrafda boşluq qalacaq. Tövsiyə: kvadrat 1:1` };
+      sizeHint = { tone: 'warn', text: `Qeyri-kvadrat: ${w}×${h}px (nisbət ${ratio.toFixed(2)}) · drag ilə mərkəzi düzəldə bilərsiniz` };
     } else if (w >= 800 && h >= 800) {
       sizeHint = { tone: 'good', text: `Mükəmməl: ${w}×${h}px · saytda təmiz görünəcək` };
     } else {
@@ -67,6 +147,16 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
   }
 
   const scaleChanged = Math.abs(localScale - 1) > 0.001;
+  const offsetChanged = Math.abs(localOffsetX) > 0.05 || Math.abs(localOffsetY) > 0.05;
+  const anyChange = scaleChanged || offsetChanged;
+
+  const resetAll = () => {
+    setLocalScale(1);
+    setLocalOffsetX(0);
+    setLocalOffsetY(0);
+    onScaleChange?.(1);
+    onOffsetChange?.(0, 0);
+  };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-3" data-testid="product-image-preview">
@@ -91,13 +181,28 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 items-start">
-        {/* ProductCard replikası — saytdakı eyni stillərlə */}
+        {/* ProductCard replikası */}
         <div className="w-full max-w-[260px] mx-auto md:mx-0">
-          <div className="relative bg-white border border-black/[0.04] aspect-square rounded-md overflow-hidden mb-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)]">
+          <div
+            ref={containerRef}
+            className={`relative bg-white border border-black/[0.04] aspect-square rounded-md overflow-hidden mb-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)] ${
+              hasUrl && !errored ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''
+            } select-none`}
+            onMouseDown={(e) => {
+              if (e.button !== 0) return;
+              e.preventDefault();
+              beginPan(e.clientX, e.clientY);
+            }}
+            onTouchStart={(e) => {
+              if (e.touches[0]) beginPan(e.touches[0].clientX, e.touches[0].clientY);
+            }}
+            data-testid="preview-image-container"
+          >
             {hasUrl && !errored ? (
               <img
                 src={imageUrl}
                 alt={name}
+                draggable={false}
                 onLoad={(e) => {
                   const img = e.currentTarget;
                   setLoaded(true);
@@ -106,9 +211,10 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
                 onError={() => { setErrored(true); setLoaded(false); }}
                 style={{
                   backgroundColor: '#ffffff',
-                  transform: `scale(${localScale})`,
+                  transform: `translate(${localOffsetX}%, ${localOffsetY}%) scale(${localScale})`,
                   transformOrigin: 'center center',
-                  transition: 'transform 0.15s ease-out',
+                  transition: isPanning ? 'none' : 'transform 0.15s ease-out',
+                  pointerEvents: 'none',
                 }}
                 className="w-full h-full object-contain p-2 bg-white"
                 data-testid="product-image-preview-img"
@@ -120,40 +226,36 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
               </div>
             )}
 
-            {/* 3×3 köməkçi grid overlay (rule of thirds) */}
+            {/* 3×3 köməkçi grid */}
             {showGrid && hasUrl && !errored && (
               <div className="absolute inset-0 pointer-events-none" data-testid="preview-grid-overlay">
                 <div className="absolute inset-0 border-y border-dashed border-blue-400/70" style={{ top: '33.33%', height: '33.34%' }} />
                 <div className="absolute inset-0 border-x border-dashed border-blue-400/70" style={{ left: '33.33%', width: '33.34%' }} />
-                {/* center dot */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500/80" />
               </div>
             )}
 
+            {/* Drag hint — yalnız dəyişiklik yoxsa göstər */}
+            {hasUrl && !errored && !isPanning && !anyChange && (
+              <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 bg-black/55 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full pointer-events-none">
+                <Move className="h-3 w-3" /> Sürüklə
+              </div>
+            )}
+
             {hasUrl && !errored && showSale && (
-              <span className="absolute top-2 left-2 z-[2] inline-flex items-center justify-center w-8 h-8 md:w-[42px] md:h-[42px] rounded-full bg-[#D14545] text-white text-[10px] md:text-[12px] font-bold tracking-tight shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)]">
+              <span className="absolute top-2 left-2 z-[2] inline-flex items-center justify-center w-8 h-8 md:w-[42px] md:h-[42px] rounded-full bg-[#D14545] text-white text-[10px] md:text-[12px] font-bold tracking-tight shadow-[0_4px_12px_-3px_rgba(209,69,69,0.55)] pointer-events-none">
                 -{discountPct}%
               </span>
             )}
 
             {hasUrl && !errored && (
               <>
-                <button
-                  type="button"
-                  className="absolute top-3 right-3 p-2 rounded-full bg-white/85 text-gray-700 shadow-md cursor-default"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                >
+                <div className="absolute top-3 right-3 p-2 rounded-full bg-white/85 text-gray-700 shadow-md pointer-events-none" aria-hidden="true">
                   <Heart className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="absolute bottom-4 right-4 bg-black text-white p-3 rounded-full shadow-[0_8px_20px_-6px_rgba(0,0,0,0.45)] cursor-default"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                >
+                </div>
+                <div className="absolute bottom-4 right-4 bg-black text-white p-3 rounded-full shadow-[0_8px_20px_-6px_rgba(0,0,0,0.45)] pointer-events-none" aria-hidden="true">
                   <ShoppingCart className="h-5 w-5" />
-                </button>
+                </div>
               </>
             )}
           </div>
@@ -184,66 +286,104 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
           </div>
         </div>
 
-        {/* Sağ panel — zoom + tövsiyələr */}
+        {/* Sağ panel — zoom + offset + tövsiyələr */}
         <div className="space-y-3">
-          {/* Zoom kontrolu — saytda da bu miqyasda saxlanacaq */}
+          {/* Zoom kontrolu */}
           {hasUrl && !errored && (
-            <div className="bg-white rounded-lg border border-gray-200 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-gray-700">Zoom · saytda da bu görünüşdə qalacaq</label>
-                <span className="text-[11px] text-gray-500 tabular-nums">{localScale.toFixed(2)}×</span>
+            <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-gray-700">Zoom</label>
+                  <span className="text-[11px] text-gray-500 tabular-nums">{localScale.toFixed(2)}×</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateScale(localScale - 0.05)}
+                    className="p-1.5 rounded-md border border-gray-300 hover:border-gray-500 text-gray-700 hover:bg-gray-50 transition-all"
+                    title="Kiçilt"
+                    data-testid="preview-zoom-out"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </button>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.05"
+                    value={localScale}
+                    onChange={(e) => updateScale(parseFloat(e.target.value))}
+                    className="flex-1 accent-gray-900"
+                    data-testid="preview-zoom-slider"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateScale(localScale + 0.05)}
+                    className="p-1.5 rounded-md border border-gray-300 hover:border-gray-500 text-gray-700 hover:bg-gray-50 transition-all"
+                    title="Böyüt"
+                    data-testid="preview-zoom-in"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateScale(localScale - 0.05)}
-                  className="p-1.5 rounded-md border border-gray-300 hover:border-gray-500 text-gray-700 hover:bg-gray-50 transition-all"
-                  title="Kiçilt"
-                  data-testid="preview-zoom-out"
-                >
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </button>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.05"
-                  value={localScale}
-                  onChange={(e) => updateScale(parseFloat(e.target.value))}
-                  className="flex-1 accent-gray-900"
-                  data-testid="preview-zoom-slider"
-                />
-                <button
-                  type="button"
-                  onClick={() => updateScale(localScale + 0.05)}
-                  className="p-1.5 rounded-md border border-gray-300 hover:border-gray-500 text-gray-700 hover:bg-gray-50 transition-all"
-                  title="Böyüt"
-                  data-testid="preview-zoom-in"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateScale(1)}
-                  disabled={!scaleChanged}
-                  className="p-1.5 rounded-md border border-gray-300 hover:border-gray-500 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Sıfırla (1.00×)"
-                  data-testid="preview-zoom-reset"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </button>
+
+              <div className="border-t border-gray-100 pt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700 inline-flex items-center gap-1">
+                    <Move className="h-3 w-3" /> Mərkəz (sürüklə və ya dəqiq daxil et)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={resetAll}
+                    disabled={!anyChange}
+                    className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Hər şeyi sıfırla"
+                    data-testid="preview-reset-all"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Sıfırla
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-0.5">Üfüqi · X (%)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="-50"
+                      max="50"
+                      value={Math.round(localOffsetX)}
+                      onChange={(e) => updateOffset(parseFloat(e.target.value) || 0, localOffsetY)}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-gray-900 tabular-nums"
+                      data-testid="preview-offset-x"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-0.5">Şaquli · Y (%)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="-50"
+                      max="50"
+                      value={Math.round(localOffsetY)}
+                      onChange={(e) => updateOffset(localOffsetX, parseFloat(e.target.value) || 0)}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-gray-900 tabular-nums"
+                      data-testid="preview-offset-y"
+                    />
+                  </div>
+                </div>
               </div>
-              <p className="text-[10px] text-gray-500 mt-2">
-                {scaleChanged ? (
-                  <>Bu miqyas <b>"Məhsul əlavə et / Yenilə"</b> düyməsi ilə birlikdə yadda saxlanacaq və saytda eyni görünəcək.</>
+
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                {anyChange ? (
+                  <>Cari görünüş <b>"Məhsul əlavə et / Yenilə"</b> düyməsi ilə yadda saxlanacaq və saytda eyni olacaq.</>
                 ) : (
-                  <>Sıfırlandı (1.00×). Slider ilə böyüt/kiçilt — saytda da o görünüşdə qalacaq.</>
+                  <>Şəkli sürüklə və ya slider/X-Y ilə tənzimlə — saytda da bu görünüşdə qalacaq.</>
                 )}
               </p>
             </div>
           )}
 
-          {/* Tövsiyə qutusu */}
           <div className="space-y-2 text-xs">
             <div className="flex items-start gap-2">
               <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${loaded ? 'bg-emerald-500' : errored ? 'bg-red-500' : 'bg-gray-300'}`} />
@@ -265,7 +405,7 @@ const ProductImagePreview: React.FC<ProductImagePreviewProps> = ({
             )}
             <ul className="text-[10px] text-gray-500 space-y-0.5 pl-3 list-disc">
               <li>İdeal ölçü: <b>800×800px</b>+, kvadrat (1:1)</li>
-              <li>Fon: ağ və ya şəffaf (PNG)</li>
+              <li>Drag, zoom və mərkəz dəyişiklikləri saytda da göstərilir</li>
             </ul>
           </div>
         </div>
