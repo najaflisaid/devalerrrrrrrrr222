@@ -19,3 +19,6 @@ and save as `/app/backend/firebase-service-account.json`.
 
 ## Customer test accounts
 - None pre-seeded; create via the registration flow (phone + name + surname + password + accept terms).
+- Testing agent (iteration_6, 2026-01) created: phone **559867215** / password **test123456**
+  (Firebase Auth synthetic email: `phone994559867215@devaleur.az`).
+  This phone now triggers duplicate-detection auto-switch in checkout.

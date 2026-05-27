@@ -125,7 +125,13 @@ const CartPage: React.FC = () => {
         if (!snap.empty) {
           setPhoneAlreadyRegistered(true);
           // Auto-switch to login mode so customer sees password field next.
-          setAuthMode((prev) => (prev === 'register' ? 'login' : prev));
+          setAuthMode((prev) => {
+            if (prev === 'register') {
+              setLoginPassword('');
+              return 'login';
+            }
+            return prev;
+          });
         } else {
           setPhoneAlreadyRegistered(false);
         }
@@ -271,9 +277,14 @@ const CartPage: React.FC = () => {
 
     // Validation helper — boş sahəni göstər, scroll et, qırmızı diqqət ringi qoy
     const flagMissing = (testId: string, message: string, durationMs = 4500) => {
-      setErrorMessage(message);
-      setShowError(true);
-      setTimeout(() => setShowError(false), durationMs);
+      // Only override the error toast if a non-empty message is supplied.
+      // (Callers may pre-set errorMessage with custom text and pass '' here
+      // just to trigger the red ring + scroll.)
+      if (message) {
+        setErrorMessage(message);
+        setShowError(true);
+        setTimeout(() => setShowError(false), durationMs);
+      }
       setMissingField(testId);
       // Növbəti tick-də scroll + focus (input render olduqdan sonra)
       setTimeout(() => {
