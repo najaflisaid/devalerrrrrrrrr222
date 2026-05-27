@@ -573,7 +573,7 @@ const Header: React.FC = () => {
                       onMouseEnter={handleDropdownEnter}
                       onMouseLeave={handleDropdownLeave}
                     >
-                      <div className="bg-white shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)] h-screen overflow-y-auto">
+                      <div className="bg-white shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)] h-screen overflow-y-auto scrollbar-hide">
                         {/* Close button at the top of the panel */}
                         <button
                           onClick={handleDropdownLeave}
@@ -1027,7 +1027,7 @@ const Header: React.FC = () => {
                 <div className="w-7" aria-hidden="true" />
               </div>
 
-              <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto">
+              <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto scrollbar-hide">
                 <nav className="flex-1 p-6 space-y-1.5">
                   {/* Mobile "Brendlər" akardeonu */}
                   <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
