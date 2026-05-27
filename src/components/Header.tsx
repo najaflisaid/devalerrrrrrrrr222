@@ -839,7 +839,7 @@ const Header: React.FC = () => {
 
               {isLoggedIn && userRole === 'b2b' && (
                 <div className="relative flex flex-col items-start leading-none">
-                  <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
+                  <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[11px] tracking-wide whitespace-nowrap font-futura uppercase">
                     {t('header.myOrders')}
                   </Link>
                   {lastOrderStatus && (
