@@ -136,21 +136,18 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
   const headingText = title || defaultHeading;
 
   // ── COMPACT MODE ─────────────────────────────────────────────────────
-  // Small vertical list — designed to slot into the right product column
-  // (under the Share button). Each row: 56×56 thumbnail + name + price.
+  // Horizontal row of 3 product tiles — no heading, slightly larger cards.
+  // Designed to slot into the right product column under the Share button.
   if (compact) {
     return (
       <section
         className="mt-8 pt-6 border-t border-black/10"
         data-testid="similar-products-section"
       >
-        <h3
-          className="text-[11px] uppercase tracking-[0.22em] text-black/65 mb-4"
-          data-testid="similar-products-heading"
+        <div
+          className="grid grid-cols-3 gap-3"
+          data-testid="similar-products-list"
         >
-          {headingText}
-        </h3>
-        <div className="space-y-3" data-testid="similar-products-list">
           {items.map((p) => {
             const displayName =
               p.name?.[lang] || p.name?.az || p.name?.en || '';
@@ -165,14 +162,14 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
                   navigate(`/product/${p.id}`);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="w-full flex items-center gap-3 p-2 -mx-2 rounded-md
-                           hover:bg-black/[0.03] transition-colors text-left
+                className="group text-left rounded-md p-2 -m-2
+                           hover:bg-black/[0.03] transition-colors
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
                 data-testid={`similar-product-${p.id}`}
               >
-                <div className="w-14 h-14 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden relative">
+                <div className="aspect-square w-full bg-gray-50 rounded-md overflow-hidden relative mb-2">
                   {onSale && (
-                    <span className="absolute top-0.5 left-0.5 z-10 bg-[#D14545] text-white text-[8px] uppercase tracking-[0.08em] px-1 py-px rounded-sm">
+                    <span className="absolute top-1 left-1 z-10 bg-[#D14545] text-white text-[9px] uppercase tracking-[0.08em] px-1 py-px rounded-sm">
                       {t('product.sale')}
                     </span>
                   )}
@@ -181,29 +178,27 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
                       src={p.images[0]}
                       alt={displayName}
                       loading="lazy"
-                      className="w-full h-full object-contain p-1"
+                      className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-100" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-[12px] text-black/85 leading-snug line-clamp-2"
-                    title={displayName}
-                  >
-                    {displayName}
-                  </p>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-[12px] font-medium text-black tabular-nums">
-                      {visiblePrice.toFixed(2)} AZN
+                <p
+                  className="text-[11px] text-black/80 leading-snug line-clamp-2 mb-1"
+                  title={displayName}
+                >
+                  {displayName}
+                </p>
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-medium text-black tabular-nums">
+                    {visiblePrice.toFixed(2)} AZN
+                  </span>
+                  {onSale && (
+                    <span className="text-[10px] text-black/40 line-through tabular-nums">
+                      {p.price.toFixed(2)}
                     </span>
-                    {onSale && (
-                      <span className="text-[10px] text-black/40 line-through tabular-nums">
-                        {p.price.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </button>
             );
