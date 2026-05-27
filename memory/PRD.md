@@ -42,3 +42,13 @@
 ## Update (2026-01-27)
 - Unified product page design: `/products/:id` route (from homepage banners & search) now uses the same `ProductPage` component as `/product/:id` (from filter/listing). Both routes render identical UI including green "Kreditlə Al" button.
 - Modified: /app/src/App.tsx (removed ProductDetailsPage import, unified route to ProductPage).
+
+
+## Update (2026-01-27) — Admin Products UX
+- **Filterlər forma açıq olduqda gizlənir**: Admin "Məhsul əlavə et" düyməsinə basanda axtarış, qiymət aralığı, kateqoriya/brend/stok/görünürlük filterlər və miqrasiya paneli avtomatik gizlənir — yalnız yeni məhsul formu görünür.
+- **Stok inputu auto-select**: Default dəyər boş (`''`), placeholder `0`. Mövcud dəyər olsa belə input fokus alanda `e.target.select()` ilə avtomatik seçilir, klaviatura yazışı ilə dərhal əvəz olunur (artıq əvvəlcədən `0`-ı silmək lazım deyil). Saxlanmada boş = 0.
+- **Tarixə görə sıralama**: Admin → Məhsullar siyahısı artıq `createdAt` üzrə azalan sıraya görə düzülür (ən son əlavə edilən yuxarıda). Hər kartda kateqoriya altında əlavə edilmə tarixi `dd.MM.yyyy HH:mm` formatında göstərilir (testid: `product-created-at-<id>`).
+- **1-ci şəklin canlı ProductCard önizləməsi**: Yeni `ProductImagePreview` komponenti (`/app/src/components/admin/ProductImagePreview.tsx`) — admin URL daxil edən kimi şəklin saytdakı `aspect-square` ProductCard-da necə oturduğunu eyni stillərlə (gradient, sale badge, qiymət, brend, qəlb/səbət ikonları) göstərir. Şəklin təbii ölçüləri oxunur və tövsiyə verilir: yaşıl (≥800×800px kvadrat), sarı (qeyri-kvadrat nisbət), qırmızı (<400px). Add və Edit formaları üçün aktivdir.
+- **Auto-tərcümə (Az→Ru/En)**: Növbəti iteration üçün təxirə salındı (user istəyi).
+- Modified: `/app/src/components/admin/AdminPanel.tsx` (filter wrapper, stock default + onFocus, sort by createdAt, date display, preview integration, Calendar icon import).
+- Added: `/app/src/components/admin/ProductImagePreview.tsx`.

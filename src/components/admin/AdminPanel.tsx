@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -21,6 +21,7 @@ import ReturnPolicyTab from './ReturnPolicyTab';
 import CareersTab from './CareersTab';
 import DeliveryPolicyTab from './DeliveryPolicyTab';
 import ProductBannersTab from './ProductBannersTab';
+import ProductImagePreview from './ProductImagePreview';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
 import ConfirmModal from './ConfirmModal';
@@ -373,7 +374,7 @@ const AdminPanel: React.FC = () => {
     gender: 'unisex' as 'men' | 'women' | 'unisex',
     images: [''],
     isBestseller: false,
-    stock: '0',
+    stock: '',
     visibleTo: 'all' as 'all' | 'b2b' | 'customer',
   });
 
@@ -760,7 +761,7 @@ const AdminPanel: React.FC = () => {
         gender: 'unisex',
         images: [''],
         isBestseller: false,
-        stock: '0',
+        stock: '',
         visibleTo: 'all',
       });
       setShowAddProduct(false);
@@ -1639,7 +1640,7 @@ const AdminPanel: React.FC = () => {
             </div>
 
             {/* Excel ilə stok miqrasiyası — yalnız düymə basıldıqda göstərilir */}
-            {showMigration && (
+            {showMigration && !showAddProduct && (
               <div className="mb-6">
                 <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Miqrasiya paneli yüklənir...</div>}>
                   <ProductExcelImport products={products} onDone={loadData} />
@@ -1647,6 +1648,7 @@ const AdminPanel: React.FC = () => {
               </div>
             )}
 
+            {!showAddProduct && (
             <div className="mb-6 space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -1765,6 +1767,7 @@ const AdminPanel: React.FC = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {showAddProduct && (
               <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
@@ -1899,6 +1902,7 @@ const AdminPanel: React.FC = () => {
                       min="0"
                       value={newProduct.stock}
                       onChange={(e) => setNewProduct({ ...newProduct, stock: sanitizeNonNegative(e.target.value) })}
+                      onFocus={(e) => e.target.select()}
                       onWheel={blockWheel}
                       onKeyDown={blockMinusKey}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
@@ -2011,6 +2015,14 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label>
+                    <ProductImagePreview
+                      imageUrl={newProduct.images[0] || ''}
+                      name={newProduct.nameAz}
+                      brand={newProduct.brand}
+                      price={newProduct.price}
+                      salePrice={newProduct.salePrice}
+                    />
+                    <div className="mt-3" />
                     {newProduct.images.map((img, index) => (
                       <div key={index} className="flex gap-2 mb-2">
                         <input
@@ -2107,7 +2119,7 @@ const AdminPanel: React.FC = () => {
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.salePrice} onChange={(e) => setEditProduct({ ...editProduct, salePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bPrice} onChange={(e) => setEditProduct({ ...editProduct, b2bPrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">B2B Endirimli Qiymət ( AZN)</label><input type="number" step="0.01" min="0" value={editProduct.b2bSalePrice} onChange={(e) => setEditProduct({ ...editProduct, b2bSalePrice: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0.00" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: sanitizeNonNegative(e.target.value) })} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Stok Sayı *</label><input type="number" min="0" value={editProduct.stock} onChange={(e) => setEditProduct({ ...editProduct, stock: sanitizeNonNegative(e.target.value) })} onFocus={(e) => e.target.select()} onWheel={blockWheel} onKeyDown={blockMinusKey} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="0" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">Brend * <button type="button" onClick={() => setShowAddBrand(true)} className="text-xs text-blue-600 hover:text-blue-700">+ Yeni Əlavə Et</button></label><select value={editProduct.brand} onChange={(e) => {
                     const selectedBrandName = e.target.value;
                     const brandObj = brands.find((b: any) => b.name === selectedBrandName) as any;
@@ -2131,7 +2143,7 @@ const AdminPanel: React.FC = () => {
                     return (<>{preferred.length > 0 && (<optgroup label="Brendə uyğun">{preferred.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}{others.length > 0 && (<optgroup label={preferred.length > 0 ? 'Digər kateqoriyalar' : 'Bütün kateqoriyalar'}>{others.map(cat => (<option key={cat.id} value={cat.nameAz || cat.name}>{cat.name}</option>))}</optgroup>)}</>);
                   })()}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>
-                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label>{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
+                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} /><div className="mt-3" />{editProduct.images.map((img, index) => (<div key={index} className="flex gap-2 mb-2"><input type="text" value={img} onChange={(e) => { const newImages = [...editProduct.images]; newImages[index] = e.target.value; setEditProduct({ ...editProduct, images: newImages }); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder={`Şəkil ${index + 1} URL`} />{index > 0 && (<button onClick={() => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); }} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"><X className="h-5 w-5" /></button>)}</div>))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>
                   <div className="md:col-span-2 flex gap-6"><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.isBestseller} onChange={(e) => setEditProduct({ ...editProduct, isBestseller: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Ən çox satılan</span></label><label className="flex items-center gap-2"><input type="checkbox" checked={editProduct.comingSoon || false} onChange={(e) => setEditProduct({ ...editProduct, comingSoon: e.target.checked })} className="w-4 h-4" /><span className="text-sm font-medium text-gray-700">Tezliklə gələcək</span></label></div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Məhsul görünəcək istifadəçilər</label>
@@ -2201,9 +2213,9 @@ const AdminPanel: React.FC = () => {
                     return matchesSearch && matchesPrice && matchesCategory && matchesBrand && matchesStock && matchesVisibility;
                   })
                   .sort((a, b) => {
-                    const brandCompare = a.brand.localeCompare(b.brand);
-                    if (brandCompare !== 0) return brandCompare;
-                    return a.name.az.localeCompare(b.name.az);
+                    const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as any).getTime();
+                    const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as any).getTime();
+                    return (bTime || 0) - (aTime || 0);
                   });
 
                 if (filteredProducts.length === 0) {
@@ -2224,6 +2236,16 @@ const AdminPanel: React.FC = () => {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{product.name.az}</h3>
                       <p className="text-sm text-gray-600">{product.brand} · {product.category}</p>
+                      {product.createdAt && (
+                        <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1" data-testid={`product-created-at-${product.id}`}>
+                          <Calendar className="h-3 w-3" />
+                          {(() => {
+                            const d = product.createdAt instanceof Date ? product.createdAt : new Date(product.createdAt as any);
+                            if (isNaN(d.getTime())) return '';
+                            return d.toLocaleString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                          })()}
+                        </p>
+                      )}
                       <div className="flex items-center gap-3">
                         <p className="text-sm font-medium text-gray-900">{product.price} AZN</p>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${product.stock === 0 ? 'bg-red-100 text-red-700' : product.stock <= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
