@@ -546,7 +546,7 @@ const Header: React.FC = () => {
                       handleDropdownEnter();
                     }
                   }}
-                  className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura ${
+                  className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
                     transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
                   }`}
                   data-testid="header-brands-link"
@@ -692,7 +692,7 @@ const Header: React.FC = () => {
               {/* Search — icon + text (LV-style, left aligned) */}
               <button
                 onClick={() => setShowSearch(true)}
-                className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura ${
+                className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
                   transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
                 }`}
                 aria-label="Search"
@@ -705,7 +705,7 @@ const Header: React.FC = () => {
               {/* Hədiyyə kartı — çərçivəli (LV-style) + güzgü/shine effekti */}
               <Link
                 to="/gift-cards"
-                className={`dv-giftcard-btn group relative inline-flex items-center gap-2 px-4 py-1.5 text-[12px] font-normal whitespace-nowrap transition-all duration-300 font-futura overflow-hidden border ${
+                className={`dv-giftcard-btn group relative inline-flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-normal whitespace-nowrap transition-all duration-300 overflow-hidden border ${
                   transparentMode
                     ? 'text-white border-white/70 hover:border-white hover:shadow-[0_6px_20px_-6px_rgba(255,255,255,0.4)]'
                     : 'text-[#8B0000] border-[#8B0000]/80 hover:border-[#8B0000] hover:shadow-[0_6px_20px_-6px_rgba(139,0,0,0.4)]'
@@ -718,10 +718,10 @@ const Header: React.FC = () => {
                   className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-3/4 w-3/4 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100"
                 />
                 <Gift
-                  className="relative h-[15px] w-[15px] transition-transform duration-300 group-hover:rotate-[-8deg]"
+                  className="relative h-[14px] w-[14px] transition-transform duration-300 group-hover:rotate-[-8deg]"
                   strokeWidth={1.4}
                 />
-                <span className="relative">
+                <span className="relative font-handwriting text-[15px] leading-none tracking-normal">
                   {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                 </span>
               </Link>

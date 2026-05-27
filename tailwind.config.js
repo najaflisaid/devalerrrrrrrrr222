@@ -8,6 +8,7 @@ export default {
         inter: ['Inter', 'sans-serif'],
         playfair: ['Playfair Display', 'serif'],
         futura: ['Jost', 'Futura', 'Trebuchet MS', 'sans-serif'],
+        handwriting: ['Caveat', 'Dancing Script', 'cursive'],
       },
       maxWidth: {
         '8xl': '1440px',
