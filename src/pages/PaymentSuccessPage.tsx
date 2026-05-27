@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { createGiftCardPromoCode } from '../services/promoCodeService';
 import { getEpointSettings } from '../services/epointPaymentService';
 import { isCustomGiftCardId } from '../utils/giftCard';
+import { useNotify } from '../components/ui/NotificationProvider';
 
 const BACKEND_URL =
   (import.meta as any).env?.VITE_BACKEND_URL ||
@@ -23,10 +24,21 @@ const PaymentSuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { clearCart } = useCart();
+  const { toast } = useNotify();
   const [state, setState] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [orderId, setOrderId] = useState<string | null>(null);
   const [giftCodes, setGiftCodes] = useState<IssuedGiftCode[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Show toast notification whenever state resolves
+  useEffect(() => {
+    if (state === 'success') {
+      toast('Ödəniş uğurla tamamlandı! Sifarişiniz qəbul edildi.', 'success');
+    } else if (state === 'error') {
+      toast('Ödəniş təsdiqlənmədi. Zəhmət olmasa yenidən cəhd edin.', 'error');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   useEffect(() => {
     const data = params.get('data');

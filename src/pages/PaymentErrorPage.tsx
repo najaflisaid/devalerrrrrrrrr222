@@ -1,15 +1,27 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { XCircle, RotateCw } from 'lucide-react';
+import { useNotify } from '../components/ui/NotificationProvider';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const PaymentErrorPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useNotify();
 
   useEffect(() => {
-    // Ödəniş uğursuz/ləğv olunsa belə sifariş bazada "pending_payment" statusu ilə qalır.
-    // Beləliklə müştəri "Sifarişlərim" hissəsindən sifarişə tıklayıb yenidən ödəniş edə bilər.
-    // pending_epoint_order_id sessiya açarı təmizlənir ki, səbət axını yenilənsin.
+    // Mark pending order as payment_failed (Epoint redirected here)
+    const pendingId = sessionStorage.getItem('pending_epoint_order_id');
+    if (pendingId) {
+      updateDoc(doc(db, 'customer_orders', pendingId), {
+        status: 'payment_failed',
+        paymentStatus: 'failed',
+      }).catch(() => undefined);
+    }
+    // Pending sessiya açarı təmizlənir ki, səbət axını yenilənsin.
     sessionStorage.removeItem('pending_epoint_order_id');
+    toast('Ödəniş uğursuz oldu. Sifarişiniz "ödəniş gözləyir" statusunda saxlanıldı.', 'error');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
