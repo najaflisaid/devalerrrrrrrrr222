@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Minus, Check, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { X, Plus, Minus, Check, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
@@ -37,6 +37,9 @@ const CartPage: React.FC = () => {
   // Inline Epoint widget — embedded in the checkout page (no redirect, no modal)
   const [inlineWidgetUrl, setInlineWidgetUrl] = useState<string | null>(null);
   const [inlineWidgetLoading, setInlineWidgetLoading] = useState(false);
+  // True once the Epoint iframe has finished its first paint — used to hide
+  // the in-place loading skeleton.
+  const [iframeReady, setIframeReady] = useState(false);
   // Auth mode toggle inside the checkout — 'register' (new customer) | 'login' (existing)
   const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
   const [loginPassword, setLoginPassword] = useState('');
@@ -287,12 +290,43 @@ const CartPage: React.FC = () => {
   const handleEpointCheckout = async (mode: 'redirect' | 'widget' = 'widget') => {
     if (items.length === 0) return;
 
+    // INSTANT feedback for the customer — show the widget shell with a
+    // loading skeleton immediately so they don't feel any waiting time
+    // while we validate / create the order / fetch the Epoint URL.
+    if (mode === 'widget') {
+      setInlineWidgetLoading(true);
+      setIframeReady(false);
+      // Scroll the widget shell into view right away on mobile.
+      setTimeout(() => {
+        const panel = document.querySelector(
+          '[data-testid="inline-checkout-panel"]'
+        ) as HTMLElement | null;
+        const widget = document.querySelector(
+          '[data-testid="inline-epoint-widget"]'
+        ) as HTMLElement | null;
+        if (panel && widget) {
+          panel.scrollTo({ top: Math.max(0, widget.offsetTop - 16), behavior: 'smooth' });
+        } else if (widget) {
+          widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 30);
+    }
+
     let userId = localStorage.getItem('userId');
     let userName = localStorage.getItem('userName') || '';
     let userEmail = localStorage.getItem('userEmail') || '';
 
+    // Helper to clear the instant skeleton when we have to bail out early
+    // (validation error, auth failure, etc.)
+    const cancelInstantShell = () => {
+      if (mode === 'widget') {
+        setInlineWidgetLoading(false);
+      }
+    };
+
     // Validation helper — boş sahəni göstər, scroll et, qırmızı diqqət ringi qoy
     const flagMissing = (testId: string, message: string, durationMs = 4500) => {
+      cancelInstantShell();
       // Only override the error toast if a non-empty message is supplied.
       // (Callers may pre-set errorMessage with custom text and pass '' here
       // just to trigger the red ring + scroll.)
@@ -413,6 +447,7 @@ const CartPage: React.FC = () => {
             setShowError(true);
             setTimeout(() => setShowError(false), 6000);
             setLoading(false);
+            cancelInstantShell();
             flagMissing('checkout-login-password', '');
             return;
           }
@@ -428,6 +463,7 @@ const CartPage: React.FC = () => {
               setShowError(true);
               setTimeout(() => setShowError(false), 6000);
               setLoading(false);
+              cancelInstantShell();
               setAuthMode('login');
               setPhoneAlreadyRegistered(true);
               return;
@@ -478,6 +514,7 @@ const CartPage: React.FC = () => {
             setShowError(true);
             setTimeout(() => setShowError(false), 6000);
             setLoading(false);
+            cancelInstantShell();
             return;
           }
         }
@@ -619,6 +656,7 @@ const CartPage: React.FC = () => {
       setShowError(true);
       setTimeout(() => setShowError(false), 6000);
       setLoading(false);
+      cancelInstantShell();
     }
   };
 
@@ -789,7 +827,7 @@ const CartPage: React.FC = () => {
         />
       )}
 
-      {loading && !isB2BUser && (
+      {loading && !isB2BUser && !inlineWidgetLoading && !inlineWidgetUrl && (
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
           data-testid="payment-loading-overlay"
@@ -1304,26 +1342,14 @@ const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Pay button — opens inline Epoint widget on this page */}
-              <button
-                onClick={() => handleEpointCheckout('widget')}
-                disabled={loading || inlineWidgetLoading || !!inlineWidgetUrl}
-                className="w-full h-12 bg-black text-white text-[12px] uppercase tracking-[0.24em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                data-testid="checkout-pay-btn"
-              >
-                {inlineWidgetLoading || loading
-                  ? 'Ödəniş hazırlanır...'
-                  : inlineWidgetUrl
-                    ? 'Ödəniş açıqdır — aşağı sürüşdürün'
-                    : 'Ödənişə keç'}
-              </button>
-
-              {/* Inline Epoint widget — embedded inline on desktop, fullscreen
-                  overlay on mobile (where inline scrolling is unreliable on
-                  iOS Safari). */}
-              {inlineWidgetUrl && (
+              {/* Pay button moved to RIGHT column (under Yekun/Total) — see
+                  bottom of the order summary. Widget shell appears here on
+                  desktop / fullscreen on mobile and shows a loading skeleton
+                  the instant the customer clicks pay (so they feel zero
+                  wait time). */}
+              {(inlineWidgetUrl || inlineWidgetLoading) && (
                 <div
-                  className="mt-6 border border-black/15 bg-white scroll-mt-4
+                  className="mt-2 border border-black/15 bg-white scroll-mt-4
                              max-md:fixed max-md:inset-0 max-md:mt-0 max-md:z-[70]
                              max-md:flex max-md:flex-col max-md:border-0"
                   data-testid="inline-epoint-widget"
@@ -1340,6 +1366,8 @@ const CartPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setInlineWidgetUrl(null);
+                        setInlineWidgetLoading(false);
+                        setIframeReady(false);
                         sessionStorage.removeItem('pending_epoint_order_id');
                       }}
                       aria-label="Ödənişi bağla"
@@ -1350,48 +1378,58 @@ const CartPage: React.FC = () => {
                       Geri
                     </button>
                   </div>
-                  <iframe
-                    src={inlineWidgetUrl}
-                    title="Epoint Payment"
-                    className="w-full bg-white border-0 block
-                               h-[780px] md:h-[780px]
-                               max-md:flex-1 max-md:h-auto"
-                    allow="payment *; publickey-credentials-get *; clipboard-write"
-                    data-testid="inline-epoint-iframe"
-                    onLoad={(e) => {
-                      // After Epoint completes the payment it redirects the
-                      // iframe to our success_redirect_url / error_redirect_url
-                      // (same origin). Break out of the iframe and navigate
-                      // the parent window so the customer lands on the
-                      // proper success/error page.
-                      try {
-                        const ifr = e.currentTarget as HTMLIFrameElement;
-                        const href = ifr.contentWindow?.location?.href || '';
-                        if (!href) return;
-                        if (
-                          href.includes('/payment/success') ||
-                          href.includes('/payment/error') ||
-                          href.includes('/payment/result')
-                        ) {
-                          window.location.href = href;
-                        }
-                      } catch {
-                        // Cross-origin while still on epoint.az — ignore.
-                      }
-                    }}
-                  />
+                  <div className="relative w-full bg-white block h-[780px] md:h-[780px] max-md:flex-1 max-md:h-auto">
+                    {inlineWidgetUrl && (
+                      <iframe
+                        src={inlineWidgetUrl}
+                        title="Epoint Payment"
+                        className="absolute inset-0 w-full h-full bg-white border-0 block"
+                        allow="payment *; publickey-credentials-get *; clipboard-write"
+                        loading="eager"
+                        data-testid="inline-epoint-iframe"
+                        onLoad={(e) => {
+                          setIframeReady(true);
+                          // After Epoint completes the payment it redirects
+                          // the iframe to our success_redirect_url /
+                          // error_redirect_url (same origin). Break out and
+                          // navigate the parent window so the customer lands
+                          // on the proper success/error page.
+                          try {
+                            const ifr = e.currentTarget as HTMLIFrameElement;
+                            const href = ifr.contentWindow?.location?.href || '';
+                            if (!href) return;
+                            if (
+                              href.includes('/payment/success') ||
+                              href.includes('/payment/error') ||
+                              href.includes('/payment/result')
+                            ) {
+                              window.location.href = href;
+                            }
+                          } catch {
+                            // Cross-origin while still on epoint.az — ignore.
+                          }
+                        }}
+                      />
+                    )}
+                    {(!inlineWidgetUrl || !iframeReady) && (
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-white"
+                        data-testid="inline-epoint-skeleton"
+                      >
+                        <Loader2 className="w-7 h-7 text-black/30 animate-spin mb-3" strokeWidth={1.5} />
+                        <p className="text-[12px] text-black/55">Ödəniş açılır...</p>
+                        <p className="text-[10px] text-black/35 mt-1 uppercase tracking-[0.18em]">
+                          Bir neçə saniyə
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02]">
                     <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">
                       Apple Pay · Google Pay · Visa · Mastercard
                     </p>
                   </div>
                 </div>
-              )}
-
-              {!inlineWidgetUrl && (
-                <p className="text-[11px] text-black/45 text-center mt-3">
-                  {t('checkout.securePayment')}
-                </p>
               )}
             </div>
 
@@ -1515,6 +1553,32 @@ const CartPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Pay button — appears AFTER the total so the customer sees
+                  the final amount before confirming. Opens the inline
+                  Epoint widget (left column on desktop / fullscreen on
+                  mobile) with an instant loading skeleton. */}
+              <button
+                onClick={() => {
+                  setIframeReady(false);
+                  handleEpointCheckout('widget');
+                }}
+                disabled={loading || inlineWidgetLoading || !!inlineWidgetUrl}
+                className="w-full h-12 mt-4 bg-black text-white text-[12px] uppercase tracking-[0.24em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="checkout-pay-btn"
+              >
+                {inlineWidgetLoading || loading
+                  ? 'Ödəniş hazırlanır...'
+                  : inlineWidgetUrl
+                    ? 'Ödəniş açıqdır'
+                    : 'Ödənişə keç'}
+              </button>
+
+              {!inlineWidgetUrl && !inlineWidgetLoading && (
+                <p className="text-[11px] text-black/45 text-center mt-3">
+                  {t('checkout.securePayment')}
+                </p>
+              )}
             </div>
           </div>
         </div>
