@@ -82,57 +82,55 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
         </p>
 
         <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
-          <div className="flex items-stretch gap-1.5 sm:gap-2">
+          <div className="flex items-start gap-1.5 sm:gap-2">
             {/* Ay düymələri */}
             {rates.map((r) => {
               const isActive = r.months === activeRate?.months;
               return (
-                <button
-                  key={r.months}
-                  type="button"
-                  onClick={() => setSelectedMonths(r.months)}
-                  className="relative group focus:outline-none flex-1 min-w-0"
-                  data-testid={`cc-month-${r.months}`}
-                >
-                  {/* Faiz etiketi */}
-                  <span
-                    className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap text-red-500 ${
-                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
-                    }`}
+                <div key={r.months} className="flex-1 min-w-0 flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMonths(r.months)}
+                    className="relative group focus:outline-none w-full"
+                    data-testid={`cc-month-${r.months}`}
                   >
-                    {r.percent > 0 ? `${r.percent}%` : '0%'}
-                  </span>
-                  <span
-                    className={`flex flex-col items-center justify-center rounded-full transition-all w-full h-14 px-1 leading-tight tabular-nums ${
-                      isActive
-                        ? 'bg-gray-900 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    }`}
-                  >
-                    <span className="text-[9px] uppercase tracking-[0.14em] opacity-70">
-                      Müddət
+                    {/* Faiz etiketi */}
+                    <span
+                      className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap text-red-500 ${
+                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+                      }`}
+                    >
+                      {r.percent > 0 ? `${r.percent}%` : '0%'}
                     </span>
-                    <span className="text-[12px] sm:text-[13px] font-semibold">
+                    <span
+                      className={`flex items-center justify-center rounded-full transition-all w-full h-9 px-2 tabular-nums text-[12px] sm:text-[13px] font-semibold ${
+                        isActive
+                          ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                    >
                       {r.months} ay
                     </span>
+                  </button>
+                  <span className="mt-1.5 text-[9px] uppercase tracking-[0.16em] text-gray-500">
+                    Müddət
                   </span>
-                </button>
+                </div>
               );
             })}
 
-            {/* Aylıq — sealed "info" pill in the same style as the month
-                buttons (not clickable). Top label "AYDA", bottom amount. */}
-            <div
-              className="flex-1 min-w-0 flex flex-col items-center justify-center
-                         rounded-full h-14 px-1 leading-tight tabular-nums
-                         bg-gray-900 text-white shadow-sm"
-              data-testid="cc-monthly-amount"
-            >
-              <span className="text-[9px] uppercase tracking-[0.14em] opacity-70">
-                Ayda
-              </span>
-              <span className="text-[12px] sm:text-[13px] font-semibold">
+            {/* Aylıq — eyni stil, kreditlə al rənginin yaşıl tonu, klikləməz */}
+            <div className="flex-1 min-w-0 flex flex-col items-center">
+              <div
+                className="w-full h-9 px-2 rounded-full flex items-center justify-center
+                           bg-emerald-600 text-white shadow-sm tabular-nums
+                           text-[12px] sm:text-[13px] font-semibold whitespace-nowrap"
+                data-testid="cc-monthly-amount"
+              >
                 {formatAzn(monthlyAmount)} AZN
+              </div>
+              <span className="mt-1.5 text-[9px] uppercase tracking-[0.16em] text-gray-500">
+                Ayda
               </span>
             </div>
           </div>
