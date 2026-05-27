@@ -328,6 +328,14 @@ const ProductPage: React.FC = () => {
               </button>
             </div>
 
+            {/* Compact similar products — same model in other colours OR
+                same gender if no exact variant exists. Limited to 3 items
+                so it fits below the share button without overwhelming the
+                product details. */}
+            {allProducts.length > 1 && (
+              <SimilarProducts current={product} all={allProducts} limit={3} compact />
+            )}
+
             {/* Trust badges */}
             <div className="mt-8 grid grid-cols-3 gap-3 text-center">
               {[
@@ -409,13 +417,6 @@ const ProductPage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Similar models (variants / colours) — auto-detected by model
-            prefix (USPA 2111-01 → USPA 2111-02, …) with brand + category
-            fallback. */}
-        {allProducts.length > 1 && (
-          <SimilarProducts current={product} all={allProducts} />
-        )}
 
         {/* Reviews */}
         <div className="mt-16 lg:mt-24 border-t border-black/10 pt-12">
