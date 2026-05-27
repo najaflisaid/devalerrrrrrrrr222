@@ -204,6 +204,22 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
             );
           })}
         </div>
+
+        {/* "See other models" link — goes to the brand page so the customer
+            can browse the full range. */}
+        <button
+          type="button"
+          onClick={() =>
+            navigate(`/brand/${encodeURIComponent(current.brand || '')}`)
+          }
+          className="mt-4 group inline-flex items-center gap-1.5 text-[11px]
+                     uppercase tracking-[0.22em] text-black/65 hover:text-black
+                     transition-colors"
+          data-testid="similar-products-see-more"
+        >
+          <span>Digər modellərə bax</span>
+          <span className="transition-transform group-hover:translate-x-0.5">→</span>
+        </button>
       </section>
     );
   }

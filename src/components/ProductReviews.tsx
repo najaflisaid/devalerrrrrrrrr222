@@ -199,41 +199,9 @@ const ProductReviews: React.FC<Props> = ({ productId }) => {
         </div>
       )}
 
-      {!isLoggedIn && (
-        <div className="mb-8 p-6 sm:p-8 bg-white border border-black/15">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.32em] text-black/55 mb-1.5">Bu məhsulu qiymətləndirin</p>
-              <p className="text-[14px] text-black/70 leading-relaxed">
-                Rəy yazmaq üçün hesabınıza daxil olun və ya yeni hesab yaradın.
-              </p>
-            </div>
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="inline-flex items-center gap-1"
-                data-testid="review-login-stars"
-                aria-label="Rəy yazmaq üçün qeydiyyatdan keçin"
-              >
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star
-                    key={i}
-                    className="h-5 w-5 text-black/25 hover:fill-black hover:text-black transition-colors cursor-pointer"
-                    strokeWidth={1.5}
-                  />
-                ))}
-              </button>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-[11px] uppercase tracking-[0.28em] font-medium hover:bg-black/85 transition-colors"
-                data-testid="review-register-link"
-              >
-                Qeydiyyat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {!isLoggedIn && null /* "Bu məhsulu qiymətləndirin" prompt removed per
+          request — the top "Rəy yaz" button already handles unauthenticated
+          users by opening the auth modal. */}
 
       {showForm && isLoggedIn && (
         <div className="mb-8 p-6 border border-black/15 bg-white space-y-5">
