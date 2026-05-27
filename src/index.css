@@ -479,6 +479,21 @@ html.dark .dv-orb { opacity: 0.28; }
   display: none;
 }
 
+/* Vintage quill / copperplate handwriting style for the "Hədiyyə" word.
+   Pinyon Script is an 18th-century copperplate calligraphy revival —
+   feels like writing done with an old quill, yet stays legible at small sizes. */
+.dv-giftcard-script {
+  font-family: 'Pinyon Script', 'Allura', 'Great Vibes', cursive;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  /* Pinyon Script renders ~30% smaller visually than a regular sans, so we
+     bump the size and line-height up to keep the button height balanced. */
+  line-height: 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
 /* Success notification animations */
 @keyframes fadeIn {
   from {

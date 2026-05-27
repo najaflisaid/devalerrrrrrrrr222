@@ -764,7 +764,7 @@ const Header: React.FC = () => {
                   className="relative h-[14px] w-[14px] transition-transform duration-300 group-hover:rotate-[-8deg]"
                   strokeWidth={1.4}
                 />
-                <span className="relative font-playfair italic text-[13px] leading-none tracking-wide">
+                <span className="relative dv-giftcard-script text-[22px] leading-none -mt-[2px]">
                   {t('header.giftCards', { defaultValue: 'Hədiyyə' })}
                 </span>
               </Link>
@@ -1166,7 +1166,7 @@ const Header: React.FC = () => {
                         className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-3/4 w-3/4 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100"
                       />
                       <Gift className="relative h-[15px] w-[15px] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.4} />
-                      <span className="relative text-[12px] uppercase tracking-[0.18em] font-medium font-futura">
+                      <span className="relative dv-giftcard-script text-[26px] leading-none -mt-[2px]">
                         {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                       </span>
                     </Link>
