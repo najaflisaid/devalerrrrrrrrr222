@@ -164,7 +164,7 @@ const Hero: React.FC = () => {
       </AnimatePresence>
 
       {/* === Editorial overlay text — BOTTOM-CENTER (LV-style) === */}
-      <div className="relative z-[5] h-full flex items-end justify-center pb-16 md:pb-20 lg:pb-24 px-4 sm:px-8 md:px-16 lg:px-24">
+      <div className="relative z-[5] h-full flex items-end justify-center pb-10 md:pb-12 lg:pb-14 px-4 sm:px-8 md:px-16 lg:px-24">
         <AnimatePresence initial={false}>
           <motion.div
             key={`text-${currentSlide}`}
@@ -176,7 +176,7 @@ const Hero: React.FC = () => {
           >
             {current?.subtitle && (
               <motion.p
-                className="font-futura text-[10px] sm:text-[11px] md:text-[12px] uppercase tracking-[0.4em] font-light text-white/90 mb-3"
+                className="font-futura text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-[0.4em] font-light text-white/90 mb-2"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -185,7 +185,7 @@ const Hero: React.FC = () => {
               </motion.p>
             )}
             <motion.h1
-              className="font-futura font-light uppercase tracking-[0.08em] leading-[1.05]"
+              className="font-futura font-light uppercase tracking-[0.08em] leading-[0.95]"
               style={{ textShadow: '0 2px 32px rgba(0,0,0,0.4)' }}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -198,11 +198,11 @@ const Hero: React.FC = () => {
                 const l2 = parts.slice(1).join(' ');
                 return (
                   <>
-                    <span className="block text-[26px] sm:text-[34px] md:text-[44px] lg:text-[54px]">
+                    <span className="block text-[20px] sm:text-[26px] md:text-[32px] lg:text-[40px]">
                       {l1}
                     </span>
                     {l2 && (
-                      <span className="block text-[26px] sm:text-[34px] md:text-[44px] lg:text-[54px]">
+                      <span className="block text-[20px] sm:text-[26px] md:text-[32px] lg:text-[40px]">
                         {l2}
                       </span>
                     )}
@@ -215,7 +215,7 @@ const Hero: React.FC = () => {
               <motion.button
                 type="button"
                 onClick={() => handleLink(current?.link)}
-                className="mt-6 md:mt-7 group/btn inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-white font-futura"
+                className="mt-4 md:mt-5 group/btn inline-flex items-center gap-3 text-[10px] md:text-[11px] uppercase tracking-[0.32em] font-medium text-white font-futura"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
@@ -229,7 +229,7 @@ const Hero: React.FC = () => {
                   />
                 </span>
                 <ArrowRight
-                  className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover/btn:translate-x-1.5"
+                  className="w-3.5 h-3.5 md:w-4 md:h-4 transition-transform duration-500 group-hover/btn:translate-x-1.5"
                   strokeWidth={1.4}
                 />
               </motion.button>
