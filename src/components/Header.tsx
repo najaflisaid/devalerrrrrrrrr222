@@ -57,6 +57,7 @@ const Header: React.FC = () => {
   // Hər kategoriyaya aid məhsul siyahısı — mega menyuda kategoriyaya hover edəndə həmin kateqoriyanın brendləri görünür
   const [productsByCategory, setProductsByCategory] = useState<Record<string, string[]>>({});
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [hoveredSubcategory, setHoveredSubcategory] = useState<string | null>(null);
   // Mobil menyu üçün açıq/qapalı state-lər
   // Mobile menu opens with the brands/categories panel already expanded so the
   // user lands directly on the category list (no extra tap needed).
@@ -293,6 +294,8 @@ const Header: React.FC = () => {
       dropdownTimersRef.current.inner = setTimeout(() => {
         setShowDropdown(false);
         setIsDropdownClosing(false);
+        setHoveredCategory(null);
+        setHoveredSubcategory(null);
         dropdownTimersRef.current.inner = null;
       }, 280);
       dropdownTimersRef.current.outer = null;
@@ -567,123 +570,148 @@ const Header: React.FC = () => {
                     {/* invisible bridge to prevent hover gap between trigger and panel */}
                     <div className="h-3 -mt-3" aria-hidden="true" />
                     <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)]">
-                      <div className="max-w-[1200px] mx-auto px-10 py-12">
-                        <div className="grid grid-cols-12 gap-10">
-                          {/* Categories Section — sol tərəf, hover edəndə həmin kategoriyanın brendləri sağda görünür */}
-                          <div className="dv-mega-section dv-mega-section-1 col-span-5">
-                            <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-6 font-semibold">
-                              {t('header.categories')}
-                            </h3>
-                            <ul className="space-y-1">
-                              {(categoryTree.length > 0
-                                ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name }))
-                                : categories.map(c => ({ key: c, displayName: getCategoryTranslation(c), lookupName: c }))
-                              ).map((cat, idx) => {
-                                const isHovered = hoveredCategory === cat.lookupName;
-                                return (
-                                  <li key={cat.key}>
-                                    <button
-                                      onMouseEnter={() => setHoveredCategory(cat.lookupName)}
-                                      onClick={() => {
-                                        navigate(`/products?category=${encodeURIComponent(cat.lookupName)}`);
-                                        setShowDropdown(false);
-                                      }}
-                                      style={{ ['--dv-i' as any]: idx }}
-                                      className={`dv-mega-link group flex w-full text-left items-center justify-between gap-2 text-sm py-2 transition-colors ${
-                                        isHovered ? 'text-black font-medium' : 'text-gray-700 hover:text-black'
-                                      }`}
-                                      data-testid={`menu-category-${cat.lookupName}`}
-                                    >
-                                      <span className="dv-mega-text">{cat.displayName}</span>
-                                      <span className={`text-xs transition-transform ${isHovered ? 'translate-x-1 text-amber-500' : 'text-gray-300'}`}>›</span>
-                                    </button>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
+                      {(() => {
+                        const categoryItems = categoryTree.length > 0
+                          ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name, node: n }))
+                          : categories.map(c => ({ key: c, displayName: getCategoryTranslation(c), lookupName: c, node: null as CategoryNode | null }));
 
-                          {/* Brands Section — kategoriyaya hover edildikdə həmin kategoriyanın alt-kateqoriyaları + brendləri, hover yoxdursa hamısı */}
-                          <div
-                            className="dv-mega-section dv-mega-section-2 col-span-7 border-l border-gray-100 pl-10"
-                            onMouseLeave={() => setHoveredCategory(null)}
-                          >
-                            {(() => {
-                              // Hover edilən kategorinin tree-də node-unu tap
-                              const hoveredNode = hoveredCategory
-                                ? categoryTree.find(n => n.nameAz === hoveredCategory || n.nameRu === hoveredCategory || n.nameEn === hoveredCategory || n.name === hoveredCategory)
-                                : null;
-                              const subcats = hoveredNode?.children || [];
-                              const brandsForHover = hoveredCategory && productsByCategory[hoveredCategory]?.length
-                                ? productsByCategory[hoveredCategory]
-                                : brands;
-                              return (
-                                <>
-                                  {/* Sub-categories (varsa) */}
-                                  {subcats.length > 0 && (
-                                    <div className="mb-6">
-                                      <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-3 font-semibold">
-                                        Alt kateqoriyalar
-                                      </h3>
-                                      <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                                        {subcats.map((sub, idx) => (
-                                          <li key={sub.id}>
-                                            <button
-                                              onClick={() => {
-                                                navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
-                                                setShowDropdown(false);
-                                              }}
-                                              style={{ ['--dv-i' as any]: idx }}
-                                              className="dv-mega-link group block w-full text-left text-sm text-gray-800 hover:text-amber-700 py-1.5 transition-colors font-medium"
-                                              data-testid={`menu-subcategory-${sub.name}`}
-                                            >
-                                              <span className="dv-mega-text">› {sub.name}</span>
-                                            </button>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
+                        const hoveredNode = hoveredCategory
+                          ? categoryTree.find(n => n.nameAz === hoveredCategory || n.nameRu === hoveredCategory || n.nameEn === hoveredCategory || n.name === hoveredCategory)
+                          : null;
+                        const subcats = hoveredNode?.children || [];
+                        const hasSubcats = subcats.length > 0;
 
-                                  {/* Brands */}
-                                  <h3 className="text-[11px] tracking-[0.2em] text-gray-700 uppercase mb-4 font-semibold flex items-center gap-2">
-                                    {hoveredCategory ? (
-                                      <>
-                                        <span className="text-amber-700">{getCategoryTranslation(hoveredCategory)}</span>
-                                        <span className="text-gray-400">/ {t('header.brands')}</span>
-                                      </>
-                                    ) : (
-                                      <span>{t('header.brands')}</span>
-                                    )}
-                                  </h3>
-                                  <ul className="grid grid-cols-2 gap-x-8 gap-y-1">
-                                    {brandsForHover.map((brand, idx) => (
-                                      <li key={`${hoveredCategory || 'all'}-${brand}`}>
+                        // Column 2 content: if subcats exist → subcategories list; else → brands for the category
+                        const brandsForCategory = hoveredCategory && productsByCategory[hoveredCategory]?.length
+                          ? productsByCategory[hoveredCategory]
+                          : brands;
+                        // Column 3 content: brands for the hovered subcategory
+                        const brandsForSubcategory = hoveredSubcategory && productsByCategory[hoveredSubcategory]?.length
+                          ? productsByCategory[hoveredSubcategory]
+                          : (hoveredSubcategory ? brands : []);
+
+                        return (
+                          <div className="flex items-stretch min-h-[480px]">
+                            {/* Column 1 — Categories (always visible) */}
+                            <div className="dv-mega-col w-[300px] py-10 px-10">
+                              <ul className="space-y-1">
+                                {categoryItems.map((cat, idx) => {
+                                  const isActive = hoveredCategory === cat.lookupName;
+                                  const hasChildren = (cat.node?.children?.length || 0) > 0;
+                                  return (
+                                    <li key={cat.key}>
+                                      <button
+                                        onMouseEnter={() => {
+                                          setHoveredCategory(cat.lookupName);
+                                          setHoveredSubcategory(null);
+                                        }}
+                                        onClick={() => {
+                                          navigate(`/products?category=${encodeURIComponent(cat.lookupName)}`);
+                                          setShowDropdown(false);
+                                        }}
+                                        style={{ ['--dv-i' as any]: idx }}
+                                        className={`dv-mega-link group flex w-full text-left items-center justify-between gap-3 text-[15px] py-2.5 transition-colors ${
+                                          isActive ? 'text-black' : 'text-gray-800 hover:text-black'
+                                        }`}
+                                        data-testid={`menu-category-${cat.lookupName}`}
+                                      >
+                                        <span className={`dv-mega-text ${isActive ? 'underline underline-offset-[6px] decoration-[1px]' : ''}`}>{cat.displayName}</span>
+                                        {hasChildren && (
+                                          <span className={`text-base leading-none ${isActive ? 'text-black' : 'text-gray-400'}`}>›</span>
+                                        )}
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+
+                            {/* Column 2 — Subcategories OR brands (when category hovered) */}
+                            {hoveredCategory && (
+                              <div className="dv-mega-col w-[300px] py-10 px-10 border-l border-gray-100 animate-[fadeIn_180ms_ease-out]">
+                                {hasSubcats ? (
+                                  <ul className="space-y-1">
+                                    {subcats.map((sub, idx) => {
+                                      const subLookup = sub.nameAz || sub.name;
+                                      const isActive = hoveredSubcategory === subLookup;
+                                      const subBrands = productsByCategory[subLookup] || [];
+                                      const hasBrands = subBrands.length > 0;
+                                      return (
+                                        <li key={sub.id}>
+                                          <button
+                                            onMouseEnter={() => setHoveredSubcategory(subLookup)}
+                                            onClick={() => {
+                                              navigate(`/products?category=${encodeURIComponent(subLookup)}`);
+                                              setShowDropdown(false);
+                                            }}
+                                            style={{ ['--dv-i' as any]: idx }}
+                                            className={`dv-mega-link group flex w-full text-left items-center justify-between gap-3 text-[15px] py-2.5 transition-colors ${
+                                              isActive ? 'text-black' : 'text-gray-800 hover:text-black'
+                                            }`}
+                                            data-testid={`menu-subcategory-${sub.name}`}
+                                          >
+                                            <span className={`dv-mega-text ${isActive ? 'underline underline-offset-[6px] decoration-[1px]' : ''}`}>{sub.name}</span>
+                                            {hasBrands && (
+                                              <span className={`text-base leading-none ${isActive ? 'text-black' : 'text-gray-400'}`}>›</span>
+                                            )}
+                                          </button>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {brandsForCategory.map((brand, idx) => (
+                                      <li key={`${hoveredCategory}-${brand}`}>
                                         <button
                                           onClick={() => {
-                                            // Birbaşa brendin öz səhifəsinə yönləndir — kateqoriyada məhsul olmasa belə
-                                            // brendin bütün məhsulları görünsün (boş səhifə olmasın)
                                             navigate(`/brand/${toBrandSlug(brand)}`);
                                             setShowDropdown(false);
                                           }}
                                           style={{ ['--dv-i' as any]: idx }}
-                                          className="dv-mega-link group block w-full text-left text-sm text-gray-700 hover:text-black py-2 transition-colors"
+                                          className="dv-mega-link group block w-full text-left text-[15px] text-gray-800 hover:text-black py-2.5 transition-colors"
                                           data-testid={`menu-brand-${brand}`}
                                         >
                                           <span className="dv-mega-text">{brand}</span>
                                         </button>
                                       </li>
                                     ))}
+                                    {brandsForCategory.length === 0 && (
+                                      <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada məhsul yoxdur.</p>
+                                    )}
                                   </ul>
-                                  {hoveredCategory && brandsForHover.length === 0 && subcats.length === 0 && (
-                                    <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada məhsul yoxdur.</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Column 3 — Brands (when subcategory hovered) */}
+                            {hoveredCategory && hasSubcats && hoveredSubcategory && (
+                              <div className="dv-mega-col w-[300px] py-10 px-10 border-l border-gray-100 animate-[fadeIn_180ms_ease-out]">
+                                <ul className="space-y-1">
+                                  {brandsForSubcategory.map((brand, idx) => (
+                                    <li key={`${hoveredSubcategory}-${brand}`}>
+                                      <button
+                                        onClick={() => {
+                                          navigate(`/brand/${toBrandSlug(brand)}`);
+                                          setShowDropdown(false);
+                                        }}
+                                        style={{ ['--dv-i' as any]: idx }}
+                                        className="dv-mega-link group block w-full text-left text-[15px] text-gray-800 hover:text-black py-2.5 transition-colors"
+                                        data-testid={`menu-brand-${brand}`}
+                                      >
+                                        <span className="dv-mega-text">{brand}</span>
+                                      </button>
+                                    </li>
+                                  ))}
+                                  {brandsForSubcategory.length === 0 && (
+                                    <p className="text-xs text-gray-400 italic mt-2">Bu alt-kateqoriyada brend yoxdur.</p>
                                   )}
-                                </>
-                              );
-                            })()}
+                                </ul>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -721,8 +749,8 @@ const Header: React.FC = () => {
                   className="relative h-[14px] w-[14px] transition-transform duration-300 group-hover:rotate-[-8deg]"
                   strokeWidth={1.4}
                 />
-                <span className="relative font-handwriting text-[22px] leading-none tracking-wide italic">
-                  {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
+                <span className="relative font-playfair italic text-[13px] leading-none tracking-wide">
+                  {t('header.giftCards', { defaultValue: 'Hədiyyə' })}
                 </span>
               </Link>
 
