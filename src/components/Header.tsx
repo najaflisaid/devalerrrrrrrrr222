@@ -564,7 +564,7 @@ const Header: React.FC = () => {
                   <>
                     {/* Backdrop overlay — dims & blurs rest of the page (LV-style) */}
                     <div
-                      className={`fixed inset-0 z-[60] bg-black/45 backdrop-blur-sm transition-opacity duration-300 ${isDropdownClosing ? 'opacity-0' : 'opacity-100'}`}
+                      className={`fixed inset-0 z-[60] bg-black/45 backdrop-blur-md transition-opacity duration-300 ${isDropdownClosing ? 'opacity-0' : 'opacity-100'}`}
                       onClick={handleDropdownLeave}
                       aria-hidden="true"
                     />
@@ -764,7 +764,7 @@ const Header: React.FC = () => {
                   className="relative h-[14px] w-[14px] transition-transform duration-300 group-hover:rotate-[-8deg]"
                   strokeWidth={1.4}
                 />
-                <span className="relative dv-giftcard-script text-[22px] leading-none -mt-[2px]">
+                <span className="relative dv-giftcard-script text-[17px] leading-none -mt-[1px]">
                   {t('header.giftCards', { defaultValue: 'Hədiyyə' })}
                 </span>
               </Link>
@@ -1006,7 +1006,7 @@ const Header: React.FC = () => {
       {isMobileMenuOpen && (
         <>
             <div
-              className={`fixed inset-0 z-50 bg-black/55 dv-menu-backdrop ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              className={`fixed inset-0 z-50 bg-black/55 backdrop-blur-md dv-menu-backdrop ${isMobileMenuClosing ? 'is-closing' : ''}`}
               onClick={closeMobileMenu}
             ></div>
 
@@ -1166,7 +1166,7 @@ const Header: React.FC = () => {
                         className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-3/4 w-3/4 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100"
                       />
                       <Gift className="relative h-[15px] w-[15px] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.4} />
-                      <span className="relative dv-giftcard-script text-[26px] leading-none -mt-[2px]">
+                      <span className="relative dv-giftcard-script text-[20px] leading-none -mt-[1px]">
                         {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                       </span>
                     </Link>
