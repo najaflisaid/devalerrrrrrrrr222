@@ -87,9 +87,13 @@ const Header: React.FC = () => {
             const userData = usersSnapshot.docs[0].data();
             const newRole = userData.role || 'customer';
 
-            // Hər login dəyişiminde (guest→login və ya rol dəyişəndə) səbət təmizlənsin.
-            // Eyni rolla yenidən bağlanan token-refresh halında dəyişmir.
-            if (previousRole !== newRole) {
+            // Hər login dəyişiminde səbət təmizlənsin — AMMA YALNIZ bir
+            // login-li rol başqa rola keçəndə (məs: b2b → customer və ya
+            // admin → customer). Qonaqdan (previousRole=null) yeni hesaba
+            // keçəndə qonaqkən əlavə edilmiş səbət SAXLANILMALIDIR — əks
+            // halda checkout zamanı qeydiyyatdan dərhal sonra səbət boşalır
+            // və müştəri "Səbətiniz boşdur" səhifəsi görür.
+            if (previousRole && previousRole !== newRole) {
               clearCart(true);
             }
 
