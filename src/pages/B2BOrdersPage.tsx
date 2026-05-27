@@ -216,6 +216,9 @@ const B2BOrdersPage: React.FC = () => {
         await loadOrders(userEmail);
       }
 
+      // Header-dəki status badge dərhal yenilənsin (30s polling-i gözləmədən)
+      window.dispatchEvent(new Event('b2bOrderSigned'));
+
       setShowSignaturePad(false);
       setSelectedOrderId(null);
       alert(t('b2b.receivedSuccess'));

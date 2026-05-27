@@ -178,8 +178,14 @@ const Header: React.FC = () => {
         });
         const latest = docs[0];
         if (latest) {
-          setLastOrderStatus(latest.status || 'pending');
-          setLastOrderNumber(latest.orderNumber ? `#${latest.orderNumber}` : `#${String(latest.id).slice(0, 6)}`);
+          // Müştəri öz imzası ilə təhvili təsdiqləyibsə, status badge gizlədilir.
+          if (latest.signature) {
+            setLastOrderStatus(null);
+            setLastOrderNumber(null);
+          } else {
+            setLastOrderStatus(latest.status || 'pending');
+            setLastOrderNumber(latest.orderNumber ? `#${latest.orderNumber}` : `#${String(latest.id).slice(0, 6)}`);
+          }
         }
       } catch (e) {
         console.warn('Last B2B order fetch failed:', e);
@@ -188,7 +194,14 @@ const Header: React.FC = () => {
     fetchLast();
     // 30 saniyədən bir yenilə — admin status dəyişdirsə müştəri tez görsün
     const id = setInterval(fetchLast, 30000);
-    return () => { cancelled = true; clearInterval(id); };
+    // Müştəri imza atan kimi dərhal yenilə
+    const onSigned = () => fetchLast();
+    window.addEventListener('b2bOrderSigned', onSigned);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener('b2bOrderSigned', onSigned);
+    };
   }, [isLoggedIn, userRole]);
 
   const dropdownTimersRef = useRef<{ outer: ReturnType<typeof setTimeout> | null; inner: ReturnType<typeof setTimeout> | null }>({ outer: null, inner: null });
