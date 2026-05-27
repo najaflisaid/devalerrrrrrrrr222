@@ -549,9 +549,9 @@ const Header: React.FC = () => {
                       handleDropdownEnter();
                     }
                   }}
-                  className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
+                  className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-opacity duration-200 font-futura uppercase ${
                     transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
-                  }`}
+                  } ${showDropdown ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                   data-testid="header-brands-link"
                   aria-expanded={showDropdown}
                   aria-haspopup="menu"
@@ -562,22 +562,28 @@ const Header: React.FC = () => {
 
                 {showDropdown && (
                   <>
-                    {/* Backdrop overlay — dims rest of the page (LV-style) */}
+                    {/* Backdrop overlay — dims & blurs rest of the page (LV-style) */}
                     <div
-                      className={`fixed left-0 right-0 bottom-0 z-40 bg-black/40 transition-opacity duration-300 ${isDropdownClosing ? 'opacity-0' : 'opacity-100'}`}
-                      style={{ top: 64 }}
-                      onMouseEnter={handleDropdownLeave}
+                      className={`fixed inset-0 z-[60] bg-black/45 backdrop-blur-sm transition-opacity duration-300 ${isDropdownClosing ? 'opacity-0' : 'opacity-100'}`}
+                      onClick={handleDropdownLeave}
                       aria-hidden="true"
                     />
                     <div
-                      className={`fixed left-0 bottom-0 z-50 dv-megamenu dv-light-reset${isDropdownClosing ? ' is-closing' : ''}`}
-                      style={{ top: 64 }}
+                      className={`fixed left-0 top-0 bottom-0 z-[70] dv-megamenu dv-light-reset${isDropdownClosing ? ' is-closing' : ''}`}
                       onMouseEnter={handleDropdownEnter}
                       onMouseLeave={handleDropdownLeave}
                     >
-                      {/* invisible bridge to prevent hover gap between trigger and panel */}
-                      <div className="h-3 -mt-3 w-[300px]" aria-hidden="true" />
-                      <div className="bg-white border-t border-gray-100 shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)] h-[calc(100vh-64px)] overflow-y-auto">
+                      <div className="bg-white shadow-[0_12px_32px_-16px_rgba(0,0,0,0.12)] h-screen overflow-y-auto">
+                        {/* Close button at the top of the panel */}
+                        <button
+                          onClick={handleDropdownLeave}
+                          className="flex items-center gap-2 px-10 pt-7 pb-4 text-[12px] tracking-wide text-gray-700 hover:text-black transition-colors uppercase font-futura"
+                          data-testid="menu-close-btn"
+                          aria-label="Close menu"
+                        >
+                          <X className="h-[16px] w-[16px]" strokeWidth={1.4} />
+                          <span>{t('header.close', { defaultValue: 'Bağla' })}</span>
+                        </button>
                       {(() => {
                         const categoryItems = categoryTree.length > 0
                           ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name, node: n }))
@@ -729,9 +735,9 @@ const Header: React.FC = () => {
               {/* Search — icon + text (LV-style, left aligned) */}
               <button
                 onClick={() => setShowSearch(true)}
-                className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
+                className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-opacity duration-200 font-futura uppercase ${
                   transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
-                }`}
+                } ${showDropdown ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 aria-label="Search"
                 data-testid="header-search-text-btn"
               >
@@ -746,7 +752,7 @@ const Header: React.FC = () => {
                   transparentMode
                     ? 'text-white border-white/70 hover:border-white hover:shadow-[0_6px_20px_-6px_rgba(255,255,255,0.4)]'
                     : 'text-[#8B0000] border-[#8B0000]/80 hover:border-[#8B0000] hover:shadow-[0_6px_20px_-6px_rgba(139,0,0,0.4)]'
-                }`}
+                } ${showDropdown ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 data-testid="header-gift-cards-link"
               >
                 {/* Mirror / shine sweep — appears on hover */}
