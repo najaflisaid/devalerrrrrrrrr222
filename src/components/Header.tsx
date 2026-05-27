@@ -608,6 +608,9 @@ const Header: React.FC = () => {
                           <div className="flex items-stretch min-h-full">
                             {/* Column 1 — Categories (always visible) */}
                             <div className="dv-mega-col w-[300px] py-10 px-10">
+                              <h3 className="dv-mega-col-title text-[10px] uppercase tracking-[0.22em] text-black/50 font-medium pb-3 mb-3 border-b border-black/[0.07]" data-testid="menu-col-title-categories">
+                                {t('header.categories', { defaultValue: 'Kateqoriyalar' })}
+                              </h3>
                               <ul className="space-y-1">
                                 {categoryItems.map((cat, idx) => {
                                   const isActive = hoveredCategory === cat.lookupName;
@@ -643,6 +646,11 @@ const Header: React.FC = () => {
                             {/* Column 2 — Subcategories OR brands (when category hovered) */}
                             {hoveredCategory && (
                               <div className="dv-mega-col w-[300px] py-10 px-10 border-l border-gray-100 animate-[fadeIn_180ms_ease-out]">
+                                <h3 className="dv-mega-col-title text-[10px] uppercase tracking-[0.22em] text-black/50 font-medium pb-3 mb-3 border-b border-black/[0.07]" data-testid="menu-col-title-col2">
+                                  {hasSubcats
+                                    ? t('header.subcategories', { defaultValue: 'Alt Kateqoriyalar' })
+                                    : t('header.brands', { defaultValue: 'Brendlər' })}
+                                </h3>
                                 {hasSubcats ? (
                                   <ul className="space-y-1">
                                     {subcats.map((sub, idx) => {
@@ -701,6 +709,9 @@ const Header: React.FC = () => {
                             {/* Column 3 — Brands (when subcategory hovered) */}
                             {hoveredCategory && hasSubcats && hoveredSubcategory && (
                               <div className="dv-mega-col w-[300px] py-10 px-10 border-l border-gray-100 animate-[fadeIn_180ms_ease-out]">
+                                <h3 className="dv-mega-col-title text-[10px] uppercase tracking-[0.22em] text-black/50 font-medium pb-3 mb-3 border-b border-black/[0.07]" data-testid="menu-col-title-brands">
+                                  {t('header.brands', { defaultValue: 'Brendlər' })}
+                                </h3>
                                 <ul className="space-y-1">
                                   {brandsForSubcategory.map((brand, idx) => (
                                     <li key={`${hoveredSubcategory}-${brand}`}>
@@ -1036,7 +1047,7 @@ const Header: React.FC = () => {
                       className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
                       data-testid="mobile-products-toggle"
                     >
-                      <span className="text-[12px] uppercase tracking-[0.18em] text-black font-normal">{t('header.brands', { defaultValue: 'Brendlər' })}</span>
+                      <span className="text-[12px] uppercase tracking-[0.18em] text-black font-normal">{t('header.categories', { defaultValue: 'Kateqoriyalar' })}</span>
                       <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileProductsOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
                     </button>
                     {/* Smooth accordion (CSS grid-rows trick) */}
@@ -1075,6 +1086,16 @@ const Header: React.FC = () => {
                                 >
                                   <div className="overflow-hidden min-h-0">
                                     <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
+                                      {/* Section label inside the open category */}
+                                      {cat.children && cat.children.length > 0 ? (
+                                        <p className="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-black/45 font-medium" data-testid={`mobile-section-label-subcategories-${cat.name}`}>
+                                          {t('header.subcategories', { defaultValue: 'Alt Kateqoriyalar' })}
+                                        </p>
+                                      ) : (catBrands.length > 0 && (
+                                        <p className="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-black/45 font-medium" data-testid={`mobile-section-label-brands-${cat.name}`}>
+                                          {t('header.brands', { defaultValue: 'Brendlər' })}
+                                        </p>
+                                      ))}
                                       {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
                                       {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
                                         const subOpen = mobileSubCategoryOpen === sub.id;
@@ -1097,6 +1118,11 @@ const Header: React.FC = () => {
                                             >
                                               <div className="overflow-hidden min-h-0">
                                                 <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
+                                                  {subBrands.length > 0 && (
+                                                    <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-[0.18em] text-black/40 font-medium" data-testid={`mobile-section-label-subbrands-${sub.name}`}>
+                                                      {t('header.brands', { defaultValue: 'Brendlər' })}
+                                                    </p>
+                                                  )}
                                                   {subBrands.length > 0 ? subBrands.map(b => (
                                                     <button
                                                       key={`${sub.id}-${b}`}
