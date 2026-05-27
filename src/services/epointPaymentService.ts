@@ -52,6 +52,32 @@ export const getEpointSettings = async (): Promise<EpointSettings> => {
   };
 };
 
+// In-memory cache for Epoint settings — eliminates the extra Firestore read
+// on every "Ödənişə keç" click (settings rarely change at runtime).
+let _epointSettingsCache: EpointSettings | null = null;
+let _epointSettingsPromise: Promise<EpointSettings> | null = null;
+
+export const getEpointSettingsCached = (): Promise<EpointSettings> => {
+  if (_epointSettingsCache) return Promise.resolve(_epointSettingsCache);
+  if (_epointSettingsPromise) return _epointSettingsPromise;
+  _epointSettingsPromise = getEpointSettings().then((s) => {
+    _epointSettingsCache = s;
+    return s;
+  }).finally(() => {
+    _epointSettingsPromise = null;
+  });
+  return _epointSettingsPromise;
+};
+
+/**
+ * Preload Epoint settings into the in-memory cache. Call this when the
+ * checkout panel opens so the actual "Pay" click no longer pays the
+ * Firestore round-trip latency.
+ */
+export const preloadEpointSettings = (): void => {
+  void getEpointSettingsCached();
+};
+
 export const saveEpointSettings = async (settings: EpointSettings): Promise<void> => {
   await setDoc(SETTINGS_DOC, settings, { merge: true });
 };
@@ -97,7 +123,7 @@ export const startEpointPayment = async (input: BuildPaymentInput): Promise<void
  * checkout page inside an iframe on our own page (no redirect).
  */
 export const getEpointRedirectUrl = async (input: BuildPaymentInput): Promise<string> => {
-  const settings = await getEpointSettings();
+  const settings = await getEpointSettingsCached();
   if (!settings.publicKey || !settings.privateKey) {
     throw new Error(
       'Epoint açarları konfiqurasiya edilməyib. Admin paneldən "Sayt Parametrləri → Epoint" hissəsinə açarları daxil edin.'

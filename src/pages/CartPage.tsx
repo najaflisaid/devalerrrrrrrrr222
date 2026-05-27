@@ -7,8 +7,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { setDoc, doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
-import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment, getEpointRedirectUrl } from '../services/epointPaymentService';
+import { createCustomerOrder, reserveCustomerOrderId } from '../services/customerOrderService';
+import { startEpointPayment, getEpointRedirectUrl, preloadEpointSettings } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
@@ -104,7 +104,12 @@ const CartPage: React.FC = () => {
     };
   }, []);
   useEffect(() => {
-    if (showCheckout) setIsLoggedIn(!!localStorage.getItem('userId'));
+    if (showCheckout) {
+      setIsLoggedIn(!!localStorage.getItem('userId'));
+      // Pre-warm the Epoint settings cache + delivery methods so the "Pay"
+      // click no longer pays for a Firestore round-trip.
+      preloadEpointSettings();
+    }
   }, [showCheckout]);
 
   // Auto-detect: if user types a phone that already has an account, switch to
@@ -544,38 +549,53 @@ const CartPage: React.FC = () => {
       const itemsTotal = getItemsAfterAllDiscounts();
       const total = itemsTotal + deliveryFee;
 
-      const { id: orderId } = await createCustomerOrder({
-        userId,
-        customerName: userName,
-        customerEmail: userEmail,
-        customerPhone: fullPhone,
-        customerAddress: isPickupFlow && selectedBranch
-          ? `${selectedBranch.name} — ${selectedBranch.address}`
-          : customerAddress.trim(),
-        notes: customerNote.trim() || '',
-        items: orderItems,
-        subtotal,
-        discountAmount: discount,
-        totalAmount: total,
-        deliveryMethodId: selectedDelivery?.id || '',
-        deliveryMethodName: selectedDelivery?.name || '',
-        deliveryFee,
-        ...(isPickupFlow && selectedBranch
-          ? {
-              isPickup: true,
-              pickupBranchId: selectedBranch.id,
-              pickupBranchName: selectedBranch.name,
-              pickupBranchAddress: selectedBranch.address,
-            }
-          : {}),
-        paymentMethod: 'epoint',
-        promoCode: promoApplied?.code || '',
-        promoDiscountPercent:
-          promoApplied?.type === 'percent' ? promoApplied.discount : 0,
-        promoDiscountAmount: promoDiscountAmt,
-      } as any);
-
+      // Pre-generate the Firestore order ID so we can fire the Epoint URL
+      // fetch IN PARALLEL with the order write (otherwise the iframe waits
+      // for the Firestore write to finish before even contacting Epoint).
+      const orderId = reserveCustomerOrderId();
       sessionStorage.setItem('pending_epoint_order_id', orderId);
+
+      const orderWritePromise = createCustomerOrder(
+        {
+          userId,
+          customerName: userName,
+          customerEmail: userEmail,
+          customerPhone: fullPhone,
+          customerAddress: isPickupFlow && selectedBranch
+            ? `${selectedBranch.name} — ${selectedBranch.address}`
+            : customerAddress.trim(),
+          notes: customerNote.trim() || '',
+          items: orderItems,
+          subtotal,
+          discountAmount: discount,
+          totalAmount: total,
+          deliveryMethodId: selectedDelivery?.id || '',
+          deliveryMethodName: selectedDelivery?.name || '',
+          deliveryFee,
+          ...(isPickupFlow && selectedBranch
+            ? {
+                isPickup: true,
+                pickupBranchId: selectedBranch.id,
+                pickupBranchName: selectedBranch.name,
+                pickupBranchAddress: selectedBranch.address,
+              }
+            : {}),
+          paymentMethod: 'epoint',
+          promoCode: promoApplied?.code || '',
+          promoDiscountPercent:
+            promoApplied?.type === 'percent' ? promoApplied.discount : 0,
+          promoDiscountAmount: promoDiscountAmt,
+        } as any,
+        orderId,
+      );
+
+      // Don't block the iframe on the order write — let it run in the
+      // background. We still surface order-write failures (the iframe will
+      // already be open by then; on success the order doc was written
+      // already because the customer reached the payment screen).
+      orderWritePromise.catch((err) => {
+        console.warn('Order write failed (payment can still be retried):', err);
+      });
 
       if (promoApplied) {
         redeemPromoCode(promoApplied.code, {
@@ -1342,95 +1362,8 @@ const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Pay button moved to RIGHT column (under Yekun/Total) — see
-                  bottom of the order summary. Widget shell appears here on
-                  desktop / fullscreen on mobile and shows a loading skeleton
-                  the instant the customer clicks pay (so they feel zero
-                  wait time). */}
-              {(inlineWidgetUrl || inlineWidgetLoading) && (
-                <div
-                  className="mt-2 border border-black/15 bg-white scroll-mt-4
-                             max-md:fixed max-md:inset-0 max-md:mt-0 max-md:z-[70]
-                             max-md:flex max-md:flex-col max-md:border-0"
-                  data-testid="inline-epoint-widget"
-                  tabIndex={-1}
-                >
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 bg-black/[0.02]">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" strokeWidth={1.6} />
-                      <span className="text-[11px] uppercase tracking-[0.18em] text-black/70 truncate">
-                        Təhlükəsiz ödəniş — Epoint
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInlineWidgetUrl(null);
-                        setInlineWidgetLoading(false);
-                        setIframeReady(false);
-                        sessionStorage.removeItem('pending_epoint_order_id');
-                      }}
-                      aria-label="Ödənişi bağla"
-                      className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1 py-1 px-2 -mr-2"
-                      data-testid="inline-epoint-close"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      Geri
-                    </button>
-                  </div>
-                  <div className="relative w-full bg-white block h-[780px] md:h-[780px] max-md:flex-1 max-md:h-auto">
-                    {inlineWidgetUrl && (
-                      <iframe
-                        src={inlineWidgetUrl}
-                        title="Epoint Payment"
-                        className="absolute inset-0 w-full h-full bg-white border-0 block"
-                        allow="payment *; publickey-credentials-get *; clipboard-write"
-                        loading="eager"
-                        data-testid="inline-epoint-iframe"
-                        onLoad={(e) => {
-                          setIframeReady(true);
-                          // After Epoint completes the payment it redirects
-                          // the iframe to our success_redirect_url /
-                          // error_redirect_url (same origin). Break out and
-                          // navigate the parent window so the customer lands
-                          // on the proper success/error page.
-                          try {
-                            const ifr = e.currentTarget as HTMLIFrameElement;
-                            const href = ifr.contentWindow?.location?.href || '';
-                            if (!href) return;
-                            if (
-                              href.includes('/payment/success') ||
-                              href.includes('/payment/error') ||
-                              href.includes('/payment/result')
-                            ) {
-                              window.location.href = href;
-                            }
-                          } catch {
-                            // Cross-origin while still on epoint.az — ignore.
-                          }
-                        }}
-                      />
-                    )}
-                    {(!inlineWidgetUrl || !iframeReady) && (
-                      <div
-                        className="absolute inset-0 flex flex-col items-center justify-center bg-white"
-                        data-testid="inline-epoint-skeleton"
-                      >
-                        <Loader2 className="w-7 h-7 text-black/30 animate-spin mb-3" strokeWidth={1.5} />
-                        <p className="text-[12px] text-black/55">Ödəniş açılır...</p>
-                        <p className="text-[10px] text-black/35 mt-1 uppercase tracking-[0.18em]">
-                          Bir neçə saniyə
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02]">
-                    <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">
-                      Apple Pay · Google Pay · Visa · Mastercard
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Widget is rendered in the RIGHT column below the pay button
+                  (desktop) and as a fullscreen overlay on mobile. */}
             </div>
 
             {/* RIGHT — order summary */}
@@ -1578,6 +1511,95 @@ const CartPage: React.FC = () => {
                 <p className="text-[11px] text-black/45 text-center mt-3">
                   {t('checkout.securePayment')}
                 </p>
+              )}
+
+              {/* Inline Epoint widget — appears in this RIGHT column on
+                  desktop (below the pay button), fullscreen overlay on
+                  mobile. Shell appears INSTANTLY on click with a loading
+                  skeleton so the customer feels zero wait time. */}
+              {(inlineWidgetUrl || inlineWidgetLoading) && (
+                <div
+                  className="mt-4 border border-black/15 bg-white scroll-mt-4
+                             max-md:fixed max-md:inset-0 max-md:mt-0 max-md:z-[70]
+                             max-md:flex max-md:flex-col max-md:border-0"
+                  data-testid="inline-epoint-widget"
+                  tabIndex={-1}
+                >
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 bg-black/[0.02]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" strokeWidth={1.6} />
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-black/70 truncate">
+                        Təhlükəsiz ödəniş — Epoint
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInlineWidgetUrl(null);
+                        setInlineWidgetLoading(false);
+                        setIframeReady(false);
+                        sessionStorage.removeItem('pending_epoint_order_id');
+                      }}
+                      aria-label="Ödənişi bağla"
+                      className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1 py-1 px-2 -mr-2"
+                      data-testid="inline-epoint-close"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Geri
+                    </button>
+                  </div>
+                  <div className="relative w-full bg-white block h-[780px] md:h-[780px] max-md:flex-1 max-md:h-auto">
+                    {inlineWidgetUrl && (
+                      <iframe
+                        src={inlineWidgetUrl}
+                        title="Epoint Payment"
+                        className="absolute inset-0 w-full h-full bg-white border-0 block"
+                        allow="payment *; publickey-credentials-get *; clipboard-write"
+                        loading="eager"
+                        data-testid="inline-epoint-iframe"
+                        onLoad={(e) => {
+                          setIframeReady(true);
+                          // After Epoint completes the payment it redirects
+                          // the iframe to our success_redirect_url /
+                          // error_redirect_url (same origin). Break out and
+                          // navigate the parent window so the customer lands
+                          // on the proper success/error page.
+                          try {
+                            const ifr = e.currentTarget as HTMLIFrameElement;
+                            const href = ifr.contentWindow?.location?.href || '';
+                            if (!href) return;
+                            if (
+                              href.includes('/payment/success') ||
+                              href.includes('/payment/error') ||
+                              href.includes('/payment/result')
+                            ) {
+                              window.location.href = href;
+                            }
+                          } catch {
+                            // Cross-origin while still on epoint.az — ignore.
+                          }
+                        }}
+                      />
+                    )}
+                    {(!inlineWidgetUrl || !iframeReady) && (
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-white"
+                        data-testid="inline-epoint-skeleton"
+                      >
+                        <Loader2 className="w-7 h-7 text-black/30 animate-spin mb-3" strokeWidth={1.5} />
+                        <p className="text-[12px] text-black/55">Ödəniş açılır...</p>
+                        <p className="text-[10px] text-black/35 mt-1 uppercase tracking-[0.18em]">
+                          Bir neçə saniyə
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02]">
+                    <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">
+                      Apple Pay · Google Pay · Visa · Mastercard
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

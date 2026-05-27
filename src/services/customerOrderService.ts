@@ -1,6 +1,7 @@
 import {
   collection,
   addDoc,
+  setDoc,
   getDocs,
   query,
   where,
@@ -79,7 +80,8 @@ export interface CustomerOrder {
 const COLLECTION = 'customer_orders';
 
 export const createCustomerOrder = async (
-  order: Omit<CustomerOrder, 'id' | 'orderNumber' | 'createdAt' | 'status'>
+  order: Omit<CustomerOrder, 'id' | 'orderNumber' | 'createdAt' | 'status'>,
+  presetId?: string
 ): Promise<{ id: string; orderNumber: number }> => {
   const counterRef = doc(db, 'counters', 'customerOrders');
   let orderNumber: number;
@@ -96,14 +98,32 @@ export const createCustomerOrder = async (
     orderNumber = Number(String(Date.now()).slice(-8));
   }
 
-  const docRef = await addDoc(collection(db, COLLECTION), {
+  const payload = {
     ...order,
     orderNumber,
     status: 'pending_payment',
     paymentMethod: 'epoint',
     createdAt: Timestamp.now(),
-  });
+  };
+
+  if (presetId) {
+    // Use the caller-provided ID so the order ID can be shared with Epoint
+    // before the Firestore write completes (parallel checkout flow).
+    await setDoc(doc(db, COLLECTION, presetId), payload);
+    return { id: presetId, orderNumber };
+  }
+
+  const docRef = await addDoc(collection(db, COLLECTION), payload);
   return { id: docRef.id, orderNumber };
+};
+
+/**
+ * Pre-generate a Firestore document ID without writing. Used to start the
+ * Epoint URL fetch IN PARALLEL with the order creation (so the customer
+ * sees the payment iframe faster).
+ */
+export const reserveCustomerOrderId = (): string => {
+  return doc(collection(db, COLLECTION)).id;
 };
 
 export const getUserOrders = async (userId: string): Promise<CustomerOrder[]> => {
