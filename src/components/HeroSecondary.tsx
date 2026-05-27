@@ -115,18 +115,6 @@ const HeroSecondary: React.FC = () => {
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 1.0, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <motion.div
-              className="flex items-center gap-3 mb-5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
-            >
-              <span className="h-px w-10 md:w-14 bg-[#C9A961]" aria-hidden="true" />
-              <p className="text-[10px] md:text-[11px] uppercase tracking-[0.42em] font-light text-white/90">
-                {lang === 'ru' ? 'Новая коллекция' : lang === 'en' ? 'New collection' : 'Yeni kolleksiya'}
-              </p>
-            </motion.div>
-
             {/* Stacked two-line title */}
             <h2
               className="font-playfair font-light leading-[0.92] tracking-tight"
@@ -151,24 +139,6 @@ const HeroSecondary: React.FC = () => {
                 </motion.span>
               )}
             </h2>
-
-            <motion.button
-              type="button"
-              onClick={handleLink}
-              className="mt-9 md:mt-12 group/btn inline-flex items-center gap-3 text-[11px] md:text-[12px] uppercase tracking-[0.32em] font-medium text-white"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.95, ease: [0.22, 1, 0.36, 1] }}
-              data-testid="dv-hero-secondary-cta"
-            >
-              <span className="relative pb-1.5">
-                {buttonText}
-              </span>
-              <ArrowRight
-                className="w-4 h-4 md:w-[18px] md:h-[18px] transition-transform duration-500 group-hover/btn:translate-x-1.5"
-                strokeWidth={1.4}
-              />
-            </motion.button>
           </motion.div>
         </AnimatePresence>
       </div>
