@@ -1111,19 +1111,21 @@ const Header: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 1 }}>
+                  <div className="dv-menu-item px-4 py-3 border-b border-black/[0.06]" style={{ ['--dv-i' as any]: 1 }}>
                     <Link
                       to="/gift-cards"
-                      className="dv-giftcard-btn group flex items-center justify-between px-4 py-4 hover:bg-[#8B0000]/[0.04] transition-colors border-b border-black/[0.06] relative overflow-hidden"
+                      className="dv-giftcard-btn group relative inline-flex items-center justify-center gap-2.5 w-full px-4 py-3 border border-[#8B0000]/80 hover:border-[#8B0000] hover:shadow-[0_6px_20px_-6px_rgba(139,0,0,0.4)] transition-all duration-300 overflow-hidden text-[#8B0000]"
                       onClick={closeMobileMenu}
                       data-testid="mobile-gift-cards-link"
                     >
-                      <span aria-hidden="true" className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-[20deg] bg-gradient-to-r from-transparent via-[#8B0000]/15 to-transparent opacity-0 group-hover:opacity-100" />
-                      <span className="relative inline-flex items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-[#8B0000] font-normal">
-                        <Gift className="h-4 w-4 text-[#8B0000] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.5} />
+                      <span
+                        aria-hidden="true"
+                        className="dv-giftcard-shine pointer-events-none absolute inset-y-0 -left-3/4 w-3/4 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/55 to-transparent opacity-0 group-hover:opacity-100"
+                      />
+                      <Gift className="relative h-[15px] w-[15px] transition-transform duration-300 group-hover:rotate-[-8deg]" strokeWidth={1.4} />
+                      <span className="relative text-[12px] uppercase tracking-[0.18em] font-medium font-futura">
                         {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                       </span>
-                      <span className="relative text-[#8B0000]/50 group-hover:text-[#8B0000] transition-colors text-sm">→</span>
                     </Link>
                   </div>
 
