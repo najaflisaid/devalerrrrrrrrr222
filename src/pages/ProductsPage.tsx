@@ -58,13 +58,27 @@ const ProductsPage: React.FC = () => {
   const [discountFilter, setDiscountFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [isB2BUser, setIsB2BUser] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
   // Kategori hierarxiyası — parent seçildikdə alt-kategoriyalardakı məhsulları da göstərmək üçün
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
-  // Mobile: 2 quick-filter chips (Cins / Qiymət) — bir anda yalnız biri açılır
-  const [mobileChipOpen, setMobileChipOpen] = useState<'gender' | 'price' | null>(null);
+  // Show the bottom-left floating filter button only when the inline top
+  // filter button is scrolled out of view (mobile only).
+  const [showFloatingFilter, setShowFloatingFilter] = useState(false);
+  // Mobile: 4 quick-filter chips (Kateqoriya / Brend / Cins / Qiymət) — bir anda yalnız biri açılır
+  const [mobileChipOpen, setMobileChipOpen] = useState<'category' | 'brand' | 'gender' | 'price' | null>(null);
+
+  useEffect(() => {
+    const handle = () => {
+      // Top inline filter button sits roughly within first ~200px of the page
+      setShowFloatingFilter(window.scrollY > 240);
+    };
+    handle();
+    window.addEventListener('scroll', handle, { passive: true });
+    return () => window.removeEventListener('scroll', handle);
+  }, []);
 
   // Function to update URL with all current filters
   const updateURLParams = (updates: Record<string, string | null>) => {
@@ -501,11 +515,44 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Floating filter button (mobile only) — appears when scrolled past top inline button */}
+      <button
+        onClick={() => {
+          setIsFilterOpen((open) => !open);
+          if (!isFilterOpen) {
+            // When opening, scroll to top so filters are immediately visible
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        aria-label={isFilterOpen ? t('common.closeFilters') : t('common.filter')}
+        data-testid="mobile-floating-filter-btn"
+        className={`lg:hidden fixed bottom-5 left-5 z-[9997] flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-amber-400/20 active:scale-95 transition-all duration-300 ${
+          showFloatingFilter
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-3 pointer-events-none'
+        }`}
+      >
+        <Filter className="h-4 w-4" />
+        <span className="text-[11px] font-semibold tracking-wide">
+          {isFilterOpen ? t('common.closeFilters') : t('common.filter')}
+        </span>
+        {activeFilterCount > 0 && !isFilterOpen && (
+          <span
+            className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#D4AF37] text-gray-900 text-[10px] font-bold rounded-full"
+            data-testid="mobile-floating-filter-count"
+          >
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:hidden mb-6 space-y-2">
-          {/* Mobile 2 quick-filter chips: Cins / Qiymət — yan-yana */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Mobile 4 quick-filter chips: Kateqoriya / Brend / Cins / Qiymət — yan-yana */}
+          <div className="grid grid-cols-4 gap-1.5">
             {([
+              { key: 'category' as const, label: t('product.category', { defaultValue: 'Kateqoriya' }), isActive: selectedCategory !== 'all' },
+              { key: 'brand' as const, label: t('product.brand', { defaultValue: 'Brend' }), isActive: selectedBrand !== 'all' },
               { key: 'gender' as const, label: t('category.filterByGender', { defaultValue: 'Cins' }), isActive: selectedGender !== 'all' },
               { key: 'price' as const, label: t('category.priceShort', { defaultValue: 'Qiymət' }), isActive: priceInitialized && (currentMinPrice !== minPrice || currentMaxPrice !== maxPrice) },
             ]).map((chip) => {
@@ -516,7 +563,7 @@ const ProductsPage: React.FC = () => {
                   type="button"
                   onClick={() => setMobileChipOpen(isOpen ? null : chip.key)}
                   aria-expanded={isOpen}
-                  className={`flex items-center justify-between gap-1 px-3.5 h-10 rounded-full border text-[11px] uppercase tracking-[0.08em] font-medium transition-all ${
+                  className={`flex items-center justify-between gap-0.5 px-2 h-10 rounded-full border text-[10px] uppercase tracking-[0.04em] font-medium transition-all ${
                     isOpen
                       ? 'bg-black text-white border-black'
                       : chip.isActive
@@ -526,7 +573,7 @@ const ProductsPage: React.FC = () => {
                   data-testid={`mobile-chip-${chip.key}`}
                 >
                   <span className="truncate">{chip.label}</span>
-                  <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.75} />
+                  <ChevronDown className={`h-2.5 w-2.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.75} />
                 </button>
               );
             })}
@@ -535,9 +582,53 @@ const ProductsPage: React.FC = () => {
           {/* Inline tray — shows the options of the currently-open chip */}
           {mobileChipOpen && (
             <div
-              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"
+              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-h-[320px] overflow-y-auto"
               data-testid={`mobile-chip-panel-${mobileChipOpen}`}
             >
+              {mobileChipOpen === 'category' && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { handleCategoryChange('all'); setMobileChipOpen(null); }}
+                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedCategory === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {t('common.all')}
+                  </button>
+                  {categories.filter(c => c !== 'all').map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => { handleCategoryChange(category); setMobileChipOpen(null); }}
+                      className={`block w-full text-left px-2 py-1.5 text-sm capitalize rounded ${selectedCategory === category ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      data-testid={`mobile-filter-category-${category}`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {mobileChipOpen === 'brand' && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { handleBrandChange('all'); setMobileChipOpen(null); }}
+                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {t('common.all')}
+                  </button>
+                  {brands.filter(b => b !== 'all').map((brand) => (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => { handleBrandChange(brand); setMobileChipOpen(null); }}
+                      className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === brand ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      data-testid={`mobile-filter-brand-${brand}`}
+                    >
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              )}
               {mobileChipOpen === 'gender' && (
                 <div className="space-y-1.5">
                   {([
@@ -615,7 +706,7 @@ const ProductsPage: React.FC = () => {
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
-          <div className="hidden lg:block lg:col-span-1">
+          <div className={`lg:col-span-1 ${isFilterOpen ? 'block' : 'hidden lg:block'}`}>
             <div className="sticky top-24 bg-white border border-gray-100 rounded-lg p-4 space-y-3 max-h-[calc(100vh-120px)] overflow-y-auto">
               <div className="flex items-center gap-2 mb-1 pb-2 border-b border-gray-100">
                 <Filter className="h-3.5 w-3.5 text-gray-700" strokeWidth={1.75} />
