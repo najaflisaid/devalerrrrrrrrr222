@@ -82,52 +82,58 @@ const CreditCalculator: React.FC<CreditCalculatorProps> = ({ price, brand }) => 
         </p>
 
         <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-stretch gap-1.5 sm:gap-2">
             {/* Ay düymələri */}
-            <div className="flex-1 min-w-0 flex flex-nowrap items-end gap-1.5 sm:gap-2">
-              {rates.map((r) => {
-                const isActive = r.months === activeRate?.months;
-                return (
-                  <button
-                    key={r.months}
-                    type="button"
-                    onClick={() => setSelectedMonths(r.months)}
-                    className="relative group focus:outline-none flex-1 min-w-0"
-                    data-testid={`cc-month-${r.months}`}
+            {rates.map((r) => {
+              const isActive = r.months === activeRate?.months;
+              return (
+                <button
+                  key={r.months}
+                  type="button"
+                  onClick={() => setSelectedMonths(r.months)}
+                  className="relative group focus:outline-none flex-1 min-w-0"
+                  data-testid={`cc-month-${r.months}`}
+                >
+                  {/* Faiz etiketi */}
+                  <span
+                    className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap text-red-500 ${
+                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+                    }`}
                   >
-                    {/* Faiz etiketi */}
-                    <span
-                      className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-semibold whitespace-nowrap text-red-500 ${
-                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
-                      }`}
-                    >
-                      {r.percent > 0 ? `${r.percent}%` : '0%'}
+                    {r.percent > 0 ? `${r.percent}%` : '0%'}
+                  </span>
+                  <span
+                    className={`flex flex-col items-center justify-center rounded-full transition-all w-full h-14 px-1 leading-tight tabular-nums ${
+                      isActive
+                        ? 'bg-gray-900 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="text-[9px] uppercase tracking-[0.14em] opacity-70">
+                      Müddət
                     </span>
-                    <span
-                      className={`flex items-center justify-center rounded-full text-[10px] sm:text-[11px] font-medium transition-all w-full px-1 h-8 tabular-nums ${
-                        isActive
-                          ? 'bg-gray-900 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
+                    <span className="text-[12px] sm:text-[13px] font-semibold">
                       {r.months} ay
                     </span>
-                  </button>
-                );
-              })}
-            </div>
+                  </span>
+                </button>
+              );
+            })}
 
-            {/* Aylıq */}
-            <div className="flex-shrink-0 border-l border-gray-200 pl-2 sm:pl-3 text-right min-w-[78px] sm:min-w-[92px]">
-              <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] text-gray-500 mb-0.5">
-                Aylıq
-              </div>
-              <div
-                className="text-[13px] sm:text-[15px] font-bold text-gray-900 tabular-nums leading-tight"
-                data-testid="cc-monthly-amount"
-              >
+            {/* Aylıq — sealed "info" pill in the same style as the month
+                buttons (not clickable). Top label "AYDA", bottom amount. */}
+            <div
+              className="flex-1 min-w-0 flex flex-col items-center justify-center
+                         rounded-full h-14 px-1 leading-tight tabular-nums
+                         bg-gray-900 text-white shadow-sm"
+              data-testid="cc-monthly-amount"
+            >
+              <span className="text-[9px] uppercase tracking-[0.14em] opacity-70">
+                Ayda
+              </span>
+              <span className="text-[12px] sm:text-[13px] font-semibold">
                 {formatAzn(monthlyAmount)} AZN
-              </div>
+              </span>
             </div>
           </div>
         </div>

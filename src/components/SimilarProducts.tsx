@@ -167,7 +167,7 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
                 data-testid={`similar-product-${p.id}`}
               >
-                <div className="aspect-square w-full bg-gray-50 rounded-md overflow-hidden relative mb-2">
+                <div className="aspect-square w-full bg-white border border-black/10 rounded-md overflow-hidden relative mb-2">
                   {onSale && (
                     <span className="absolute top-1 left-1 z-10 bg-[#D14545] text-white text-[9px] uppercase tracking-[0.08em] px-1 py-px rounded-sm">
                       {t('product.sale')}
@@ -205,21 +205,24 @@ const SimilarProducts: React.FC<SimilarProductsProps> = ({
           })}
         </div>
 
-        {/* "See other models" link — goes to the brand page so the customer
-            can browse the full range. */}
-        <button
-          type="button"
-          onClick={() =>
-            navigate(`/brand/${encodeURIComponent(current.brand || '')}`)
-          }
-          className="mt-4 group inline-flex items-center gap-1.5 text-[11px]
-                     uppercase tracking-[0.22em] text-black/65 hover:text-black
-                     transition-colors"
-          data-testid="similar-products-see-more"
-        >
-          <span>Digər modellərə bax</span>
-          <span className="transition-transform group-hover:translate-x-0.5">→</span>
-        </button>
+        {/* "See other models" — small pill button */}
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/brand/${encodeURIComponent(current.brand || '')}`)
+            }
+            className="group inline-flex items-center gap-1.5 px-3 h-8
+                       border border-black/20 rounded-full
+                       text-[10px] uppercase tracking-[0.2em] text-black/75
+                       hover:bg-black hover:text-white hover:border-black
+                       transition-colors"
+            data-testid="similar-products-see-more"
+          >
+            <span>Digər modellər</span>
+            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+          </button>
+        </div>
       </section>
     );
   }
