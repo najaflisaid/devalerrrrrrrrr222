@@ -20,6 +20,16 @@ import { WishlistProvider } from './context/WishlistContext';
 (() => {
   if (typeof window === 'undefined') return;
 
+  // Browser-in avtomatik scroll restoration-ını söndür: bəzən route dəyişəndə
+  // və ya history navigation zamanı brauzer köhnə scroll mövqeyini (səhifənin
+  // aşağısını) bərpa etməyə çalışır → `scroll-behavior: smooth` ilə bu
+  // animasiya ilə baş verir və istifadəçiyə "səhifə öz-özünə aşağı atdı"
+  // kimi görünür. ScrollToTop komponenti zatən route-da yuxarıya scroll
+  // edir, ona görə manual rejim daha proqnozlaşdırılan davranış verir.
+  if ('scrollRestoration' in history) {
+    try { history.scrollRestoration = 'manual'; } catch { /* noop */ }
+  }
+
   // Ctrl/Cmd + wheel zoom + horizontal page scroll blok
   window.addEventListener(
     'wheel',

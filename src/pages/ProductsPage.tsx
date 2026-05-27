@@ -58,27 +58,13 @@ const ProductsPage: React.FC = () => {
   const [discountFilter, setDiscountFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [isB2BUser, setIsB2BUser] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [columnsPerRow, setColumnsPerRow] = useState<number>(3);
   // Kategori hierarxiyası — parent seçildikdə alt-kategoriyalardakı məhsulları da göstərmək üçün
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
-  // Show the bottom-left floating filter button only when the inline top
-  // filter button is scrolled out of view (mobile only).
-  const [showFloatingFilter, setShowFloatingFilter] = useState(false);
-  // Mobile: 3 quick-filter chips (Kateqoriya / Brend / Cins) — bir anda yalnız biri açılır
-  const [mobileChipOpen, setMobileChipOpen] = useState<'category' | 'brand' | 'gender' | null>(null);
-
-  useEffect(() => {
-    const handle = () => {
-      // Top inline filter button sits roughly within first ~200px of the page
-      setShowFloatingFilter(window.scrollY > 240);
-    };
-    handle();
-    window.addEventListener('scroll', handle, { passive: true });
-    return () => window.removeEventListener('scroll', handle);
-  }, []);
+  // Mobile: 2 quick-filter chips (Cins / Qiymət) — bir anda yalnız biri açılır
+  const [mobileChipOpen, setMobileChipOpen] = useState<'gender' | 'price' | null>(null);
 
   // Function to update URL with all current filters
   const updateURLParams = (updates: Record<string, string | null>) => {
@@ -515,47 +501,14 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Floating filter button (mobile only) — appears when scrolled past top inline button */}
-      <button
-        onClick={() => {
-          setIsFilterOpen((open) => !open);
-          if (!isFilterOpen) {
-            // When opening, scroll to top so filters are immediately visible
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        }}
-        aria-label={isFilterOpen ? t('common.closeFilters') : t('common.filter')}
-        data-testid="mobile-floating-filter-btn"
-        className={`lg:hidden fixed bottom-5 left-5 z-[9997] flex items-center gap-1.5 pl-2.5 pr-3 py-2 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white rounded-full shadow-[0_6px_24px_rgba(0,0,0,0.3)] border border-amber-400/20 active:scale-95 transition-all duration-300 ${
-          showFloatingFilter
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-3 pointer-events-none'
-        }`}
-      >
-        <Filter className="h-4 w-4" />
-        <span className="text-[11px] font-semibold tracking-wide">
-          {isFilterOpen ? t('common.closeFilters') : t('common.filter')}
-        </span>
-        {activeFilterCount > 0 && !isFilterOpen && (
-          <span
-            className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#D4AF37] text-gray-900 text-[10px] font-bold rounded-full"
-            data-testid="mobile-floating-filter-count"
-          >
-            {activeFilterCount}
-          </span>
-        )}
-      </button>
-
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:hidden mb-6 space-y-2">
-          {/* Mobile 3 quick-filter chips: Kateqoriya / Brend / Cins + tiny "Daha çox" for the rest */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Mobile 2 quick-filter chips: Cins / Qiymət — yan-yana */}
+          <div className="grid grid-cols-2 gap-2">
             {([
-              { key: 'category' as const, label: t('product.category', { defaultValue: 'Kateqoriya' }), value: selectedCategory },
-              { key: 'brand' as const, label: t('product.brand', { defaultValue: 'Brend' }), value: selectedBrand },
-              { key: 'gender' as const, label: t('category.filterByGender', { defaultValue: 'Cins' }), value: selectedGender },
+              { key: 'gender' as const, label: t('category.filterByGender', { defaultValue: 'Cins' }), isActive: selectedGender !== 'all' },
+              { key: 'price' as const, label: t('category.priceShort', { defaultValue: 'Qiymət' }), isActive: priceInitialized && (currentMinPrice !== minPrice || currentMaxPrice !== maxPrice) },
             ]).map((chip) => {
-              const isActive = chip.value !== 'all';
               const isOpen = mobileChipOpen === chip.key;
               return (
                 <button
@@ -563,10 +516,10 @@ const ProductsPage: React.FC = () => {
                   type="button"
                   onClick={() => setMobileChipOpen(isOpen ? null : chip.key)}
                   aria-expanded={isOpen}
-                  className={`flex items-center justify-between gap-1 px-2.5 h-10 rounded-full border text-[11px] uppercase tracking-[0.08em] font-medium transition-all ${
+                  className={`flex items-center justify-between gap-1 px-3.5 h-10 rounded-full border text-[11px] uppercase tracking-[0.08em] font-medium transition-all ${
                     isOpen
                       ? 'bg-black text-white border-black'
-                      : isActive
+                      : chip.isActive
                         ? 'bg-white text-black border-black'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
                   }`}
@@ -582,53 +535,9 @@ const ProductsPage: React.FC = () => {
           {/* Inline tray — shows the options of the currently-open chip */}
           {mobileChipOpen && (
             <div
-              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-h-[300px] overflow-y-auto"
+              className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"
               data-testid={`mobile-chip-panel-${mobileChipOpen}`}
             >
-              {mobileChipOpen === 'category' && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => { handleCategoryChange('all'); setMobileChipOpen(null); }}
-                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedCategory === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {t('common.all')}
-                  </button>
-                  {categories.filter(c => c !== 'all').map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => { handleCategoryChange(category); setMobileChipOpen(null); }}
-                      className={`block w-full text-left px-2 py-1.5 text-sm capitalize rounded ${selectedCategory === category ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-                      data-testid={`mobile-filter-category-${category}`}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {mobileChipOpen === 'brand' && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => { handleBrandChange('all'); setMobileChipOpen(null); }}
-                    className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === 'all' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {t('common.all')}
-                  </button>
-                  {brands.filter(b => b !== 'all').map((brand) => (
-                    <button
-                      key={brand}
-                      type="button"
-                      onClick={() => { handleBrandChange(brand); setMobileChipOpen(null); }}
-                      className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedBrand === brand ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-                      data-testid={`mobile-filter-brand-${brand}`}
-                    >
-                      {brand}
-                    </button>
-                  ))}
-                </div>
-              )}
               {mobileChipOpen === 'gender' && (
                 <div className="space-y-1.5">
                   {([
@@ -649,22 +558,64 @@ const ProductsPage: React.FC = () => {
                   ))}
                 </div>
               )}
+              {mobileChipOpen === 'price' && (
+                <div className="space-y-3 px-1">
+                  <div className="relative pt-2 pb-1">
+                    <div className="relative h-2 bg-gray-200 rounded-lg">
+                      <div
+                        className="absolute h-2 bg-gray-900 rounded-lg"
+                        style={{
+                          left: `${((currentMinPrice - minPrice) / Math.max(1, (maxPrice - minPrice))) * 100}%`,
+                          right: `${100 - ((currentMaxPrice - minPrice) / Math.max(1, (maxPrice - minPrice))) * 100}%`
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min={minPrice}
+                      max={maxPrice}
+                      value={currentMinPrice}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (v < currentMaxPrice) setCurrentMinPrice(v);
+                      }}
+                      className="absolute w-full h-2 top-2 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-gray-900 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:bg-gray-900 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
+                      data-testid="mobile-filter-price-min"
+                    />
+                    <input
+                      type="range"
+                      min={minPrice}
+                      max={maxPrice}
+                      value={currentMaxPrice}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (v > currentMinPrice) setCurrentMaxPrice(v);
+                      }}
+                      className="absolute w-full h-2 top-2 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-gray-900 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:bg-gray-900 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
+                      data-testid="mobile-filter-price-max"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-semibold text-gray-900">{currentMinPrice} AZN</span>
+                    <span className="text-gray-400">—</span>
+                    <span className="font-semibold text-gray-900">{currentMaxPrice} AZN</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileChipOpen(null)}
+                    className="w-full mt-1 py-2 text-[11px] uppercase tracking-[0.12em] font-medium text-white bg-black hover:bg-gray-900 rounded-full transition-colors"
+                    data-testid="mobile-filter-price-apply"
+                  >
+                    {t('common.apply', { defaultValue: 'Tətbiq et' })}
+                  </button>
+                </div>
+              )}
             </div>
           )}
-
-          {/* "More filters" — opens the full sidebar with price / discount / etc. */}
-          <button
-            onClick={() => { setIsFilterOpen(!isFilterOpen); setMobileChipOpen(null); }}
-            className="w-full flex items-center justify-center gap-2 py-2 text-[11px] uppercase tracking-[0.12em] font-medium text-gray-700 hover:text-black border border-gray-200 hover:border-gray-400 rounded-full transition-colors"
-            data-testid="mobile-more-filters"
-          >
-            <Filter className="h-3.5 w-3.5" strokeWidth={1.75} />
-            <span>{isFilterOpen ? t('common.closeFilters') : t('common.filter')}</span>
-          </button>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
-          <div className={`lg:col-span-1 ${isFilterOpen ? 'block' : 'hidden lg:block'}`}>
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24 bg-white border border-gray-100 rounded-lg p-4 space-y-3 max-h-[calc(100vh-120px)] overflow-y-auto">
               <div className="flex items-center gap-2 mb-1 pb-2 border-b border-gray-100">
                 <Filter className="h-3.5 w-3.5 text-gray-700" strokeWidth={1.75} />
