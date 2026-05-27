@@ -171,6 +171,22 @@ const CartPage: React.FC = () => {
     return () => window.removeEventListener('message', handler);
   }, [inlineWidgetUrl, navigate]);
 
+  // Lock body scroll when the inline payment widget is open on mobile
+  // (it overlays the entire viewport). Prevents background bounce-scroll.
+  useEffect(() => {
+    if (!inlineWidgetUrl) return;
+    const prevHtml = document.documentElement.style.overflow;
+    const prevBody = document.body.style.overflow;
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.documentElement.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+    };
+  }, [inlineWidgetUrl]);
+
   // Auto-open checkout if redirected from cart drawer with ?checkout=1
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -550,10 +566,25 @@ const CartPage: React.FC = () => {
           setInlineWidgetLoading(false);
           setLoading(false);
           // Scroll the widget into view so customer sees the payment form.
+          // The checkout panel is `fixed inset-0 overflow-y-auto` — on iOS
+          // Safari, scrollIntoView() inside such a container is unreliable,
+          // so we scroll the panel directly. We also bring focus to the
+          // iframe wrapper so VoiceOver / TalkBack picks it up.
           setTimeout(() => {
-            const el = document.querySelector('[data-testid="inline-epoint-widget"]');
-            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 200);
+            const panel = document.querySelector(
+              '[data-testid="inline-checkout-panel"]'
+            ) as HTMLElement | null;
+            const widget = document.querySelector(
+              '[data-testid="inline-epoint-widget"]'
+            ) as HTMLElement | null;
+            if (panel && widget) {
+              const target = Math.max(0, widget.offsetTop - 16);
+              panel.scrollTo({ top: target, behavior: 'smooth' });
+            } else if (widget) {
+              widget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            widget?.focus?.();
+          }, 250);
           return;
         }
         await startEpointPayment({ orderId, amount: total });
@@ -1287,11 +1318,16 @@ const CartPage: React.FC = () => {
                     : 'Ödənişə keç'}
               </button>
 
-              {/* Inline Epoint widget — embedded right here on the page */}
+              {/* Inline Epoint widget — embedded inline on desktop, fullscreen
+                  overlay on mobile (where inline scrolling is unreliable on
+                  iOS Safari). */}
               {inlineWidgetUrl && (
                 <div
-                  className="mt-6 border border-black/15 bg-white"
+                  className="mt-6 border border-black/15 bg-white scroll-mt-4
+                             max-md:fixed max-md:inset-0 max-md:mt-0 max-md:z-[70]
+                             max-md:flex max-md:flex-col max-md:border-0"
                   data-testid="inline-epoint-widget"
+                  tabIndex={-1}
                 >
                   <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 bg-black/[0.02]">
                     <div className="flex items-center gap-2 min-w-0">
@@ -1307,7 +1343,7 @@ const CartPage: React.FC = () => {
                         sessionStorage.removeItem('pending_epoint_order_id');
                       }}
                       aria-label="Ödənişi bağla"
-                      className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1"
+                      className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1 py-1 px-2 -mr-2"
                       data-testid="inline-epoint-close"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
@@ -1317,16 +1353,17 @@ const CartPage: React.FC = () => {
                   <iframe
                     src={inlineWidgetUrl}
                     title="Epoint Payment"
-                    className="w-full bg-white border-0 block"
-                    style={{ height: '780px' }}
+                    className="w-full bg-white border-0 block
+                               h-[780px] md:h-[780px]
+                               max-md:flex-1 max-md:h-auto"
                     allow="payment *; publickey-credentials-get *; clipboard-write"
                     data-testid="inline-epoint-iframe"
                     onLoad={(e) => {
                       // After Epoint completes the payment it redirects the
                       // iframe to our success_redirect_url / error_redirect_url
-                      // (same origin). When that happens, break out of the
-                      // iframe and navigate the parent window to that URL so
-                      // the customer lands on the proper success/error page.
+                      // (same origin). Break out of the iframe and navigate
+                      // the parent window so the customer lands on the
+                      // proper success/error page.
                       try {
                         const ifr = e.currentTarget as HTMLIFrameElement;
                         const href = ifr.contentWindow?.location?.href || '';
