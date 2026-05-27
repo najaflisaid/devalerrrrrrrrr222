@@ -1,19 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Minus, ChevronDown, Check, CreditCard } from 'lucide-react';
+import { X, Plus, Minus, Check, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc as fsDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment } from '../services/epointPaymentService';
+import { startEpointPayment, fetchEpointWidgetUrl } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
 import CustomerLogin from '../components/auth/CustomerLogin';
-import EpointWidgetModal from '../components/EpointWidgetModal';
 import { validatePromoCode, redeemPromoCode } from '../services/promoCodeService';
 
 const CartPage: React.FC = () => {
@@ -35,16 +34,18 @@ const CartPage: React.FC = () => {
   const [phoneDigits, setPhoneDigits] = useState(initPhone);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
+  // Inline Epoint widget — embedded in the checkout page (no redirect, no modal)
+  const [inlineWidgetUrl, setInlineWidgetUrl] = useState<string | null>(null);
+  const [inlineWidgetLoading, setInlineWidgetLoading] = useState(false);
+  // Auth mode toggle inside the checkout — 'register' (new customer) | 'login' (existing)
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+  const [loginPassword, setLoginPassword] = useState('');
+  // True once we've detected the entered phone already has an account
+  // (auto-suggests switching to login mode).
+  const [phoneAlreadyRegistered, setPhoneAlreadyRegistered] = useState(false);
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
 
-  // Device detection — show Apple Pay on Apple devices, Google Pay on others
-  const deviceType = useMemo(() => {
-    if (typeof navigator === 'undefined') return 'other';
-    const ua = navigator.userAgent || '';
-    const isApple = /iPad|iPhone|iPod|Macintosh/.test(ua) && !/Windows/.test(ua);
-    return isApple ? 'apple' : 'other';
-  }, []);
+  // Device detection (reserved for future use)
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [guestName, setGuestName] = useState('');
@@ -102,6 +103,67 @@ const CartPage: React.FC = () => {
   useEffect(() => {
     if (showCheckout) setIsLoggedIn(!!localStorage.getItem('userId'));
   }, [showCheckout]);
+
+  // Auto-detect: if user types a phone that already has an account, switch to
+  // login mode and tell them they don't need to re-register.
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const clean = phoneDigits.replace(/\D/g, '');
+    if (clean.length !== 9) {
+      setPhoneAlreadyRegistered(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+        const fullPhone = `+994${clean}`;
+        const snap = await getDocs(
+          query(collection(fsDb, 'users'), where('phone', '==', fullPhone), limit(1))
+        );
+        if (cancelled) return;
+        if (!snap.empty) {
+          setPhoneAlreadyRegistered(true);
+          // Auto-switch to login mode so customer sees password field next.
+          setAuthMode((prev) => (prev === 'register' ? 'login' : prev));
+        } else {
+          setPhoneAlreadyRegistered(false);
+        }
+      } catch {
+        // If rules block the read, fall back silently — the order flow will
+        // still surface auth/email-already-in-use error.
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [phoneDigits, isLoggedIn]);
+
+  // Listen for Epoint inline-iframe postMessage results
+  useEffect(() => {
+    if (!inlineWidgetUrl) return;
+    const handler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (typeof data.status !== 'string') return;
+      const status = String(data.status).toLowerCase();
+      if (status === 'success') {
+        const orderId = sessionStorage.getItem('pending_epoint_order_id') || '';
+        setInlineWidgetUrl(null);
+        navigate(`/payment/success${orderId ? `?orderId=${orderId}` : ''}`);
+      } else if (status === 'error' || status === 'failed' || status === 'declined') {
+        const msg = data?.payment?.message || data?.message || 'Ödəniş tamamlanmadı. Yenidən cəhd edin.';
+        setInlineWidgetUrl(null);
+        setLoading(false);
+        setErrorMessage(String(msg));
+        setShowError(true);
+        setTimeout(() => setShowError(false), 5000);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [inlineWidgetUrl, navigate]);
 
   // Auto-open checkout if redirected from cart drawer with ?checkout=1
   useEffect(() => {
@@ -200,7 +262,7 @@ const CartPage: React.FC = () => {
     setShowCheckout(true);
   };
 
-  const handleEpointCheckout = async (mode: 'redirect' | 'widget' = 'redirect') => {
+  const handleEpointCheckout = async (mode: 'redirect' | 'widget' = 'widget') => {
     if (items.length === 0) return;
 
     let userId = localStorage.getItem('userId');
@@ -232,25 +294,6 @@ const CartPage: React.FC = () => {
       setTimeout(() => setMissingField((c) => (c === testId ? null : c)), 5000);
     };
 
-    if (!userId) {
-      if (!guestName.trim()) {
-        flagMissing('checkout-first-name', 'Adınızı daxil edin.');
-        return;
-      }
-      if (!guestLastName.trim()) {
-        flagMissing('checkout-last-name', 'Soyadınızı daxil edin.');
-        return;
-      }
-      if (guestPassword.length < 6) {
-        flagMissing('checkout-password', 'Şifrə ən azı 6 simvol olmalıdır.');
-        return;
-      }
-      if (guestPassword !== guestPassword2) {
-        flagMissing('checkout-password2', 'Şifrələr uyğun gəlmir. Yenidən yoxlayın.');
-        return;
-      }
-    }
-
     const cleanPhone = phoneDigits.replace(/\D/g, '');
     if (cleanPhone.length !== 9) {
       flagMissing('checkout-phone-input', 'Telefon nömrəsini tam daxil edin (9 rəqəm). Məs: 50 123 45 67');
@@ -258,6 +301,34 @@ const CartPage: React.FC = () => {
     }
     const fullPhone = `+994${cleanPhone}`;
     const syntheticEmail = `phone994${cleanPhone}@devaleur.az`;
+
+    if (!userId) {
+      if (authMode === 'login') {
+        // Existing customer flow — phone + password only
+        if (loginPassword.length < 6) {
+          flagMissing('checkout-login-password', 'Şifrə ən azı 6 simvol olmalıdır.');
+          return;
+        }
+      } else {
+        // New registration flow
+        if (!guestName.trim()) {
+          flagMissing('checkout-first-name', 'Adınızı daxil edin.');
+          return;
+        }
+        if (!guestLastName.trim()) {
+          flagMissing('checkout-last-name', 'Soyadınızı daxil edin.');
+          return;
+        }
+        if (guestPassword.length < 6) {
+          flagMissing('checkout-password', 'Şifrə ən azı 6 simvol olmalıdır.');
+          return;
+        }
+        if (guestPassword !== guestPassword2) {
+          flagMissing('checkout-password2', 'Şifrələr uyğun gəlmir. Yenidən yoxlayın.');
+          return;
+        }
+      }
+    }
 
     if (deliveryMethods.length > 0 && !selectedDeliveryId) {
       flagMissing('delivery-method-list', 'Çatdırılma üsulunu seçin.');
@@ -278,64 +349,110 @@ const CartPage: React.FC = () => {
     setLoading(true);
     try {
       if (!userId) {
-        // Check if this phone is already registered (login required in that case)
-        try {
-          const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
-          const dupSnap = await getDocs(
-            query(collection(fsDb, 'users'), where('phone', '==', fullPhone), limit(1))
-          );
-          if (!dupSnap.empty) {
-            setErrorMessage('Bu nömrə artıq qeydiyyatdadır. Zəhmət olmasa "Daxil ol" düyməsindən giriş edin.');
+        if (authMode === 'login') {
+          // Sign in existing customer
+          try {
+            const cred = await signInWithEmailAndPassword(auth, syntheticEmail, loginPassword);
+            userId = cred.user.uid;
+            const userDoc = await fsGetDoc(fsDoc(fsDb, 'users', userId));
+            const userData = userDoc.exists() ? (userDoc.data() as any) : {};
+            userName = (userData.name || '') + (userData.surname ? ' ' + userData.surname : '');
+            userName = userName.trim() || fullPhone;
+            userEmail = cred.user.email || syntheticEmail;
+
+            localStorage.setItem('userId', userId);
+            localStorage.setItem('userRole', userData.role || 'customer');
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('userEmail', userEmail);
+            localStorage.setItem('userPhone', userData.phone || fullPhone);
+            if (userData.surname) localStorage.setItem('userSurname', userData.surname);
+            localStorage.setItem('userData', JSON.stringify({
+              id: userId, email: userEmail, name: userName, role: userData.role || 'customer',
+              phone: userData.phone || fullPhone, surname: userData.surname || '',
+              discountPercentage: userData.discountPercentage || 0,
+              discountUsageType: userData.discountUsageType || 'unlimited',
+              discountUsed: userData.discountUsed || false,
+            }));
+            setIsLoggedIn(true);
+          } catch (loginErr: any) {
+            const code = loginErr?.code || '';
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/user-not-found') {
+              setErrorMessage('Nömrə və ya şifrə yanlışdır. Yenidən cəhd edin və ya "Yeni qeydiyyat" seçin.');
+            } else if (code === 'auth/too-many-requests') {
+              setErrorMessage('Çox cəhd oldu. Bir az sonra yenidən cəhd edin.');
+            } else {
+              setErrorMessage('Giriş alınmadı: ' + (loginErr?.message || 'naməlum xəta'));
+            }
+            setShowError(true);
+            setTimeout(() => setShowError(false), 6000);
+            setLoading(false);
+            flagMissing('checkout-login-password', '');
+            return;
+          }
+        } else {
+          // Register new user — check duplicate first
+          try {
+            const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+            const dupSnap = await getDocs(
+              query(collection(fsDb, 'users'), where('phone', '==', fullPhone), limit(1))
+            );
+            if (!dupSnap.empty) {
+              setErrorMessage('Bu nömrə artıq qeydiyyatdadır. "Hesabım var" seçərək şifrənizi daxil edin.');
+              setShowError(true);
+              setTimeout(() => setShowError(false), 6000);
+              setLoading(false);
+              setAuthMode('login');
+              setPhoneAlreadyRegistered(true);
+              return;
+            }
+          } catch { /* if rules block read, just continue and let auth handle duplicates */ }
+
+          const autoPassword = guestPassword;
+          try {
+            const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, autoPassword);
+            userId = cred.user.uid;
+            userName = (guestName.trim() + (guestLastName ? ' ' + guestLastName.trim() : '')).trim();
+            userEmail = syntheticEmail;
+
+            await setDoc(fsDoc(fsDb, 'users', userId), {
+              id: userId,
+              email: syntheticEmail,
+              name: userName,
+              surname: guestLastName.trim(),
+              phone: fullPhone,
+              role: 'customer',
+              discountPercentage: 0,
+              discountUsageType: 'unlimited',
+              discountUsed: false,
+              autoRegistered: true,
+              emailOptIn,
+              createdAt: new Date().toISOString(),
+            });
+
+            localStorage.setItem('userId', userId);
+            localStorage.setItem('userRole', 'customer');
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('userEmail', userEmail);
+            localStorage.setItem('userPhone', fullPhone);
+            localStorage.setItem('userData', JSON.stringify({
+              id: userId, email: userEmail, name: userName, role: 'customer',
+              phone: fullPhone, surname: guestLastName.trim(),
+              discountPercentage: 0, discountUsageType: 'unlimited', discountUsed: false,
+            }));
+            sessionStorage.setItem('dv_auto_pw', autoPassword);
+          } catch (regErr: any) {
+            if (regErr?.code === 'auth/email-already-in-use') {
+              setErrorMessage('Bu nömrə artıq qeydiyyatdadır. "Hesabım var" seçərək şifrənizi daxil edin.');
+              setAuthMode('login');
+              setPhoneAlreadyRegistered(true);
+            } else {
+              setErrorMessage('Qeydiyyat xətası: ' + (regErr?.message || 'naməlum'));
+            }
             setShowError(true);
             setTimeout(() => setShowError(false), 6000);
             setLoading(false);
             return;
           }
-        } catch { /* if rules block read, just continue and let auth handle duplicates */ }
-
-        const autoPassword = guestPassword;
-        try {
-          const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, autoPassword);
-          userId = cred.user.uid;
-          userName = (guestName.trim() + (guestLastName ? ' ' + guestLastName.trim() : '')).trim();
-          userEmail = syntheticEmail;
-
-          await setDoc(fsDoc(fsDb, 'users', userId), {
-            id: userId,
-            email: syntheticEmail,
-            name: userName,
-            surname: guestLastName.trim(),
-            phone: fullPhone,
-            role: 'customer',
-            discountPercentage: 0,
-            discountUsageType: 'unlimited',
-            discountUsed: false,
-            autoRegistered: true,
-            emailOptIn,
-            createdAt: new Date().toISOString(),
-          });
-
-          localStorage.setItem('userId', userId);
-          localStorage.setItem('userRole', 'customer');
-          localStorage.setItem('userName', userName);
-          localStorage.setItem('userEmail', userEmail);
-          localStorage.setItem('userPhone', fullPhone);
-          localStorage.setItem('userData', JSON.stringify({
-            id: userId, email: userEmail, name: userName, role: 'customer',
-            phone: fullPhone, surname: guestLastName.trim(),
-            discountPercentage: 0, discountUsageType: 'unlimited', discountUsed: false,
-          }));
-          sessionStorage.setItem('dv_auto_pw', autoPassword);
-        } catch (regErr: any) {
-          if (regErr?.code === 'auth/email-already-in-use') {
-            setErrorMessage('Bu nömrə artıq qeydiyyatdadır. Zəhmət olmasa "Daxil ol" düyməsindən giriş edin.');
-          } else {
-            setErrorMessage('Qeydiyyat xətası: ' + (regErr?.message || 'naməlum'));
-          }
-          setShowError(true);
-          setTimeout(() => setShowError(false), 6000);
-          setLoading(false);
-          return;
         }
       } else {
         localStorage.setItem('userPhone', fullPhone);
@@ -407,18 +524,23 @@ const CartPage: React.FC = () => {
 
       try {
         if (mode === 'widget') {
-          // Use the canonical /api/1/payment-request flow (same as official
-          // OpenCart plugin). The hosted Epoint page automatically renders:
-          //  - Apple Pay native button on iOS Safari (when merchant has Apple Pay enabled)
-          //  - Google Pay native button on Android Chrome
-          //  - Card form fallback on all platforms
-          // Top-level navigation is REQUIRED for Apple Pay / Google Pay sheets
-          // to fire — iframes cannot trigger them on iOS Safari.
-          await startEpointPayment({
+          // Inline widget — fetch URL and render iframe right inside the
+          // checkout page (no redirect, no popup modal). Customer scrolls
+          // in place, sees card form + Apple Pay button when supported.
+          setInlineWidgetLoading(true);
+          const url = await fetchEpointWidgetUrl({
             orderId,
             amount: total,
             description: `DE VALEUR sifariş #${orderId.slice(0, 10)}`,
           });
+          setInlineWidgetUrl(url);
+          setInlineWidgetLoading(false);
+          setLoading(false);
+          // Scroll the widget into view so customer sees the payment form.
+          setTimeout(() => {
+            const el = document.querySelector('[data-testid="inline-epoint-widget"]');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 200);
           return;
         }
         await startEpointPayment({ orderId, amount: total });
@@ -427,6 +549,7 @@ const CartPage: React.FC = () => {
         // və müştəri "Sifarişlərim" hissəsindən yenidən ödəyə bilər. Statusu "payment_failed"
         // qoymuruq ki, müştəri yenidən ödəmə imkanını itirməsin.
         sessionStorage.removeItem('pending_epoint_order_id');
+        setInlineWidgetLoading(false);
         throw signErr;
       }
 
@@ -826,29 +949,7 @@ const CartPage: React.FC = () => {
         </div>
       )}
 
-      {/* Epoint widget iframe modal — Apple Pay / Google Pay / Card */}
-      {widgetUrl && (
-        <EpointWidgetModal
-          url={widgetUrl}
-          onClose={() => {
-            setWidgetUrl(null);
-            setLoading(false);
-          }}
-          onSuccess={() => {
-            const orderId = sessionStorage.getItem('pending_epoint_order_id') || '';
-            setWidgetUrl(null);
-            // Navigate to success page so codes/order display works the same
-            navigate(`/payment/success${orderId ? `?orderId=${orderId}` : ''}`);
-          }}
-          onError={(msg) => {
-            setWidgetUrl(null);
-            setLoading(false);
-            setErrorMessage(msg || 'Ödəniş tamamlanmadı. Yenidən cəhd edin.');
-            setShowError(true);
-            setTimeout(() => setShowError(false), 5000);
-          }}
-        />
-      )}
+      {/* Epoint widget is now rendered INLINE inside the checkout panel (no modal) */}
 
       {/* CHECKOUT — Rosefield-style two-column */}
       {showCheckout && !isB2BUser && (
@@ -885,12 +986,51 @@ const CartPage: React.FC = () => {
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-12">
             {/* LEFT — form (simplified) */}
             <div className="px-5 sm:px-8 lg:pl-12 lg:pr-6 py-8 md:py-12 lg:border-r lg:border-black/10">
-              {/* QEYDIYYAT MƏLUMATLARI */}
+              {/* QEYDIYYAT / GİRİŞ */}
               <div className="mb-8">
                 <h2 className="text-[14px] uppercase tracking-[0.22em] text-black/65 mb-4" data-testid="checkout-section-title">
-                  {isLoggedIn ? 'Hesab' : 'Qeydiyyat'}
+                  {isLoggedIn ? 'Hesab' : (authMode === 'login' ? 'Daxil ol' : 'Qeydiyyat')}
                 </h2>
-                {!isLoggedIn ? (
+
+                {!isLoggedIn && (
+                  <div className="flex border-b border-black/15 mb-5" data-testid="checkout-auth-tabs">
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode('register'); setMissingField(null); }}
+                      className={`flex-1 pb-3 text-[11px] uppercase tracking-[0.22em] transition-colors ${
+                        authMode === 'register'
+                          ? 'border-b-2 border-black -mb-px text-black font-medium'
+                          : 'text-black/45 hover:text-black/70'
+                      }`}
+                      data-testid="checkout-auth-tab-register"
+                    >
+                      Yeni qeydiyyat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode('login'); setMissingField(null); }}
+                      className={`flex-1 pb-3 text-[11px] uppercase tracking-[0.22em] transition-colors ${
+                        authMode === 'login'
+                          ? 'border-b-2 border-black -mb-px text-black font-medium'
+                          : 'text-black/45 hover:text-black/70'
+                      }`}
+                      data-testid="checkout-auth-tab-login"
+                    >
+                      Hesabım var
+                    </button>
+                  </div>
+                )}
+
+                {!isLoggedIn && phoneAlreadyRegistered && authMode === 'login' && (
+                  <div
+                    className="mb-3 px-3 py-2.5 border border-black/15 bg-black/[0.03] text-[12px] text-black/75"
+                    data-testid="checkout-existing-account-hint"
+                  >
+                    Bu nömrə artıq qeydiyyatdadır. Şifrənizi daxil edib davam edin — yenidən qeydiyyatdan keçməyə ehtiyac yoxdur.
+                  </div>
+                )}
+
+                {!isLoggedIn && authMode === 'register' ? (
                   <div className="space-y-3 mb-3">
                     <div className="grid grid-cols-2 gap-3">
                       <RFInput
@@ -950,6 +1090,52 @@ const CartPage: React.FC = () => {
                         name="new-password-confirm"
                         autoComplete="new-password"
                       />
+                    </div>
+                  </div>
+                ) : !isLoggedIn ? (
+                  // LOGIN MODE — only phone + password
+                  <div className="space-y-3 mb-3" data-testid="checkout-login-form">
+                    <RFInput
+                      label={t('checkout.phone')}
+                      required
+                      value={phoneDigits.replace(/(\d{2})(\d{3})(\d{2})(\d{2}).*/, '$1 $2 $3 $4')}
+                      onChange={(v) => { setPhoneDigits(v.replace(/\D/g, '').slice(0, 9)); if (missingField === 'checkout-phone-input') setMissingField(null); }}
+                      testId="checkout-phone-input"
+                      inputMode="numeric"
+                      placeholder={t('checkout.phonePlaceholder')}
+                      error={missingField === 'checkout-phone-input'}
+                      name="tel"
+                      autoComplete="tel"
+                    />
+                    <RFInput
+                      label="Şifrə"
+                      type="password"
+                      required
+                      value={loginPassword}
+                      onChange={(v) => { setLoginPassword(v); if (missingField === 'checkout-login-password') setMissingField(null); }}
+                      testId="checkout-login-password"
+                      placeholder="şifrəniz"
+                      error={missingField === 'checkout-login-password'}
+                      name="current-password"
+                      autoComplete="current-password"
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginModal(true)}
+                        className="text-[11px] text-black/55 hover:text-black underline underline-offset-2"
+                        data-testid="checkout-forgot-password"
+                      >
+                        Şifrəni unutmusuz?
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('register')}
+                        className="text-[11px] text-black/55 hover:text-black underline underline-offset-2"
+                        data-testid="checkout-switch-register"
+                      >
+                        Yeni qeydiyyat
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -1074,21 +1260,68 @@ const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Pay button (Ödənişə keç) */}
+              {/* Pay button — opens inline Epoint widget on this page */}
               <button
-                onClick={() => handleEpointCheckout('redirect')}
-                disabled={loading}
+                onClick={() => handleEpointCheckout('widget')}
+                disabled={loading || inlineWidgetLoading || !!inlineWidgetUrl}
                 className="w-full h-12 bg-black text-white text-[12px] uppercase tracking-[0.24em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 data-testid="checkout-pay-btn"
               >
-                {loading ? t('checkout.redirecting') : 'Ödənişə keç'}
+                {inlineWidgetLoading || loading
+                  ? 'Ödəniş hazırlanır...'
+                  : inlineWidgetUrl
+                    ? 'Ödəniş açıqdır — aşağı sürüşdürün'
+                    : 'Ödənişə keç'}
               </button>
 
-              {/* Apple Pay & Google Pay removed per request — only card pay remains */}
+              {/* Inline Epoint widget — embedded right here on the page */}
+              {inlineWidgetUrl && (
+                <div
+                  className="mt-6 border border-black/15 bg-white"
+                  data-testid="inline-epoint-widget"
+                >
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 bg-black/[0.02]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" strokeWidth={1.6} />
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-black/70 truncate">
+                        Təhlükəsiz ödəniş — Epoint
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInlineWidgetUrl(null);
+                        sessionStorage.removeItem('pending_epoint_order_id');
+                      }}
+                      aria-label="Ödənişi bağla"
+                      className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1"
+                      data-testid="inline-epoint-close"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Geri
+                    </button>
+                  </div>
+                  <iframe
+                    src={inlineWidgetUrl}
+                    title="Epoint Payment"
+                    className="w-full bg-white border-0 block"
+                    style={{ height: '780px' }}
+                    allow="payment *; publickey-credentials-get *; clipboard-write"
+                    data-testid="inline-epoint-iframe"
+                  />
+                  <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02]">
+                    <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">
+                      Apple Pay · Google Pay · Visa · Mastercard
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              <p className="text-[11px] text-black/45 text-center mt-3">
-                {t('checkout.securePayment')}
-              </p>
+              {!inlineWidgetUrl && (
+                <p className="text-[11px] text-black/45 text-center mt-3">
+                  {t('checkout.securePayment')}
+                </p>
+              )}
             </div>
 
             {/* RIGHT — order summary */}
