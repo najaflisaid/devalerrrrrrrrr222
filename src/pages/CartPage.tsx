@@ -8,7 +8,7 @@ import { setDoc, doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
 import { createCustomerOrder } from '../services/customerOrderService';
-import { startEpointPayment, fetchEpointWidgetUrl } from '../services/epointPaymentService';
+import { startEpointPayment, getEpointRedirectUrl } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
 import CreditApplicationForm from '../components/CreditApplicationForm';
@@ -535,11 +535,13 @@ const CartPage: React.FC = () => {
 
       try {
         if (mode === 'widget') {
-          // Inline widget — fetch URL and render iframe right inside the
-          // checkout page (no redirect, no popup modal). Customer scrolls
-          // in place, sees card form + Apple Pay button when supported.
+          // Inline payment — fetch hosted-checkout URL from Epoint and render
+          // it in an iframe right inside the checkout page (no redirect, no
+          // popup modal). The hosted page renders the card form (and Apple
+          // Pay / Google Pay buttons where supported). Customer scrolls in
+          // place and pays.
           setInlineWidgetLoading(true);
-          const url = await fetchEpointWidgetUrl({
+          const url = await getEpointRedirectUrl({
             orderId,
             amount: total,
             description: `DE VALEUR sifariş #${orderId.slice(0, 10)}`,
@@ -1319,6 +1321,27 @@ const CartPage: React.FC = () => {
                     style={{ height: '780px' }}
                     allow="payment *; publickey-credentials-get *; clipboard-write"
                     data-testid="inline-epoint-iframe"
+                    onLoad={(e) => {
+                      // After Epoint completes the payment it redirects the
+                      // iframe to our success_redirect_url / error_redirect_url
+                      // (same origin). When that happens, break out of the
+                      // iframe and navigate the parent window to that URL so
+                      // the customer lands on the proper success/error page.
+                      try {
+                        const ifr = e.currentTarget as HTMLIFrameElement;
+                        const href = ifr.contentWindow?.location?.href || '';
+                        if (!href) return;
+                        if (
+                          href.includes('/payment/success') ||
+                          href.includes('/payment/error') ||
+                          href.includes('/payment/result')
+                        ) {
+                          window.location.href = href;
+                        }
+                      } catch {
+                        // Cross-origin while still on epoint.az — ignore.
+                      }
+                    }}
                   />
                   <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02]">
                     <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">

@@ -76,6 +76,27 @@ const sha1Base64 = (text: string): string =>
  * automatically based on the device/browser capabilities.
  */
 export const startEpointPayment = async (input: BuildPaymentInput): Promise<void> => {
+  const url = await getEpointRedirectUrl(input);
+
+  // Top-level navigation so Apple Pay / Google Pay can render correctly
+  // (escape any iframe wrapper such as the Emergent preview).
+  try {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = url;
+      return;
+    }
+  } catch {
+    /* cross-origin top — fall through to same-window nav */
+  }
+  window.location.href = url;
+};
+
+/**
+ * Same backend call as startEpointPayment but returns the redirect URL
+ * instead of navigating. Useful when we want to embed the hosted Epoint
+ * checkout page inside an iframe on our own page (no redirect).
+ */
+export const getEpointRedirectUrl = async (input: BuildPaymentInput): Promise<string> => {
   const settings = await getEpointSettings();
   if (!settings.publicKey || !settings.privateKey) {
     throw new Error(
@@ -89,7 +110,7 @@ export const startEpointPayment = async (input: BuildPaymentInput): Promise<void
 
   const successUrl = settings.successUrl || `${window.location.origin}/payment/success`;
   const errorUrl = settings.errorUrl || `${window.location.origin}/payment/error`;
-  const resultUrl = settings.resultUrl || ''; // optional server-to-server callback
+  const resultUrl = settings.resultUrl || '';
 
   const payload = {
     public_key: settings.publicKey,
@@ -125,17 +146,7 @@ export const startEpointPayment = async (input: BuildPaymentInput): Promise<void
     throw new Error(body?.message || 'Epoint ödəniş URL-i alınmadı');
   }
 
-  // Top-level navigation so Apple Pay / Google Pay can render correctly
-  // (escape any iframe wrapper such as the Emergent preview).
-  try {
-    if (window.top && window.top !== window.self) {
-      window.top.location.href = body.redirect_url;
-      return;
-    }
-  } catch {
-    /* cross-origin top — fall through to same-window nav */
-  }
-  window.location.href = body.redirect_url;
+  return body.redirect_url as string;
 };
 
 /**
