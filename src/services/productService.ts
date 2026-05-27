@@ -14,6 +14,15 @@ import {
 let _campaignCache: { data: Campaign | null; at: number } = { data: null, at: 0 };
 const CAMPAIGN_TTL_MS = 60_000;
 
+// Cache `getAll()` returns for ~60s. Key includes userRole + includeComingSoon
+// because admin/B2B see comingSoon products and B2B/customer have different
+// campaign-discount visibility. Invalidate on any mutation (create/update/delete).
+const PRODUCTS_TTL_MS = 60_000;
+const _productsCache: Map<string, { data: Product[]; at: number }> = new Map();
+const productsCacheKey = (role: string | null, includeComingSoon: boolean) =>
+  `${role || 'guest'}|${includeComingSoon ? 'cs' : 'nocs'}`;
+const invalidateProductsCache = () => _productsCache.clear();
+
 const getCampaignCached = async (): Promise<Campaign | null> => {
   const now = Date.now();
   if (_campaignCache.data && now - _campaignCache.at < CAMPAIGN_TTL_MS) {
@@ -29,14 +38,23 @@ const getCampaignCached = async (): Promise<Campaign | null> => {
 };
 
 // Public — admin paneldə kampaniyanı yeniləyəndə cache-i sıfırlayır.
+// Eyni zamanda məhsul cache-ni də sıfırlayır, çünki kampaniya endirimi
+// məhsulların qiymətlərinə tətbiq olunur — köhnə cache-də endirim
+// yanlış görünə bilər.
 export const invalidateCampaignCache = () => {
   _campaignCache = { data: null, at: 0 };
+  _productsCache.clear();
 };
 
 export const productService = {
   async getAll(includeComingSoon: boolean = false): Promise<Product[]> {
     try {
       const userRole = localStorage.getItem('userRole');
+      const cacheKey = productsCacheKey(userRole, includeComingSoon);
+      const cached = _productsCache.get(cacheKey);
+      if (cached && Date.now() - cached.at < PRODUCTS_TTL_MS) {
+        return cached.data;
+      }
       console.log('ProductService.getAll - userRole:', userRole);
       const isB2BorAdmin = userRole === 'b2b' || userRole === 'admin';
 
@@ -82,6 +100,7 @@ export const productService = {
       }
 
       console.log('ProductService.getAll - final products returned:', products.length);
+      _productsCache.set(cacheKey, { data: products, at: Date.now() });
       return products;
     } catch (error) {
       console.error('Error in getAll products:', error);
@@ -174,16 +193,19 @@ export const productService = {
       ...product,
       createdAt: new Date()
     });
+    invalidateProductsCache();
     return docRef.id;
   },
 
   async update(id: string, product: Partial<Product>): Promise<void> {
     const docRef = doc(db, 'products', id);
     await updateDoc(docRef, product);
+    invalidateProductsCache();
   },
 
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, 'products', id));
+    invalidateProductsCache();
   },
 
   async uploadImage(file: File, productId: string): Promise<string> {

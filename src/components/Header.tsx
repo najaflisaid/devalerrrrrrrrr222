@@ -687,7 +687,7 @@ const Header: React.FC = () => {
                                       <li key={`${hoveredCategory}-${brand}`}>
                                         <button
                                           onClick={() => {
-                                            navigate(`/brand/${toBrandSlug(brand)}`);
+                                            navigate(`/products?brand=${encodeURIComponent(brand)}`);
                                             setShowDropdown(false);
                                           }}
                                           style={{ ['--dv-i' as any]: idx }}
@@ -717,7 +717,7 @@ const Header: React.FC = () => {
                                     <li key={`${hoveredSubcategory}-${brand}`}>
                                       <button
                                         onClick={() => {
-                                          navigate(`/brand/${toBrandSlug(brand)}`);
+                                          navigate(`/products?brand=${encodeURIComponent(brand)}`);
                                           setShowDropdown(false);
                                         }}
                                         style={{ ['--dv-i' as any]: idx }}
@@ -1127,7 +1127,7 @@ const Header: React.FC = () => {
                                                     <button
                                                       key={`${sub.id}-${b}`}
                                                       onClick={() => {
-                                                        navigate(`/brand/${toBrandSlug(b)}`);
+                                                        navigate(`/products?brand=${encodeURIComponent(b)}`);
                                                         closeMobileMenu();
                                                         window.scrollTo({ top: 0, behavior: 'auto' });
                                                       }}
@@ -1151,7 +1151,7 @@ const Header: React.FC = () => {
                                           <button
                                             key={`${cat.key}-${b}`}
                                             onClick={() => {
-                                              navigate(`/brand/${toBrandSlug(b)}`);
+                                              navigate(`/products?brand=${encodeURIComponent(b)}`);
                                               closeMobileMenu();
                                               window.scrollTo({ top: 0, behavior: 'auto' });
                                             }}

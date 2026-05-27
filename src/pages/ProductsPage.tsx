@@ -985,11 +985,11 @@ const ProductsPage: React.FC = () => {
                 ))}
               </div>
             ) : loading ? (
-              <div className="flex items-center justify-center py-24">
+              <div className="flex items-center justify-center min-h-[70vh] py-24">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black" data-testid="products-loading-spinner"></div>
               </div>
             ) : (
-              <div className="text-center py-16">
+              <div className="text-center py-16 min-h-[70vh] flex flex-col items-center justify-center">
                 <p className="text-gray-600 text-lg">{t('common.noProductsFound')}</p>
                 <button
                   onClick={() => {
