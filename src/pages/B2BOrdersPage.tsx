@@ -73,6 +73,27 @@ const B2BOrdersPage: React.FC = () => {
 
   useEffect(() => {
     loadProducts();
+    // Profil məlumatlarını DƏRHAL localStorage-dan oxu — login-də artıq qoyulub.
+    // Bu sayədə sidebar boş görünmür və Firestore round-trip-ni gözləmir.
+    try {
+      const userDataStr = localStorage.getItem('userData');
+      if (userDataStr) {
+        const ud = JSON.parse(userDataStr);
+        setProfile({
+          name: ud.name || '',
+          lastname: ud.surname || ud.lastname || '',
+          company: ud.companyName || ud.company || '',
+          phone: ud.phone || localStorage.getItem('userPhone') || '',
+          email: ud.email || localStorage.getItem('userEmail') || '',
+        });
+      } else {
+        const e = localStorage.getItem('userEmail') || '';
+        const n = localStorage.getItem('userName') || '';
+        const p = localStorage.getItem('userPhone') || '';
+        if (e || n) setProfile({ name: n, email: e, phone: p });
+      }
+    } catch { /* noop */ }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user && user.email) {
         setUserEmail(user.email);
@@ -88,22 +109,32 @@ const B2BOrdersPage: React.FC = () => {
 
   const loadProfile = async (uid: string, email: string) => {
     try {
+      // Firestore-dan da yoxla — localStorage-da olmayan sahələri tamamla
+      let firestoreData: any = null;
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
-        const u: any = snap.data();
-        setProfile({
-          name: u.name || u.firstName || '',
-          lastname: u.lastname || u.lastName || u.surname || '',
-          company: u.companyName || u.company || '',
-          phone: u.phone || u.phoneNumber || '',
-          email,
-        });
+        firestoreData = snap.data();
       } else {
-        setProfile({ email });
+        // uid ilə tapılmırsa, email ilə cəhd et
+        const { collection: col, query: q2, where: w2, getDocs: gd } = await import('firebase/firestore');
+        const qs = await gd(q2(col(db, 'users'), w2('email', '==', email)));
+        if (!qs.empty) firestoreData = qs.docs[0].data();
       }
+
+      // localStorage-dakı dəyərləri saxla, Firestore yalnız boş sahələri doldursun
+      setProfile((prev) => {
+        const u = firestoreData || {};
+        return {
+          name: prev.name || u.name || u.firstName || '',
+          lastname: prev.lastname || u.lastname || u.lastName || u.surname || '',
+          company: prev.company || u.companyName || u.company || '',
+          phone: prev.phone || u.phone || u.phoneNumber || '',
+          email: prev.email || email,
+        };
+      });
     } catch (e) {
       console.warn('profile load failed', e);
-      setProfile({ email });
+      setProfile((prev) => ({ ...prev, email: prev.email || email }));
     }
   };
 

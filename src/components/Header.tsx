@@ -75,6 +75,10 @@ const Header: React.FC = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationsRead, setNotificationsRead] = useState(false);
 
+  // B2B son sifariş statusu — "Sifarişlərim" linki altında kiçik bildiriş üçün
+  const [lastOrderStatus, setLastOrderStatus] = useState<string | null>(null);
+  const [lastOrderNumber, setLastOrderNumber] = useState<string | null>(null);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -150,6 +154,42 @@ const Header: React.FC = () => {
   useEffect(() => {
     loadCategoriesAndBrands();
   }, []);
+
+  // B2B son sifariş statusunu yüklə (yalnız B2B istifadəçilər üçün)
+  useEffect(() => {
+    if (!isLoggedIn || userRole !== 'b2b') {
+      setLastOrderStatus(null);
+      setLastOrderNumber(null);
+      return;
+    }
+    const email = localStorage.getItem('userEmail');
+    if (!email) return;
+
+    let cancelled = false;
+    const fetchLast = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'b2bOrders'), where('customerEmail', '==', email)));
+        if (cancelled || snap.empty) return;
+        const docs = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        docs.sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() || 0;
+          const tb = b.createdAt?.toMillis?.() || 0;
+          return tb - ta;
+        });
+        const latest = docs[0];
+        if (latest) {
+          setLastOrderStatus(latest.status || 'pending');
+          setLastOrderNumber(latest.orderNumber ? `#${latest.orderNumber}` : `#${String(latest.id).slice(0, 6)}`);
+        }
+      } catch (e) {
+        console.warn('Last B2B order fetch failed:', e);
+      }
+    };
+    fetchLast();
+    // 30 saniyədən bir yenilə — admin status dəyişdirsə müştəri tez görsün
+    const id = setInterval(fetchLast, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [isLoggedIn, userRole]);
 
   const dropdownTimersRef = useRef<{ outer: ReturnType<typeof setTimeout> | null; inner: ReturnType<typeof setTimeout> | null }>({ outer: null, inner: null });
 
@@ -785,9 +825,44 @@ const Header: React.FC = () => {
               </Link>
 
               {isLoggedIn && userRole === 'b2b' && (
-                <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
-                  {t('header.myOrders')}
-                </Link>
+                <div className="relative flex flex-col items-start leading-none">
+                  <Link to="/b2b/orders" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
+                    {t('header.myOrders')}
+                  </Link>
+                  {lastOrderStatus && (
+                    <Link
+                      to="/b2b/orders"
+                      className="absolute top-full left-0 mt-0.5 flex items-center gap-1 whitespace-nowrap text-[9px] font-medium uppercase tracking-wide hover:opacity-80 transition-opacity"
+                      data-testid="header-last-order-status"
+                      title={`Son sifariş ${lastOrderNumber || ''}`}
+                    >
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        lastOrderStatus === 'delivered' ? 'bg-gray-400' :
+                        lastOrderStatus === 'delivering' ? 'bg-purple-500 animate-pulse' :
+                        lastOrderStatus === 'ready' ? 'bg-green-500' :
+                        lastOrderStatus === 'preparing' ? 'bg-orange-500 animate-pulse' :
+                        lastOrderStatus === 'accepted' ? 'bg-blue-500' :
+                        'bg-yellow-500 animate-pulse'
+                      }`} />
+                      <span className={
+                        lastOrderStatus === 'delivered' ? 'text-gray-500' :
+                        lastOrderStatus === 'delivering' ? 'text-purple-600' :
+                        lastOrderStatus === 'ready' ? 'text-green-600' :
+                        lastOrderStatus === 'preparing' ? 'text-orange-600' :
+                        lastOrderStatus === 'accepted' ? 'text-blue-600' :
+                        'text-yellow-600'
+                      }>
+                        {lastOrderStatus === 'pending' ? 'Gözləyir' :
+                         lastOrderStatus === 'accepted' ? 'Qəbul edildi' :
+                         lastOrderStatus === 'preparing' ? 'Hazırlanır' :
+                         lastOrderStatus === 'ready' ? 'Hazırdır' :
+                         lastOrderStatus === 'delivering' ? 'Çatdırılır' :
+                         lastOrderStatus === 'delivered' ? 'Çatdırıldı' :
+                         lastOrderStatus}
+                      </span>
+                    </Link>
+                  )}
+                </div>
               )}
               {isLoggedIn && userRole === 'admin' && (
                 <Link to="/admin" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[13px] whitespace-nowrap font-futura">
@@ -958,7 +1033,7 @@ const Header: React.FC = () => {
                   {showLoginDropdown && (
                     <div className="dv-light-reset absolute right-0 top-full bg-white border border-black/10 shadow-lg min-w-[180px] z-50" data-testid="account-loggedin-dropdown">
                       <Link
-                        to="/my-orders"
+                        to={userRole === 'b2b' ? '/b2b/orders' : '/my-orders'}
                         onClick={() => setShowLoginDropdown(false)}
                         className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors"
                         data-testid="account-my-orders"
