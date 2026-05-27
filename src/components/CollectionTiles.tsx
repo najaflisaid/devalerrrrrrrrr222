@@ -88,9 +88,10 @@ const CollectionTiles: React.FC = () => {
           </h2>
         </motion.div>
 
-        {/* Grid — desktop 4 cols, tablet 2, mobile horizontal scroll-snap */}
+        {/* Horizontal scroll-snap — same on mobile & desktop.
+            Yeni kateqoriya kartı əlavə edildikdə 2-ci cərgəyə düşmür, sağa scroll olur. */}
         <motion.div
-          className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6"
+          className="relative -mx-4 sm:-mx-6 lg:-mx-10"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-10%' }}
@@ -100,54 +101,60 @@ const CollectionTiles: React.FC = () => {
           }}
           data-testid="collection-tiles-grid"
         >
-          {tiles.map((tile, idx) => {
-            const titleText =
-              (tile as any)[`title_${lang}`] ||
-              tile.title_az ||
-              tile.title_en ||
-              tile.title_ru ||
-              '';
-            return (
-              <motion.div
-                key={tile.id || idx}
-                variants={{
-                  hidden: { opacity: 0, y: 36 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { duration: 1.0, ease: [0.22, 1, 0.36, 1] },
-                  },
-                }}
-                data-testid={`dv-collection-tile-${tile.id || idx}`}
-              >
-                <Link
-                  to={tile.link_url || '/products'}
-                  className="group relative block overflow-hidden bg-[#0A0A0A] aspect-[3/4] lg:aspect-[3/4.2]"
+          <div
+            className="flex overflow-x-auto snap-x snap-mandatory gap-3 md:gap-5 lg:gap-6 px-4 sm:px-6 lg:px-10 pb-2"
+            style={{ scrollbarWidth: 'none' }}
+            data-testid="collection-tiles-track"
+          >
+            {tiles.map((tile, idx) => {
+              const titleText =
+                (tile as any)[`title_${lang}`] ||
+                tile.title_az ||
+                tile.title_en ||
+                tile.title_ru ||
+                '';
+              return (
+                <motion.div
+                  key={tile.id || idx}
+                  variants={{
+                    hidden: { opacity: 0, y: 36 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { duration: 1.0, ease: [0.22, 1, 0.36, 1] },
+                    },
+                  }}
+                  className="shrink-0 snap-start w-[38%] sm:w-[32%] md:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-4.5rem)/4)]"
+                  data-testid={`dv-collection-tile-${tile.id || idx}`}
                 >
-                  {/* Media */}
-                  {tile.video_url ? (
-                    <video
-                      src={tile.video_url}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.08]"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="auto"
-                      controls={false}
-                      disablePictureInPicture
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  ) : tile.image_url ? (
-                    <img
-                      src={tile.image_url}
-                      alt={titleText}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.08]"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a]" />
-                  )}
+                  <Link
+                    to={tile.link_url || '/products'}
+                    className="group relative block overflow-hidden bg-[#0A0A0A] aspect-[3/4] lg:aspect-[3/4.2]"
+                  >
+                    {/* Media */}
+                    {tile.video_url ? (
+                      <video
+                        src={tile.video_url}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.08]"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        controls={false}
+                        disablePictureInPicture
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    ) : tile.image_url ? (
+                      <img
+                        src={tile.image_url}
+                        alt={titleText}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.08]"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a]" />
+                    )}
 
                   {/* Vignette gradient for text legibility */}
                   <div
@@ -192,68 +199,8 @@ const CollectionTiles: React.FC = () => {
               </motion.div>
             );
           })}
-        </motion.div>
-
-        {/* Mobile horizontal scroll-snap fallback */}
-        <div className="md:hidden -mx-4 mt-4">
-          <div
-            className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-4 pb-2"
-            style={{ scrollbarWidth: 'none' }}
-            data-testid="collection-tiles-track"
-          >
-            {tiles.map((tile, idx) => {
-              const titleText =
-                (tile as any)[`title_${lang}`] ||
-                tile.title_az ||
-                tile.title_en ||
-                tile.title_ru ||
-                '';
-              return (
-                <Link
-                  key={tile.id || idx}
-                  to={tile.link_url || '/products'}
-                  className="group relative block shrink-0 snap-start overflow-hidden bg-[#0A0A0A] aspect-[7/9] w-[38%]"
-                  data-testid={`dv-collection-tile-m-${tile.id || idx}`}
-                >
-                  {tile.video_url ? (
-                    <video
-                      src={tile.video_url}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="auto"
-                      controls={false}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  ) : tile.image_url ? (
-                    <img
-                      src={tile.image_url}
-                      alt={titleText}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a]" />
-                  )}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 p-3 text-white">
-                    <h3
-                      className="font-playfair text-[13px] font-light leading-tight break-words"
-                      style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}
-                    >
-                      {titleText}
-                    </h3>
-                  </div>
-                </Link>
-              );
-            })}
           </div>
-        </div>
+        </motion.div>
 
         <style>{`
           [data-testid="collection-tiles-track"]::-webkit-scrollbar { display: none; }

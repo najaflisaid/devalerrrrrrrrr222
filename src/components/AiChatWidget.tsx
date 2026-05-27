@@ -648,19 +648,22 @@ const AiChatWidget: React.FC = () => {
           >
             {/* Animated gold ring around the logo */}
             <span aria-hidden="true" className="dv-ai-ring absolute left-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full pointer-events-none" />
-            {/* Logo circle */}
-            <span className="relative flex items-center justify-center w-9 h-9 rounded-full bg-white overflow-hidden flex-shrink-0 z-[1]" style={{ boxShadow: '0 0 0 1px rgba(212,175,55,0.55)' }}>
-              <img
-                src="https://i.hizliresim.com/tmu65g6.png"
-                alt="De Valeur"
-                className="w-[78%] h-[78%] object-contain"
-                draggable={false}
-              />
-              {/* Pulsing online indicator (green) */}
-              <span aria-hidden="true" className="dv-ai-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white z-[2]" />
-              <span aria-hidden="true" className="dv-ai-online-pulse absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 z-[1]" />
+            {/* Logo wrapper — NO overflow-hidden so the green online dot is fully visible */}
+            <span className="relative flex items-center justify-center w-9 h-9 flex-shrink-0 z-[1]">
+              {/* Inner clipped circle for logo image only */}
+              <span className="absolute inset-0 rounded-full overflow-hidden flex items-center justify-center bg-white" style={{ boxShadow: '0 0 0 1px rgba(212,175,55,0.55)' }}>
+                <img
+                  src="https://i.hizliresim.com/tmu65g6.png"
+                  alt="De Valeur"
+                  className="w-[78%] h-[78%] object-contain"
+                  draggable={false}
+                />
+              </span>
+              {/* Pulsing online indicator (green) — OUTSIDE clip so it shows fully */}
+              <span aria-hidden="true" className="dv-ai-online-dot absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white z-[3]" />
+              <span aria-hidden="true" className="dv-ai-online-pulse absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 z-[2]" />
             </span>
-            <span className="font-futura text-[13px] font-medium text-black/90 whitespace-nowrap tracking-wide">
+            <span className="font-futura text-[11px] font-normal text-black/90 whitespace-nowrap tracking-wide uppercase">
               {lang === 'en' ? 'Chat with us' : lang === 'ru' ? 'Напишите нам' : 'Bizə yaz'}
             </span>
             <svg
