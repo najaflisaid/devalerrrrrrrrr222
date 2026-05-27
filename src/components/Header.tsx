@@ -546,14 +546,14 @@ const Header: React.FC = () => {
                       handleDropdownEnter();
                     }
                   }}
-                  className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
+                  className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
                     transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
                   }`}
                   data-testid="header-brands-link"
                   aria-expanded={showDropdown}
                   aria-haspopup="menu"
                 >
-                  <Menu className="h-[18px] w-[18px]" strokeWidth={1.25} />
+                  <Menu className="h-[16px] w-[16px]" strokeWidth={1.25} />
                   <span>{t('header.menu', { defaultValue: 'Menu' })}</span>
                 </button>
 
@@ -692,13 +692,13 @@ const Header: React.FC = () => {
               {/* Search — icon + text (LV-style, left aligned) */}
               <button
                 onClick={() => setShowSearch(true)}
-                className={`flex items-center gap-2 font-normal text-[13px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
+                className={`flex items-center gap-2 font-normal text-[11px] tracking-wide whitespace-nowrap transition-colors font-futura uppercase ${
                   transparentMode ? 'text-white hover:text-white/80' : 'text-black hover:text-gray-700'
                 }`}
                 aria-label="Search"
                 data-testid="header-search-text-btn"
               >
-                <Search className="h-[18px] w-[18px]" strokeWidth={1.25} />
+                <Search className="h-[16px] w-[16px]" strokeWidth={1.25} />
                 <span>{t('header.search', { defaultValue: 'Search' })}</span>
               </button>
 
@@ -721,7 +721,7 @@ const Header: React.FC = () => {
                   className="relative h-[14px] w-[14px] transition-transform duration-300 group-hover:rotate-[-8deg]"
                   strokeWidth={1.4}
                 />
-                <span className="relative font-handwriting text-[15px] leading-none tracking-normal">
+                <span className="relative font-handwriting text-[22px] leading-none tracking-wide italic">
                   {t('header.giftCards', { defaultValue: 'Hədiyyə Kartı' })}
                 </span>
               </Link>
