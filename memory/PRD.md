@@ -12,6 +12,21 @@
 - Payments: Epoint.az hosted widget (inline iframe via `/api/1/token/widget`)
 - Backend: FastAPI + Vercel serverless functions (`/api/epoint/*`)
 
+
+## Bug Fix (2026-01-28) — Instagram in-app brauzerdə klik işləməməsi
+**Problem**: iPhone-da Instagram bio-dakı linkə girəndə sayt açılırdı, scroll işləyirdi, amma heç bir düyməyə/linkə klik etmək mümkün olmurdu. Safari-də birbaşa açanda problem yox idi.
+
+**Root cause**: 
+1. `src/main.tsx`-də `gesturestart`/`gesturechange`/`gestureend` event-ləri `window`-a `{ passive: false }` ilə qoşulub `preventDefault()` çağırırdı. Instagram-ın iOS WebView versiyası bu gesture-ları bəzən tək toxunmada da fire edir → tıklama event-i blok olunurdu.
+2. `index.html`-də viewport meta-da `maximum-scale=1.0, user-scalable=no` Instagram WebView ilə birgə klik delegasiyasını zədələyir.
+3. Eyni problem `wheel` listener-i ilə də potensial olaraq mövcud idi.
+
+**Fix**:
+- `main.tsx`: `wheel` və `gesturestart` listener-ləri yalnız desktop-da (`matchMedia('(pointer: fine)')`) qoşulur. Touch cihazlarda bu listener-lərə ehtiyac yoxdur.
+- `index.html`: Viewport meta sadələşdirildi: `width=device-width, initial-scale=1.0, viewport-fit=cover`. iOS-da input zoom-u CSS-də `font-size: 16px` ilə artıq qarşısı alınıb.
+
+**Deploy üçün qeyd**: Bu dəyişikliklər `devaleur.az` saytında effektə minmək üçün Netlify-də yenidən deploy etmək lazımdır.
+
 ## Implemented (2026-01)
 - **Checkout auth tabs** in `CartPage.tsx`: "Yeni qeydiyyat" / "Hesabım var" (testid: `checkout-auth-tabs`).
   - Logged-in users skip auth entirely.

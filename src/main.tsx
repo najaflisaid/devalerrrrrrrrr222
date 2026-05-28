@@ -30,7 +30,20 @@ import { WishlistProvider } from './context/WishlistContext';
     try { history.scrollRestoration = 'manual'; } catch { /* noop */ }
   }
 
-  // Ctrl/Cmd + wheel zoom + horizontal page scroll blok
+  // Cihaz növünü təyin et — mobil/touch cihazlarda (xüsusən iPhone-da
+  // Instagram in-app brauzerində) `wheel` və `gesturestart`/`gesturechange`
+  // event-ləri ya işə düşmür, ya da tək toxunmada da fire olur. Hər iki
+  // halda non-passive preventDefault() klik delegasiyasını zədələyə bilər.
+  // Buna görə bu listener-ləri yalnız DESKTOP-da (pointer: fine) qoşuruq.
+  const isFinePointer =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: fine)').matches;
+
+  // Ctrl/Cmd + wheel zoom + horizontal page scroll blok — yalnız DESKTOP
+  // (touch cihazlarda wheel event-i fire olmur, amma Instagram in-app
+  // brauzerində bəzən anomaliyalı şəkildə işə düşür və klikləri blok edə
+  // bilər. Mobile-da bu listener-ə ehtiyac yoxdur).
+  if (isFinePointer) {
   window.addEventListener(
     'wheel',
     (e: WheelEvent) => {
@@ -65,6 +78,7 @@ import { WishlistProvider } from './context/WishlistContext';
     },
     { passive: false }
   );
+  }
 
   // Ctrl/Cmd + = / - / 0  zoom blok
   window.addEventListener(
@@ -80,10 +94,16 @@ import { WishlistProvider } from './context/WishlistContext';
     { passive: false }
   );
 
-  // Safari/macOS pinch gestures
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => {
-    window.addEventListener(ev, (e) => e.preventDefault(), { passive: false } as any);
-  });
+  // Safari/macOS pinch gestures — DESKTOP-only.
+  // QEYD: Mobil cihazlarda (xüsusən iPhone-da Instagram in-app brauzerində)
+  // `gesturestart`/`gesturechange` event-ləri tək toxunmada da fire ola
+  // bilər və preventDefault() çağırışı klik hadisəsini blok edir →
+  // istifadəçi heç bir düyməyə kliklə bilmir.
+  if (isFinePointer) {
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => {
+      window.addEventListener(ev, (e) => e.preventDefault(), { passive: false } as any);
+    });
+  }
 
   // Hər hansı yolla baş verən üfüqi scroll-u dərhal 0-a qaytar (məs. üfüqi
   // touch swipe səhifəsi). Daxili overflow-scroll elementlər window-da deyil,
