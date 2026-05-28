@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -36,6 +36,7 @@ import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
 import CampaignsTab from './CampaignsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
+import AiInboxTab from './AiInboxTab';
 import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
@@ -1501,6 +1502,7 @@ const AdminPanel: React.FC = () => {
       items: [
         { id: 'analytics', label: 'Analitika', icon: BarChart3 },
         { id: 'aiKnowledge', label: 'AI Bilik Bazası', icon: Sparkles },
+        { id: 'aiInbox', label: 'AI Inbox (WhatsApp & Instagram)', icon: Bot },
       ],
     },
     {
@@ -3622,6 +3624,12 @@ const AdminPanel: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <AiKnowledgeTab />
             </div>
+          </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'aiInbox' && (
+          <PasswordProtectedSection sectionName="aiInbox">
+            <AiInboxTab />
           </PasswordProtectedSection>
         )}
 

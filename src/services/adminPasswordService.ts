@@ -114,6 +114,7 @@ const DEFAULT_OPEN_SECTIONS = new Set([
   'partners',
   'contactMessages',
   'siteSettings',
+  'aiInbox',
 ]);
 
 export { DEFAULTS as DEFAULT_ADMIN_PASSWORDS };
