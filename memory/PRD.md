@@ -13,6 +13,42 @@
 - Backend: FastAPI + Vercel serverless functions (`/api/epoint/*`)
 
 
+## Feature (2026-01-28) — Smart Məhsul Miqrasiyası + Jurnal/Rollback
+
+**Tələblər**:
+1. Excel import-da bazada mövcud mallar dəqiq tapılsın (boşluq/karakter ucbatından "yoxdur" hesab edilmir).
+2. Yeni mal adları və yeni kateqoriyalar ayrıca göstərilsin, təsdiqlə əlavə olunsun.
+3. Miqrasiya jurnalı yaradılsın — keçmiş tətbiqlər tarixlə qeyd olunur, ehtiyacda "Geri qaytar" düyməsi ilə bazanı əvvəlki vəziyyətə qaytarmaq mümkün olsun.
+
+**Yeni / dəyişdirilmiş fayllar**:
+- `src/services/productMigrationService.ts` (YENİ):
+  - `smartNorm()` — NFKC + zero-width sil + bütün dash variantları → standart hyphen + bütün whitespace (NBSP daxil) → tək boşluq + lowercase + trim.
+  - `findBestMatch()` — ad + brend əsasında 88%+ Levenshtein oxşarlıq. 3 mərhələ: exact → fuzzy with brand match → fuzzy name-only (92%+).
+  - `saveMigrationLog()`, `listMigrationLogs()`, `detectRollbackConflicts()`, `rollbackMigration()`, `deleteMigrationLog()` — Firestore `productMigrationLogs` collection.
+  - Hər log-da updates üçün `oldValues + newValues`, creations üçün full snapshot saxlanılır → rollback dəqiq işləyir.
+
+- `src/components/admin/ProductMigrationLog.tsx` (YENİ):
+  - Bütün miqrasiyaların siyahısı (yeni → köhnə), hər birinin detalı (köhnə → yeni dəyərlər), "Geri qaytar" düyməsi.
+  - Rollback modal: conflict detection (sonradan kim redaktə etdi yoxlanır) + 3 təsdiq variantı:
+    - Konfliktsizdirsə → "Davam et və geri qaytar".
+    - Konfliktlidirsə → "Konfliktsiz olanları geri qaytar" (təhlükəsiz) və ya "Konfliktə baxmayaraq qaytar" (force).
+
+- `src/components/admin/ProductExcelImport.tsx` (TƏKMİL):
+  - Köhnə tam-match `products.find` → yeni `findBestMatch` (smart fuzzy).
+  - UI-da fuzzy match konfidensi göstərilir (məs. `92%` Sparkles ikon ilə).
+  - Apply zamanı `saveMigrationLog()` çağrılır — bütün dəyişikliklər saxlanılır.
+
+- `src/components/admin/AdminPanel.tsx`:
+  - "Miqrasiya et" düyməsi basılanda artıq həm `ProductExcelImport` həm də altda `ProductMigrationLog` göstərilir.
+
+**Smoke test** (smartNorm):
+- NBSP, em-dash, zero-width, uppercase, multi-space, leading/trailing → 6/6 PASS.
+
+**Build**: 13.25s, 0 xəta.
+
+**Deploy üçün qeyd**: Bütün dəyişikliklər Firestore-ya `productMigrationLogs` collection-ında yeni log saxlayır. Cari `firestore.rules`-də default `allow read, write: if true` qaydası var, ona görə əlavə rule lazım deyil. Production-da bunu admin-only restrict etmək tövsiyə olunur.
+
+
 ## Performance Optimization (2026-01-28) — Sayt sürətləndirilməsi
 **Şikayət**: İlk açılışda ağ ekran uzun durur, şəkillər gec yüklənir, səhifələr arası keçid yavaşdır.
 

@@ -1,9 +1,15 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileSpreadsheet, Check, AlertTriangle, X, Loader2, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, AlertTriangle, X, Loader2, Download, Sparkles } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { collection, getDocs, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Product } from '../../types';
+import {
+  findBestMatch,
+  saveMigrationLog,
+  type MigrationUpdateEntry,
+  type MigrationCreationEntry,
+} from '../../services/productMigrationService';
 
 interface Props {
   products: Product[];
@@ -51,7 +57,19 @@ interface ParsedRow {
 }
 
 interface ImportResult {
-  updated: { product: Product; oldStock: number; newStock: number; row: ParsedRow; categoryMismatch: boolean; oldVisibility: VisibleTo; visibilityChanged: boolean }[];
+  updated: {
+    product: Product;
+    oldStock: number;
+    newStock: number;
+    row: ParsedRow;
+    categoryMismatch: boolean;
+    oldVisibility: VisibleTo;
+    visibilityChanged: boolean;
+    /** Fuzzy match olduğu zaman 0..1 confidence (1 = tam eyni) */
+    matchConfidence: number;
+    /** Match səbəbi: 'exact' tam normalize match, 'fuzzy-name' brend eyni amma ad fuzzy */
+    matchReason: 'exact' | 'fuzzy-name' | 'fuzzy-name-only';
+  }[];
   created: ParsedRow[];
   skipped: { row: ParsedRow; reason: string }[];
   errors: string[];
@@ -244,13 +262,20 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           continue;
         }
 
-        // Match ƏSL: YALNIZ AD-A görə (case-insensitive)
-        const found = products.find((p) => {
-          const pname = norm(p.name?.az || p.name?.en || '');
-          return pname && pname === norm(row.name);
-        });
+        // Match: ad + brend birlikdə, smart fuzzy (≥88% oxşarlıq) — boşluq/karakter
+        // fərqlərinə tolerantdır. Köhnə yalnız tam-match məntiqi mövcud malları
+        // "yoxdur" hesab edirdi; indi bu problem həll olunur.
+        const match = findBestMatch(
+          row.name,
+          row.brand,
+          products as any,
+          0.88
+        );
+        const found = match
+          ? (products.find((p) => p.id === match.product.id) as Product | undefined)
+          : undefined;
 
-        if (found) {
+        if (found && match) {
           // Köhnə kateqoriya qorunur — fayldakı kateqoriya iqnor edilir
           const fileCatNorm = norm(row.category);
           const productCatNorm = norm(found.category);
@@ -265,6 +290,8 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             categoryMismatch,
             oldVisibility,
             visibilityChanged,
+            matchConfidence: match.confidence,
+            matchReason: match.reason,
           });
         } else {
           // Yeni məhsul — kateqoriya və brend sistemdə olmalıdır
@@ -307,6 +334,11 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
     if (!result) return;
     setApplying(true);
     try {
+      // Migration log üçün hər dəyişikliyin "köhnə + yeni" snapshot-unu toplayırıq.
+      // Rollback bu məlumatdan istifadə edib bazanı əvvəlki vəziyyətə qaytaracaq.
+      const logUpdates: MigrationUpdateEntry[] = [];
+      const logCreations: MigrationCreationEntry[] = [];
+
       // 1) Stok yenilənməsi — köhnə məlumatlar qorunur, yalnız `stock`
       //    (və faylda göstərilibsə `visibleTo`) dəyişir
       await Promise.all(
@@ -316,9 +348,23 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               ? Math.max(0, m.oldStock + m.newStock)
               : Math.max(0, m.newStock);
           const patch: Record<string, any> = { stock: finalStock };
+          const oldValues: Record<string, any> = { stock: m.oldStock };
+          const newValues: Record<string, any> = { stock: finalStock };
           if (m.row.visibility !== null) {
             patch.visibleTo = m.row.visibility;
+            oldValues.visibleTo = m.oldVisibility;
+            newValues.visibleTo = m.row.visibility;
           }
+          // Migration log üçün toplayırıq
+          logUpdates.push({
+            productId: m.product.id,
+            productName:
+              (m.product.name as any)?.az ||
+              (m.product.name as any)?.en ||
+              String(m.product.name || ''),
+            oldValues,
+            newValues,
+          });
           return updateDoc(doc(db, 'products', m.product.id), patch);
         })
       );
@@ -326,7 +372,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       // 2) Yeni məhsullar
       for (const r of result.created) {
         const gender = ['men', 'women', 'unisex'].includes(r.gender) ? r.gender : 'unisex';
-        await addDoc(collection(db, 'products'), {
+        const newDocData = {
           name: { az: r.name, ru: r.name, en: r.name },
           description: { az: '', ru: '', en: '' },
           price: r.price || 0,
@@ -342,7 +388,38 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           stock: Math.max(0, r.stock),
           visibleTo: r.visibility ?? 'all',
           createdAt: new Date(),
+        };
+        const ref = await addDoc(collection(db, 'products'), newDocData);
+        logCreations.push({
+          productId: ref.id,
+          productName: r.name,
+          data: newDocData,
         });
+      }
+
+      // 3) Migration log-u saxla (yalnız əslində dəyişiklik edilibsə)
+      if (logUpdates.length > 0 || logCreations.length > 0) {
+        try {
+          const appliedBy =
+            (typeof window !== 'undefined' && localStorage.getItem('adminEmail')) ||
+            (typeof window !== 'undefined' && localStorage.getItem('userEmail')) ||
+            'admin';
+          await saveMigrationLog({
+            appliedBy,
+            fileName: fileRef.current?.files?.[0]?.name || 'unknown.xlsx',
+            summary: {
+              updatedCount: logUpdates.length,
+              createdCount: logCreations.length,
+              skippedCount: result.skipped.length,
+              stockMode,
+            },
+            updates: logUpdates,
+            creations: logCreations,
+          });
+        } catch (logErr) {
+          // Log saxlamaq alınmasa da, əsas migration uğurlu olub — istifadəçiyə xəbərdarlıq
+          console.warn('Migration log saxlamaq alınmadı:', logErr);
+        }
       }
 
       const parts: string[] = [];
@@ -503,8 +580,20 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               </p>
               <div className="max-h-60 overflow-y-auto border border-emerald-100 rounded-lg divide-y divide-gray-100 bg-white">
                 {result.updated.map((m, i) => (
-                  <div key={i} className="px-3 py-2 text-xs flex items-center gap-3" data-testid={`import-update-${i}`}>
-                    <span className="flex-1 truncate">{m.product.name?.az || m.product.name?.en}</span>
+                  <div key={i} className="px-3 py-2 text-xs flex items-center gap-3 flex-wrap" data-testid={`import-update-${i}`}>
+                    <span className="flex-1 truncate min-w-[200px]">
+                      {m.product.name?.az || m.product.name?.en}
+                      {m.matchReason !== 'exact' && (
+                        <span
+                          className="ml-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200"
+                          title={`Smart match (${Math.round(m.matchConfidence * 100)}% oxşar) — fayldakı ad: "${m.row.name}"`}
+                          data-testid={`import-update-fuzzy-${i}`}
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          {Math.round(m.matchConfidence * 100)}%
+                        </span>
+                      )}
+                    </span>
                     <span className="text-gray-500">{m.product.category}</span>
                     {m.categoryMismatch && (
                       <span className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200" title={`Faylda: ${m.row.category}`}>

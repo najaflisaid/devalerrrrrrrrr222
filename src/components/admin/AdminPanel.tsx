@@ -39,6 +39,7 @@ import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
+const ProductMigrationLog = React.lazy(() => import('./ProductMigrationLog'));
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -1659,9 +1660,12 @@ const AdminPanel: React.FC = () => {
 
             {/* Excel ilə stok miqrasiyası — yalnız düymə basıldıqda göstərilir */}
             {showMigration && !showAddProduct && (
-              <div className="mb-6">
+              <div className="mb-6 space-y-4">
                 <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Miqrasiya paneli yüklənir...</div>}>
                   <ProductExcelImport products={products} onDone={loadData} />
+                </React.Suspense>
+                <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">Jurnal yüklənir...</div>}>
+                  <ProductMigrationLog onChanged={loadData} />
                 </React.Suspense>
               </div>
             )}
