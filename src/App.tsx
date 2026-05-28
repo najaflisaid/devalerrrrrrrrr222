@@ -211,13 +211,50 @@ const AppContent: React.FC = () => {
       </div>
 
       <Suspense fallback={null}>
-        <AiChatWidgetGate />
-        <CampaignPopup />
+        <DeferredMount delayMs={1500}>
+          <AiChatWidgetGate />
+        </DeferredMount>
+        <DeferredMount delayMs={2500}>
+          <CampaignPopup />
+        </DeferredMount>
         {/* Admin üçün qlobal sifariş bildiriş səsi — admin hansı səhifədə olursa olsun çalışır */}
-        <AdminGlobalNotifications />
+        <DeferredMount delayMs={3000}>
+          <AdminGlobalNotifications />
+        </DeferredMount>
       </Suspense>
     </>
   );
+};
+
+/**
+ * DeferredMount — child komponentini ilk paint-dən sonra (requestIdleCallback
+ * və ya setTimeout fallback ilə) mount edir. Bu hero/məhsul kimi kritik
+ * məzmunun rendering-i ilə yarışmadan AI chat, kampaniya popup-ı və admin
+ * bildirişlərini sonradan yükləyir → First Contentful Paint sürətlənir.
+ */
+const DeferredMount: React.FC<{ children: React.ReactNode; delayMs?: number }> = ({
+  children,
+  delayMs = 1500,
+}) => {
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+    let timeoutId: number | undefined;
+    let idleId: number | undefined;
+    if (typeof ric === 'function') {
+      idleId = ric(() => setReady(true), { timeout: delayMs + 1000 });
+      timeoutId = window.setTimeout(() => setReady(true), delayMs);
+    } else {
+      timeoutId = window.setTimeout(() => setReady(true), delayMs);
+    }
+    return () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      if (idleId !== undefined && (window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(idleId);
+      }
+    };
+  }, [delayMs]);
+  return ready ? <>{children}</> : null;
 };
 
 // AI Chat is hidden for B2B users / admins / workers — only retail customers / guests see it
@@ -242,10 +279,19 @@ const AiChatWidgetGate: React.FC = () => {
 
 function App() {
   // Sayta giriş edən hər bir ziyarətçini gündəlik analitikaya əlavə et (sessiya başına 1 dəfə)
+  // — yüklənmə ilk paint-dən sonra (idle vaxtda) baş verir ki kritik render
+  // ilə yarışmasın.
   React.useEffect(() => {
-    import('./services/analyticsService').then(({ trackDailyVisit }) =>
-      trackDailyVisit().catch(() => undefined)
-    );
+    const run = () =>
+      import('./services/analyticsService').then(({ trackDailyVisit }) =>
+        trackDailyVisit().catch(() => undefined)
+      );
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+    if (typeof ric === 'function') {
+      ric(run, { timeout: 4000 });
+    } else {
+      window.setTimeout(run, 1500);
+    }
   }, []);
 
   return (

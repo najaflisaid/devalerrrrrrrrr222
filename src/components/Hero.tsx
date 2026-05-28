@@ -145,6 +145,8 @@ const Hero: React.FC = () => {
               className="absolute inset-0 w-full h-full object-cover object-center md:object-cover"
               style={{ objectPosition: 'center center' }}
               loading="eager"
+              fetchPriority="high"
+              decoding="sync"
               initial={{ scale: 1 }}
               animate={{ scale: 1 }}
               transition={{ duration: (current?.duration || 7), ease: 'linear' }}

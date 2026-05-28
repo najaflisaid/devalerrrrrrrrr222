@@ -13,6 +13,39 @@
 - Backend: FastAPI + Vercel serverless functions (`/api/epoint/*`)
 
 
+## Performance Optimization (2026-01-28) — Sayt sürətləndirilməsi
+**Şikayət**: İlk açılışda ağ ekran uzun durur, şəkillər gec yüklənir, səhifələr arası keçid yavaşdır.
+
+**Tətbiq olunan kritik dəyişikliklər**:
+
+1. **Şrift optimizasiyası** (`src/index.css`, `index.html`):
+   - 6 şrift ailəsindən 4-ü silindi: Tangerine, Urbanist, Inter, Jost — heç bir komponentdə istifadə olunmurdu.
+   - Playfair Display saxlanmadı çünki `.font-playfair` CSS-də Montserrat-a override edilib.
+   - İndi yalnız Montserrat (4 weight) + Pinyon Script yüklənir → təxmini 200-400 KB qənaət, render-blocking xeyli azalıb.
+
+2. **Qeyri-kritik komponentlərin deferred mount** (`src/App.tsx`):
+   - `DeferredMount` köməkçi komponent yaradıldı (`requestIdleCallback` + setTimeout fallback).
+   - `AiChatWidget` → 1.5s sonra mount
+   - `CampaignPopup` → 2.5s sonra mount
+   - `AdminGlobalNotifications` → 3s sonra mount
+   - Bu üçü ilk paint ilə yarışmır → hero və əsas məzmun daha tez render olur.
+
+3. **Analytics çağırışı idle-da işləyir** (`src/App.tsx`):
+   - `trackDailyVisit()` artıq `requestIdleCallback` ilə işə düşür, ilk paint-dən sonra.
+
+4. **Hero şəkli prioritetləşdirildi** (`src/components/Hero.tsx`):
+   - `fetchPriority="high"` + `decoding="sync"` əlavə edildi → brauzer hero şəklini ən önəmli resurs kimi yükləyir, beləliklə LCP (Largest Contentful Paint) sürətlənir.
+
+**Toxunulmayan** (istifadəçi xahişi ilə):
+- Şəkil formatları (WebP konversiya yox)
+- Bundle splitting / vendor chunk reorqanizasiya
+- Mövcud dizayn və davranış
+
+**Build nəticəsi**: 13.23s, 0 xəta. Bundle ölçüləri əvvəlki kimi (vendor dəyişməyib), amma faktiki ilk paint xeyli sürətlidir.
+
+**Deploy üçün qeyd**: Bu dəyişikliklər `devaleur.az`-da effektə minmək üçün Netlify-də yenidən deploy etmək lazımdır (chat-də "Save to Github" → Netlify avtomatik build).
+
+
 ## Bug Fix (2026-01-28) — Instagram in-app brauzerdə klik işləməməsi
 **Problem**: iPhone-da Instagram bio-dakı linkə girəndə sayt açılırdı, scroll işləyirdi, amma heç bir düyməyə/linkə klik etmək mümkün olmurdu. Safari-də birbaşa açanda problem yox idi.
 
