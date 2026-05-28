@@ -728,6 +728,57 @@ const MyOrdersPage: React.FC = () => {
                             ))}
                           </div>
 
+                          {/* Hədiyyə kartı kodları — müştəri özünə və ya
+                              başqasına hədiyyə kartı alıbsa, hər kart üçün
+                              paylaşma linki və WhatsApp düyməsi göstərilir.
+                              Beləliklə müştəri sonradan da kartı kiminsə ilə
+                              paylaşa bilər. */}
+                          {Array.isArray((order as any).giftCardCodes) && (order as any).giftCardCodes.length > 0 && (
+                            <div className="my-3 bg-gradient-to-br from-amber-50 to-rose-50 border border-amber-200 rounded-lg p-3" data-testid={`my-order-giftcards-${order.id}`}>
+                              <p className="text-xs font-semibold text-amber-900 flex items-center gap-1.5 mb-2">
+                                <Ticket className="h-3.5 w-3.5" />
+                                Hədiyyə Kartı Kodları
+                              </p>
+                              <div className="space-y-1.5">
+                                {(order as any).giftCardCodes.map((g: { code: string; amount: number }, gi: number) => {
+                                  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/gift-card/${g.code}`;
+                                  const waText = encodeURIComponent(`Sizə DE VALEUR hədiyyə kartı göndərildi! ${shareUrl}`);
+                                  return (
+                                    <div key={gi} className="flex flex-wrap items-center gap-2 bg-white border border-amber-100 rounded px-2.5 py-1.5">
+                                      <span className="font-mono text-sm font-semibold tracking-widest text-gray-900">{g.code}</span>
+                                      <span className="text-[11px] text-gray-500">· {g.amount.toFixed(0)} AZN</span>
+                                      <div className="ml-auto flex items-center gap-1">
+                                        <a
+                                          href={`https://wa.me/?text=${waText}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                                          data-testid={`my-order-giftcard-wa-${order.id}-${gi}`}
+                                        >
+                                          <MessageCircle className="h-3 w-3" />
+                                          WhatsApp
+                                        </a>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            try {
+                                              await navigator.clipboard.writeText(shareUrl);
+                                              alert('Hədiyyə kartı linki kopyalandı!');
+                                            } catch { /* noop */ }
+                                          }}
+                                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                                          data-testid={`my-order-giftcard-copy-${order.id}-${gi}`}
+                                        >
+                                          Linki kopyala
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-200">
                             <div className="text-sm">
                               <span className="text-gray-500">Cəmi: </span>

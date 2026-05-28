@@ -21,6 +21,7 @@ import {
   query,
   orderBy,
   Timestamp,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -29,6 +30,8 @@ export interface PromoCodeUsage {
   userEmail?: string;
   userName?: string;
   orderId?: string;
+  /** Gift card üçün — bu konkret istifadədə tutulan AZN məbləği */
+  amountUsed?: number;
   usedAt: any;
 }
 
@@ -37,6 +40,9 @@ export interface PromoCode {
   discount: number; // percent (0 if amount-based)
   type?: 'percent' | 'amount'; // default 'percent'
   amountAZN?: number; // fixed amount discount in AZN (only when type === 'amount')
+  /** Gift card üçün — hələ istifadə olunmamış qalan balans. İlkin = amountAZN.
+   * Hər qismən istifadədə azalır. 0-a düşəndə `used: true` olur. */
+  remainingAZN?: number;
   isGiftCard?: boolean; // true if generated from a gift-card purchase
   used: boolean;
   // 'single' = klassik birdəfəlik 6 rəqəmli kod (default)
@@ -148,7 +154,7 @@ export const validatePromoCode = async (
   userId?: string
 ): Promise<
   | { valid: true; type: 'percent'; discount: number }
-  | { valid: true; type: 'amount'; amountAZN: number }
+  | { valid: true; type: 'amount'; amountAZN: number; remainingAZN: number; isGiftCard: boolean }
   | { valid: false; reason: string }
 > => {
   const trimmed = (code || '').trim().toUpperCase();
@@ -188,7 +194,30 @@ export const validatePromoCode = async (
     return { valid: true, type: 'percent', discount: data.discount };
   }
 
-  // Klassik single-use kod
+  // Gift card / amount kod — `used` flag-ı tam istifadəni bildirir, lakin
+  // qismən istifadədən sonra `remainingAZN > 0` olsa hələ də etibarlıdır
+  if (data.type === 'amount') {
+    const remaining =
+      typeof data.remainingAZN === 'number' ? data.remainingAZN : (data.amountAZN || 0);
+    if (remaining <= 0 || data.used) {
+      return { valid: false, reason: 'Bu hədiyyə kartının balansı bitib' };
+    }
+    // Konkret müştəriyə təyin olunmuş kart yalnız o müştəri üçün
+    if (data.assignedTo?.userId) {
+      if (!userId || data.assignedTo.userId !== userId) {
+        return { valid: false, reason: 'Bu hədiyyə kartı sizə təyin olunmayıb' };
+      }
+    }
+    return {
+      valid: true,
+      type: 'amount',
+      amountAZN: data.amountAZN || 0,
+      remainingAZN: remaining,
+      isGiftCard: !!data.isGiftCard,
+    };
+  }
+
+  // Klassik single-use percent kod
   if (data.used) {
     return { valid: false, reason: 'Bu promo kod artıq istifadə olunub' };
   }
@@ -200,9 +229,6 @@ export const validatePromoCode = async (
         reason: 'Bu promo kod sizə təyin olunmayıb',
       };
     }
-  }
-  if (data.type === 'amount') {
-    return { valid: true, type: 'amount', amountAZN: data.amountAZN || 0 };
   }
   return { valid: true, type: 'percent', discount: data.discount };
 };
@@ -237,6 +263,7 @@ export const createGiftCardPromoCode = async (
       discount: 0,
       type: 'amount',
       amountAZN: +amountAZN.toFixed(2),
+      remainingAZN: +amountAZN.toFixed(2),
       isGiftCard: true,
       used: false,
       createdAt: Timestamp.now(),
@@ -270,7 +297,9 @@ export const createGiftCardPromoCode = async (
 };
 
 // Hədiyyə kartı kodunu public olaraq oxumaq üçün — `/gift-card/[code]` səhifəsi istifadə edir.
-// Yalnız isGiftCard=true olan kodları qaytarır; başqa kod tapılsa null qaytarır.
+// Yalnız isGiftCard=true olan kodları qaytarır. `used: true` olsa belə qaytarılır
+// ki, paylaşma səhifəsində kartın "istifadə olunub" vəziyyəti göstərilsin və
+// qismən istifadədən sonra qalan balans görünsün.
 export const getGiftCardByCode = async (code: string): Promise<PromoCode | null> => {
   try {
     const ref = doc(db, COLLECTION, code);
@@ -278,6 +307,11 @@ export const getGiftCardByCode = async (code: string): Promise<PromoCode | null>
     if (!snap.exists()) return null;
     const data = snap.data() as PromoCode;
     if (!data.isGiftCard) return null;
+    // Köhnə kartlarda remainingAZN olmaya bilər — backward-compatibility:
+    // əgər used=false amma remainingAZN yoxdursa, amountAZN-i qalan kimi qəbul et.
+    if (data.remainingAZN === undefined) {
+      data.remainingAZN = data.used ? 0 : (data.amountAZN || 0);
+    }
     return data;
   } catch (err) {
     console.error('getGiftCardByCode error:', err);
@@ -310,60 +344,121 @@ export const getUserAssignedCodes = async (userId: string): Promise<PromoCode[]>
 
 /**
  * Sifariş zamanı kodu istifadə olundu kimi qeyd edir.
- * Yarış vəziyyətinə (race condition) qarşı: əvvəlcə oxuyur, sonra yenidən yoxlayır və yazır.
+ *
+ * ✅ THREAD-SAFE (Firestore transaction): iki müştəri eyni anda klikləsə,
+ * yalnız BİRİ uğurla redeem edir, digərinə "artıq istifadə olunub" və ya
+ * "balans kifayət etmir" xətası atılır.
+ *
+ * Gift card (`type: 'amount'`) üçün qismən istifadəni dəstəkləyir:
+ *  - `amountToConsume` verilsə, kartdan həmin qədər tutulur (qalan balans azalır).
+ *  - Verilməsə, bütün qalan balans tutulur (default — backward compat).
+ *  - Balans 0-a düşəndə `used: true` qoyulur.
  */
 export const redeemPromoCode = async (
   code: string,
-  redeemedBy: { userId?: string; userEmail?: string; userName?: string; orderId?: string }
-): Promise<void> => {
+  redeemedBy: {
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
+    orderId?: string;
+    /** Yalnız gift card üçün — bu sifarişdə kartdan tutulacaq AZN məbləği.
+     * Verilməsə, kartın tam balansı (remainingAZN) tutulur. */
+    amountToConsume?: number;
+  }
+): Promise<{ amountUsed?: number; remainingAfter?: number }> => {
   const trimmed = (code || '').trim().toUpperCase();
   const ref = doc(db, COLLECTION, trimmed);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    throw new Error('Promo kod tapılmadı');
-  }
-  const data = snap.data() as PromoCode;
 
-  // Kampaniya kodu: usageCount artır, usageHistory-a əlavə et
-  if (data.kind === 'campaign') {
-    const limit = data.usageLimit || 0;
-    const count = data.usageCount || 0;
-    if (limit > 0 && count >= limit) {
-      throw new Error('Bu promo kodun istifadə limiti dolub');
+  return await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) {
+      throw new Error('Promo kod tapılmadı');
     }
-    const newCount = count + 1;
-    const history: PromoCodeUsage[] = Array.isArray(data.usageHistory) ? data.usageHistory : [];
-    history.push({
-      userId: redeemedBy.userId || '',
-      userEmail: redeemedBy.userEmail || '',
-      userName: redeemedBy.userName || '',
-      orderId: redeemedBy.orderId || '',
+    const data = snap.data() as PromoCode;
+
+    // ───── Kampaniya kodu ─────
+    if (data.kind === 'campaign') {
+      const limit = data.usageLimit || 0;
+      const count = data.usageCount || 0;
+      if (limit > 0 && count >= limit) {
+        throw new Error('Bu promo kodun istifadə limiti dolub');
+      }
+      const newCount = count + 1;
+      const history: PromoCodeUsage[] = Array.isArray(data.usageHistory) ? data.usageHistory : [];
+      history.push({
+        userId: redeemedBy.userId || '',
+        userEmail: redeemedBy.userEmail || '',
+        userName: redeemedBy.userName || '',
+        orderId: redeemedBy.orderId || '',
+        usedAt: Timestamp.now(),
+      });
+      const update: any = { usageCount: newCount, usageHistory: history };
+      if (limit > 0 && newCount >= limit) {
+        update.used = true;
+      }
+      tx.update(ref, update);
+      return {};
+    }
+
+    // ───── Gift card / amount kod ─────
+    if (data.type === 'amount') {
+      const currentRemaining =
+        typeof data.remainingAZN === 'number'
+          ? data.remainingAZN
+          : (data.amountAZN || 0);
+      if (data.used || currentRemaining <= 0) {
+        throw new Error('Bu hədiyyə kartının balansı bitib');
+      }
+      // Tutulacaq məbləğ: explicit verilibsə onu, yoxsa tam qalan balansı.
+      const requested =
+        typeof redeemedBy.amountToConsume === 'number'
+          ? redeemedBy.amountToConsume
+          : currentRemaining;
+      if (requested <= 0) {
+        throw new Error('Tutulacaq məbləğ 0-dan böyük olmalıdır');
+      }
+      const consumed = +Math.min(requested, currentRemaining).toFixed(2);
+      const newRemaining = +Math.max(0, currentRemaining - consumed).toFixed(2);
+      const history: PromoCodeUsage[] = Array.isArray(data.usageHistory) ? data.usageHistory : [];
+      history.push({
+        userId: redeemedBy.userId || '',
+        userEmail: redeemedBy.userEmail || '',
+        userName: redeemedBy.userName || '',
+        orderId: redeemedBy.orderId || '',
+        amountUsed: consumed,
+        usedAt: Timestamp.now(),
+      });
+      const update: any = {
+        remainingAZN: newRemaining,
+        usageHistory: history,
+      };
+      if (newRemaining <= 0) {
+        update.used = true;
+        update.usedBy = {
+          userId: redeemedBy.userId || '',
+          userEmail: redeemedBy.userEmail || '',
+          orderId: redeemedBy.orderId || '',
+        };
+        update.usedAt = Timestamp.now();
+      }
+      tx.update(ref, update);
+      return { amountUsed: consumed, remainingAfter: newRemaining };
+    }
+
+    // ───── Klassik single-use percent kod ─────
+    if (data.used) {
+      throw new Error('Bu promo kod artıq istifadə olunub');
+    }
+    tx.update(ref, {
+      used: true,
+      usedBy: {
+        userId: redeemedBy.userId || '',
+        userEmail: redeemedBy.userEmail || '',
+        orderId: redeemedBy.orderId || '',
+      },
       usedAt: Timestamp.now(),
     });
-    const update: any = {
-      usageCount: newCount,
-      usageHistory: history,
-    };
-    // Limit dolarsa "used" kimi işarələ (yenidən istifadə oluna bilməsin)
-    if (limit > 0 && newCount >= limit) {
-      update.used = true;
-    }
-    await updateDoc(ref, update);
-    return;
-  }
-
-  // Klassik single-use kod
-  if (data.used) {
-    throw new Error('Bu promo kod artıq istifadə olunub');
-  }
-  await updateDoc(ref, {
-    used: true,
-    usedBy: {
-      userId: redeemedBy.userId || '',
-      userEmail: redeemedBy.userEmail || '',
-      orderId: redeemedBy.orderId || '',
-    },
-    usedAt: Timestamp.now(),
+    return {};
   });
 };
 

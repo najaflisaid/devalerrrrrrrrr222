@@ -59,7 +59,7 @@ const CartPage: React.FC = () => {
   const [promoInput, setPromoInput] = useState('');
   const [promoApplied, setPromoApplied] = useState<
     | { code: string; type: 'percent'; discount: number }
-    | { code: string; type: 'amount'; amountAZN: number }
+    | { code: string; type: 'amount'; amountAZN: number; remainingAZN: number; isGiftCard: boolean }
     | null
   >(null);
   const [promoError, setPromoError] = useState('');
@@ -238,7 +238,8 @@ const CartPage: React.FC = () => {
     const baseItems = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
     if (!promoApplied) return baseItems;
     if (promoApplied.type === 'amount') {
-      return Math.max(0, +(baseItems - promoApplied.amountAZN).toFixed(2));
+      // Gift card: yalnız qalan balans qədər tutula bilər
+      return Math.max(0, +(baseItems - promoApplied.remainingAZN).toFixed(2));
     }
     return +(baseItems * (1 - promoApplied.discount / 100)).toFixed(2);
   };
@@ -247,7 +248,7 @@ const CartPage: React.FC = () => {
     if (!promoApplied) return 0;
     const baseItems = userDiscount > 0 ? getDiscountedTotal() : getTotalPrice();
     if (promoApplied.type === 'amount') {
-      return Math.min(promoApplied.amountAZN, baseItems);
+      return Math.min(promoApplied.remainingAZN, baseItems);
     }
     return +(baseItems * (promoApplied.discount / 100)).toFixed(2);
   };
@@ -265,7 +266,13 @@ const CartPage: React.FC = () => {
       const res = await validatePromoCode(code, userId);
       if (res.valid) {
         if (res.type === 'amount') {
-          setPromoApplied({ code, type: 'amount', amountAZN: res.amountAZN });
+          setPromoApplied({
+            code,
+            type: 'amount',
+            amountAZN: res.amountAZN,
+            remainingAZN: res.remainingAZN,
+            isGiftCard: res.isGiftCard,
+          });
         } else {
           setPromoApplied({ code, type: 'percent', discount: res.discount });
         }
@@ -599,12 +606,55 @@ const CartPage: React.FC = () => {
       });
 
       if (promoApplied) {
+        // Gift card üçün qismən istifadə: yalnız faktiki tutulmuş AZN
+        // miqdarını kartdan azaldırıq. Beləliklə 300 AZN kartdan 200 AZN
+        // sifariş üçün 200 AZN tutulur, 100 AZN qalır → eyni kodla növbəti
+        // sifarişdə istifadə oluna bilər.
+        const amountToConsume =
+          promoApplied.type === 'amount' ? promoDiscountAmt : undefined;
         redeemPromoCode(promoApplied.code, {
           userId,
           userEmail,
           userName,
           orderId,
+          amountToConsume,
         }).catch((e) => console.warn('Promo kod redeem xətası:', e));
+      }
+
+      // ───── Gift card tam ödəyir → Epoint açma, birbaşa uğurla bağla ─────
+      // Sifariş məbləği gift card balansından çıxarıldıqdan sonra 0-a düşürsə,
+      // Epoint widget-i göstərməyə ehtiyac yoxdur. Sifariş "paid" olaraq
+      // yaradılır və müştəri ödəniş uğurlu səhifəsinə yönləndirilir.
+      if (
+        total <= 0.01 &&
+        promoApplied &&
+        promoApplied.type === 'amount' &&
+        promoApplied.isGiftCard
+      ) {
+        // sessionStorage-da order_id-ni saxlayırıq ki, PaymentSuccessPage
+        // bunu finalize edə bilsin (gift card kodları paylaşma linkləri,
+        // sifariş statusu, vs.).
+        // QEYD: removeItem etmirik — PaymentSuccessPage özü təmizləyəcək.
+        // Sifariş statusunu da background-da `paid` qoyuruq (idempotent —
+        // PaymentSuccess yenidən qoysa da problem yoxdur).
+        orderWritePromise
+          .then(async () => {
+            const { doc: fsDoc, updateDoc: fsUpdate, Timestamp: FsTs } = await import('firebase/firestore');
+            const { db: fsDb } = await import('../lib/firebase');
+            await fsUpdate(fsDoc(fsDb, 'customer_orders', orderId), {
+              paymentStatus: 'paid',
+              paymentMethod: 'gift_card',
+              giftCardCode: promoApplied.code,
+              giftCardAmountUsed: promoDiscountAmt,
+              paidAt: FsTs.now(),
+            }).catch((e) => console.warn('mark paid failed:', e));
+          })
+          .catch(() => undefined);
+        clearCart();
+        // PaymentSuccessPage özü qalan iş axınını idarə edir
+        navigate(`/payment/success?order_id=${encodeURIComponent(orderId)}&giftcard=1`);
+        setLoading(false);
+        return;
       }
 
       try {

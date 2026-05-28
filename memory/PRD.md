@@ -13,6 +13,57 @@
 - Backend: FastAPI + Vercel serverless functions (`/api/epoint/*`)
 
 
+## Feature (2026-01-28) — Hədiyyə Kartı Sistemi Təkmilləşdirildi
+
+**Tələblər**:
+1. `/gift-card/:code` səhifəsində UI dəyişiklikləri (Premium Gift → Hədiyyə, logo əlavə, Sevgili → Hörmətli).
+2. Qismən istifadə dəstəyi — kart 300 AZN, sifariş 200 AZN olarsa 100 AZN qalsın və göstərilsin.
+3. Sifariş kart ilə tam ödənirsə Epoint açılmasın, birbaşa uğurlu səhifə.
+4. Adi müştəri hədiyyə kartı aldıqda da paylaşma linki ala bilsin.
+5. Concurrent access — 2 nəfər eyni anda istifadə edə bilməsin (Firestore transaction).
+
+**Tətbiq olunan dəyişikliklər**:
+
+### Backend / Service (`src/services/promoCodeService.ts`)
+- `PromoCode` interface-inə yeni `remainingAZN` field-i (qalan balans, ilkin = `amountAZN`).
+- `usageHistory` entry-də gift card üçün `amountUsed` field-i (hər istifadədə neçə AZN tutuldu).
+- `validatePromoCode` artıq `remainingAZN` və `isGiftCard` qaytarır → cart bilir ki, qismən istifadə dəstəkləyən kartdır.
+- `getGiftCardByCode` `used: true` kartları da qaytarır (paylaşma səhifəsində "tam istifadə olunub" göstərilməsi üçün).
+- **`redeemPromoCode` tamamilə Firestore `runTransaction` ilə yenidən yazıldı** → atomic read-modify-write. İki müştəri eyni anda klikləsə, yalnız BİRİ uğurla redeem edir.
+- Gift card-da qismən tutma: `redeemPromoCode(..., { amountToConsume })` parametri əlavə olundu.
+
+### UI — `src/pages/GiftCardSharePage.tsx` (tam yenidən yazıldı)
+- "Premium Gift" → **"Hədiyyə"**.
+- DE VALEUR brendinin yanında **logo şəkli** (dairə fonunda, ağ filter).
+- "Sevgili" → **"Hörmətli"**.
+- Qismən istifadədən sonra: **"Qalan Balans"** + "İstifadə olunub: X AZN · Qalan: Y AZN" badge.
+- Kart tam istifadə olunubsa: "Kart tam istifadə olunub" red badge + kod üstündən xətt çəkilir.
+
+### Cart (`src/pages/CartPage.tsx`)
+- `promoApplied` tipinə `remainingAZN` + `isGiftCard` field-ləri.
+- Endirim hesablanmasında `Math.min(remainingAZN, baseItems)` istifadə olunur.
+- Apply zamanı `amountToConsume = promoDiscountAmt` ötürülür → kartdan yalnız faktiki tutulan azalır, qalan saxlanılır.
+- **Gift card sifariş ümumi məbləğini tam ödəyirsə (`total <= 0.01`):**
+  - `sessionStorage`-da pending order ID qalır.
+  - Sifariş arxa fonda `paymentStatus: 'paid'`, `paymentMethod: 'gift_card'` ilə update olunur.
+  - Səbət təmizlənir, müştəri birbaşa `/payment/success?order_id=...&giftcard=1`-ə yönləndirilir.
+  - **Epoint widget heç açılmır** — istifadəçi tələbinə uyğun.
+
+### MyOrdersPage (`src/pages/MyOrdersPage.tsx`)
+- Hər sifariş üçün `giftCardCodes` field-i varsa, aşağıda hər kart üçün:
+  - Kod (mono font), məbləğ.
+  - **WhatsApp** düyməsi → `/gift-card/[code]` linkini paylaşır.
+  - **"Linki kopyala"** düyməsi → URL-i clipboard-a yazır.
+- Beləliklə adi müştəri də sonradan kart linkini başqasına göndərə bilər.
+
+**Təhlükəsizlik xülasəsi**:
+- Firestore transaction → race condition həll olunub.
+- Sifariş tam paid statusda yaranır → reklamda göstərilən qiyməti dəyişmək mümkün deyil (server-side validation).
+- Gift card balansı serverdə (Firestore) — frontend manipulyasiya edə bilməz.
+
+**Build**: 12.98s, 0 xəta ✅
+
+
 ## Feature (2026-01-28) — Smart Məhsul Miqrasiyası + Jurnal/Rollback
 
 **Tələblər**:
