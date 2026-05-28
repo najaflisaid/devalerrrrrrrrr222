@@ -122,27 +122,24 @@ const GiftCardSharePage: React.FC = () => {
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl" />
 
           <div className="relative">
-            {/* Brand — logo şəkli + brend adı */}
+            {/* Brand — yalnız mərkəzləşdirilmiş logo, dairəsiz və adsiz */}
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 border border-amber-700/40 backdrop-blur-sm">
-                  <img
-                    src={DEVALEUR_LOGO}
-                    alt="DE VALEUR"
-                    className="w-9 h-9 object-contain"
-                    style={{ filter: 'brightness(0) invert(1)' }}
-                    data-testid="gift-card-logo"
-                  />
-                </span>
-                <div>
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-amber-300/80 mb-0.5">
-                    Hədiyyə
-                  </p>
-                  <p className="text-base font-semibold tracking-[0.2em] text-white">DE VALEUR</p>
-                </div>
+              <div className="flex-1 flex justify-center">
+                <img
+                  src={DEVALEUR_LOGO}
+                  alt="DE VALEUR"
+                  className="h-12 object-contain"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                  data-testid="gift-card-logo"
+                />
               </div>
-              <Gift className="h-7 w-7 text-amber-400" />
+              <Gift className="h-7 w-7 text-amber-400 flex-shrink-0 absolute right-8 top-8" />
             </div>
+
+            {/* "HƏDİYYƏ" başlığı */}
+            <p className="text-[11px] tracking-[0.4em] uppercase text-amber-300/80 text-center mb-6">
+              Hədiyyə
+            </p>
 
             {/* Personal message */}
             <div className="text-center mb-6">
