@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Inbox, Send, Bot, PowerOff as BotOff, RefreshCw, Save, Eye, EyeOff, Sparkles,
-  MessageSquare, Instagram, AlertCircle, CheckCircle2, Copy, Settings as SettingsIcon,
-  Search, User, ShieldCheck, Loader2, Wand2,
+  MessageSquare, Instagram, AlertCircle, CheckCircle2, Copy,
+  Settings as SettingsIcon, Search, ShieldCheck, Loader2, Wand2,
 } from 'lucide-react';
-
-const BACKEND_URL =
-  (import.meta as any).env?.VITE_BACKEND_URL ||
-  (import.meta as any).env?.REACT_APP_BACKEND_URL ||
-  '';
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  query,
+  orderBy,
+  updateDoc,
+} from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 interface Conversation {
   id: string;
@@ -19,7 +24,7 @@ interface Conversation {
   last_message: string;
   last_direction: 'inbound' | 'outbound';
   unread_count: number;
-  updated_at?: string | null;
+  updated_at?: any;
 }
 
 interface InboxMessage {
@@ -27,29 +32,62 @@ interface InboxMessage {
   direction: 'inbound' | 'outbound';
   text: string;
   by: 'customer' | 'ai' | 'admin';
-  created_at?: string | null;
+  created_at?: any;
 }
 
 interface AiInboxConfig {
   global_enabled: boolean;
   wa_enabled: boolean;
   ig_enabled: boolean;
-  provider: string;
+  provider: string;          // 'openai' | 'anthropic' | 'gemini'
   model: string;
   use_custom_key: boolean;
-  has_custom_key: boolean;
-  custom_api_key_masked: string;
+  custom_api_key: string;
   persona: string;
   instagram_page_id: string;
-  has_instagram_token: boolean;
-  instagram_token_masked: string;
+  instagram_access_token: string;
   instagram_api_version: string;
+  whatsapp_phone_id: string;
+  whatsapp_access_token: string;
+  whatsapp_api_version: string;
   meta_verify_token: string;
-  has_meta_app_secret: boolean;
-  webhook_urls: { whatsapp: string; instagram: string };
-  allowed_models: Record<string, string[]>;
-  firebase_ready: boolean;
+  meta_app_secret: string;
 }
+
+const DEFAULT_PERSONA =
+  'Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi WhatsApp/Instagram müştəri xidmətləri köməkçisisən. ' +
+  'Müştərilərə Azərbaycan dilində (və ya yazıldığı dildə) mehriban, peşəkar və qısa cavab ver. ' +
+  'Saat brendləri, ödəniş, çatdırılma, qaytarma haqqında kömək et. Konkret məhsul soruşulsa, müştərini saytımıza yönləndir: https://devaleur.az. ' +
+  'Cavablar maks 3-4 cümlə olsun, robot kimi deyil, təbii danışıq tonunda.';
+
+const DEFAULT_CFG: AiInboxConfig = {
+  global_enabled: false,
+  wa_enabled: true,
+  ig_enabled: true,
+  provider: 'openai',
+  model: 'gpt-4o-mini',
+  use_custom_key: false,
+  custom_api_key: '',
+  persona: DEFAULT_PERSONA,
+  instagram_page_id: '',
+  instagram_access_token: '',
+  instagram_api_version: 'v22.0',
+  whatsapp_phone_id: '',
+  whatsapp_access_token: '',
+  whatsapp_api_version: 'v22.0',
+  meta_verify_token: 'devaleur-meta-2026',
+  meta_app_secret: '',
+};
+
+const ALLOWED_MODELS: Record<string, string[]> = {
+  openai: ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
+  anthropic: [
+    'claude-sonnet-4-5-20250929',
+    'claude-opus-4-1-20250805',
+    'claude-haiku-4-5',
+  ],
+  gemini: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+};
 
 const PROVIDER_LABEL: Record<string, string> = {
   openai: 'OpenAI (GPT)',
@@ -57,32 +95,38 @@ const PROVIDER_LABEL: Record<string, string> = {
   gemini: 'Google (Gemini)',
 };
 
+const maskToken = (t: string) => {
+  if (!t) return '';
+  return t.length > 4 ? '•'.repeat(6) + t.slice(-4) : '••••';
+};
+
+const buildWebhookUrls = () => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return {
+    whatsapp: `${origin}/api/webhooks/whatsapp`,
+    instagram: `${origin}/api/webhooks/instagram`,
+  };
+};
+
 const AiInboxTab: React.FC = () => {
-  const [adminSecret] = useState<string>(
-    () => localStorage.getItem('adminApiSecret') || 'devaleur-admin-2026'
-  );
   const [activeSection, setActiveSection] = useState<'inbox' | 'settings' | 'setup'>('inbox');
-  const [config, setConfig] = useState<AiInboxConfig | null>(null);
+  const [cfg, setCfg] = useState<AiInboxConfig>(DEFAULT_CFG);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filterPlatform, setFilterPlatform] = useState<'all' | 'whatsapp' | 'instagram'>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [replyText, setReplyText] = useState('');
-  const [loadingConvs, setLoadingConvs] = useState(false);
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const webhookUrls = useMemo(buildWebhookUrls, []);
 
-  // Settings form state
-  const [form, setForm] = useState<Partial<AiInboxConfig> & {
-    custom_api_key?: string;
-    instagram_access_token?: string;
-    meta_app_secret?: string;
-  }>({});
+  // Form state for settings
+  const [form, setForm] = useState<AiInboxConfig>(DEFAULT_CFG);
   const [showKey, setShowKey] = useState(false);
   const [showIgToken, setShowIgToken] = useState(false);
+  const [showWaToken, setShowWaToken] = useState(false);
   const [showAppSecret, setShowAppSecret] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -94,91 +138,81 @@ const AiInboxTab: React.FC = () => {
     setTimeout(() => setToast(null), 4500);
   };
 
-  // ---- Config -----------------------------------------------------------
-  const fetchConfig = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/ai-inbox/config`, {
-        headers: { 'X-Admin-Secret': adminSecret },
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setConfig(data);
-      setForm({
-        global_enabled: data.global_enabled,
-        wa_enabled: data.wa_enabled,
-        ig_enabled: data.ig_enabled,
-        provider: data.provider,
-        model: data.model,
-        use_custom_key: data.use_custom_key,
-        persona: data.persona,
-        instagram_page_id: data.instagram_page_id,
-        instagram_api_version: data.instagram_api_version,
-        meta_verify_token: data.meta_verify_token,
-      });
-    } catch (e: any) {
-      showToast(false, 'Konfiqurasiya yüklənmədi: ' + e.message);
-    }
-  };
-
-  const fetchConversations = async () => {
-    setLoadingConvs(true);
-    try {
-      const url =
-        filterPlatform === 'all'
-          ? `${BACKEND_URL}/api/admin/ai-inbox/conversations`
-          : `${BACKEND_URL}/api/admin/ai-inbox/conversations?platform=${filterPlatform}`;
-      const res = await fetch(url, { headers: { 'X-Admin-Secret': adminSecret } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setConversations(data || []);
-    } catch (e: any) {
-      showToast(false, 'Söhbətlər yüklənmədi: ' + e.message);
-    } finally {
-      setLoadingConvs(false);
-    }
-  };
-
-  const fetchMessages = async (convId: string) => {
-    setLoadingMsgs(true);
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/ai-inbox/conversations/${convId}/messages`,
-        { headers: { 'X-Admin-Secret': adminSecret } }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setMessages(data || []);
-      // Mark unread = 0 in local state
-      setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, unread_count: 0 } : c))
-      );
-    } catch (e: any) {
-      showToast(false, 'Mesajlar yüklənmədi: ' + e.message);
-    } finally {
-      setLoadingMsgs(false);
-    }
-  };
-
+  // ---- Subscribe to config (live) ---------------------------------------
   useEffect(() => {
-    fetchConfig();
-    fetchConversations();
-    // Auto refresh inbox every 10s
-    const interval = setInterval(() => {
-      if (activeSection === 'inbox') {
-        fetchConversations();
-        if (selectedId) fetchMessages(selectedId);
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterPlatform]);
+    const ref = doc(db, 'siteSettings', 'aiInbox');
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.exists() ? (snap.data() as Partial<AiInboxConfig>) : {};
+      const merged = { ...DEFAULT_CFG, ...data } as AiInboxConfig;
+      setCfg(merged);
+      setForm((prev) => {
+        // On first load just overwrite. After that, only refresh non-secret fields
+        if (prev === DEFAULT_CFG) return merged;
+        return {
+          ...prev,
+          global_enabled: merged.global_enabled,
+          wa_enabled: merged.wa_enabled,
+          ig_enabled: merged.ig_enabled,
+        };
+      });
+    });
+    return () => unsub();
+  }, []);
 
+  // ---- Subscribe to conversations (live) --------------------------------
   useEffect(() => {
-    if (selectedId) fetchMessages(selectedId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const ref = collection(db, 'aiInboxConversations');
+    const unsub = onSnapshot(ref, (snap) => {
+      const list: Conversation[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as any;
+        list.push({
+          id: data.id || d.id,
+          platform: data.platform || '',
+          user_external_id: data.user_external_id || '',
+          user_name: data.user_name || '',
+          ai_enabled: data.ai_enabled !== false,
+          last_message: data.last_message || '',
+          last_direction: data.last_direction || 'inbound',
+          unread_count: data.unread_count || 0,
+          updated_at: data.updated_at,
+        });
+      });
+      list.sort((a, b) => {
+        const ta = a.updated_at?.seconds || 0;
+        const tb = b.updated_at?.seconds || 0;
+        return tb - ta;
+      });
+      setConversations(list);
+    });
+    return () => unsub();
+  }, []);
+
+  // ---- Subscribe to messages of selected conversation -------------------
+  useEffect(() => {
+    if (!selectedId) {
+      setMessages([]);
+      return;
+    }
+    const msgsRef = collection(db, 'aiInboxConversations', selectedId, 'messages');
+    const q = query(msgsRef, orderBy('created_at', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const list: InboxMessage[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as any;
+        list.push({
+          id: data.id || d.id,
+          direction: data.direction || 'inbound',
+          text: data.text || '',
+          by: data.by || 'customer',
+          created_at: data.created_at,
+        });
+      });
+      setMessages(list);
+      // Mark as read (reset unread_count)
+      updateDoc(doc(db, 'aiInboxConversations', selectedId), { unread_count: 0 }).catch(() => undefined);
+    });
+    return () => unsub();
   }, [selectedId]);
 
   useEffect(() => {
@@ -186,84 +220,59 @@ const AiInboxTab: React.FC = () => {
   }, [messages]);
 
   // ---- Actions ----------------------------------------------------------
-  const sendReply = async () => {
-    if (!selectedId || !replyText.trim()) return;
-    setSending(true);
+  const saveSettings = async () => {
+    setSaving(true);
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/ai-inbox/conversations/${selectedId}/reply`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-          body: JSON.stringify({ text: replyText.trim() }),
-        }
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      setReplyText('');
-      await fetchMessages(selectedId);
-      await fetchConversations();
-      showToast(true, 'Mesaj göndərildi');
+      const payload: any = { ...form };
+      // Don't overwrite stored secrets with masked placeholder strings
+      if (!form.custom_api_key) delete payload.custom_api_key;
+      if (!form.instagram_access_token) delete payload.instagram_access_token;
+      if (!form.whatsapp_access_token) delete payload.whatsapp_access_token;
+      if (!form.meta_app_secret) delete payload.meta_app_secret;
+
+      const ref = doc(db, 'siteSettings', 'aiInbox');
+      await setDoc(ref, payload, { merge: true });
+      setForm((f) => ({
+        ...f,
+        custom_api_key: '',
+        instagram_access_token: '',
+        whatsapp_access_token: '',
+        meta_app_secret: '',
+      }));
+      showToast(true, 'Parametrlər yadda saxlanıldı');
     } catch (e: any) {
-      showToast(false, 'Göndərmə uğursuz oldu: ' + e.message);
+      showToast(false, 'Yadda saxlanılmadı: ' + (e?.message || e));
     } finally {
-      setSending(false);
+      setSaving(false);
     }
   };
 
   const toggleConvAi = async (convId: string, current: boolean) => {
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/ai-inbox/conversations/${convId}/toggle-ai`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-          body: JSON.stringify({ ai_enabled: !current }),
-        }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, ai_enabled: !current } : c))
-      );
+      await updateDoc(doc(db, 'aiInboxConversations', convId), { ai_enabled: !current });
       showToast(true, !current ? 'AI aktiv edildi' : 'AI dayandırıldı');
     } catch (e: any) {
-      showToast(false, 'Dəyişiklik baş tutmadı: ' + e.message);
+      showToast(false, 'Dəyişiklik baş tutmadı: ' + (e?.message || e));
     }
   };
 
-  const saveSettings = async () => {
-    setSaving(true);
+  const sendReply = async () => {
+    if (!selectedId || !replyText.trim()) return;
+    setSending(true);
     try {
-      const payload: any = { ...form };
-      // Only include secret fields if user actually entered new values
-      if (!payload.custom_api_key) delete payload.custom_api_key;
-      if (!payload.instagram_access_token) delete payload.instagram_access_token;
-      if (!payload.meta_app_secret) delete payload.meta_app_secret;
-
-      const res = await fetch(`${BACKEND_URL}/api/admin/ai-inbox/config`, {
+      const res = await fetch('/api/ai-inbox/reply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conv_id: selectedId, text: replyText.trim() }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setConfig(data);
-      setForm((f) => ({
-        ...f,
-        custom_api_key: '',
-        instagram_access_token: '',
-        meta_app_secret: '',
-      }));
-      showToast(true, 'Parametrlər yadda saxlanıldı');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setReplyText('');
+      showToast(true, 'Mesaj göndərildi');
     } catch (e: any) {
-      showToast(false, 'Yadda saxlanılmadı: ' + e.message);
+      showToast(false, 'Göndərmə uğursuz oldu: ' + (e?.message || e));
     } finally {
-      setSaving(false);
+      setSending(false);
     }
   };
 
@@ -271,21 +280,28 @@ const AiInboxTab: React.FC = () => {
     setTesting(true);
     setTestReply(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/ai-inbox/test`, {
+      const res = await fetch('/api/ai-inbox/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-        body: JSON.stringify({ text: testInput }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: testInput,
+          // Use the current form values (so admin can test before saving)
+          config: {
+            provider: form.provider,
+            model: form.model,
+            use_custom_key: form.use_custom_key,
+            custom_api_key: form.custom_api_key || undefined,
+            persona: form.persona,
+          },
+        }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setTestReply(data.reply || '(boş cavab)');
       showToast(true, 'AI cavab verdi');
     } catch (e: any) {
-      showToast(false, 'AI test uğursuz: ' + e.message);
-      setTestReply('Xəta: ' + e.message);
+      showToast(false, 'AI test uğursuz: ' + (e?.message || e));
+      setTestReply('Xəta: ' + (e?.message || e));
     } finally {
       setTesting(false);
     }
@@ -298,24 +314,23 @@ const AiInboxTab: React.FC = () => {
 
   // ---- Derived ----------------------------------------------------------
   const filteredConvs = useMemo(() => {
+    let list = conversations;
+    if (filterPlatform !== 'all') list = list.filter((c) => c.platform === filterPlatform);
     const term = search.trim().toLowerCase();
-    if (!term) return conversations;
-    return conversations.filter(
-      (c) =>
-        c.user_name?.toLowerCase().includes(term) ||
-        c.user_external_id?.toLowerCase().includes(term) ||
-        c.last_message?.toLowerCase().includes(term)
-    );
-  }, [conversations, search]);
+    if (term) {
+      list = list.filter(
+        (c) =>
+          c.user_name?.toLowerCase().includes(term) ||
+          c.user_external_id?.toLowerCase().includes(term) ||
+          c.last_message?.toLowerCase().includes(term)
+      );
+    }
+    return list;
+  }, [conversations, filterPlatform, search]);
 
   const selectedConv = conversations.find((c) => c.id === selectedId) || null;
+  const modelOptions = ALLOWED_MODELS[form.provider || 'openai'] || [];
 
-  const modelOptions = useMemo(() => {
-    if (!config) return [];
-    return config.allowed_models[form.provider || config.provider] || [];
-  }, [config, form.provider]);
-
-  // ---- Render -----------------------------------------------------------
   const renderPlatformIcon = (p: string, sz = 16) =>
     p === 'instagram' ? (
       <Instagram size={sz} className="text-pink-500" />
@@ -329,7 +344,9 @@ const AiInboxTab: React.FC = () => {
       {toast && (
         <div
           className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
-            toast.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+            toast.ok
+              ? 'bg-green-50 text-green-800 border border-green-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
           }`}
           data-testid="ai-inbox-toast"
         >
@@ -354,14 +371,14 @@ const AiInboxTab: React.FC = () => {
         <div className="flex items-center gap-2">
           <span
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-              config?.global_enabled
+              cfg.global_enabled
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : 'bg-gray-50 text-gray-600 border border-gray-200'
             }`}
             data-testid="ai-inbox-status-badge"
           >
-            {config?.global_enabled ? <Bot size={14} /> : <BotOff size={14} />}
-            AI {config?.global_enabled ? 'Aktiv' : 'Söndürülüb'}
+            {cfg.global_enabled ? <Bot size={14} /> : <BotOff size={14} />}
+            AI {cfg.global_enabled ? 'Aktiv' : 'Söndürülüb'}
           </span>
         </div>
       </div>
@@ -380,9 +397,7 @@ const AiInboxTab: React.FC = () => {
               key={t.id}
               onClick={() => setActiveSection(t.id)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                isActive
-                  ? 'border-indigo-600 text-indigo-700'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                isActive ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
               data-testid={`ai-inbox-section-${t.id}`}
             >
@@ -426,18 +441,9 @@ const AiInboxTab: React.FC = () => {
                   data-testid="inbox-search"
                 />
               </div>
-              <button
-                onClick={fetchConversations}
-                disabled={loadingConvs}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-60"
-                data-testid="inbox-refresh"
-              >
-                <RefreshCw size={12} className={loadingConvs ? 'animate-spin' : ''} />
-                Yenilə
-              </button>
             </div>
             <div className="flex-1 overflow-y-auto max-h-[60vh]">
-              {filteredConvs.length === 0 && !loadingConvs && (
+              {filteredConvs.length === 0 && (
                 <div className="p-6 text-center text-sm text-gray-500">
                   <Inbox size={24} className="mx-auto mb-2 text-gray-300" />
                   Söhbət yoxdur. Müştərilər mesaj yazanda burada görəcəksiniz.
@@ -473,9 +479,7 @@ const AiInboxTab: React.FC = () => {
                     <div className="flex items-center gap-2 mt-1.5">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                          c.ai_enabled
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-gray-100 text-gray-600'
+                          c.ai_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
                         }`}
                       >
                         {c.ai_enabled ? <Bot size={10} /> : <BotOff size={10} />}
@@ -529,12 +533,13 @@ const AiInboxTab: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 max-h-[55vh]">
-                  {loadingMsgs && messages.length === 0 && (
-                    <div className="text-center text-sm text-gray-400 py-8">Yüklənir…</div>
-                  )}
                   {messages.map((m) => {
                     const isOut = m.direction === 'outbound';
                     const byLabel = m.by === 'ai' ? 'AI' : m.by === 'admin' ? 'Admin' : '';
+                    let ts: string | null = null;
+                    if (m.created_at?.seconds) {
+                      ts = new Date(m.created_at.seconds * 1000).toLocaleString('az-AZ');
+                    }
                     return (
                       <div
                         key={m.id}
@@ -556,9 +561,9 @@ const AiInboxTab: React.FC = () => {
                             </div>
                           )}
                           <div className="whitespace-pre-wrap break-words">{m.text}</div>
-                          {m.created_at && (
+                          {ts && (
                             <div className={`text-[10px] mt-1 ${isOut ? 'text-white/60' : 'text-gray-400'}`}>
-                              {new Date(m.created_at).toLocaleString('az-AZ')}
+                              {ts}
                             </div>
                           )}
                         </div>
@@ -595,7 +600,7 @@ const AiInboxTab: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1.5">
-                    Bu söhbətdə AI {selectedConv.ai_enabled ? 'aktivdir' : 'söndürülüb'} — manual cavab AI-ı bir mesaj üçün əvəz edir
+                    Bu söhbətdə AI {selectedConv.ai_enabled ? 'aktivdir' : 'söndürülüb'} — manual cavab göndəririk
                   </p>
                 </div>
               </>
@@ -605,7 +610,7 @@ const AiInboxTab: React.FC = () => {
       )}
 
       {/* === SETTINGS === */}
-      {activeSection === 'settings' && config && (
+      {activeSection === 'settings' && (
         <div className="space-y-4">
           {/* Global toggles */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
@@ -643,7 +648,7 @@ const AiInboxTab: React.FC = () => {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="text-base font-semibold text-gray-900 mb-1">AI Model</h3>
             <p className="text-xs text-gray-500 mb-4">
-              Hansı AI modelinin cavab verəcəyini seçin. Default açar Emergent Universal LLM Key-dir.
+              Hansı AI modelinin cavab verəcəyini seçin. Default OpenAI açarı saytın chat sistemində istifadə olunan açardır.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -652,13 +657,13 @@ const AiInboxTab: React.FC = () => {
                   value={form.provider || 'openai'}
                   onChange={(e) => {
                     const p = e.target.value;
-                    const first = config.allowed_models[p]?.[0] || '';
+                    const first = ALLOWED_MODELS[p]?.[0] || '';
                     setForm({ ...form, provider: p, model: first });
                   }}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
                   data-testid="provider-select"
                 >
-                  {Object.keys(config.allowed_models).map((p) => (
+                  {Object.keys(ALLOWED_MODELS).map((p) => (
                     <option key={p} value={p}>
                       {PROVIDER_LABEL[p] || p}
                     </option>
@@ -670,7 +675,7 @@ const AiInboxTab: React.FC = () => {
                 <select
                   value={form.model || ''}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
                   data-testid="model-select"
                 >
                   {modelOptions.map((m) => (
@@ -699,16 +704,16 @@ const AiInboxTab: React.FC = () => {
                 <div className="mt-3">
                   <label className="text-xs text-gray-600 block mb-1">
                     API açarı{' '}
-                    {config.has_custom_key && (
+                    {cfg.custom_api_key && (
                       <span className="text-gray-400">
-                        (cari: {config.custom_api_key_masked})
+                        (cari: {maskToken(cfg.custom_api_key)})
                       </span>
                     )}
                   </label>
                   <div className="relative">
                     <input
                       type={showKey ? 'text' : 'password'}
-                      value={(form as any).custom_api_key || ''}
+                      value={form.custom_api_key || ''}
                       onChange={(e) => setForm({ ...form, custom_api_key: e.target.value })}
                       placeholder="sk-... və ya hər hansı API açarı"
                       className="w-full pr-9 px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
@@ -723,7 +728,7 @@ const AiInboxTab: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Açar üzərindəki provayderə uyğun olmalıdır (OpenAI üçün OpenAI açarı, və s.).
+                    Açar seçilmiş provayderə uyğun olmalıdır (OpenAI üçün OpenAI açarı, Anthropic üçün Claude açarı, və s.).
                   </p>
                 </div>
               )}
@@ -743,6 +748,63 @@ const AiInboxTab: React.FC = () => {
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
               data-testid="persona-input"
             />
+          </div>
+
+          {/* WhatsApp credentials */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <MessageSquare size={16} className="text-green-600" /> WhatsApp
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              WhatsApp Cloud API (Meta) credentials. Əgər boş qalsa, mövcud Admin → WhatsApp tab-ından oxunur.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Phone Number ID</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_phone_id || ''}
+                  onChange={(e) => setForm({ ...form, whatsapp_phone_id: e.target.value })}
+                  placeholder="məs. 123456789012345"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  data-testid="wa-phone-id"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">API version</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_api_version || 'v22.0'}
+                  onChange={(e) => setForm({ ...form, whatsapp_api_version: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-xs font-medium text-gray-700 block mb-1">
+                Permanent Access Token{' '}
+                {cfg.whatsapp_access_token && (
+                  <span className="text-gray-400">(cari: {maskToken(cfg.whatsapp_access_token)})</span>
+                )}
+              </label>
+              <div className="relative">
+                <input
+                  type={showWaToken ? 'text' : 'password'}
+                  value={form.whatsapp_access_token || ''}
+                  onChange={(e) => setForm({ ...form, whatsapp_access_token: e.target.value })}
+                  placeholder="EAA..."
+                  className="w-full pr-9 px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  data-testid="wa-token-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowWaToken(!showWaToken)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showWaToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Instagram credentials */}
@@ -772,9 +834,7 @@ const AiInboxTab: React.FC = () => {
                 <input
                   type="text"
                   value={form.instagram_api_version || 'v22.0'}
-                  onChange={(e) =>
-                    setForm({ ...form, instagram_api_version: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, instagram_api_version: e.target.value })}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 />
               </div>
@@ -782,14 +842,14 @@ const AiInboxTab: React.FC = () => {
             <div className="mt-3">
               <label className="text-xs font-medium text-gray-700 block mb-1">
                 Page Access Token{' '}
-                {config.has_instagram_token && (
-                  <span className="text-gray-400">(cari: {config.instagram_token_masked})</span>
+                {cfg.instagram_access_token && (
+                  <span className="text-gray-400">(cari: {maskToken(cfg.instagram_access_token)})</span>
                 )}
               </label>
               <div className="relative">
                 <input
                   type={showIgToken ? 'text' : 'password'}
-                  value={(form as any).instagram_access_token || ''}
+                  value={form.instagram_access_token || ''}
                   onChange={(e) => setForm({ ...form, instagram_access_token: e.target.value })}
                   placeholder="EAA..."
                   className="w-full pr-9 px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
@@ -826,14 +886,14 @@ const AiInboxTab: React.FC = () => {
               <div>
                 <label className="text-xs font-medium text-gray-700 block mb-1">
                   App Secret{' '}
-                  {config.has_meta_app_secret && (
+                  {cfg.meta_app_secret && (
                     <span className="text-gray-400">(təyin edilib)</span>
                   )}
                 </label>
                 <div className="relative">
                   <input
                     type={showAppSecret ? 'text' : 'password'}
-                    value={(form as any).meta_app_secret || ''}
+                    value={form.meta_app_secret || ''}
                     onChange={(e) => setForm({ ...form, meta_app_secret: e.target.value })}
                     placeholder="Meta app secret"
                     className="w-full pr-9 px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-200"
@@ -851,7 +911,7 @@ const AiInboxTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Save + Test */}
+          {/* Save */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={saveSettings}
@@ -863,12 +923,12 @@ const AiInboxTab: React.FC = () => {
               Yadda saxla
             </button>
             <button
-              onClick={fetchConfig}
+              onClick={() => setForm(cfg)}
               className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
               data-testid="reload-settings-btn"
             >
               <RefreshCw size={16} />
-              Yenidən yüklə
+              Sıfırla
             </button>
           </div>
 
@@ -908,7 +968,7 @@ const AiInboxTab: React.FC = () => {
       )}
 
       {/* === SETUP guide === */}
-      {activeSection === 'setup' && config && (
+      {activeSection === 'setup' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="text-base font-semibold text-gray-900 mb-3">Webhook URL-ləri</h3>
@@ -917,8 +977,8 @@ const AiInboxTab: React.FC = () => {
             </p>
             <div className="space-y-2">
               {[
-                { label: 'WhatsApp', icon: MessageSquare, url: config.webhook_urls.whatsapp, color: 'text-green-600' },
-                { label: 'Instagram', icon: Instagram, url: config.webhook_urls.instagram, color: 'text-pink-600' },
+                { label: 'WhatsApp', icon: MessageSquare, url: webhookUrls.whatsapp, color: 'text-green-600' },
+                { label: 'Instagram', icon: Instagram, url: webhookUrls.instagram, color: 'text-pink-600' },
               ].map((w) => {
                 const Icon = w.icon;
                 return (
@@ -939,9 +999,9 @@ const AiInboxTab: React.FC = () => {
               <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                 <ShieldCheck size={16} className="text-indigo-600" />
                 <span className="text-sm font-medium text-gray-700 w-24">Verify Token</span>
-                <code className="flex-1 text-xs text-gray-900 font-mono truncate">{config.meta_verify_token}</code>
+                <code className="flex-1 text-xs text-gray-900 font-mono truncate">{cfg.meta_verify_token}</code>
                 <button
-                  onClick={() => copy(config.meta_verify_token)}
+                  onClick={() => copy(cfg.meta_verify_token)}
                   className="p-1.5 rounded hover:bg-gray-200 text-gray-600"
                 >
                   <Copy size={14} />
@@ -956,30 +1016,23 @@ const AiInboxTab: React.FC = () => {
             </h3>
             <ol className="space-y-2 text-sm text-gray-700 list-decimal list-inside">
               <li>
-                <a
-                  href="https://developers.facebook.com/apps"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-indigo-600 underline"
-                >
+                <a href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer" className="text-indigo-600 underline">
                   developers.facebook.com
                 </a>{' '}
                 → My Apps → app-i seçin (yoxdursa Business app yaradın)
               </li>
-              <li>
-                Add Product → <b>WhatsApp</b> → Setup
-              </li>
+              <li>Add Product → <b>WhatsApp</b> → Setup</li>
               <li>
                 <b>Phone Number ID</b>, <b>Business Account ID</b> və <b>permanent access token</b> alın (System User vasitəsi ilə)
               </li>
               <li>
-                Bunları Admin → <b>WhatsApp tab</b>-ında daxil edin (artıq mövcuddur)
+                Bunları yuxarıda Settings → <b>WhatsApp</b> bölməsinə daxil edin (və ya Admin → WhatsApp tab-ında)
               </li>
               <li>
                 Configuration → Webhooks → <b>Callback URL</b>: yuxarıdakı WhatsApp URL-i; <b>Verify Token</b>: yuxarıdakı token; Subscribe to: <b>messages, message_status</b>
               </li>
               <li>
-                App Settings → Basic → <b>App Secret</b>-i kopyalayıb yuxarıda Settings-ə yapışdırın (təhlükəsizlik üçün)
+                App Settings → Basic → <b>App Secret</b>-i kopyalayıb yuxarıda Settings → Meta Webhook Təhlükəsizliyi-yə yapışdırın
               </li>
             </ol>
           </div>
@@ -989,23 +1042,12 @@ const AiInboxTab: React.FC = () => {
               <Instagram size={16} className="text-pink-600" /> Instagram Graph API quraşdırılması
             </h3>
             <ol className="space-y-2 text-sm text-gray-700 list-decimal list-inside">
-              <li>
-                Instagram hesabınızı <b>Professional / Business</b>-ə çevirin
-              </li>
-              <li>
-                Facebook <b>Page</b>-ə bağlayın (Page Settings → Linked Accounts → Instagram)
-              </li>
-              <li>
-                Eyni Meta app-ə Add Product → <b>Instagram</b> + <b>Messenger</b>
-              </li>
+              <li>Instagram hesabınızı <b>Professional / Business</b>-ə çevirin</li>
+              <li>Facebook <b>Page</b>-ə bağlayın (Page Settings → Linked Accounts → Instagram)</li>
+              <li>Eyni Meta app-ə Add Product → <b>Instagram</b> + <b>Messenger</b></li>
               <li>
                 Graph API Explorer (
-                <a
-                  className="text-indigo-600 underline"
-                  href="https://developers.facebook.com/tools/explorer"
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="text-indigo-600 underline" href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer">
                   developers.facebook.com/tools/explorer
                 </a>
                 ) → <code className="bg-gray-100 px-1 rounded">me/accounts</code> → page seçin → <code className="bg-gray-100 px-1 rounded">instagram_business_account</code> götürün → <b>Page ID</b> və <b>Page Access Token</b> alın
@@ -1016,15 +1058,11 @@ const AiInboxTab: React.FC = () => {
                 <code className="bg-gray-100 px-1 rounded text-[11px]">pages_messaging</code>,{' '}
                 <code className="bg-gray-100 px-1 rounded text-[11px]">pages_show_list</code>
               </li>
-              <li>
-                Page ID və Token-i yuxarıda Settings → Instagram bölməsində daxil edin
-              </li>
+              <li>Page ID və Token-i yuxarıda Settings → Instagram bölməsində daxil edin</li>
               <li>
                 App Dashboard → Messenger → Settings → Webhooks → <b>Add Callback URL</b> yuxarıdakı Instagram URL-i + Verify Token; Subscribe to: <b>messages</b>, <b>messaging_postbacks</b>
               </li>
-              <li>
-                Instagram → Webhooks → eyni URL-i əlavə edin və <b>messages</b>-ə subscribe edin
-              </li>
+              <li>Instagram → Webhooks → eyni URL-i əlavə edin və <b>messages</b>-ə subscribe edin</li>
             </ol>
           </div>
 
@@ -1032,6 +1070,13 @@ const AiInboxTab: React.FC = () => {
             <AlertCircle size={20} className="text-amber-600 flex-shrink-0" />
             <div className="text-sm text-amber-900">
               <b>Vacib:</b> Meta yalnız 24 saat ərzində müştərinin sizə yazdığı mesaja sərbəst cavab verməyə icazə verir. Bu pəncərə xaricində WhatsApp üçün təsdiqlənmiş template, Instagram üçün isə standart bir cavab tələb olunur.
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+            <ShieldCheck size={20} className="text-blue-600 flex-shrink-0" />
+            <div className="text-sm text-blue-900">
+              <b>Memarliq:</b> Bu funksiya tamamilə frontend-də (Vercel serverless functions + Firebase Firestore) işləyir — ayrı backend serverinə ehtiyac yoxdur. Webhooks <code>/api/webhooks/*</code> serverless function-ları tərəfindən işlənir, məlumatlar isə birbaşa Firestore-da saxlanılır.
             </div>
           </div>
         </div>
