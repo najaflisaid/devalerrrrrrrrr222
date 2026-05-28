@@ -85,7 +85,8 @@ const CartPage: React.FC = () => {
       // bfcache-dən bərpa olunduqda və ya səhifə yenidən görünəndə
       if (e.persisted || sessionStorage.getItem('pending_epoint_order_id')) {
         setLoading(false);
-        setWidgetUrl(null);
+        setInlineWidgetUrl(null);
+        setInlineWidgetLoading(false);
         // Epoint-ə getmişdi amma ödəniş tamamlanmadı — sessiyanı təmizlə
         sessionStorage.removeItem('pending_epoint_order_id');
       }
@@ -880,7 +881,8 @@ const CartPage: React.FC = () => {
               type="button"
               onClick={() => {
                 setLoading(false);
-                setWidgetUrl(null);
+                setInlineWidgetUrl(null);
+                setInlineWidgetLoading(false);
                 sessionStorage.removeItem('pending_epoint_order_id');
               }}
               className="text-[11px] uppercase tracking-[0.18em] text-black/45 hover:text-black/80 transition-colors underline-offset-2 hover:underline"
@@ -1503,13 +1505,35 @@ const CartPage: React.FC = () => {
               </div>
 
               {/* Pay button — appears AFTER the total so the customer sees
-                  the final amount before confirming. Opens the inline
-                  Epoint widget (left column on desktop / fullscreen on
-                  mobile) with an instant loading skeleton. */}
+                  the final amount before confirming.
+                  • Desktop → inline Epoint iframe widget (single-page UX).
+                  • Mobil → full-page redirect to Epoint's hosted page
+                    (Apple Pay native, card form native, no iframe sandboxing).
+                  Səbəb: iOS Safari Apple Pay merchant validation iframe daxilində
+                  uğursuz olur və Epoint mobil üçün özü kart formasını breakout edir.
+              */}
               <button
                 onClick={() => {
                   setIframeReady(false);
-                  handleEpointCheckout('widget');
+                  // Mobil cihaz aşkar etməsi: dar ekran ya da kombinasiya.
+                  // Touch-only laptop-ları (1920×1080 + sensor) "mobil" saymırıq
+                  // çünki onlarda iframe widget yaxşı işləyir. Yalnız həqiqi
+                  // dar ekran (telefon / kiçik tablet) və ya UA-da "Mobile"
+                  // sözü olduqda redirect mode-a keçirik.
+                  const isMobileCheckout = (() => {
+                    if (typeof window === 'undefined') return false;
+                    try {
+                      const narrow = window.innerWidth < 820;
+                      const ua = navigator.userAgent || '';
+                      const uaMobile = /Mobi|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua);
+                      const coarse = window.matchMedia?.('(pointer: coarse)')?.matches === true;
+                      // Telefon: dar ekran + (touch və ya mobile UA)
+                      return narrow && (coarse || uaMobile);
+                    } catch {
+                      return window.innerWidth < 768;
+                    }
+                  })();
+                  handleEpointCheckout(isMobileCheckout ? 'redirect' : 'widget');
                 }}
                 disabled={loading || inlineWidgetLoading || !!inlineWidgetUrl}
                 className="w-full h-12 mt-4 bg-black text-white text-[12px] uppercase tracking-[0.24em] font-medium hover:bg-black/85 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"

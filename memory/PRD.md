@@ -83,3 +83,20 @@
   - `/app/src/components/admin/AdminPanel.tsx` (newProduct/editProduct state + add/update + edit-click hydrate)
   - `/app/src/components/ProductCard.tsx` (translate + scale kompozit transform)
 
+
+## Bug Fix (2026-01-27) — Mobil ödəniş: Apple Pay & kart formu
+**Problem**: Telefonda "Ödənişə keç" düyməsi basıldıqda:
+- Apple Pay düyməsi açılırdı amma kartı tanımırdı (Apple Pay merchant validation iframe daxilində uğursuz olurdu — iOS Safari restrictions).
+- Kart ödənişi düyməsinə basanda Epoint öz səhifəsinə **başqa pəncərə/səhifə** kimi açılırdı (Epoint hosted page mobil üçün özü iframe-dən breakout edir).
+- Komputerdə isə hər şey düzgün işləyirdi (iframe widget desktop-da sabit).
+
+**Həlli**: Mobil cihaz aşkar etməsi + ödəniş modunu avtomatik dəyişdirmə:
+- **Desktop** (geniş ekran + mouse) → inline iframe widget (mövcud davranış).
+- **Mobil** (`innerWidth < 820` + `pointer:coarse` ya da UA-da `Mobi|Android|iPhone|...`) → **full-page redirect** (`startEpointPayment`-i çağırır, `window.top.location.href = url` ilə Epoint-in mobil-optimallaşdırılmış səhifəsinə aparır). Epoint öz hosted səhifəsində Apple Pay native işləyir (merchant validation top-level page-də doğru olur), kart formu da iframe sandboxing problemsiz açılır. Ödəniş bitdikdən sonra Epoint istifadəçini `success_redirect_url` / `error_redirect_url`-ə qaytarır, sifariş `pending_payment` statusunda Firestore-da saxlanılır.
+- Touch-laptopları (1920×1080 + sensor) mobil saymırıq — sırf dar ekran + (touch və ya mobile UA) kombinasiyası.
+
+**Əlavə düzəliş**: 2 pre-existing bug — `setWidgetUrl is not defined` (state `setInlineWidgetUrl`-ə adlandırılmışdı) — bfcache restore və "Ləğv et" düymə­sində crash edirdi. Düzəldildi.
+
+- Modified: `/app/src/pages/CartPage.tsx`
+- Test: `tsc --noEmit` 0 error · Cart səhifəsi 375px viewport-da düzgün render olunur.
+
