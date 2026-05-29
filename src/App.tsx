@@ -12,6 +12,7 @@ import BestSellersSection from './components/BestSellersSection';
 import RedCarpetSection from './components/RedCarpetSection';
 import AmbassadorSection from './components/AmbassadorSection';
 import GiftFinderSection from './components/GiftFinderSection';
+import LuxuryGiftCardsSection from './components/LuxuryGiftCardsSection';
 import CollectionTiles from './components/CollectionTiles';
 import NewsTiles from './components/NewsTiles';
 import HomeBlogSection from './components/HomeBlogSection';
@@ -73,6 +74,7 @@ const DEFAULT_SECTION_ORDER = [
   'ambassador',
   'featuredStory',
   'giftFinder',
+  'luxuryGifts',
   'homeProductBanners',
   'homeBlogSection',
   'newsTiles',
@@ -107,6 +109,7 @@ const HomePage: React.FC = () => {
     ambassador: <AmbassadorSection />,
     featuredStory: <FeaturedStorySection />,
     giftFinder: <GiftFinderSection />,
+    luxuryGifts: <LuxuryGiftCardsSection />,
     homeProductBanners: (
       <RevealOnScroll variant="up">
         <HomeProductBanners />
