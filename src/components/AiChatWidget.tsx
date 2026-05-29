@@ -663,7 +663,7 @@ const AiChatWidget: React.FC = () => {
               <span aria-hidden="true" className="dv-ai-online-dot absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white z-[3]" />
               <span aria-hidden="true" className="dv-ai-online-pulse absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 z-[2]" />
             </span>
-            <span className="font-futura text-[11px] font-normal text-black/90 whitespace-nowrap tracking-wide uppercase">
+            <span className="text-[11px] font-medium text-black/90 whitespace-nowrap tracking-wide uppercase">
               {lang === 'en' ? 'Chat with us' : lang === 'ru' ? 'Напишите нам' : 'Bizə yaz'}
             </span>
             <svg
@@ -684,8 +684,8 @@ const AiChatWidget: React.FC = () => {
         <div
           className="fixed bottom-5 right-5 z-[9999] bg-white flex flex-col overflow-hidden dv-ai-panel"
           style={{
-            width: 'min(400px, calc(100vw - 24px))',
-            height: 'min(600px, calc(100vh - 60px))',
+            width: 'min(360px, calc(100vw - 24px))',
+            height: 'min(580px, calc(100vh - 60px))',
             border: '1px solid #D4AF37',
             boxShadow: '0 24px 60px -20px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(212,175,55,0.3)',
           }}

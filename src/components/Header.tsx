@@ -1482,7 +1482,7 @@ const Header: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder={t('header.searchPlaceholder', { defaultValue: 'Search for…' })}
-                  className="w-full pl-14 pr-14 py-4 text-[15px] font-futura text-black placeholder-black/45 bg-white border border-black/35 rounded-full focus:border-black focus:outline-none transition-colors"
+                  className="w-full pl-14 pr-14 py-4 text-[15px] text-black placeholder-black/45 bg-white border border-black/35 rounded-full focus:border-black focus:outline-none transition-colors"
                   autoFocus
                   data-testid="header-search-input"
                 />
@@ -1507,7 +1507,7 @@ const Header: React.FC = () => {
                     key={c}
                     type="button"
                     onClick={() => setSearchQuery(c)}
-                    className="font-futura text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
+                    className="text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
                     data-testid={`header-search-trending-${c}`}
                   >
                     {c}
@@ -1540,7 +1540,7 @@ const Header: React.FC = () => {
                 if (allProducts.length === 0) return null;
                 return (
                   <div className="text-center py-20" data-testid="header-search-no-results">
-                    <p className="font-futura text-[14px] text-black/55">
+                    <p className="text-[14px] text-black/55">
                       {t('common.noResults', 'Nəticə tapılmadı')}
                     </p>
                   </div>
@@ -1552,7 +1552,7 @@ const Header: React.FC = () => {
 
               return (
                 <>
-                  <h3 className="font-futura text-[15px] sm:text-[16px] text-black mb-6" data-testid="header-search-section-title">
+                  <h3 className="text-[15px] sm:text-[16px] text-black mb-6 font-medium" data-testid="header-search-section-title">
                     {isQuery
                       ? t('header.searchResults', { defaultValue: 'Nəticələr' })
                       : t('header.featuredProducts', { defaultValue: 'Seçilmiş məhsullar' })}
@@ -1581,13 +1581,13 @@ const Header: React.FC = () => {
                               <div className="w-full h-full flex items-center justify-center text-xs text-black/30">N/A</div>
                             )}
                           </div>
-                          <p className="font-futura text-[11px] uppercase tracking-[0.14em] text-black/55 mb-1 truncate">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-black/55 mb-1 truncate">
                             {p.brand}
                           </p>
-                          <p className="font-futura text-[13px] text-black leading-tight line-clamp-2 mb-1.5 group-hover:underline underline-offset-4">
+                          <p className="text-[13px] text-black leading-tight line-clamp-2 mb-1.5 group-hover:underline underline-offset-4">
                             {displayName}
                           </p>
-                          <p className="font-futura text-[13px] text-black/75">
+                          <p className="text-[13px] text-black/75">
                             {price?.toFixed(2)} AZN
                           </p>
                         </button>
