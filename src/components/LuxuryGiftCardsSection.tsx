@@ -157,7 +157,11 @@ const LuxuryGiftCardsSection: React.FC = () => {
 
   return (
     <section
-      className="relative bg-[#fafaf8] py-20 md:py-28 overflow-hidden"
+      className="relative py-20 md:py-28 overflow-hidden"
+      style={{
+        background:
+          'linear-gradient(to bottom, #ffffff 0%, #fafaf8 14%, #fafaf8 86%, #ffffff 100%)',
+      }}
       data-testid="luxury-gifts-section"
     >
       {/* Dekorativ qızılı blur */}
@@ -200,22 +204,6 @@ const LuxuryGiftCardsSection: React.FC = () => {
               </p>
             ) : null}
           </div>
-
-          <button
-            type="button"
-            onClick={() => navigate(ctaLink)}
-            className="hidden md:inline-flex self-end items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2"
-            data-testid="luxury-gifts-view-all-btn"
-          >
-            <span className="relative pb-1">
-              {viewAll}
-              <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-black/70" />
-            </span>
-            <ArrowRight
-              className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1.5"
-              strokeWidth={1.6}
-            />
-          </button>
         </motion.div>
 
         {/* Mobil — sadə 2-sütunlu masonry üslubu */}
@@ -262,19 +250,22 @@ const LuxuryGiftCardsSection: React.FC = () => {
           })}
         </div>
 
-        {/* Mobil CTA */}
-        <div className="md:hidden mt-8 flex justify-center">
+        {/* CTA — həmişə aşağıda, ortada (desktop + mobil) */}
+        <div className="mt-10 md:mt-14 flex justify-center">
           <button
             type="button"
             onClick={() => navigate(ctaLink)}
-            className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80"
-            data-testid="luxury-gifts-view-all-mobile-btn"
+            className="inline-flex items-center gap-2 text-[11px] md:text-[12px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group"
+            data-testid="luxury-gifts-view-all-btn"
           >
             <span className="relative pb-1">
               {viewAll}
               <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-black/70" />
             </span>
-            <ArrowRight className="w-4 h-4" strokeWidth={1.6} />
+            <ArrowRight
+              className="w-3.5 h-3.5 transition-transform duration-500 group-hover:translate-x-1.5"
+              strokeWidth={1.6}
+            />
           </button>
         </div>
       </div>
@@ -317,11 +308,11 @@ const CardItem: React.FC<CardItemProps> = ({ idx, slot, product, lang, onClick, 
       className="relative bg-white rounded-2xl md:rounded-[28px] overflow-hidden shadow-[0_6px_22px_-12px_rgba(0,0,0,0.10)] hover:shadow-[0_18px_44px_-14px_rgba(0,0,0,0.22)] transition-shadow duration-500 cursor-pointer group"
       initial={{ scaleY: 0, opacity: 0 }}
       whileInView={{ scaleY: 1, opacity: 1 }}
-      viewport={{ once: true, margin: '-6%' }}
+      viewport={{ once: true, margin: '20% 0px 20% 0px', amount: 0.05 }}
       transition={{
-        duration: 0.85,
+        duration: 0.55,
         ease: EASE,
-        delay: (idx % 4) * 0.07 + Math.floor(idx / 4) * 0.04,
+        delay: (idx % 4) * 0.04,
       }}
       whileHover={{ y: -4 }}
       onClick={onClick}
@@ -345,11 +336,11 @@ const CardItem: React.FC<CardItemProps> = ({ idx, slot, product, lang, onClick, 
           style={{ willChange: 'transform, opacity' }}
           initial={innerInitial(slot.innerDir)}
           whileInView={{ opacity: 1, x: 0, y: 0 }}
-          viewport={{ once: true, margin: '-6%' }}
+          viewport={{ once: true, margin: '20% 0px 20% 0px', amount: 0.05 }}
           transition={{
-            duration: 0.85,
+            duration: 0.55,
             ease: EASE,
-            delay: 0.35 + (idx % 4) * 0.07 + Math.floor(idx / 4) * 0.04,
+            delay: 0.2 + (idx % 4) * 0.04,
           }}
         >
           <img

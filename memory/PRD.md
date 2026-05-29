@@ -37,3 +37,17 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
 - Admin: `HomeSectionsTab.tsx` -ə yeni sub-tab `luxuryGifts` əlavə olundu (eyebrow/title/subtitle/cta + 12 slot product picker). `SECTION_LABELS` -ə əlavə olundu — sıralama listinə avtomatik düşür (yuxarı/aşağı düymələri ilə yer dəyişmək olar).
 - contentService: `luxuryGifts` HomepageSections-a əlavə olundu, default `sectionOrder` -a `'luxuryGifts'` daxil edildi (giftFinder-dən sonra), getHomepageSections merge logic-ə əlavə olundu
 - Mobil: 2-sütunlu fallback grid, eyni 12 slot ardıcıllığı ilə
+
+## 2026-05-29 (iter 3) — Luxury Gifts polish + global UI fixes
+- **Luxury Gifts animasiya tezliyi**: duration 0.85s→0.55s, delay/index 0.07→0.04, viewport.amount 0.05, margin '20% 0px 20% 0px' — kartlar daha tez və hamısı bir bütün kimi açılır
+- **Luxury Gifts CTA**: yuxarı-sağdakı "Hamısına bax" silindi, yalnız aşağıda ortada — daha kompakt
+- **Bg blend**: Luxury Gifts arxa fonu `linear-gradient(to bottom, #fff 0%, #fafaf8 14%, #fafaf8 86%, #fff 100%)` — yuxarı/aşağı bölmələrlə (giftFinder & homeProductBanners ikisi də white) yumşaq keçid
+- **CollectionTiles**: "Keçid et" K-clipping fix (overflow-hidden silindi, initial -translate-x-1 silindi); mobil başlıq 22px→15px, sm 24px→20px
+- **Header axtarış paneli**: "Trend axtarışlar" etiketi silindi, yalnız kateqoriya quick-pick-lər
+- **BrandSlider (footer scroll)**: logoları əlavə edildi (Firestore `brands` collection-undan `logo` field-i ilə), hər element `/brand/:slug` linki ilə klikləndirilə bilər, hover-də opacity artır
+- **BrandShowcase**: max 6→9 brend (3×3 grid), aspect 4/5→3/4 (daha hündür/böyük portret kartlar), CTA button-u kompaktlaşdırıldı (gap-3→gap-2, px-7→px-5, tracking azaldıldı)
+- **ProductCarousel arrow nav**: w-12/h-12→w-9/h-9 (mobile), w-14→w-10 (desktop), shadow-sm əlavə edildi — daha incə
+- **Brand/Category case consistency**: bütün `capitalize` CSS-ləri silindi (Header search title, ProductPage breadcrumb, ProductPage spec values, ProductsPage filter mobile/desktop) — admin-in daxil etdiyi case (SAATLAR / Saatlar / saatlar) hər yerdə eyni qalır
+
+## Backlog (deferred from user feedback)
+- Admin → İstifadəçilər: qeydiyyat tarixi + ardıcıllıq sütunu

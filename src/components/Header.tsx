@@ -1499,12 +1499,9 @@ const Header: React.FC = () => {
               </div>
             </form>
 
-            {/* Trending searches — only when no query */}
+            {/* Category quick-picks — only when no query */}
             {!searchQuery && categories.length > 0 && (
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3" data-testid="header-search-trending">
-                <span className="font-futura text-[11px] uppercase tracking-[0.22em] text-black/55">
-                  {t('header.trendingSearches', { defaultValue: 'Trend axtarışlar' })}
-                </span>
                 {categories.slice(0, 6).map((c) => (
                   <button
                     key={c}
@@ -1555,7 +1552,7 @@ const Header: React.FC = () => {
 
               return (
                 <>
-                  <h3 className="font-futura text-[15px] sm:text-[16px] text-black mb-6 capitalize" data-testid="header-search-section-title">
+                  <h3 className="font-futura text-[15px] sm:text-[16px] text-black mb-6" data-testid="header-search-section-title">
                     {isQuery
                       ? t('header.searchResults', { defaultValue: 'Nəticələr' })
                       : t('header.featuredProducts', { defaultValue: 'Seçilmiş məhsullar' })}

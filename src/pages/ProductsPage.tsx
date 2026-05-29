@@ -599,7 +599,7 @@ const ProductsPage: React.FC = () => {
                       key={category}
                       type="button"
                       onClick={() => { handleCategoryChange(category); setMobileChipOpen(null); }}
-                      className={`block w-full text-left px-2 py-1.5 text-sm capitalize rounded ${selectedCategory === category ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                      className={`block w-full text-left px-2 py-1.5 text-sm rounded ${selectedCategory === category ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-50'}`}
                       data-testid={`mobile-filter-category-${category}`}
                     >
                       {category}
@@ -803,7 +803,7 @@ const ProductsPage: React.FC = () => {
                         className="mr-2"
                         data-testid={`filter-category-${category}`}
                       />
-                      <span className="text-sm capitalize">{category}</span>
+                      <span className="text-sm">{category}</span>
                     </label>
                   ))}
                 </div>

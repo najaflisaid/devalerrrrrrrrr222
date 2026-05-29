@@ -168,9 +168,9 @@ const CollectionTiles: React.FC = () => {
                   />
 
                   {/* Bottom editorial caption */}
-                  <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7 text-white">
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-7 text-white">
                     <h3
-                      className="font-playfair text-[22px] sm:text-[24px] lg:text-[28px] font-light leading-[1.1] tracking-tight"
+                      className="font-playfair text-[15px] sm:text-[20px] lg:text-[28px] font-light leading-[1.15] tracking-tight"
                       style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}
                     >
                       {titleText}
@@ -178,9 +178,9 @@ const CollectionTiles: React.FC = () => {
 
                     {/* Discover CTA — reveal on hover */}
                     <div
-                      className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-medium overflow-hidden"
+                      className="mt-2 md:mt-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-medium pl-0.5"
                     >
-                      <span className="relative inline-flex items-center gap-2 transition-transform duration-500 ease-out -translate-x-1 opacity-80 group-hover:translate-x-0 group-hover:opacity-100">
+                      <span className="relative inline-flex items-center gap-2 transition-transform duration-500 ease-out opacity-80 group-hover:translate-x-1 group-hover:opacity-100">
                         <span className="relative pb-1">
                           {discoverCta}
                           <span
@@ -189,7 +189,7 @@ const CollectionTiles: React.FC = () => {
                           />
                         </span>
                         <ArrowRight
-                          className="w-3.5 h-3.5 transition-transform duration-500 ease-out group-hover:translate-x-1.5"
+                          className="w-3 h-3 transition-transform duration-500 ease-out group-hover:translate-x-1"
                           strokeWidth={1.4}
                         />
                       </span>

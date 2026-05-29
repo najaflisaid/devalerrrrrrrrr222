@@ -125,7 +125,7 @@ const ProductPage: React.FC = () => {
         <nav className="flex items-center gap-2 text-[12px] text-black/55 mb-6 lg:mb-10 uppercase tracking-[0.18em]">
           <Link to="/" className="hover:text-black transition-colors">{t('product.home')}</Link>
           <span className="text-black/25">/</span>
-          <Link to={`/category/${product.category}`} className="hover:text-black transition-colors capitalize truncate max-w-[150px]">
+          <Link to={`/category/${product.category}`} className="hover:text-black transition-colors truncate max-w-[150px] normal-case">
             {product.category}
           </Link>
           <span className="text-black/25">/</span>
@@ -405,7 +405,7 @@ const ProductPage: React.FC = () => {
                           {s.rows.map((r) => (
                             <div key={r.k} className="flex items-baseline justify-between gap-4 text-[13px]">
                               <dt className="text-black/55 uppercase tracking-[0.14em] text-[11px]">{r.k}</dt>
-                              <dd className="text-black capitalize text-right">{r.v}</dd>
+                              <dd className="text-black text-right">{r.v}</dd>
                             </div>
                           ))}
                         </dl>

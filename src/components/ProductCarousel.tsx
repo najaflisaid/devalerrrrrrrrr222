@@ -76,11 +76,11 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
         disabled={!canPrev}
         aria-label="Previous"
         data-testid={`${testIdPrefix}-prev`}
-        className={`hidden md:flex absolute -left-2 lg:-left-4 top-[34%] -translate-y-1/2 z-[3] w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-white border border-black/10 hover:border-black transition-all duration-300 ${
+        className={`hidden md:flex absolute -left-2 lg:-left-3 top-[34%] -translate-y-1/2 z-[3] w-9 h-9 lg:w-10 lg:h-10 items-center justify-center rounded-full bg-white border border-black/15 hover:border-black transition-all duration-300 shadow-sm ${
           canPrev ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <ArrowLeft className="w-4 h-4 text-black" strokeWidth={1.4} />
+        <ArrowLeft className="w-3.5 h-3.5 text-black" strokeWidth={1.5} />
       </button>
       <button
         type="button"
@@ -88,11 +88,11 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({
         disabled={!canNext}
         aria-label="Next"
         data-testid={`${testIdPrefix}-next`}
-        className={`hidden md:flex absolute -right-2 lg:-right-4 top-[34%] -translate-y-1/2 z-[3] w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-white border border-black/10 hover:border-black transition-all duration-300 ${
+        className={`hidden md:flex absolute -right-2 lg:-right-3 top-[34%] -translate-y-1/2 z-[3] w-9 h-9 lg:w-10 lg:h-10 items-center justify-center rounded-full bg-white border border-black/15 hover:border-black transition-all duration-300 shadow-sm ${
           canNext ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <ArrowRight className="w-4 h-4 text-black" strokeWidth={1.4} />
+        <ArrowRight className="w-3.5 h-3.5 text-black" strokeWidth={1.5} />
       </button>
 
       {/* Scroller */}

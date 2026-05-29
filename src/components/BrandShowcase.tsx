@@ -54,7 +54,7 @@ const BrandShowcase: React.FC = () => {
         );
 
         const selected = sections.brandShowcase?.selectedBrands || DEFAULT_HOMEPAGE_SECTIONS.brandShowcase.selectedBrands;
-        const max = 6; // hardcoded per design — exactly 6 brands on homepage
+        const max = 9; // 3 cərgə × 3 sütun = 9 brend
         const covers = sections.brandShowcase?.brandCovers || {};
 
         let names: string[] = [];
@@ -121,15 +121,15 @@ const BrandShowcase: React.FC = () => {
           </p>
         </div>
 
-        {/* Brand grid — exactly 6 cards, white background, slow zoom on hover */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+        {/* Brand grid — 9 kart (3×3), daha böyük portret kartlar */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
           {tiles.map((b, idx) => {
             const img = b.override || b.logo || b.productImage;
             return (
               <button
                 key={b.name}
                 onClick={() => navigate(`/brand/${toBrandSlug(b.name)}`)}
-                className={`dv-brand-card group relative overflow-hidden rounded-sm aspect-[4/5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8914c] bg-gray-50 ${inView ? 'dv-brand-in' : ''}`}
+                className={`dv-brand-card group relative overflow-hidden rounded-sm aspect-[3/4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b8914c] bg-gray-50 ${inView ? 'dv-brand-in' : ''}`}
                 style={{ animationDelay: `${120 + idx * 90}ms` }}
                 data-testid={`dv-brand-card-${b.name}`}
               >
@@ -182,14 +182,14 @@ const BrandShowcase: React.FC = () => {
         </div>
 
         {/* CTA */}
-        <div className={`mt-12 md:mt-16 text-center dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-5`}>
+        <div className={`mt-10 md:mt-14 text-center dv-reveal ${inView ? 'is-in' : ''} dv-reveal-delay-5`}>
           <button
             onClick={() => navigate('/products')}
-            className="inline-flex items-center justify-center gap-3 px-7 sm:px-9 py-3 sm:py-3.5 border border-black bg-white hover:bg-black hover:text-white text-[10px] sm:text-[11px] uppercase tracking-[0.32em] font-medium text-black transition-all duration-500 group"
+            className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 border border-black bg-white hover:bg-black hover:text-white text-[10px] sm:text-[11px] uppercase tracking-[0.28em] font-medium text-black transition-all duration-500 group"
             data-testid="dv-brand-showcase-cta"
           >
             <span>{copy.cta[lang]}</span>
-            <span className="transition-transform duration-500 group-hover:translate-x-1.5 text-base leading-none">→</span>
+            <span className="transition-transform duration-500 group-hover:translate-x-1 text-sm leading-none">→</span>
           </button>
         </div>
       </div>
