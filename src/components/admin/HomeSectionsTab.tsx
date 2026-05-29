@@ -325,6 +325,7 @@ const SECTION_LABELS: Record<string, string> = {
   ambassador: 'Ambassador editorial',
   featuredStory: 'Featured Story (editorial split)',
   giftFinder: 'Hədiyyə tapıcı kartı',
+  luxuryGifts: 'Luxury hədiyyə kartları (LV-stil)',
   homeProductBanners: 'Home Product Banners',
   homeBlogSection: 'News & Stories (blog grid)',
   newsTiles: 'News Tiles',
@@ -400,6 +401,7 @@ const HomeSectionsTab: React.FC = () => {
     | 'featuredStory'
     | 'ambassador'
     | 'giftFinder'
+    | 'luxuryGifts'
     | 'redCarpet';
   const [activeSub, setActiveSub] = useState<SubTab>('order');
 
@@ -410,6 +412,7 @@ const HomeSectionsTab: React.FC = () => {
     { id: 'featuredStory', label: 'Featured Story' },
     { id: 'ambassador', label: 'Ambassador' },
     { id: 'giftFinder', label: 'Hədiyyə tapıcı' },
+    { id: 'luxuryGifts', label: 'Luxury hədiyyə kartları' },
     { id: 'redCarpet', label: 'Red Carpet' },
   ];
 
@@ -1431,6 +1434,156 @@ const HomeSectionsTab: React.FC = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
             data-testid="gift-finder-cta-link"
           />
+        </div>
+      </SectionEditor>
+      )}
+
+      {/* ============ LUXURY GIFTS (LV-style 12-slot grid) ============ */}
+      {activeSub === 'luxuryGifts' && (
+      <SectionEditor
+        title="Luxury hədiyyə kartları (LV-stil)"
+        description="4×4 asimmetrik grid — 4 hündür + 8 kiçik kart. Hər slota məhsul seçə bilərsiniz; boş slotlar random məhsulla doldurulur."
+        testid="home-sections-luxury-gifts"
+        enabled={data.luxuryGifts?.enabled !== false}
+        onToggle={(v) =>
+          setData({
+            ...data,
+            luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), enabled: v },
+          })
+        }
+      >
+        <MultiLangField
+          label="Eyebrow"
+          value={data.luxuryGifts?.eyebrow ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!.eyebrow}
+          onChange={(v) =>
+            setData({ ...data, luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), eyebrow: v } })
+          }
+        />
+        <MultiLangField
+          label="Başlıq"
+          value={data.luxuryGifts?.title ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!.title}
+          onChange={(v) =>
+            setData({ ...data, luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), title: v } })
+          }
+        />
+        <MultiLangField
+          label="Alt mətn (subtitle)"
+          textarea
+          value={data.luxuryGifts?.subtitle ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!.subtitle}
+          onChange={(v) =>
+            setData({ ...data, luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), subtitle: v } })
+          }
+        />
+        <MultiLangField
+          label="CTA mətni"
+          value={data.luxuryGifts?.ctaLabel ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!.ctaLabel}
+          onChange={(v) =>
+            setData({ ...data, luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), ctaLabel: v } })
+          }
+        />
+        <div>
+          <Label>CTA Link</Label>
+          <input
+            type="text"
+            value={data.luxuryGifts?.ctaLink ?? ''}
+            onChange={(e) =>
+              setData({
+                ...data,
+                luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), ctaLink: e.target.value },
+              })
+            }
+            placeholder="/products"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+            data-testid="luxury-gifts-cta-link"
+          />
+        </div>
+
+        {/* SLOT seçimi — 12 kart */}
+        <div className="border-t border-gray-100 pt-5 space-y-3">
+          <div>
+            <Label>Slotlar — hər karta məhsul təyin edin (boş qoysanız random məhsul göstəriləcək)</Label>
+            <p className="text-xs text-gray-500">
+              Slot ölçüsü: <b>T</b> = hündür kart (2 sıra), <b>S</b> = kiçik kart. Sıra və ölçü sabitdir
+              (LV "kəpənək" simmetriyası).
+            </p>
+          </div>
+
+          {(() => {
+            const slots: string[] = (data.luxuryGifts?.slots && data.luxuryGifts.slots.length === 12)
+              ? data.luxuryGifts.slots
+              : (DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!.slots);
+            const SLOT_LABELS: { idx: number; tag: string; pos: string }[] = [
+              { idx: 0,  tag: 'T', pos: 'Sıra 1, Sütun 1' },
+              { idx: 1,  tag: 'S', pos: 'Sıra 1, Sütun 2' },
+              { idx: 2,  tag: 'S', pos: 'Sıra 1, Sütun 3' },
+              { idx: 3,  tag: 'T', pos: 'Sıra 1, Sütun 4' },
+              { idx: 4,  tag: 'S', pos: 'Sıra 2, Sütun 2' },
+              { idx: 5,  tag: 'S', pos: 'Sıra 2, Sütun 3' },
+              { idx: 6,  tag: 'S', pos: 'Sıra 3, Sütun 1' },
+              { idx: 7,  tag: 'T', pos: 'Sıra 3, Sütun 2' },
+              { idx: 8,  tag: 'T', pos: 'Sıra 3, Sütun 3' },
+              { idx: 9,  tag: 'S', pos: 'Sıra 3, Sütun 4' },
+              { idx: 10, tag: 'S', pos: 'Sıra 4, Sütun 1' },
+              { idx: 11, tag: 'S', pos: 'Sıra 4, Sütun 4' },
+            ];
+            const updateSlot = (i: number, productId: string) => {
+              const next = [...slots];
+              next[i] = productId;
+              setData({
+                ...data,
+                luxuryGifts: { ...(data.luxuryGifts ?? DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!), slots: next },
+              });
+            };
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {SLOT_LABELS.map(({ idx, tag, pos }) => {
+                  const currentId = slots[idx] || '';
+                  const current = products.find((p) => p.id === currentId);
+                  const isTall = tag === 'T';
+                  return (
+                    <div
+                      key={idx}
+                      className={`border rounded-lg p-3 flex items-center gap-3 ${
+                        isTall ? 'border-amber-300 bg-amber-50/30' : 'border-gray-200 bg-gray-50/50'
+                      }`}
+                      data-testid={`luxury-gifts-slot-${idx}`}
+                    >
+                      <div className="flex flex-col items-center justify-center w-12 h-12 rounded-md bg-white border border-gray-200 shrink-0">
+                        <span className={`text-xs font-bold ${isTall ? 'text-amber-700' : 'text-gray-600'}`}>{tag}</span>
+                        <span className="text-[10px] text-gray-400">#{idx + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-gray-500 mb-1">{pos}</p>
+                        <select
+                          value={currentId}
+                          onChange={(e) => updateSlot(idx, e.target.value)}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm bg-white"
+                          data-testid={`luxury-gifts-slot-select-${idx}`}
+                        >
+                          <option value="">— Random məhsul —</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name.az || p.name.en || p.id}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {current?.images?.[0] ? (
+                        <img
+                          src={current.images[0]}
+                          alt=""
+                          className="w-12 h-12 object-contain rounded border border-gray-200 bg-white shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded border border-dashed border-gray-300 shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </SectionEditor>
       )}

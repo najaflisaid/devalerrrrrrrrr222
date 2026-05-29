@@ -278,6 +278,16 @@ export interface HomepageSections {
     ctaLabel: { az: string; ru: string; en: string };
     ctaLink: string;
   };
+  luxuryGifts?: {
+    enabled: boolean;
+    eyebrow: { az: string; ru: string; en: string };
+    title: { az: string; ru: string; en: string };
+    subtitle: { az: string; ru: string; en: string };
+    ctaLabel: { az: string; ru: string; en: string };
+    ctaLink: string;
+    /** Slot başına bir məhsulun id-si. Uzunluq həmişə 12; boş slot üçün ''. */
+    slots: string[];
+  };
   redCarpet?: {
     enabled: boolean;
     eyebrow: { az: string; ru: string; en: string };
@@ -461,6 +471,23 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     ctaLabel: { az: 'Hədiyyə et', ru: 'Подарить', en: 'Send a gift' },
     ctaLink: '/gift-cards',
   },
+  luxuryGifts: {
+    enabled: true,
+    eyebrow: { az: 'HƏDİYYƏ SEÇİMİ', ru: 'КОЛЛЕКЦИЯ ПОДАРКОВ', en: 'GIFT EDIT' },
+    title: {
+      az: 'Sevərək seçildi',
+      ru: 'Подобрано с любовью',
+      en: 'Curated with love',
+    },
+    subtitle: {
+      az: 'Hər detal — duyğu hədiyyə etmək üçün bir səbəbdir.',
+      ru: 'Каждая деталь — повод подарить эмоцию.',
+      en: 'Every detail — a reason to gift an emotion.',
+    },
+    ctaLabel: { az: 'Hamısına bax', ru: 'Все подарки', en: 'View all' },
+    ctaLink: '/products',
+    slots: ['', '', '', '', '', '', '', '', '', '', '', ''],
+  },
   redCarpet: {
     enabled: true,
     eyebrow: { az: 'REDAKSİYANIN SEÇİMİ', ru: 'ВЫБОР РЕДАКЦИИ', en: "EDITOR'S PICK" },
@@ -479,6 +506,7 @@ const DEFAULT_HOMEPAGE_SECTIONS: HomepageSections = {
     'ambassador',
     'featuredStory',
     'giftFinder',
+    'luxuryGifts',
     'homeProductBanners',
     'homeBlogSection',
     'newsTiles',
@@ -501,6 +529,7 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
         featuredStory: { ...DEFAULT_HOMEPAGE_SECTIONS.featuredStory!, ...(data.featuredStory || {}) },
         ambassador: { ...DEFAULT_HOMEPAGE_SECTIONS.ambassador!, ...(data.ambassador || {}) },
         giftFinder: { ...DEFAULT_HOMEPAGE_SECTIONS.giftFinder!, ...(data.giftFinder || {}) },
+        luxuryGifts: { ...DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!, ...(data.luxuryGifts || {}) },
         redCarpet: { ...DEFAULT_HOMEPAGE_SECTIONS.redCarpet!, ...(data.redCarpet || {}) },
         sectionOrder: data.sectionOrder && data.sectionOrder.length > 0
           ? data.sectionOrder

@@ -29,3 +29,11 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
 - P1: Wishlist heart button-u real funksionallıqla bağlamaq
 - P2: "Compare" və "Quick view" overlay
 - P2: Reduced-motion media query-də motion-u tam söndür (framer hazırda da hörmət edir, sınamaq)
+
+## 2026-05-29 (iter 2) — Luxury Gifts təkmilləşdirməsi
+- Layout dəyişdirildi: 4×4 sabit "kəpənək" simmetriyası (12 slot, explicit gridColumnStart/gridRowStart, 4 hündür + 8 kiçik kart)
+- Şəkillər: hamısı `object-contain` + uniform padding — kart ölçüsündən asılı olmayaraq məhsul tam görünür (saatlar/sneakerlar daha kəsilmir)
+- Animasiya: kart səviyyəsində `scaleY 0→1` qarmon effekti, alternativ transformOrigin (top/bottom) — kəpənək açılışı; daxili şəkil ayrıca 3 istiqamətdən (up/left/right) sürüşür
+- Admin: `HomeSectionsTab.tsx` -ə yeni sub-tab `luxuryGifts` əlavə olundu (eyebrow/title/subtitle/cta + 12 slot product picker). `SECTION_LABELS` -ə əlavə olundu — sıralama listinə avtomatik düşür (yuxarı/aşağı düymələri ilə yer dəyişmək olar).
+- contentService: `luxuryGifts` HomepageSections-a əlavə olundu, default `sectionOrder` -a `'luxuryGifts'` daxil edildi (giftFinder-dən sonra), getHomepageSections merge logic-ə əlavə olundu
+- Mobil: 2-sütunlu fallback grid, eyni 12 slot ardıcıllığı ilə

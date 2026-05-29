@@ -4,64 +4,70 @@ import { motion } from 'framer-motion';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { productService } from '../services/productService';
+import { getHomepageSections, HomepageSections } from '../services/contentService';
 import { Product } from '../types';
 
 /**
- * LuxuryGiftCardsSection — Louis Vuitton tərzli asimmetrik məhsul kartları bölməsi.
+ * LuxuryGiftCardsSection — Louis Vuitton tərzli sabit 12-slotlu asimmetrik məhsul vitrini.
  *
- * - Scroll edərkən hər kart fərqli istiqamətdən (yuxarı / aşağı / sol / sağ / scale)
- *   yumşaq açılır.
- * - Kartın içindəki məhsul şəkli də fərqli istiqamətdən (yuxarı / sol / sağ) yüngül
- *   gecikmə ilə sürüşərək görünür.
- * - GPU-friendly transform-lar və `cubic-bezier(0.22, 1, 0.36, 1)` easing istifadə
- *   olunur ki, donma / janky effekt yaranmasın.
- * - Məhsullar hələlik bazadan random götürülür (admin idarəetməsi sonradan).
+ *  - 4 sütun × 4 sıra (toplam 16 hüceyrə) — 4 ədəd `row-span-2` "hündür" kart + 8 ədəd kiçik kart.
+ *    Top və bottom sıralarının hər ikisi tam doldurulur (kəpənək / simmetrik bitiş).
+ *  - Kartlar qarmon (accordion) effekti ilə açılır: `scaleY: 0 → 1`, alternativ transformOrigin
+ *    (top/bottom) — açıldıqca real qarmon hissi.
+ *  - Kartın içindəki məhsul şəkli kart açılandan sonra yüngül gecikmə ilə yuxarı/sol/sağdan
+ *    sürüşərək tam görünür (`object-contain` + daxili padding — saatlar / sneakerlar tam görünür).
+ *  - Slotlar admin tərəfindən idarə olunur; boş slotlar üçün enabled+random məhsullar fallback olur.
  */
 
-type CardDir = 'up' | 'down' | 'left' | 'right' | 'scale';
+type CardSize = 'tall' | 'short';
 type InnerDir = 'up' | 'left' | 'right';
 
-interface CardLayout {
-  /** Tailwind row-span class — kartı asimmetrik etmək üçün */
-  rowSpan: string;
-  /** Kartın özünün gəliş istiqaməti */
-  dir: CardDir;
-  /** Şəklin kartın içində gəliş istiqaməti */
+interface SlotLayout {
+  /** Hüceyrənin sütun başlanğıcı (1-based) */
+  colStart: number;
+  /** Hüceyrənin sıra başlanğıcı (1-based) */
+  rowStart: number;
+  /** Sıra span — 2 olarsa kart hündürdür */
+  rowSpan: 1 | 2;
+  size: CardSize;
+  /** Kartın açılma istiqaməti (qarmon origin) */
+  origin: 'top' | 'bottom';
+  /** Daxili şəklin giriş istiqaməti */
   innerDir: InnerDir;
-  /** Şəklin tutması (object-fit) — bəzi kartlar üçün cover, digərləri üçün contain */
-  fit: 'cover' | 'contain';
 }
 
-// 9 kart üçün stabil asimmetrik layout (LV-yə bənzər)
-const LAYOUTS: CardLayout[] = [
-  { rowSpan: 'md:row-span-2', dir: 'up',    innerDir: 'up',    fit: 'contain' }, // 1 - tall
-  { rowSpan: 'md:row-span-1', dir: 'left',  innerDir: 'left',  fit: 'cover'   }, // 2
-  { rowSpan: 'md:row-span-2', dir: 'down',  innerDir: 'up',    fit: 'contain' }, // 3 - tall
-  { rowSpan: 'md:row-span-1', dir: 'right', innerDir: 'right', fit: 'cover'   }, // 4
-  { rowSpan: 'md:row-span-1', dir: 'scale', innerDir: 'up',    fit: 'contain' }, // 5
-  { rowSpan: 'md:row-span-1', dir: 'up',    innerDir: 'right', fit: 'cover'   }, // 6
-  { rowSpan: 'md:row-span-2', dir: 'right', innerDir: 'left',  fit: 'contain' }, // 7 - tall
-  { rowSpan: 'md:row-span-1', dir: 'left',  innerDir: 'up',    fit: 'cover'   }, // 8
-  { rowSpan: 'md:row-span-1', dir: 'down',  innerDir: 'right', fit: 'contain' }, // 9
+/**
+ * 12 slot — kəpənək simmetriyası:
+ *   ROW 1:  [T0 ][s1 ][s2 ][T3 ]
+ *   ROW 2:  [T0 ][s4 ][s5 ][T3 ]
+ *   ROW 3:  [s6 ][T7 ][T8 ][s9 ]
+ *   ROW 4:  [s10][T7 ][T8 ][s11]
+ *
+ *   ↑ Top və bottom sıraları tam dolur, hündür kartlar köşədən-mərkəzə miqrasiya edir.
+ */
+const LAYOUT: SlotLayout[] = [
+  { colStart: 1, rowStart: 1, rowSpan: 2, size: 'tall',  origin: 'top',    innerDir: 'left'  }, // 0
+  { colStart: 2, rowStart: 1, rowSpan: 1, size: 'short', origin: 'top',    innerDir: 'up'    }, // 1
+  { colStart: 3, rowStart: 1, rowSpan: 1, size: 'short', origin: 'top',    innerDir: 'up'    }, // 2
+  { colStart: 4, rowStart: 1, rowSpan: 2, size: 'tall',  origin: 'top',    innerDir: 'right' }, // 3
+  { colStart: 2, rowStart: 2, rowSpan: 1, size: 'short', origin: 'bottom', innerDir: 'right' }, // 4
+  { colStart: 3, rowStart: 2, rowSpan: 1, size: 'short', origin: 'bottom', innerDir: 'left'  }, // 5
+  { colStart: 1, rowStart: 3, rowSpan: 1, size: 'short', origin: 'top',    innerDir: 'right' }, // 6
+  { colStart: 2, rowStart: 3, rowSpan: 2, size: 'tall',  origin: 'bottom', innerDir: 'up'    }, // 7
+  { colStart: 3, rowStart: 3, rowSpan: 2, size: 'tall',  origin: 'bottom', innerDir: 'up'    }, // 8
+  { colStart: 4, rowStart: 3, rowSpan: 1, size: 'short', origin: 'top',    innerDir: 'left'  }, // 9
+  { colStart: 1, rowStart: 4, rowSpan: 1, size: 'short', origin: 'bottom', innerDir: 'left'  }, // 10
+  { colStart: 4, rowStart: 4, rowSpan: 1, size: 'short', origin: 'bottom', innerDir: 'right' }, // 11
 ];
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+const SLOT_COUNT = 12;
 
-const dirToInitial = (dir: CardDir) => {
+const innerInitial = (dir: InnerDir) => {
   switch (dir) {
-    case 'up':    return { opacity: 0, y: 64, x: 0, scale: 1 };
-    case 'down':  return { opacity: 0, y: -56, x: 0, scale: 1 };
-    case 'left':  return { opacity: 0, x: -72, y: 0, scale: 1 };
-    case 'right': return { opacity: 0, x: 72, y: 0, scale: 1 };
-    case 'scale': return { opacity: 0, x: 0, y: 24, scale: 0.92 };
-  }
-};
-
-const innerToInitial = (dir: InnerDir) => {
-  switch (dir) {
-    case 'up':    return { opacity: 0, y: 40, x: 0 };
-    case 'left':  return { opacity: 0, x: -44, y: 0 };
-    case 'right': return { opacity: 0, x: 44, y: 0 };
+    case 'up':    return { opacity: 0, y: 36, x: 0 };
+    case 'left':  return { opacity: 0, x: -40, y: 0 };
+    case 'right': return { opacity: 0, x: 40, y: 0 };
   }
 };
 
@@ -78,59 +84,76 @@ function shuffle<T>(arr: T[]): T[] {
 const LuxuryGiftCardsSection: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+
+  const [sections, setSections] = useState<HomepageSections | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const all = await productService.getAll();
-        const usable = all.filter(
-          (p) => p.isEnabled !== false && !p.isGiftCard && p.images && p.images.length > 0
-        );
-        setProducts(shuffle(usable).slice(0, 9));
+        const [sec, all] = await Promise.all([getHomepageSections(), productService.getAll()]);
+        setSections(sec);
+        setProducts(all.filter((p) => p.isEnabled !== false && !p.isGiftCard && p.images?.length > 0));
       } catch (e) {
-        console.error('LuxuryGiftCards load error:', e);
+        console.error('LuxuryGifts load error:', e);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
+  const cfg = sections?.luxuryGifts;
+  const slots = cfg?.slots ?? [];
+
+  /** Hər slota məhsul təyin et: admin seçdiyini götür, boş olsa random fallback. */
+  const slotProducts: (Product | null)[] = useMemo(() => {
+    if (!products.length) return new Array(SLOT_COUNT).fill(null);
+
+    const byId = new Map(products.map((p) => [p.id, p]));
+    const usedIds = new Set<string>();
+
+    // 1) Admin-in seçdiyi məhsullar
+    const adminResolved: (Product | null)[] = new Array(SLOT_COUNT).fill(null);
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      const id = slots[i];
+      if (id && byId.has(id)) {
+        adminResolved[i] = byId.get(id)!;
+        usedIds.add(id);
+      }
+    }
+
+    // 2) Boş slotları random məhsulla doldur (istifadə olunmamışlardan)
+    const remaining = shuffle(products.filter((p) => !usedIds.has(p.id)));
+    let ri = 0;
+    return adminResolved.map((p) => {
+      if (p) return p;
+      return remaining[ri++] || null;
+    });
+  }, [products, slots]);
+
   const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
 
-  const eyebrow = lang === 'ru' ? 'КОЛЛЕКЦИЯ ПОДАРКОВ' : lang === 'en' ? 'GIFT EDIT' : 'HƏDİYYƏ SEÇİMİ';
-  const title =
-    lang === 'ru'
-      ? 'Подобрано с любовью'
-      : lang === 'en'
-      ? 'Curated with love'
-      : 'Sevərək seçildi';
-  const subtitle =
-    lang === 'ru'
-      ? 'Каждая деталь — повод подарить эмоцию.'
-      : lang === 'en'
-      ? 'Every detail — a reason to gift an emotion.'
-      : 'Hər detal — duyğu hədiyyə etmək üçün bir səbəbdir.';
-  const viewAll = lang === 'ru' ? 'Все подарки' : lang === 'en' ? 'View all' : 'Hamısına bax';
-
-  // Layout-ları məhsul sayına uyğunlaşdır
-  const cards = useMemo(
-    () => products.map((p, idx) => ({ product: p, layout: LAYOUTS[idx % LAYOUTS.length] })),
-    [products]
-  );
+  // Multi-lang field-lər (admin-dən və ya default)
+  const eyebrow = cfg?.eyebrow?.[lang] || cfg?.eyebrow?.az || 'HƏDİYYƏ SEÇİMİ';
+  const title = cfg?.title?.[lang] || cfg?.title?.az || 'Sevərək seçildi';
+  const subtitle = cfg?.subtitle?.[lang] || cfg?.subtitle?.az || '';
+  const viewAll = cfg?.ctaLabel?.[lang] || cfg?.ctaLabel?.az || 'Hamısına bax';
+  const ctaLink = cfg?.ctaLink || '/products';
 
   if (loading) {
     return (
-      <section className="bg-white py-16 md:py-24" data-testid="dv-luxury-gifts-loading">
+      <section className="bg-[#fafaf8] py-16 md:py-24" data-testid="luxury-gifts-loading">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-          <div className="h-[600px] bg-neutral-50 animate-pulse rounded-3xl" />
+          <div className="h-[800px] bg-neutral-100 animate-pulse rounded-3xl" />
         </div>
       </section>
     );
   }
 
-  if (products.length === 0) return null;
+  // Admin tərəfindən bağlanıb və ya heç bir məhsul tapılmayıbsa, ümumiyyətlə render etmə
+  if (cfg && cfg.enabled === false) return null;
+  if (slotProducts.every((p) => p === null)) return null;
 
   return (
     <section
@@ -171,14 +194,16 @@ const LuxuryGiftCardsSection: React.FC = () => {
             >
               {title}
             </h2>
-            <p className="mt-3 md:mt-4 text-sm md:text-base text-black/55 max-w-xl font-light">
-              {subtitle}
-            </p>
+            {subtitle ? (
+              <p className="mt-3 md:mt-4 text-sm md:text-base text-black/55 max-w-xl font-light">
+                {subtitle}
+              </p>
+            ) : null}
           </div>
 
           <button
             type="button"
-            onClick={() => navigate('/products')}
+            onClick={() => navigate(ctaLink)}
             className="hidden md:inline-flex self-end items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80 hover:text-black group whitespace-nowrap pb-2"
             data-testid="luxury-gifts-view-all-btn"
           >
@@ -193,83 +218,46 @@ const LuxuryGiftCardsSection: React.FC = () => {
           </button>
         </motion.div>
 
-        {/* Asimmetrik kart şəbəkəsi */}
+        {/* Mobil — sadə 2-sütunlu masonry üslubu */}
         <div
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 md:auto-rows-[260px]"
+          className="md:hidden grid grid-cols-2 gap-3"
+          data-testid="luxury-gifts-grid-mobile"
+        >
+          {LAYOUT.map((slot, idx) => {
+            const product = slotProducts[idx];
+            if (!product) return null;
+            return (
+              <CardItem
+                key={product.id + ':' + idx}
+                idx={idx}
+                slot={slot}
+                product={product}
+                lang={lang}
+                onClick={() => navigate(`/product/${product.id}`)}
+                isMobile
+              />
+            );
+          })}
+        </div>
+
+        {/* Desktop — sabit 4 × 4 grid (12 slot, "kəpənək" simmetriyası) */}
+        <div
+          className="hidden md:grid grid-cols-4 gap-5"
+          style={{ gridTemplateRows: 'repeat(4, 280px)' }}
           data-testid="luxury-gifts-grid"
         >
-          {cards.map(({ product, layout }, idx) => {
-            const name = product.name[lang] || product.name.az;
-            const img = product.images[0];
-
+          {LAYOUT.map((slot, idx) => {
+            const product = slotProducts[idx];
+            if (!product) return null;
             return (
-              <motion.article
-                key={product.id}
-                className={`relative bg-white rounded-2xl md:rounded-[28px] overflow-hidden shadow-[0_6px_24px_-12px_rgba(0,0,0,0.12)] hover:shadow-[0_14px_36px_-14px_rgba(0,0,0,0.22)] transition-shadow duration-500 cursor-pointer group ${layout.rowSpan}`}
-                style={{ willChange: 'transform, opacity' }}
-                initial={dirToInitial(layout.dir)}
-                whileInView={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-                viewport={{ once: true, margin: '-8%' }}
-                transition={{
-                  duration: 0.95,
-                  ease: EASE,
-                  delay: (idx % 4) * 0.08,
-                }}
-                whileHover={{ y: -4 }}
+              <CardItem
+                key={product.id + ':' + idx}
+                idx={idx}
+                slot={slot}
+                product={product}
+                lang={lang}
                 onClick={() => navigate(`/product/${product.id}`)}
-                data-testid={`luxury-gift-card-${idx}`}
-              >
-                {/* Heart düyməsi */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="absolute top-3 right-3 z-10 p-2 rounded-full hover:bg-black/5 transition-colors"
-                  aria-label="wishlist"
-                  data-testid={`luxury-gift-heart-${idx}`}
-                >
-                  <Heart className="w-4 h-4 md:w-[18px] md:h-[18px] text-black/70" strokeWidth={1.5} />
-                </button>
-
-                {/* Şəkil sahəsi */}
-                <div className="absolute inset-0 flex items-center justify-center p-6 md:p-8 pb-14 md:pb-16">
-                  <motion.div
-                    className="relative w-full h-full flex items-center justify-center"
-                    style={{ willChange: 'transform, opacity' }}
-                    initial={innerToInitial(layout.innerDir)}
-                    whileInView={{ opacity: 1, x: 0, y: 0 }}
-                    viewport={{ once: true, margin: '-8%' }}
-                    transition={{
-                      duration: 0.9,
-                      ease: EASE,
-                      delay: 0.25 + (idx % 4) * 0.08,
-                    }}
-                  >
-                    <img
-                      src={img}
-                      alt={name}
-                      loading="lazy"
-                      className={`max-w-full max-h-full transition-transform duration-[900ms] ease-out group-hover:scale-[1.04] ${
-                        layout.fit === 'cover' ? 'w-full h-full object-cover' : 'object-contain'
-                      }`}
-                      style={{
-                        transform: product.imageScale ? `scale(${product.imageScale})` : undefined,
-                      }}
-                    />
-                  </motion.div>
-                </div>
-
-                {/* Məhsul adı */}
-                <div className="absolute bottom-0 inset-x-0 px-4 md:px-5 pb-3 md:pb-4">
-                  <p
-                    className="text-center text-[11px] md:text-[13px] text-black/85 font-light tracking-wide line-clamp-1"
-                    data-testid={`luxury-gift-name-${idx}`}
-                  >
-                    {name}
-                  </p>
-                </div>
-              </motion.article>
+              />
             );
           })}
         </div>
@@ -278,7 +266,7 @@ const LuxuryGiftCardsSection: React.FC = () => {
         <div className="md:hidden mt-8 flex justify-center">
           <button
             type="button"
-            onClick={() => navigate('/products')}
+            onClick={() => navigate(ctaLink)}
             className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] font-medium text-black/80"
             data-testid="luxury-gifts-view-all-mobile-btn"
           >
@@ -291,6 +279,101 @@ const LuxuryGiftCardsSection: React.FC = () => {
         </div>
       </div>
     </section>
+  );
+};
+
+/* ─────────────────────────────────────────── */
+
+interface CardItemProps {
+  idx: number;
+  slot: SlotLayout;
+  product: Product;
+  lang: 'az' | 'ru' | 'en';
+  onClick: () => void;
+  isMobile?: boolean;
+}
+
+const CardItem: React.FC<CardItemProps> = ({ idx, slot, product, lang, onClick, isMobile }) => {
+  const name = product.name[lang] || product.name.az;
+  const img = product.images[0];
+
+  // Desktop-da sabit yerləşmə, mobildə natural flow
+  const gridStyle: React.CSSProperties = isMobile
+    ? slot.rowSpan === 2
+      ? { gridRow: 'span 2', minHeight: 280 }
+      : { minHeight: 200 }
+    : {
+        gridColumnStart: slot.colStart,
+        gridRowStart: slot.rowStart,
+        gridRowEnd: `span ${slot.rowSpan}`,
+      };
+
+  // Qarmon (accordion) açılışı — alternativ origin
+  const transformOrigin = slot.origin === 'top' ? 'top center' : 'bottom center';
+
+  return (
+    <motion.article
+      style={{ ...gridStyle, transformOrigin, willChange: 'transform, opacity' }}
+      className="relative bg-white rounded-2xl md:rounded-[28px] overflow-hidden shadow-[0_6px_22px_-12px_rgba(0,0,0,0.10)] hover:shadow-[0_18px_44px_-14px_rgba(0,0,0,0.22)] transition-shadow duration-500 cursor-pointer group"
+      initial={{ scaleY: 0, opacity: 0 }}
+      whileInView={{ scaleY: 1, opacity: 1 }}
+      viewport={{ once: true, margin: '-6%' }}
+      transition={{
+        duration: 0.85,
+        ease: EASE,
+        delay: (idx % 4) * 0.07 + Math.floor(idx / 4) * 0.04,
+      }}
+      whileHover={{ y: -4 }}
+      onClick={onClick}
+      data-testid={`luxury-gift-card-${idx}`}
+    >
+      {/* Heart düyməsi */}
+      <button
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-3 right-3 z-10 p-2 rounded-full hover:bg-black/5 transition-colors"
+        aria-label="wishlist"
+        data-testid={`luxury-gift-heart-${idx}`}
+      >
+        <Heart className="w-4 h-4 md:w-[18px] md:h-[18px] text-black/70" strokeWidth={1.5} />
+      </button>
+
+      {/* Şəkil sahəsi — həmişə object-contain, kart ölçüsündən asılı olmayaraq məhsul tam görünür */}
+      <div className="absolute inset-0 flex items-center justify-center p-5 md:p-7 pt-9 md:pt-11 pb-12 md:pb-14">
+        <motion.div
+          className="relative w-full h-full flex items-center justify-center"
+          style={{ willChange: 'transform, opacity' }}
+          initial={innerInitial(slot.innerDir)}
+          whileInView={{ opacity: 1, x: 0, y: 0 }}
+          viewport={{ once: true, margin: '-6%' }}
+          transition={{
+            duration: 0.85,
+            ease: EASE,
+            delay: 0.35 + (idx % 4) * 0.07 + Math.floor(idx / 4) * 0.04,
+          }}
+        >
+          <img
+            src={img}
+            alt={name}
+            loading="lazy"
+            className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
+            style={{
+              transform: product.imageScale ? `scale(${product.imageScale})` : undefined,
+            }}
+          />
+        </motion.div>
+      </div>
+
+      {/* Məhsul adı */}
+      <div className="absolute bottom-0 inset-x-0 px-4 md:px-5 pb-3 md:pb-4 pointer-events-none">
+        <p
+          className="text-center text-[11px] md:text-[13px] text-black/85 font-light tracking-wide line-clamp-1"
+          data-testid={`luxury-gift-name-${idx}`}
+        >
+          {name}
+        </p>
+      </div>
+    </motion.article>
   );
 };
 
