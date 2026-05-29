@@ -531,9 +531,15 @@ export const getHomepageSections = async (): Promise<HomepageSections> => {
         giftFinder: { ...DEFAULT_HOMEPAGE_SECTIONS.giftFinder!, ...(data.giftFinder || {}) },
         luxuryGifts: { ...DEFAULT_HOMEPAGE_SECTIONS.luxuryGifts!, ...(data.luxuryGifts || {}) },
         redCarpet: { ...DEFAULT_HOMEPAGE_SECTIONS.redCarpet!, ...(data.redCarpet || {}) },
-        sectionOrder: data.sectionOrder && data.sectionOrder.length > 0
-          ? data.sectionOrder
-          : DEFAULT_HOMEPAGE_SECTIONS.sectionOrder,
+        sectionOrder: (() => {
+          const def = DEFAULT_HOMEPAGE_SECTIONS.sectionOrder || [];
+          const saved = (data.sectionOrder && data.sectionOrder.length > 0)
+            ? data.sectionOrder
+            : def;
+          // Köhnə yadda saxlanılmış sıraya yeni əlavə olunmuş açarları sonadək əlavə et
+          const missing = def.filter((k) => !saved.includes(k));
+          return [...saved, ...missing];
+        })(),
       };
     }
   } catch (err) {
