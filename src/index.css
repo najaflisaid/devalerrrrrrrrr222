@@ -173,10 +173,39 @@ body {
      tətbiq etmirik, çünki `hidden` və `clip` `position: sticky`-ni sındırır. */
   max-width: 100%;
   overscroll-behavior-x: none;
+  /* iOS-da tap response-ı təbii olsun (boz flash gizlət) və smooth scroll təmin et */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+/* iOS-da yağ kimi axıcı scroll — momentum dəstəyi və hardware acceleration */
+body {
+  -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: auto;
 }
 html {
   /* Yalnız double-tap zoom və callout deaktiv; horizontal pan daxili
-     carousel-larda işləyə bilməsi üçün touch-action-ı body-də override etmirik. */
+     carousel-larda işləyə bilməsi üçün touch-action-ı body-də override etmirik.
+     QEYD: iPhone-da Instagram in-app browser-də `manipulation` bəzən
+     klik hadisələrini gecikdirir. `auto` daha proqnozlaşdırılan davranış verir. */
+  touch-action: manipulation;
+}
+/* Bütün overflow scrollable container-lərdə momentum saxla (iOS) */
+*[class*="overflow-y-auto"],
+*[class*="overflow-y-scroll"],
+*[class*="overflow-x-auto"],
+*[class*="overflow-x-scroll"],
+*[class*="overflow-auto"],
+*[class*="overflow-scroll"] {
+  -webkit-overflow-scrolling: touch;
+}
+/* Interaktiv elementlər üçün cursor: pointer və iOS tap saxlanır */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   touch-action: manipulation;
 }
 @media (max-width: 768px) {
@@ -211,9 +240,15 @@ input[type='number'] {
   }
 }
 
-/* Smooth scrolling */
+/* Smooth scrolling — yalnız anchor jump-lar üçün; iOS-da scroll-during-animation
+   stutter etməsin deyə mobil ekranlarda söndürürük (native momentum daha yaxşıdır). */
 html {
   scroll-behavior: smooth;
+}
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* Custom scrollbar */

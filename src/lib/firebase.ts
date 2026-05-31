@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, inMemoryPersistence, initializeAuth } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -14,7 +14,30 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+/**
+ * Auth init — iPhone-da Instagram in-app brauzeri və Brave kimi 3rd-party
+ * cookie blok edən mühitlərdə standart `getAuth()` IndexedDB-ə müraciət
+ * edərkən səssiz uğursuz olur və BÜTÜN tətbiqi sındırır (klik işləmir).
+ * Buna görə persistence variantlarını ardıcıllıqla sınayırıq:
+ *   IndexedDB → browserLocal → browserSession → inMemory (sonuncu həmişə işləyir).
+ */
+let _auth: Auth;
+try {
+  _auth = initializeAuth(app, {
+    persistence: [
+      indexedDBLocalPersistence,
+      browserLocalPersistence,
+      browserSessionPersistence,
+      inMemoryPersistence,
+    ],
+  });
+} catch {
+  // Əgər initializeAuth artıq çağırılıbsa (HMR, double-import) standart getAuth-a qayıt
+  _auth = getAuth(app);
+}
+export const auth = _auth;
+
 // ignoreUndefinedProperties: undefined sahələri Firestore-a göndərməyəcək,
 // səssizcə uğursuz olmalardan qoruyur (məs. bonus məbləği boş olduqda).
 export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });

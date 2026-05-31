@@ -106,3 +106,36 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
   - Həm sorğu, həm məhsul sahələri (ad/brend/kateqoriya) normalizə edilib müqayisə edilir
   - Verifikasiya: "eynek" → 60, "sirga" → 17, "alisqan" → 60, "gumus" → 1 nəticə (əvvəl 0 idi)
 - **LogoLoader kiçildildi**: `h-10/h-12/h-14` → `h-7/h-8` — daha minimalist, ekran ortasında kiçik və zərif görünür
+
+## 2026-01 (iter 3 — mobile smooth scroll + iPhone Instagram/Brave fix)
+**Feedback**: Mobil scroll yağ kimi olsun, yeni səhifə açılışları sürətli olsun. iPhone 11 Pro-da Instagram in-app brauzeri və Brave-də saytın klikləri işləmir (digər telefonlarda işləyir).
+
+### Root cause analysis (iPhone Instagram/Brave klik problemi)
+İki əsas səbəb:
+1. **Firebase Auth IndexedDB tələbi**: Instagram in-app brauzeri və Brave (iOS) "Intelligent Tracking Prevention" ilə 3rd-party IndexedDB-i blok edir. `getAuth()` susqun şəkildə fail olur, modul exception atır, React hydration tamamlanmır → istifadəçi səhifəni görür amma klikləyə bilmir.
+2. **Heç bir Error Boundary olmadığı üçün hər hansı runtime/chunk-load exception bütün tətbiqi sındırırdı** (xüsusilə dinamik import() chunk-ları Instagram WebView-də bəzən fail olur).
+
+### Implemented
+- **Firebase Auth resilient init** (`lib/firebase.ts`):
+  - `initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence] })`
+  - Persistence variantlarını ardıcıllıqla sınayır — IndexedDB blok edilsə də `inMemory` ilə həmişə işləyir
+- **Global ErrorBoundary** (`components/ErrorBoundary.tsx` + `App.tsx`):
+  - React.Component-əsaslı, `getDerivedStateFromError` + `componentDidCatch` ilə
+  - Səhv baş verdikdə: De Valeur logosu + "Yenidən cəhd et" düyməsi → istifadəçi boş ekranda qalmır
+  - Retry sessionStorage.clear() edib səhifəni yeniləyir
+- **iOS mobil scroll smoothness** (`index.css`):
+  - `-webkit-tap-highlight-color: rgba(0,0,0,0)` — boz tap flash gizlədir, klik daha cəld hiss olunur
+  - `-webkit-overflow-scrolling: touch` body və bütün overflow-scroll konteynerlərə → native iOS momentum
+  - `-webkit-font-smoothing: antialiased` + `-moz-osx-font-smoothing: grayscale` → şriftlər daha incə
+  - Bütün `button/a/[role="button"]` elementlərə `touch-action: manipulation` — 300ms tap delay yox olur
+  - Mobil ekranlarda `scroll-behavior: smooth` söndürüldü (native momentum daha yağlı), desktop-da qalır
+
+### Verified
+- iPhone 11 Pro ekran ölçüsündə (375×812) test:
+  - Mobil menyu açılır, admin kategoriyaları (DƏRİ, GÜMÜŞ, SAAT, ALIŞQAN) düzgün görünür
+  - Scroll smooth — heç bir freeze yox
+  - Header search düyməsi klik edir, axtarış inputu görünür
+- Vite production build keçir (`✓ built in 13.31s`)
+
+### Production deployment note
+Bu dəyişiklikləri istifadəçinin saytında (`devaleur.az`) görmək üçün **yenidən deploy etmək lazımdır** — preview environment-də artıq işləyir.

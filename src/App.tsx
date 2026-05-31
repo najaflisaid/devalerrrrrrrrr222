@@ -62,6 +62,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
 import LogoLoader from './components/LogoLoader';
+import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 
 // Minimal səhifə yüklənmə fallback-i — De Valeur logosu + zərif pulse (ekranın ortasında)
@@ -299,16 +300,18 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <Router>
-        <ScrollToTop />
-        <NotificationProvider>
-          <WorkerAuthProvider>
-            <AppContent />
-          </WorkerAuthProvider>
-        </NotificationProvider>
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <Router>
+          <ScrollToTop />
+          <NotificationProvider>
+            <WorkerAuthProvider>
+              <AppContent />
+            </WorkerAuthProvider>
+          </NotificationProvider>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
