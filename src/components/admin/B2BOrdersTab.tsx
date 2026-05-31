@@ -721,7 +721,8 @@ const B2BOrdersTab: React.FC = () => {
                                 <img
                                   src={productImage}
                                   alt={item.productName?.az || item.productName}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md flex-shrink-0 border border-gray-200"
+                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md flex-shrink-0 border border-gray-200 dv-img-zoom"
+                                  title="Şəkli böyütmək üçün üzərinə gəlin"
                                 />
                               ) : (
                                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-md flex-shrink-0 flex items-center justify-center border border-gray-200">

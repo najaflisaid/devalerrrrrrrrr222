@@ -277,7 +277,13 @@ const CustomerOrdersTab: React.FC = () => {
                 {order.items.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2.5">
                     {item.image ? (
-                      <img src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded-md" />
+                      <img
+                        src={item.image}
+                        alt={item.productName}
+                        className="w-12 h-12 object-cover rounded-md dv-img-zoom"
+                        title="Şəkli böyütmək üçün üzərinə gəlin"
+                        data-testid={`admin-customer-order-item-img-${order.id}-${i}`}
+                      />
                     ) : (
                       <div className="w-12 h-12 bg-gray-200 rounded-md" />
                     )}

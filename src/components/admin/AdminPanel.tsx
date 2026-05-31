@@ -307,6 +307,11 @@ const AdminPanel: React.FC = () => {
   const [showEditBrand, setShowEditBrand] = useState(false);
   const [editingBrand, setEditingBrand] = useState<any | null>(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  // Kateqoriya birləşdirmə (merge) modalı — case-insensitive dublikatları aşkar edib tək kanonik formaya gətirir.
+  const [showMergeCategories, setShowMergeCategories] = useState(false);
+  // Hər dublikat qrupu üçün admin-in seçdiyi kanonik kateqoriya ID-si.
+  const [mergeSelections, setMergeSelections] = useState<Record<string, string>>({});
+  const [mergeInProgress, setMergeInProgress] = useState(false);
   const [showAddB2BUser, setShowAddB2BUser] = useState(false);
   const [showAddBlog, setShowAddBlog] = useState(false);
   const [showEditBlog, setShowEditBlog] = useState(false);
@@ -1140,6 +1145,169 @@ const AdminPanel: React.FC = () => {
         console.error('Error deleting category:', error);
         alert('Xəta baş verdi: ' + (error as Error).message);
       }
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // KATEQORİYA BİRLƏŞDİRMƏ (Merge)
+  // Eyni mənalı amma fərqli case-də yazılmış kateqoriyaları (məs. "SAAT" və "Saat")
+  // tək kanonik formada birləşdirir. Admin hansı yazılışın saxlanılacağını seçir,
+  // qalan bütün dublikatların məhsulları o adın altına köçürülür və köhnə
+  // kateqoriya sənədləri silinir.
+  // ---------------------------------------------------------------------------
+  type DupGroup = { key: string; items: any[] };
+  const computeDuplicateGroups = (): DupGroup[] => {
+    const groups: Record<string, any[]> = {};
+    categories.forEach((c: any) => {
+      // Hər kateqoriya üçün bütün dil variantlarından və "name"-dən normalize key qur
+      const names = [c.nameAz, c.nameRu, c.nameEn, c.name]
+        .filter((n: any) => typeof n === 'string' && n.trim())
+        .map((n: string) => n.trim().toLowerCase());
+      // Əsas qrup açarı kimi nameAz (və ya ilk mövcud) götürülür
+      const primary = (c.nameAz || c.name || names[0] || '').trim().toLowerCase();
+      if (!primary) return;
+      if (!groups[primary]) groups[primary] = [];
+      groups[primary].push(c);
+      // Həm də digər dil variantları ilə əlaqəli ola bilər — primary üzərindən bağlayırıq
+      void names;
+    });
+    return Object.entries(groups)
+      .filter(([, items]) => items.length >= 2)
+      .map(([key, items]) => ({ key, items }));
+  };
+
+  const openMergeCategoriesModal = () => {
+    const groups = computeDuplicateGroups();
+    if (groups.length === 0) {
+      alert('Dublikat kateqoriya tapılmadı. Bütün kateqoriyalar artıq unikaldır.');
+      return;
+    }
+    // Hər qrupda default olaraq ilk (ən köhnə) kateqoriyanı kanonik seç
+    const selections: Record<string, string> = {};
+    groups.forEach((g) => {
+      selections[g.key] = g.items[0].id;
+    });
+    setMergeSelections(selections);
+    setShowMergeCategories(true);
+  };
+
+  const handleMergeDuplicateCategories = async () => {
+    const groups = computeDuplicateGroups();
+    if (groups.length === 0) {
+      setShowMergeCategories(false);
+      return;
+    }
+    setMergeInProgress(true);
+    try {
+      const { doc, deleteDoc, updateDoc, collection, getDocs, writeBatch } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      let totalMigratedProducts = 0;
+      let totalMergedCats = 0;
+
+      for (const group of groups) {
+        const canonicalId = mergeSelections[group.key] || group.items[0].id;
+        const canonical = group.items.find((c: any) => c.id === canonicalId) || group.items[0];
+        const duplicates = group.items.filter((c: any) => c.id !== canonical.id);
+        if (duplicates.length === 0) continue;
+
+        // Kanonik adlar (məhsulların yenilənməsi üçün AZ adı götürülür)
+        const canonicalAz = (canonical.nameAz || canonical.name || '').trim();
+        if (!canonicalAz) continue;
+
+        // Bütün məhsulları yüklə və dublikat ada uyğun olanları kanonik AZ adına yenilə
+        const oldNames = new Set<string>();
+        duplicates.forEach((d: any) => {
+          [d.nameAz, d.nameRu, d.nameEn, d.name]
+            .filter((n: any) => typeof n === 'string' && n.trim())
+            .forEach((n: string) => oldNames.add(n.trim()));
+        });
+        // Kanoniki də əlavə et — fərqli case-li məhsullar da düzəldilsin
+        [canonical.nameAz, canonical.nameRu, canonical.nameEn, canonical.name]
+          .filter((n: any) => typeof n === 'string' && n.trim() && n !== canonicalAz)
+          .forEach((n: any) => oldNames.add(n.trim()));
+
+        const productsSnap = await getDocs(collection(db, 'products'));
+        const batch = writeBatch(db);
+        let groupMigrated = 0;
+        productsSnap.docs.forEach((d) => {
+          const data = d.data() as any;
+          const cat = data?.category;
+          if (typeof cat !== 'string') return;
+          // Case-insensitive uyğunluq
+          const catLower = cat.trim().toLowerCase();
+          const matches = Array.from(oldNames).some((n) => n.toLowerCase() === catLower);
+          if (matches && cat !== canonicalAz) {
+            batch.update(d.ref, { category: canonicalAz });
+            groupMigrated += 1;
+          }
+        });
+        if (groupMigrated > 0) {
+          await batch.commit();
+          totalMigratedProducts += groupMigrated;
+        }
+
+        // Brendlər kolleksiyasında brand.categoryNames içində köhnə adı varsa kanonikə dəyiş
+        try {
+          const brandsSnap = await getDocs(collection(db, 'brands'));
+          for (const bd of brandsSnap.docs) {
+            const data = bd.data() as any;
+            const cats: string[] = Array.isArray(data.categoryNames) ? data.categoryNames : [];
+            if (cats.length === 0) continue;
+            const updated = Array.from(new Set(
+              cats.map((c) => {
+                const catLower = (c || '').trim().toLowerCase();
+                const matches = Array.from(oldNames).some((n) => n.toLowerCase() === catLower);
+                return matches ? canonicalAz : c;
+              })
+            ));
+            const changed = updated.length !== cats.length || updated.some((v, i) => v !== cats[i]);
+            if (changed) {
+              await updateDoc(doc(db, 'brands', bd.id), { categoryNames: updated });
+            }
+          }
+        } catch (e) {
+          console.warn('Brand categoryNames yenilənmədi:', e);
+        }
+
+        // Dublikat kateqoriya sənədlərini sil
+        for (const d of duplicates) {
+          // Əgər dublikat parent isə, onun alt-kateqoriyalarını kanoniki ana et
+          try {
+            const childrenQuery = await getDocs(collection(db, 'categories'));
+            const childBatch = writeBatch(db);
+            let childUpdates = 0;
+            childrenQuery.docs.forEach((cd) => {
+              const cData = cd.data() as any;
+              if (cData?.parentId === d.id) {
+                childBatch.update(cd.ref, { parentId: canonical.id });
+                childUpdates += 1;
+              }
+            });
+            if (childUpdates > 0) {
+              await childBatch.commit();
+            }
+          } catch (e) {
+            console.warn('Alt-kateqoriyaların parent yenilənməsi alınmadı:', e);
+          }
+          await deleteDoc(doc(db, 'categories', d.id));
+          totalMergedCats += 1;
+        }
+      }
+
+      await loadData({ silent: true });
+      setShowMergeCategories(false);
+      setMergeSelections({});
+      alert(
+        `Birləşdirmə tamamlandı!\n` +
+        `• ${totalMergedCats} dublikat kateqoriya silindi.\n` +
+        `• ${totalMigratedProducts} məhsulun kateqoriyası kanonik formaya gətirildi.`
+      );
+    } catch (error) {
+      console.error('Merge categories error:', error);
+      alert('Birləşdirmə zamanı xəta baş verdi: ' + (error as Error).message);
+    } finally {
+      setMergeInProgress(false);
     }
   };
 
@@ -2269,7 +2437,13 @@ const AdminPanel: React.FC = () => {
 
                 return filteredProducts.map((product) => (
                   <div key={product.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
-                    <img src={product.images[0]} alt={product.name.az} className="w-16 h-16 object-cover rounded-lg" />
+                    <img
+                      src={product.images[0]}
+                      alt={product.name.az}
+                      className="w-16 h-16 object-cover rounded-lg dv-img-zoom"
+                      title="Şəkli böyütmək üçün üzərinə gəlin"
+                      data-testid={`admin-product-thumb-${product.id}`}
+                    />
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{product.name.az}</h3>
                       <p className="text-sm text-gray-600">{product.brand} · {product.category}</p>
@@ -2653,15 +2827,27 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'categories' && (
           <PasswordProtectedSection sectionName="categories">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">Kateqoriyalar ({categories.length})</h2>
-              <button
-                onClick={() => setShowAddCategory(!showAddCategory)}
-                className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
-              >
-                <Plus className="h-5 w-5" />
-                Kateqoriya əlavə et
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={openMergeCategoriesModal}
+                  className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2.5 rounded-lg hover:bg-amber-700 transition-all shadow-md hover:shadow-lg"
+                  data-testid="admin-merge-categories-btn"
+                  title="Eyni mənalı amma fərqli yazılışda olan kateqoriyaları (məs. SAAT və Saat) tək kanonik formaya gətirir"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  Dublikatları birləşdir
+                </button>
+                <button
+                  onClick={() => setShowAddCategory(!showAddCategory)}
+                  className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
+                  data-testid="admin-add-category-btn"
+                >
+                  <Plus className="h-5 w-5" />
+                  Kateqoriya əlavə et
+                </button>
+              </div>
             </div>
 
             {showAddCategory && (
@@ -2852,6 +3038,152 @@ const AdminPanel: React.FC = () => {
                 })
               )}
             </div>
+
+            {/* Kateqoriya BİRLƏŞDİRMƏ modalı — dublikatları kanonik formaya gətirir */}
+            {showMergeCategories && (() => {
+              const groups = computeDuplicateGroups();
+              return (
+                <div
+                  className="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => !mergeInProgress && setShowMergeCategories(false)}
+                  data-testid="merge-categories-modal"
+                >
+                  <div
+                    className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center">
+                          <Sparkles className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">Kateqoriya dublikatlarını birləşdir</h3>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            Hər qrup üçün saxlanılacaq kanonik yazılışı seçin. Qalan dublikatların məhsulları
+                            avtomatik kanonik kateqoriyaya köçürüləcək və köhnə qeydlər silinəcək.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => !mergeInProgress && setShowMergeCategories(false)}
+                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-white/60 transition-colors"
+                        data-testid="merge-categories-close"
+                        disabled={mergeInProgress}
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                      {groups.length === 0 ? (
+                        <p className="text-center text-gray-500 py-6">Dublikat tapılmadı.</p>
+                      ) : (
+                        groups.map((group, gIdx) => (
+                          <div
+                            key={group.key}
+                            className="border border-gray-200 rounded-xl p-4 bg-gray-50"
+                            data-testid={`merge-group-${gIdx}`}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-[11px] uppercase tracking-wider text-amber-700 font-bold">
+                                Qrup #{gIdx + 1} — {group.items.length} variant
+                              </p>
+                              <p className="text-[11px] text-gray-500">"{group.key}"</p>
+                            </div>
+                            <div className="space-y-2">
+                              {group.items.map((item: any) => {
+                                const checked = mergeSelections[group.key] === item.id;
+                                const parent = item.parentId
+                                  ? categories.find((c: any) => c.id === item.parentId)
+                                  : null;
+                                return (
+                                  <label
+                                    key={item.id}
+                                    className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                      checked
+                                        ? 'border-amber-500 bg-amber-50'
+                                        : 'border-gray-200 bg-white hover:border-amber-300'
+                                    }`}
+                                    data-testid={`merge-option-${item.id}`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`merge-group-${group.key}`}
+                                      checked={checked}
+                                      onChange={() =>
+                                        setMergeSelections({ ...mergeSelections, [group.key]: item.id })
+                                      }
+                                      className="w-4 h-4 accent-amber-600"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-gray-900 truncate">
+                                        {item.nameAz || item.name}
+                                      </div>
+                                      <div className="text-[11px] text-gray-500 mt-0.5">
+                                        Az: {item.nameAz || '—'} · Ru: {item.nameRu || '—'} · En: {item.nameEn || '—'}
+                                        {parent && <span className="text-amber-700"> · alt: ↳ {parent.name}</span>}
+                                      </div>
+                                    </div>
+                                    {checked && (
+                                      <span className="text-[10px] uppercase tracking-wider text-amber-700 font-bold whitespace-nowrap">
+                                        Kanonik
+                                      </span>
+                                    )}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
+                      <p className="text-xs text-gray-600">
+                        {groups.length > 0 && (
+                          <>
+                            Birləşdirilməsi: <span className="font-semibold">{groups.length}</span> qrup ·{' '}
+                            <span className="font-semibold">
+                              {groups.reduce((s, g) => s + g.items.length - 1, 0)}
+                            </span>{' '}
+                            dublikat silinəcək
+                          </>
+                        )}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowMergeCategories(false)}
+                          disabled={mergeInProgress}
+                          className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                          data-testid="merge-cancel-btn"
+                        >
+                          Ləğv et
+                        </button>
+                        <button
+                          onClick={handleMergeDuplicateCategories}
+                          disabled={mergeInProgress || groups.length === 0}
+                          className="px-5 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                          data-testid="merge-confirm-btn"
+                        >
+                          {mergeInProgress ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Birləşdirilir...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4" />
+                              Birləşdir
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           </PasswordProtectedSection>
         )}

@@ -52,6 +52,9 @@ const Header: React.FC = () => {
   }, []);
   const [categories, setCategories] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  // Hər kateqoriya adı (istənilən dildə) → həmin kateqoriyanın bütün 3 dil variantları.
+  // Axtarış üçün istifadə olunur ki, "watches" yazanda "Saat" kateqoriyalı məhsullar gəlsin.
+  const [categoryLangMap, setCategoryLangMap] = useState<Record<string, string[]>>({});
   // Kategori hierarxiyası (parent → alt-kategori). Firestore-dan oxunur.
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   // Hər kategoriyaya aid məhsul siyahısı — mega menyuda kategoriyaya hover edəndə həmin kateqoriyanın brendləri görünür
@@ -285,10 +288,80 @@ const Header: React.FC = () => {
         }
       };
       tree.forEach(enrichBrandsForParents);
+
+      // Hər kateqoriya üçün bütün 3 dildə adları toplayıb tək map-ə yığ —
+      // axtarış "watches" yazanda "Saat" kateqoriyalı məhsulları da tapsın.
+      // Həmçinin i18n tərcümə açarlarını sinonim kimi əlavə edirik
+      // (məs. Firestore-dakı "Saat" → i18n "Saatlar/Watches/Часы" də uyğunlaşsın).
+      const langMap: Record<string, string[]> = {};
+      const i18nCategoryKeys = ['perfume', 'skincare', 'haircare', 'makeup', 'bodycare', 'accessories', 'watches', 'jewelry', 'bags', 'sunglasses', 'gifts', 'sale'];
+      // i18n.store-dan birbaşa götür ki, dil parametri keçərkən düzgün dəyər gəlsin
+      const tForLng = (key: string, lng: 'az' | 'ru' | 'en'): string => {
+        try {
+          const res = i18n.getResource(lng, 'translation', key) || i18n.getResource(lng, 'common', key);
+          if (typeof res === 'string' && res.trim()) return res;
+        } catch { /* noop */ }
+        return '';
+      };
+      const i18nSynonyms = i18nCategoryKeys.map((k) => {
+        const az = tForLng(`category.${k}`, 'az') || tForLng(`header.${k}`, 'az');
+        const ru = tForLng(`category.${k}`, 'ru') || tForLng(`header.${k}`, 'ru');
+        const en = tForLng(`category.${k}`, 'en') || tForLng(`header.${k}`, 'en');
+        return [az, ru, en].map((x) => x.trim()).filter(Boolean);
+      }).filter((arr) => arr.length > 0);
+
+      // Hardcoded fallback synonyms — i18n resurslar yüklənməyibsə də işləsin
+      const fallbackSyn = [
+        ['Saat', 'Saatlar', 'Часы', 'Watch', 'Watches'],
+        ['Zərgərlik', 'Zergerlik', 'Украшения', 'Jewelry', 'Jewellery'],
+        ['Çanta', 'Çantalar', 'Сумки', 'Сумка', 'Bag', 'Bags'],
+        ['Eynək', 'Günəş Eynəkləri', 'Очки', 'Sunglasses', 'Glasses'],
+        ['Ətir', 'Ətirlər', 'Парфюм', 'Perfume', 'Fragrance'],
+        ['Aksesuar', 'Aksesuarlar', 'Аксессуары', 'Accessories', 'Accessory'],
+        ['Hədiyyə', 'Подарок', 'Подарки', 'Gift', 'Gifts'],
+      ];
+      fallbackSyn.forEach((set) => {
+        const exists = i18nSynonyms.some((s) => s.some((v) => set.some((f) => f.toLowerCase() === v.toLowerCase())));
+        if (!exists) i18nSynonyms.push(set);
+      });
+
+      const findI18nSynonyms = (name: string): string[] => {
+        const n = name.toLowerCase().trim();
+        for (const synSet of i18nSynonyms) {
+          if (synSet.some((s) => {
+            const sl = s.toLowerCase();
+            return sl === n || sl.includes(n) || n.includes(sl);
+          })) {
+            return synSet;
+          }
+        }
+        return [];
+      };
+
+      const walkCatLang = (node: CategoryNode) => {
+        const baseNames = [node.nameAz, node.nameRu, node.nameEn, node.name].filter(Boolean);
+        // İlk uyğun i18n sinonim qrupunu da əlavə et — "Saat" → "Saatlar / Watches / Часы"
+        const i18nExtra = baseNames.flatMap(findI18nSynonyms);
+        const allNames = Array.from(new Set([...baseNames, ...i18nExtra]));
+        baseNames.forEach((n) => {
+          langMap[n.toLowerCase()] = allNames;
+        });
+        node.children.forEach(walkCatLang);
+      };
+      tree.forEach(walkCatLang);
+
+      // Eyni zamanda yalnız products-da olan kateqoriyalar üçün də i18n sinonimləri qur
+      uniqueCategories.forEach((catName) => {
+        const key = catName.toLowerCase();
+        if (langMap[key]) return;
+        const syn = findI18nSynonyms(catName);
+        langMap[key] = syn.length > 0 ? Array.from(new Set([catName, ...syn])) : [catName];
+      });
       setCategories(uniqueCategories);
       setBrands(uniqueBrands);
       setProductsByCategory(byCat);
       setCategoryTree(tree);
+      setCategoryLangMap(langMap);
     } catch (error) {
       console.error('Error loading categories and brands:', error);
     }
@@ -482,29 +555,64 @@ const Header: React.FC = () => {
       return;
     }
     const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
-    const matches = allProducts
-      .filter((p) => {
-        const nameAz = p.name?.az?.toLowerCase() || '';
-        const nameRu = p.name?.ru?.toLowerCase() || '';
-        const nameEn = p.name?.en?.toLowerCase() || '';
+
+    // Aqresiv axtarış: brend → həmin brendin BÜTÜN modelləri,
+    // kateqoriya → həmin kateqoriyaya aid bütün məhsullar (hər 3 dildə).
+    // Axtarış sözünü split edib hər birinin uyğunlaşmasını tələb edirik (multi-word).
+    const tokens = q.split(/\s+/).filter(Boolean);
+
+    const matchesToken = (p: Product, token: string): boolean => {
+      const nameAz = p.name?.az?.toLowerCase() || '';
+      const nameRu = p.name?.ru?.toLowerCase() || '';
+      const nameEn = p.name?.en?.toLowerCase() || '';
+      const brand = (p.brand || '').toLowerCase();
+      const category = (p.category || '').toLowerCase();
+      // Kateqoriyanın bütün 3 dildə adları (Firestore-dan) — "watches" yazanda "Saat" kateqoriyalı məhsullar gəlsin
+      const catVariants = categoryLangMap[category] || [];
+      const catVariantsMatch = catVariants.some((c) => c.toLowerCase().includes(token));
+      // Cins kütləvi sözləri də nəzərə al — "kişi" → men, "qadın" → women
+      const gender = (p.gender || '').toLowerCase();
+      const genderHints =
+        (token === 'kişi' || token === 'kisi' || token === 'мужской' || token === 'муж' || token === 'men' || token === 'male')
+          ? gender === 'men' || gender === 'unisex'
+          : (token === 'qadın' || token === 'qadin' || token === 'женский' || token === 'жен' || token === 'women' || token === 'female')
+          ? gender === 'women' || gender === 'unisex'
+          : false;
+      return (
+        nameAz.includes(token) ||
+        nameRu.includes(token) ||
+        nameEn.includes(token) ||
+        brand.includes(token) ||
+        category.includes(token) ||
+        catVariantsMatch ||
+        genderHints
+      );
+    };
+
+    const matches = allProducts.filter((p) => tokens.every((t) => matchesToken(p, t)));
+
+    // Brend / kateqoriya tam uyğunluğunda olan məhsullar üst-də göstərilsin.
+    // Sonra ad uyğunluqları. Müsadirə üçün stok və bestseller balansı.
+    const scored = matches
+      .map((p) => {
         const brand = (p.brand || '').toLowerCase();
         const category = (p.category || '').toLowerCase();
-        // Also match the translated/localized category name so that
-        // typing or selecting a localized trending term (e.g. "Saat", "Çantalar")
-        // returns the correct products in any UI language.
-        const categoryLocalized = getCategoryTranslation(p.category || '').toLowerCase();
-        return (
-          nameAz.includes(q) ||
-          nameRu.includes(q) ||
-          nameEn.includes(q) ||
-          brand.includes(q) ||
-          category.includes(q) ||
-          categoryLocalized.includes(q)
-        );
+        const catVariants = categoryLangMap[category] || [];
+        let score = 0;
+        if (brand === q || tokens.every((t) => brand === t)) score += 100;
+        else if (brand.includes(q)) score += 60;
+        if (category === q || catVariants.some((c) => c.toLowerCase() === q)) score += 80;
+        else if (category.includes(q) || catVariants.some((c) => c.toLowerCase().includes(q))) score += 40;
+        if (p.isBestseller) score += 5;
+        if ((p.stock ?? 0) > 0) score += 3;
+        return { p, score };
       })
-      .slice(0, 24);
-    setSearchResults(matches);
-    setHighlightIndex(matches.length > 0 ? 0 : -1);
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.p)
+      .slice(0, 60);
+
+    setSearchResults(scored);
+    setHighlightIndex(scored.length > 0 ? 0 : -1);
     void lang;
     // Debounced: 1.2 saniyə yazmadıqdan sonra analitikaya göndər
     if (q.length >= 2) {
@@ -515,7 +623,7 @@ const Header: React.FC = () => {
       }, 1200);
       return () => clearTimeout(debounceTimer);
     }
-  }, [searchQuery, allProducts, i18n.language]);
+  }, [searchQuery, allProducts, i18n.language, categoryLangMap]);
 
   const goToProduct = (p: Product) => {
     // Track the search query that led to this product click

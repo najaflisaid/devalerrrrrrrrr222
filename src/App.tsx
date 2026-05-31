@@ -61,10 +61,11 @@ import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
+import LogoLoader from './components/LogoLoader';
 import './i18n';
 
-// Minimal səhifə yüklənmə fallback-i — boş div, qaralma yaratmır
-const PageFallback: React.FC = () => <div className="min-h-screen bg-white" />;
+// Minimal səhifə yüklənmə fallback-i — De Valeur logosu + zərif pulse (ekranın ortasında)
+const PageFallback: React.FC = () => <LogoLoader fullScreen={false} />;
 
 const DEFAULT_SECTION_ORDER = [
   'collectionTiles',

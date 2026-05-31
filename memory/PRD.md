@@ -51,3 +51,42 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
 
 ## Backlog (deferred from user feedback)
 - Admin → İstifadəçilər: qeydiyyat tarixi + ardıcıllıq sütunu
+
+## 2026-01 (iter — category merge + UX polish)
+**Problem statement**: Admin paneldə "Kateqoriya birləşdir" aləti əlavə etmək (case-insensitive dublikatları tək kanonik formaya gətirmək), axtarış UX təkmilləşdirmək (ə hərfi düzgün renderlənsin, çoxdilli + brend axtarış ağıllı olsun), səhifə yüklənmə zamanı brendlənmiş logo loader göstərmək, admin paneldə məhsul/sifariş şəkillərinə hover zoom əlavə etmək.
+
+### Implemented (this iteration)
+- **Kateqoriya merge aləti** (`AdminPanel.tsx`):
+  - "Dublikatları birləşdir" düyməsi (amber) → modal ilə case-insensitive dublikat qruplarını göstərir
+  - Hər qrup üçün admin kanonik versiyanı seçir (radio); qalan versiyaların məhsulları (`products.category`) və brendlərin `categoryNames` massivləri kanonik nameAz-a köçürülür
+  - Dublikat kateqoriya sənədləri silinir; alt-kateqoriyaların `parentId`-si kanonikə yönləndirilir
+  - `data-testid`-lər: `admin-merge-categories-btn`, `merge-categories-modal`, `merge-group-{i}`, `merge-option-{id}`, `merge-confirm-btn`
+- **Font: `font-futura` → Montserrat** (`tailwind.config.js`):
+  - Bütün `font-futura` className-ləri artıq Montserrat ailəsinə düşür — Azərbaycan dilinin "ə/ş/ç/ı/ö/ü/ğ" hərfləri düzgün renderlənir, header düymələri (MENYU, AXTARIŞ, Hədiyyə) menyu fontu ilə eyni görünür
+- **Logo Loader** (`components/LogoLoader.tsx` + `index.css`):
+  - Minimalist: yalnız mərkəzlənmiş De Valeur logosu + `dv-logo-pulse` (1.55s ease-in-out, opacity 0.55→1, scale 0.985→1.04) — spinner və progress bar yoxdur
+  - `App.tsx` -də Suspense fallback (`PageFallback`) artıq `<LogoLoader fullScreen={false} />` qaytarır (hər səhifə dəyişikliyində görünür)
+  - `prefers-reduced-motion: reduce` → animasiya söndürülür, opacity 0.85-də qalır
+- **Ağıllı axtarış** (`Header.tsx`):
+  - Multi-token: "Festina saat" → həm Festina, həm Saat kriteriyalarını qarşılayan məhsullar
+  - i18n synonym map: "watches" / "часы" yazanda "Saat" kateqoriyalı bütün məhsullar gəlir
+  - Hardcoded fallback synonyms (Saat/Часы/Watches, Çanta/Сумки/Bags, Eynək/Очки/Sunglasses, Ətir/Парфюм/Perfume və s.) — i18n resurs gec yüklənsə də işləyir
+  - Gender hints: "kişi" / "qadın" / "men" / "women" → uyğun gender filtri
+  - Skorlu sıralama: tam uyğunluq (brend=q, category=q) > qismi uyğunluq > bestseller/stok bonus; nəticə limiti 24→60
+  - Verifikasiya: "saat"→24+, "watches"→60, "часы"→60, "festina"→49
+- **Şəkil hover zoom** (`.dv-img-zoom` CSS class):
+  - Admin paneldə məhsul siyahısı thumb (`AdminPanel.tsx`)
+  - Müştəri sifarişləri item şəkilləri (`CustomerOrdersTab.tsx`)
+  - B2B sifariş item şəkilləri (`B2BOrdersTab.tsx`)
+  - Hover-də `scale(2.6)` + zərif drop shadow + `z-index 50` → klik etmədən şəkli yaxından görmək mümkün
+
+### Verified
+- TypeScript: yeni dəyişikliklər heç bir əlavə xəta yaratmır (pre-existing unrelated TS errors saxlanılır)
+- Vite production build keçir: `✓ built in 12.97s`
+- Live screenshot: ana səhifə, axtarış modalı (saat/watches/часы/festina), mega menyu — hamısı düzgün renderlənir
+- Font: ə/ş/ç/ı hərfləri Montserrat-da təmiz görünür
+
+### Backlog / next
+- P1: Admin merge modalına "Preview before merge" — silinəcək sənədlərin ID-ləri göstərilsin
+- P2: Axtarış input-da "Recent searches" siyahısı (LocalStorage)
+- P2: LogoLoader-i ProductPage və CategoryPage daxili `<Suspense>` -lərinə də ötür
