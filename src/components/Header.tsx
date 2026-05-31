@@ -1248,7 +1248,7 @@ const Header: React.FC = () => {
             ></div>
 
             <div
-              className={`dv-light-reset fixed top-0 left-0 h-full w-[88%] max-w-[400px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              className={`dv-light-reset fixed top-0 left-0 h-full w-full max-w-[520px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
               style={{ boxShadow: '12px 0 48px -12px rgba(0,0,0,0.22)' }}
             >
               {/* Top header — luxurious */}
@@ -1265,140 +1265,177 @@ const Header: React.FC = () => {
               </div>
 
               <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto scrollbar-hide">
-                <nav className="flex-1 p-6 space-y-1.5">
-                  {/* Mobile "Brendlər" akardeonu */}
-                  <div className="dv-menu-item" style={{ ['--dv-i' as any]: 0 }}>
-                    <button
-                      onClick={() => setMobileProductsOpen(v => !v)}
-                      className="group w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.03] transition-colors text-left border-b border-black/[0.06]"
-                      data-testid="mobile-products-toggle"
-                    >
-                      <span className="text-[12px] uppercase tracking-[0.18em] text-black font-normal">{t('header.categories', { defaultValue: 'Kateqoriyalar' })}</span>
-                      <ChevronDown className={`h-3.5 w-3.5 text-black/55 transition-transform duration-300 ${mobileProductsOpen ? 'rotate-180 text-black' : ''}`} strokeWidth={1.5} />
-                    </button>
-                    {/* Smooth accordion (CSS grid-rows trick) */}
-                    <div
-                      className="grid transition-[grid-template-rows] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
-                      style={{ gridTemplateRows: mobileProductsOpen ? '1fr' : '0fr' }}
-                    >
-                      <div className="overflow-hidden min-h-0">
-                        <div className="mt-1 ml-2 pl-3 border-l border-gray-200 space-y-0.5 dv-accordion-open">
-                          {/* Top-level kategoriyalar (parent) — əgər categoryTree boşdursa fallback olaraq düz categories siyahısı */}
-                          {(categoryTree.length > 0
-                            ? categoryTree.map(node => ({ key: node.id, name: node.name, displayName: node.name, lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean), children: node.children }))
-                            : categories.map(c => ({ key: c, name: c, displayName: getCategoryTranslation(c), lookupNames: [c], children: [] as CategoryNode[] }))
-                          ).map((cat) => {
-                            const isOpen = mobileCategoryOpen === cat.key;
-                            // Bu kategoriyaya aid brendlər (parent isə alt-larından da daxil)
-                            const catBrands = Array.from(new Set(cat.lookupNames.flatMap(n => productsByCategory[n] || [])))
-                              .sort((a, b) => a.localeCompare(b, 'az'));
-                            return (
-                              <div key={cat.key} className="border-b border-gray-50 last:border-0">
+                <nav className="flex-1 py-3 space-y-1.5">
+                  {/* Mobile menu — 3 sütun: Kateqoriyalar | Alt-kateqoriya | Brendlər
+                      (komputerdə olduğu kimi). Tıklamaq seçimi yeniləyir. */}
+                  {(() => {
+                    const categoryItems = categoryTree.length > 0
+                      ? categoryTree.map(node => ({
+                          key: node.id,
+                          name: node.name,
+                          displayName: node.name,
+                          lookupName: node.nameAz || node.name,
+                          lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean),
+                          children: node.children,
+                        }))
+                      : categories.map(c => ({
+                          key: c,
+                          name: c,
+                          displayName: getCategoryTranslation(c),
+                          lookupName: c,
+                          lookupNames: [c],
+                          children: [] as CategoryNode[],
+                        }));
+
+                    // Seçilmiş kateqoriya (mobileCategoryOpen artıq mövcuddur — seçim state-i kimi istifadə)
+                    const selectedCat = categoryItems.find(c => c.key === mobileCategoryOpen) || categoryItems[0];
+                    const subcats = selectedCat?.children || [];
+                    const hasSubcats = subcats.length > 0;
+
+                    // Seçilmiş alt-kateqoriya
+                    const selectedSub = hasSubcats
+                      ? (subcats.find((s: CategoryNode) => s.id === mobileSubCategoryOpen) || subcats[0])
+                      : null;
+
+                    // 3-cü sütun: alt-kateqoriya varsa onun brendləri, yoxsa ana kateqoriya brendləri
+                    const brandsTarget = selectedSub
+                      ? [selectedSub.nameAz, selectedSub.nameRu, selectedSub.nameEn].filter(Boolean)
+                      : (selectedCat?.lookupNames || []);
+                    const colBrands = Array.from(new Set(brandsTarget.flatMap((n: string) => productsByCategory[n] || [])))
+                      .sort((a: string, b: string) => a.localeCompare(b, 'az'));
+
+                    return (
+                      <div className="grid grid-cols-3 gap-0 border-t border-black/[0.06] min-h-[60vh]" data-testid="mobile-menu-3col">
+                        {/* Sütun 1 — Kateqoriyalar */}
+                        <div className="border-r border-black/[0.06] py-3 px-2 sm:px-3">
+                          <p className="px-1 pb-2 text-[9px] uppercase tracking-[0.18em] text-black/45 font-medium">
+                            {t('header.categories', { defaultValue: 'Kateqoriya' })}
+                          </p>
+                          <ul className="space-y-0.5">
+                            {categoryItems.map((cat) => {
+                              const isActive = selectedCat?.key === cat.key;
+                              return (
+                                <li key={cat.key}>
+                                  <button
+                                    onClick={() => {
+                                      setMobileCategoryOpen(cat.key);
+                                      setMobileSubCategoryOpen(null);
+                                    }}
+                                    className={`w-full text-left px-1.5 py-2 text-[12.5px] rounded transition-colors ${
+                                      isActive ? 'text-black font-medium bg-black/[0.04]' : 'text-gray-700 hover:bg-black/[0.03]'
+                                    }`}
+                                    data-testid={`mobile-category-toggle-${cat.name}`}
+                                  >
+                                    <span className="block truncate">{cat.displayName}</span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+
+                        {/* Sütun 2 — Alt-kateqoriyalar (varsa) */}
+                        <div className="border-r border-black/[0.06] py-3 px-2 sm:px-3">
+                          <p className="px-1 pb-2 text-[9px] uppercase tracking-[0.18em] text-black/45 font-medium">
+                            {hasSubcats
+                              ? t('header.subcategories', { defaultValue: 'Alt' })
+                              : t('header.brands', { defaultValue: 'Brendlər' })}
+                          </p>
+                          {hasSubcats ? (
+                            <ul className="space-y-0.5">
+                              {subcats.map((sub: CategoryNode) => {
+                                const isActive = selectedSub?.id === sub.id;
+                                return (
+                                  <li key={sub.id}>
+                                    <button
+                                      onClick={() => setMobileSubCategoryOpen(sub.id)}
+                                      className={`w-full text-left px-1.5 py-2 text-[12.5px] rounded transition-colors ${
+                                        isActive ? 'text-black font-medium bg-black/[0.04]' : 'text-gray-700 hover:bg-black/[0.03]'
+                                      }`}
+                                      data-testid={`mobile-subcategory-toggle-${sub.name}`}
+                                    >
+                                      <span className="block truncate">{sub.name}</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                              {/* "Hamısı" — bu kateqoriyaya keçid */}
+                              <li className="pt-2 mt-2 border-t border-black/[0.05]">
                                 <button
                                   onClick={() => {
-                                    setMobileCategoryOpen(isOpen ? null : cat.key);
-                                    setMobileSubCategoryOpen(null);
+                                    navigate(`/products?category=${encodeURIComponent(selectedCat.lookupName)}`);
+                                    closeMobileMenu();
+                                    window.scrollTo({ top: 0, behavior: 'auto' });
                                   }}
-                                  className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded transition-colors text-left"
-                                  data-testid={`mobile-category-toggle-${cat.name}`}
+                                  className="w-full text-left px-1.5 py-2 text-[11px] uppercase tracking-wider text-black/70 hover:text-black"
+                                  data-testid={`mobile-category-all-${selectedCat.name}`}
                                 >
-                                  <span>{cat.displayName}</span>
-                                  <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
+                                  {t('header.viewAll', { defaultValue: 'Hamısına bax' })} →
                                 </button>
-                                {/* Smooth nested accordion */}
-                                <div
-                                  className="grid transition-[grid-template-rows] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
-                                  style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
-                                >
-                                  <div className="overflow-hidden min-h-0">
-                                    <div className="ml-2 pl-3 border-l border-amber-200/60 mb-2 space-y-0.5 dv-accordion-open">
-                                      {/* Section label inside the open category */}
-                                      {cat.children && cat.children.length > 0 ? (
-                                        <p className="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-black/45 font-medium" data-testid={`mobile-section-label-subcategories-${cat.name}`}>
-                                          {t('header.subcategories', { defaultValue: 'Alt Kateqoriyalar' })}
-                                        </p>
-                                      ) : (catBrands.length > 0 && (
-                                        <p className="px-3 pt-1.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-black/45 font-medium" data-testid={`mobile-section-label-brands-${cat.name}`}>
-                                          {t('header.brands', { defaultValue: 'Brendlər' })}
-                                        </p>
-                                      ))}
-                                      {/* Alt-kateqoriyalar (varsa) — hər birinin də öz akardeonu var (brendlərini açır) */}
-                                      {cat.children && cat.children.length > 0 && cat.children.map((sub: CategoryNode) => {
-                                        const subOpen = mobileSubCategoryOpen === sub.id;
-                                        const subLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
-                                        const subBrands = Array.from(new Set(subLookups.flatMap(n => productsByCategory[n] || [])))
-                                          .sort((a, b) => a.localeCompare(b, 'az'));
-                                        return (
-                                          <div key={sub.id}>
-                                            <button
-                                              onClick={() => setMobileSubCategoryOpen(subOpen ? null : sub.id)}
-                                              className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded text-left"
-                                              data-testid={`mobile-subcategory-toggle-${sub.name}`}
-                                            >
-                                              <span>{sub.name}</span>
-                                              <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${subOpen ? 'rotate-180' : ''}`} strokeWidth={1.25} />
-                                            </button>
-                                            <div
-                                              className="grid transition-[grid-template-rows] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden"
-                                              style={{ gridTemplateRows: subOpen ? '1fr' : '0fr' }}
-                                            >
-                                              <div className="overflow-hidden min-h-0">
-                                                <div className="ml-2 pl-3 border-l border-gray-100 space-y-0.5 mb-1 dv-accordion-open">
-                                                  {subBrands.length > 0 && (
-                                                    <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-[0.18em] text-black/40 font-medium" data-testid={`mobile-section-label-subbrands-${sub.name}`}>
-                                                      {t('header.brands', { defaultValue: 'Brendlər' })}
-                                                    </p>
-                                                  )}
-                                                  {subBrands.length > 0 ? subBrands.map(b => (
-                                                    <button
-                                                      key={`${sub.id}-${b}`}
-                                                      onClick={() => {
-                                                        navigate(`/products?brand=${encodeURIComponent(b)}`);
-                                                        closeMobileMenu();
-                                                        window.scrollTo({ top: 0, behavior: 'auto' });
-                                                      }}
-                                                      className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
-                                                    >
-                                                      {b}
-                                                    </button>
-                                                  )) : (
-                                                    <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
+                              </li>
+                            </ul>
+                          ) : (
+                            // Alt-kateqoriya yoxdursa, 2-ci sütun birbaşa brendləri göstərir
+                            colBrands.length > 0 ? (
+                              <ul className="space-y-0.5">
+                                {colBrands.map((b: string) => (
+                                  <li key={b}>
+                                    <button
+                                      onClick={() => {
+                                        navigate(`/products?brand=${encodeURIComponent(b)}`);
+                                        closeMobileMenu();
+                                        window.scrollTo({ top: 0, behavior: 'auto' });
+                                      }}
+                                      className="w-full text-left px-1.5 py-2 text-[12px] text-gray-700 hover:bg-black/[0.03] rounded"
+                                      data-testid={`mobile-brand-${b}`}
+                                    >
+                                      <span className="block truncate">{b}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="px-1.5 py-2 text-[11px] text-gray-400 italic">—</p>
+                            )
+                          )}
+                        </div>
 
-                                      {/* Birbaşa brendlər (alt-kategoriyaya aid olmayan) */}
-                                      {(!cat.children || cat.children.length === 0) && (
-                                        catBrands.length > 0 ? catBrands.map(b => (
-                                          <button
-                                            key={`${cat.key}-${b}`}
-                                            onClick={() => {
-                                              navigate(`/products?brand=${encodeURIComponent(b)}`);
-                                              closeMobileMenu();
-                                              window.scrollTo({ top: 0, behavior: 'auto' });
-                                            }}
-                                            className="block w-full text-left px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded"
-                                          >
-                                            {b}
-                                          </button>
-                                        )) : (
-                                          <p className="px-3 py-1.5 text-[11px] text-gray-400 italic">Brend yoxdur</p>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                        {/* Sütun 3 — Brendlər (alt-kategori seçilibsə onun brendləri) */}
+                        <div className="py-3 px-2 sm:px-3">
+                          <p className="px-1 pb-2 text-[9px] uppercase tracking-[0.18em] text-black/45 font-medium">
+                            {t('header.brands', { defaultValue: 'Brendlər' })}
+                          </p>
+                          {hasSubcats ? (
+                            colBrands.length > 0 ? (
+                              <ul className="space-y-0.5">
+                                {colBrands.map((b: string) => (
+                                  <li key={`${selectedSub?.id || 'all'}-${b}`}>
+                                    <button
+                                      onClick={() => {
+                                        navigate(`/products?brand=${encodeURIComponent(b)}`);
+                                        closeMobileMenu();
+                                        window.scrollTo({ top: 0, behavior: 'auto' });
+                                      }}
+                                      className="w-full text-left px-1.5 py-2 text-[12px] text-gray-700 hover:bg-black/[0.03] rounded"
+                                      data-testid={`mobile-brand-sub-${b}`}
+                                    >
+                                      <span className="block truncate">{b}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="px-1.5 py-2 text-[11px] text-gray-400 italic">—</p>
+                            )
+                          ) : (
+                            // Alt-kateqoriya yoxdursa 3-cü sütun boş — istifadəçi sütun 2-də brendləri görür
+                            <p className="px-1.5 py-2 text-[11px] text-gray-400 italic">—</p>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
+                  <div className="px-4 pt-4"></div>
 
                   <div className="dv-menu-item px-4 py-3 border-b border-black/[0.06]" style={{ ['--dv-i' as any]: 1 }}>
                     <Link

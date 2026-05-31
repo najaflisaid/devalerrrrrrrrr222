@@ -89,29 +89,30 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     <Ctx.Provider value={{ toast: showToast, confirm: askConfirm }}>
       {children}
 
-      {/* Toast container */}
-      <div className="fixed bottom-6 right-6 z-[1000] flex flex-col gap-2 pointer-events-none">
+      {/* Toast container — minimalist, aşağı sağ, nazik və ozelliyilə zərif */}
+      <div className="fixed bottom-4 right-4 z-[1000] flex flex-col gap-2 pointer-events-none max-w-[calc(100%-2rem)]" data-testid="site-toast-container">
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`pointer-events-auto px-4 py-3 rounded-xl shadow-2xl flex items-start gap-2 text-sm max-w-sm border ${
-              t.tone === 'success' ? 'bg-gray-900 text-white border-gray-800' :
-              t.tone === 'error'   ? 'bg-red-600 text-white border-red-700' :
-                                     'bg-white text-gray-900 border-gray-200'
+            className={`pointer-events-auto pl-3 pr-2 py-2 rounded-full shadow-lg flex items-center gap-2 text-[12.5px] font-medium max-w-sm backdrop-blur-md transition-all ${
+              t.tone === 'success' ? 'bg-gray-900/95 text-white border border-gray-800/40' :
+              t.tone === 'error'   ? 'bg-red-600/95 text-white border border-red-700/40' :
+                                     'bg-white/95 text-gray-900 border border-gray-200'
             }`}
             data-testid={`site-toast-${t.tone}`}
             role="status"
+            style={{ animation: 'dv-toast-in 0.35s cubic-bezier(0.22, 1, 0.36, 1)' }}
           >
-            {t.tone === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />}
-            {t.tone === 'error' && <AlertCircle className="h-4 w-4 text-white mt-0.5 shrink-0" />}
-            {t.tone === 'info' && <AlertCircle className="h-4 w-4 text-gray-700 mt-0.5 shrink-0" />}
-            <span className="whitespace-pre-line leading-relaxed flex-1">{t.message}</span>
+            {t.tone === 'success' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300 shrink-0" strokeWidth={2.2} />}
+            {t.tone === 'error' && <AlertCircle className="h-3.5 w-3.5 text-white shrink-0" strokeWidth={2.2} />}
+            {t.tone === 'info' && <AlertCircle className="h-3.5 w-3.5 text-gray-700 shrink-0" strokeWidth={2.2} />}
+            <span className="leading-tight flex-1 truncate">{t.message}</span>
             <button
               onClick={() => removeToast(t.id)}
-              className="opacity-60 hover:opacity-100 -mr-1 -mt-0.5 p-0.5 rounded"
+              className="opacity-60 hover:opacity-100 p-0.5 rounded-full shrink-0"
               aria-label="Bağla"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" strokeWidth={2.2} />
             </button>
           </div>
         ))}

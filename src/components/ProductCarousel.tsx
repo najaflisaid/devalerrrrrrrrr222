@@ -24,8 +24,8 @@ interface ProductCarouselProps {
 const ProductCarousel: React.FC<ProductCarouselProps> = ({
   products,
   testIdPrefix = 'pc',
-  // Mobil: 2 kart + 3-cünün yarısı görünür (basis ~36%, gap-5 nəzərə alınmaqla).
-  cardBasis = 'basis-[36%] sm:basis-[46%] md:basis-[31%] lg:basis-[24%]',
+  // Mobil: 3 kart tam görünür (~31%, gap-5 nəzərə alınmaqla); desktop-da 5 kart (lg: ~19%).
+  cardBasis = 'basis-[31%] sm:basis-[31%] md:basis-[24%] lg:basis-[19%] xl:basis-[19%]',
   variant = 'default',
 }) => {
   const { i18n } = useTranslation();

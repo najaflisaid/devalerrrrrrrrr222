@@ -139,3 +139,32 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
 
 ### Production deployment note
 Bu dəyişiklikləri istifadəçinin saytında (`devaleur.az`) görmək üçün **yenidən deploy etmək lazımdır** — preview environment-də artıq işləyir.
+
+## 2026-01 (iter 4 — mobile polish + 3-col menu + product grid)
+**Feedback**: 
+- Mobil scroll geri qayıdanda logo bannerin ortasına düşür
+- "Dəri Məhsullar" kateqoriya kartında alt-alta yazılır — yan-yana olsun
+- Best Sellers / Yeni Modellər: kompda 5 məhsul, telefonda 3 (azca böyüt)
+- Ana səhifədə sağdan sola sürüşdürəndə bütün səhifə yerindən tərpənir
+- Bildirişlər aşağı sağdan + daha nazik + minimal olsun
+- Mobil menyu kompda olduğu kimi 3-sütunlu (Kateqoriya / Alt / Brend)
+
+### Implemented
+- **ProductCarousel basis** (BestSellers + bütün carousel-lar): `basis-[31%]` mobil (3 kart görünür), `lg/xl:basis-[19%]` desktop (5 kart). Test: mobil 3 kart, desktop 5 kart düzgün görünür.
+- **CollectionTiles şrift kompakt**: `text-[14px] sm:text-[18px] lg:text-[26px]` + `whitespace-nowrap overflow-hidden text-ellipsis` — "Dəri Məhsullar" artıq tək sətirdə (Saatlar/Gümüşlər kimi).
+- **Horizontal swipe lock**: `html, body { overflow-x: clip }` — sağdan sola sürüşdürəndə səhifə yerindən tərpənmir. `clip` `sticky`-ni sındırmır (`hidden` sındırırdı).
+- **Toast (bildiriş) redesign**: aşağı sağ, `rounded-full` pill, `pl-3 pr-2 py-2`, `text-[12.5px]`, `backdrop-blur-md`, `dv-toast-in` slide-up animation — daha nazik, daha zərif, daha minimalist.
+- **Mobil menyu — 3-sütunlu** (`Header.tsx`):
+  - Panel `max-w-[520px] w-full` (sağdan kifayət qədər yer)
+  - 3 sütun grid: KATEQORİYA | ALT (və ya BRENDLƏR əgər alt yox) | BRENDLƏR
+  - Tap kateqoriya → alt-kategoriyalar/brendlər real vaxt yenilənir
+  - "Hamısına bax" alt-sütunun altına əlavə olundu — kateqoriyaya keçid
+  - data-testids: `mobile-menu-3col`, `mobile-category-toggle-{name}`, `mobile-subcategory-toggle-{name}`, `mobile-brand-{name}`
+
+### Verified
+- iPhone 11 Pro ölçüsündə (375×812) screenshots:
+  - Mobil menyu 3-sütunlu görünür: DƏRİ aktiv → ÇANTA alt → ENZO NORİ, SILVERATOSO brendlər
+  - BestSellers 3 məhsul kartı tam görünür
+  - "Dəri Məhsul..." tək sətirdə ellipsis ilə
+- Desktop (1440px): BestSellers 5 məhsul kartı
+- Vite production build keçir: `✓ built in 13.92s`

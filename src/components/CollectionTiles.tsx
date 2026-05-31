@@ -170,7 +170,7 @@ const CollectionTiles: React.FC = () => {
                   {/* Bottom editorial caption */}
                   <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-7 text-white">
                     <h3
-                      className="font-playfair text-[15px] sm:text-[20px] lg:text-[28px] font-light leading-[1.15] tracking-tight"
+                      className="font-playfair text-[14px] sm:text-[18px] lg:text-[26px] font-light leading-[1.15] tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
                       style={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}
                     >
                       {titleText}

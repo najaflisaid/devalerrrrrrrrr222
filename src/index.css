@@ -169,9 +169,11 @@ html,
 body {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Üfüqi səhifə sürüşməsi JS ilə blok olunur (main.tsx); CSS-də overflow-x
-     tətbiq etmirik, çünki `hidden` və `clip` `position: sticky`-ni sındırır. */
+  /* Üfüqi səhifə sürüşməsini blok et — istifadəçi sağdan sola sürüşdürəndə
+     səhifə yerindən tərpənməsin. `clip` `position: sticky`-ni sındırmır
+     (köhnə `hidden` sındırırdı). Daxili carousel-lar öz overflow-x ilə işləyir. */
   max-width: 100%;
+  overflow-x: clip;
   overscroll-behavior-x: none;
   /* iOS-da tap response-ı təbii olsun (boz flash gizlət) və smooth scroll təmin et */
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -1818,6 +1820,13 @@ button:active {
 
 
 /* === LogoLoader: minimalist səhifə yüklənmə (pulse) === */
+
+/* Toast slide-in animasiyası — aşağı sağdan zərif yuxarı çıxar */
+@keyframes dv-toast-in {
+  0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @keyframes dv-logo-pulse {
   0%, 100% {
     opacity: 0.55;
