@@ -90,3 +90,19 @@ Ana səhifədə "Dəyər hədiyyə edin" (GiftFinder) bölməsindən sonra LV-ü
 - P1: Admin merge modalına "Preview before merge" — silinəcək sənədlərin ID-ləri göstərilsin
 - P2: Axtarış input-da "Recent searches" siyahısı (LocalStorage)
 - P2: LogoLoader-i ProductPage və CategoryPage daxili `<Suspense>` -lərinə də ötür
+
+## 2026-01 (iter 2 — canonical category names + AZ diacritic search)
+**Feedback**: User explained: kateqoriya adlarını "Eynəklər" → "EYNƏK", "Alışqanlar" → "ALIŞQAN" kimi adminə dəyişiblər, amma axtarış trending-i hələ köhnə adları (məhsullar üzərindən) göstərirdi. Həmçinin "eynek" (ə-siz yazılış) heç nə tapmırdı və loader logosu böyük idi.
+
+### Implemented
+- **Trending / footer / filter dropdown indi admin canonical adlarını göstərir**:
+  - `Header.tsx` trending pick-lər `categoryTree` -dən (admin) gəlir, məhsulların `category` field-indən deyil
+  - `Footer.tsx` artıq YALNIZ admin-də yaradılmış kateqoriyaları siyahıya salır — product-only "orphan" dublikatları (case fərqli, plural variant və s.) yox olur
+  - `ProductsPage.tsx` filter dropdown-u öncə admin kateqoriyalarını göstərir (fallback: məhsulların kateqoriyaları)
+- **Case-insensitive + substring filter matching** (`ProductsPage.tsx`):
+  - Admin "EYNƏK" filtrini klikləyəndə məhsullarda hələ "Eynəklər" qalıbsa da nəticələr gəlir (qarşılıqlı substring + lowercase)
+- **Azərbaycan diakritik normalizasiyası** (`Header.tsx` axtarış):
+  - `normalizeAz()` köməkçi: ə→e, ş→s, ç→c, ı→i, ö→o, ü→u, ğ→g
+  - Həm sorğu, həm məhsul sahələri (ad/brend/kateqoriya) normalizə edilib müqayisə edilir
+  - Verifikasiya: "eynek" → 60, "sirga" → 17, "alisqan" → 60, "gumus" → 1 nəticə (əvvəl 0 idi)
+- **LogoLoader kiçildildi**: `h-10/h-12/h-14` → `h-7/h-8` — daha minimalist, ekran ortasında kiçik və zərif görünür

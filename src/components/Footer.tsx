@@ -76,17 +76,10 @@ const Footer: React.FC = () => {
         children: (n.children || []).map((c) => c.name),
       }));
 
-      // Add any product-only categories that aren't in the tree as parent-only
-      const knownNames = new Set<string>();
-      parents.forEach((p) => {
-        knownNames.add(p.name.toLowerCase());
-        p.children.forEach((c) => knownNames.add(c.toLowerCase()));
-      });
-      cats.forEach((c) => {
-        if (!knownNames.has(c.toLowerCase())) {
-          parents.push({ name: c, children: [] });
-        }
-      });
+      // YALNIZ admin paneldə təyin olunmuş kateqoriyalar göstərilir — məhsullarda
+      // qalmış köhnə adlar (case fərqli və ya plural variantlar) artıq footer-də görünmür.
+      // Admin "Eynəklər"-i "EYNƏK"-ə dəyişdiyi anda hər yerdə yalnız "EYNƏK" görünməlidir.
+      // Köhnə davranış: admin-də olmayan product-only kateqoriyalar əlavə olunurdu — bu silindi.
 
       setCategoryNodes(parents);
       setCategories(cats.sort());

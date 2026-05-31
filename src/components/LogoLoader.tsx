@@ -23,7 +23,7 @@ const LogoLoader: React.FC<{ fullScreen?: boolean }> = ({ fullScreen = true }) =
       <img
         src="https://i.hizliresim.com/tmu65g6.png"
         alt="De Valeur"
-        className="h-10 sm:h-12 md:h-14 dv-logo-pulse select-none"
+        className="h-7 sm:h-8 dv-logo-pulse select-none"
         draggable={false}
       />
     </div>

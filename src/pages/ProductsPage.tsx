@@ -414,6 +414,17 @@ const ProductsPage: React.FC = () => {
     }
 
     if (selectedCategory !== 'all') {
+      // Admin "Eynəklər" → "EYNƏK" dəyişdikdən sonra məhsullarda hələ köhnə dəyər
+      // qalmış ola bilər. Buna görə uyğunluq case-insensitive və qarşılıqlı substring
+      // ilə yoxlanır — admin-in qoyduğu adın hissəsi məhsuldakı köhnə adda və ya
+      // əksinə tapılırsa, məhsul daxil edilir.
+      const norm = (s: string) => (s || '').trim().toLowerCase();
+      const selNorm = norm(selectedCategory);
+      const fuzzyMatch = (productCat: string): boolean => {
+        const pc = norm(productCat);
+        if (!pc || !selNorm) return false;
+        return pc === selNorm || pc.includes(selNorm) || selNorm.includes(pc);
+      };
       // Əgər seçilmiş kategori parent-dirsə, onun bütün alt-kateqoriyalarındakı məhsulları da daxil et
       const parentNode = categoryTree.find(n => n.nameAz === selectedCategory || n.nameRu === selectedCategory || n.nameEn === selectedCategory || n.name === selectedCategory);
       if (parentNode && parentNode.children.length > 0) {
@@ -421,9 +432,13 @@ const ProductsPage: React.FC = () => {
         parentNode.children.forEach(c => {
           [c.nameAz, c.nameRu, c.nameEn, c.name].filter(Boolean).forEach(n => validNames.add(n));
         });
-        filtered = filtered.filter(p => validNames.has(p.category));
+        filtered = filtered.filter(p => {
+          if (validNames.has(p.category)) return true;
+          // Case-insensitive / substring fallback
+          return Array.from(validNames).some(name => fuzzyMatch(name) && fuzzyMatch(p.category) && (norm(name) === norm(p.category) || norm(name).includes(norm(p.category)) || norm(p.category).includes(norm(name))));
+        });
       } else {
-        filtered = filtered.filter(p => p.category === selectedCategory);
+        filtered = filtered.filter(p => fuzzyMatch(p.category));
       }
     }
 
@@ -495,7 +510,21 @@ const ProductsPage: React.FC = () => {
     setFilteredProducts(filtered);
   };
 
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+  // Filter dropdown-da göstərilən kateqoriyalar: ÜSTÜNLƏK admin paneldə təyin olunmuş
+  // kateqoriya adlarına verilir (onların case-ini saxlayır). Admin kateqoriya yoxdursa
+  // məhsulların kateqoriyalarına geri qayıdırıq. Bu, admin "Eynəklər"-i "EYNƏK"-ə
+  // dəyişdikdən sonra filtrdə yalnız "EYNƏK" görünməsini təmin edir.
+  const adminCategoryNames: string[] = [];
+  const walkCatTree = (n: CategoryNode) => {
+    const name = n.name || n.nameAz || n.nameEn || n.nameRu;
+    if (name && !adminCategoryNames.includes(name)) adminCategoryNames.push(name);
+    n.children.forEach(walkCatTree);
+  };
+  categoryTree.forEach(walkCatTree);
+  const productCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+  const categories: string[] = adminCategoryNames.length > 0
+    ? ['all', ...adminCategoryNames]
+    : ['all', ...productCategories];
   const brands = ['all', ...Array.from(new Set(products.map(p => p.brand)))];
 
   // Count of currently-active filters (anything that narrows results from "all")

@@ -546,6 +546,21 @@ const Header: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Azərbaycan diakritiklərini normallaşdır — istifadəçi "eynek" yazsa
+  // belə "EYNƏK" və ya "Eynəklər" tapılsın. Eyni ilə ş→s, ç→c, ı→i, ö→o, ü→u, ğ→g.
+  const normalizeAz = (s: string): string => {
+    return (s || '')
+      .toLowerCase()
+      .replace(/ə/g, 'e')
+      .replace(/ş/g, 's')
+      .replace(/ç/g, 'c')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ğ/g, 'g')
+      .trim();
+  };
+
   // Filter products as user types + analytics tracking (debounced)
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -560,16 +575,27 @@ const Header: React.FC = () => {
     // kateqoriya → həmin kateqoriyaya aid bütün məhsullar (hər 3 dildə).
     // Axtarış sözünü split edib hər birinin uyğunlaşmasını tələb edirik (multi-word).
     const tokens = q.split(/\s+/).filter(Boolean);
+    const qNorm = normalizeAz(q);
+    const tokensNorm = qNorm.split(/\s+/).filter(Boolean);
 
-    const matchesToken = (p: Product, token: string): boolean => {
+    const matchesToken = (p: Product, token: string, tokenNorm: string): boolean => {
       const nameAz = p.name?.az?.toLowerCase() || '';
       const nameRu = p.name?.ru?.toLowerCase() || '';
       const nameEn = p.name?.en?.toLowerCase() || '';
       const brand = (p.brand || '').toLowerCase();
       const category = (p.category || '').toLowerCase();
+      // Diakritiksiz variantlar (Azərbaycan klaviaturasız istifadəçilər üçün)
+      const nameAzN = normalizeAz(nameAz);
+      const nameRuN = normalizeAz(nameRu);
+      const nameEnN = normalizeAz(nameEn);
+      const brandN = normalizeAz(brand);
+      const categoryN = normalizeAz(category);
       // Kateqoriyanın bütün 3 dildə adları (Firestore-dan) — "watches" yazanda "Saat" kateqoriyalı məhsullar gəlsin
       const catVariants = categoryLangMap[category] || [];
-      const catVariantsMatch = catVariants.some((c) => c.toLowerCase().includes(token));
+      const catVariantsMatch = catVariants.some((c) => {
+        const cl = c.toLowerCase();
+        return cl.includes(token) || normalizeAz(cl).includes(tokenNorm);
+      });
       // Cins kütləvi sözləri də nəzərə al — "kişi" → men, "qadın" → women
       const gender = (p.gender || '').toLowerCase();
       const genderHints =
@@ -579,17 +605,17 @@ const Header: React.FC = () => {
           ? gender === 'women' || gender === 'unisex'
           : false;
       return (
-        nameAz.includes(token) ||
-        nameRu.includes(token) ||
-        nameEn.includes(token) ||
-        brand.includes(token) ||
-        category.includes(token) ||
+        nameAz.includes(token) || nameAzN.includes(tokenNorm) ||
+        nameRu.includes(token) || nameRuN.includes(tokenNorm) ||
+        nameEn.includes(token) || nameEnN.includes(tokenNorm) ||
+        brand.includes(token) || brandN.includes(tokenNorm) ||
+        category.includes(token) || categoryN.includes(tokenNorm) ||
         catVariantsMatch ||
         genderHints
       );
     };
 
-    const matches = allProducts.filter((p) => tokens.every((t) => matchesToken(p, t)));
+    const matches = allProducts.filter((p) => tokens.every((t, idx) => matchesToken(p, t, tokensNorm[idx] || normalizeAz(t))));
 
     // Brend / kateqoriya tam uyğunluğunda olan məhsullar üst-də göstərilsin.
     // Sonra ad uyğunluqları. Müsadirə üçün stok və bestseller balansı.
@@ -1607,22 +1633,35 @@ const Header: React.FC = () => {
               </div>
             </form>
 
-            {/* Category quick-picks — only when no query */}
-            {!searchQuery && categories.length > 0 && (
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3" data-testid="header-search-trending">
-                {categories.slice(0, 6).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setSearchQuery(c)}
-                    className="text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
-                    data-testid={`header-search-trending-${c}`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Category quick-picks — admin-in qoyduğu kateqoriyalar (məhsullardakı köhnə dəyərlər deyil) */}
+            {!searchQuery && (categoryTree.length > 0 || categories.length > 0) && (() => {
+              // Admin-in tərif etdiyi kateqoriyalardan istifadə et (parent + alt — düz siyahı)
+              const fromAdmin: string[] = [];
+              const walk = (n: CategoryNode) => {
+                const display = n.name || n.nameAz || n.nameEn || n.nameRu;
+                if (display && !fromAdmin.includes(display)) fromAdmin.push(display);
+                n.children.forEach(walk);
+              };
+              categoryTree.forEach(walk);
+              // Admin kateqoriyası yoxdursa fallback: məhsulların kateqoriyaları
+              const trendingList = fromAdmin.length > 0 ? fromAdmin : categories;
+              if (trendingList.length === 0) return null;
+              return (
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3" data-testid="header-search-trending">
+                  {trendingList.slice(0, 6).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSearchQuery(c)}
+                      className="text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
+                      data-testid={`header-search-trending-${c}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Results / Default grid */}
