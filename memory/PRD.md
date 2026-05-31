@@ -168,3 +168,51 @@ Bu dəyişiklikləri istifadəçinin saytında (`devaleur.az`) görmək üçün 
   - "Dəri Məhsul..." tək sətirdə ellipsis ilə
 - Desktop (1440px): BestSellers 5 məhsul kartı
 - Vite production build keçir: `✓ built in 13.92s`
+
+## 2026-01 (iter 5 — SEO + OG önbaxış + dinamik məhsul önbaxışı)
+**Feedback**: 
+- Google axtarışında daha geniş sitelinks (kateqoriyalar, brendlər, əlaqə, haqqımızda, ünvanlar) avtomatik çıxsın
+- Məhsul linki paylaşıldıqda OG önbaxışında məhsul şəkli açılsın, məhsul olmayan linklərdə 4×4 ağ arxa fonlu logo
+- Title: "DE VALEUR — ..." em-dash əvəzinə "DE VALEUR | Prestijinizə dəyər qatan detallar"
+
+### Implemented
+- **Title + meta yeniləməsi** (`index.html`):
+  - `<title>DE VALEUR | Prestijinizə dəyər qatan detallar</title>` (em-dash silindi, slogan əlavə)
+  - og:title, twitter:title, description — hamısı yeni başlıq və tagline ilə
+  - og:image → `/api/og-default` (1200×1200 ağ arxa fon SVG, slogan ilə)
+  - og:type "website" (homepage), məhsullarda dinamik "product"
+- **`/api/og-default.js`** (Vercel serverless):
+  - 1200×1200 ağ arxa fonlu SVG qaytarır
+  - De Valeur logo mərkəzdə + altında "PRESTIJINIZƏ DƏYƏR QATAN DETALLAR" tagline
+  - Cache: 1 gün CDN + 1 həftə stale-while-revalidate
+- **`/api/og-product.js`** (Vercel serverless — məhsul önbaxış generator):
+  - Firestore REST API ilə məhsulu fetch edir
+  - index.html-i fetch edib OG meta-larını məhsula uyğun replace edir (title=məhsul adı + brend, image=məhsul ilk şəkli, description=ad·brend·qiymət·stok)
+  - Bot User-Agent (WhatsApp/Telegram/Twitter/Facebook/Google/Discord/Slack/LinkedIn/iMessage/Slackbot və 20+ digər) → bu funksiya
+  - Adi istifadəçilər (brauzer) → standart SPA index.html (heç bir performans cəzası)
+  - Səhv olarsa standart index.html fallback edir
+- **`vercel.json` conditional rewrite**:
+  - `/product/:id` və `/products/:id` üçün — bot UA detected (regex) → `/api/og-product?id=:id`
+  - Adi istifadəçilər üçün dəyişiklik yoxdur
+- **Strukturlaşdırılmış data zənginləşdirildi** (`index.html` ItemList):
+  - Kateqoriyalar əlavə olundu: Saatlar, Dəri Məhsullar, Gümüş, Eynəklər, Alışqanlar
+  - Ünvanlar/Filiallar ayrıca sitelinks elementi
+  - 15 SiteNavigationElement (öncə 10) — Google sitelinks üçün daha çox seçim
+
+### Verified
+- Build: dist/index.html içində title doğru: `DE VALEUR | Prestijinizə dəyər qatan detallar`
+- Production build keçir (`✓ built in 13.98s`)
+
+### Necə işləyir paylaşma zamanı
+1. **Məhsul linki paylaşılır** (məs. `https://devaleur.az/product/abc123`):
+   - WhatsApp/Telegram bot endpoint-ə gəlir → og-product.js Firestore-dan məhsulu alır → məhsul şəkli + adı + qiyməti ilə HTML qaytarır → bot OG-ni göstərir
+2. **Adi sayt linki paylaşılır** (məs. `https://devaleur.az/`):
+   - og:image = `/api/og-default` → 1200×1200 ağ arxa fonlu logo + slogan SVG
+   - WhatsApp/Twitter/Facebook bunu önbaxışda göstərir
+3. **Google axtarışı**:
+   - 15 SiteNavigationElement strukturlaşdırılmış data Google-a sitelinks üçün xüsusi siqnaldır
+   - sitemap.xml-də bütün vacib səhifələr var
+   - Google avtomatik olaraq saytı analiz edib 3-6 sitelinks göstərəcək (adətən 2-4 həftə deploy-dan sonra)
+
+### Production deployment qeydi
+⚠️ Bu dəyişikliklər real saytda görünməsi üçün **Vercel deploy** olunmalıdır. Lokal preview-də `/api/*` Vercel funksiyaları işləmir.

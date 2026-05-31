@@ -5,6 +5,28 @@
   "installCommand": "yarn install",
   "rewrites": [
     {
+      "source": "/product/:id",
+      "destination": "/api/og-product?id=:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
+      "source": "/products/:id",
+      "destination": "/api/og-product?id=:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
