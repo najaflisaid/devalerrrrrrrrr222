@@ -1248,7 +1248,9 @@ const Header: React.FC = () => {
             ></div>
 
             <div
-              className={`dv-light-reset fixed top-0 left-0 h-full w-[85%] max-w-[360px] z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              className={`dv-light-reset fixed top-0 left-0 h-full z-50 bg-white dv-menu-panel transition-[width,max-width] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                mobileCategoryOpen ? 'w-2/3 max-w-[480px]' : 'w-1/3 max-w-[260px]'
+              } ${isMobileMenuClosing ? 'is-closing' : ''}`}
               style={{ boxShadow: '12px 0 48px -12px rgba(0,0,0,0.22)' }}
             >
               {/* Top header — luxurious */}
