@@ -23,6 +23,10 @@ const productsCacheKey = (role: string | null, includeComingSoon: boolean) =>
   `${role || 'guest'}|${includeComingSoon ? 'cs' : 'nocs'}`;
 const invalidateProductsCache = () => _productsCache.clear();
 
+// Public — Excel miqrasiyası, batch update, rollback və.s birbaşa Firestore-a
+// yazanda cache-i sıfırlamaq üçün ixrac olunur.
+export const invalidateProductsCachePublic = () => _productsCache.clear();
+
 const getCampaignCached = async (): Promise<Campaign | null> => {
   const now = Date.now();
   if (_campaignCache.data && now - _campaignCache.at < CAMPAIGN_TTL_MS) {

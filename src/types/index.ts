@@ -23,6 +23,8 @@ export interface Product {
   isGiftCard?: boolean;
   comingSoon?: boolean;
   stock: number;
+  /** Məhsul kodu / SKU — Excel miqrasiyasında dəqiq uyğunlaşdırma üçün istifadə olunur. */
+  sku?: string;
   visibleTo?: 'all' | 'b2b' | 'customer';
   imageScale?: number;
   imageOffsetX?: number;

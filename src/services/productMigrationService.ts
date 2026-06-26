@@ -1,14 +1,21 @@
 /**
  * productMigrationService.ts
  * ---------------------------
- * Excel ilə məhsul miqrasiyası üçün:
- *   1. Smart fuzzy matching (ad + brend əsasında 88%+ oxşarlıq → eyni məhsul).
- *   2. Migration log persistensiyası (Firestore `productMigrationLogs` collection).
- *   3. Rollback (geri qaytarma) — log əsasında bazanın əvvəlki vəziyyətinə qayıdış.
+ * Excel ilə məhsul miqrasiyası üçün təkmilləşdirilmiş v2:
+ *   1. Dəqiq uyğunlaşdırma — SKU/kod birinci növbədə, ad+brend ikinci (smartNorm ilə).
+ *   2. Opsiyonal fuzzy match — yalnız istifadəçi açıq şəkildə açdıqda və yüksək threshold ilə.
+ *   3. Firestore writeBatch ilə ATOMIK yazılar (500-lük chunks) — race yoxdur.
+ *   4. Cache invalidation — apply/rollback sonrası productService cache-i sıfırlanır.
+ *   5. Migration log + təhlükəsiz rollback (conflict detection ilə).
  *
- * Mövcud problemi həll edir: əvvəllər boşluq/karakter fərqi ucbatından bazada
- * mövcud mallar "yoxdur" hesab edilirdi → indi smartNorm + fuzzy threshold ilə
- * dəqiq tapılır.
+ * Köhnə bug-lar:
+ *   - 88% fuzzy threshold "Casio LTP-1094E-1ARDF" və "Casio LTP-1094E-7ARDF" kimi
+ *     SKU-da fərqlənən amma çox oxşar adlı malları SƏHV uyğunlaşdırırdı →
+ *     miqdar yanlış məhsula gedirdi. İndi default OFF, və threshold 0.95+.
+ *   - Promise.all paralel writes → eyni məhsula düşən 2 sətirdə son yazı qalırdı.
+ *     İndi writeBatch ilə ardıcıl atomik yazır.
+ *   - Cache invalidate olunmurdu → B2B tərəf köhnə miqdarları göstərirdi.
+ *     İndi mütləq invalidateProductsCachePublic() çağrılır.
  */
 
 import {
@@ -17,61 +24,57 @@ import {
   getDoc,
   getDocs,
   addDoc,
-  updateDoc,
   deleteDoc,
   orderBy,
   query,
   serverTimestamp,
   Timestamp,
   setDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { invalidateProductsCachePublic } from './productService';
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Smart normalization & fuzzy match
+// Normalize & fuzzy
 // ───────────────────────────────────────────────────────────────────────────────
 
 /**
- * smartNorm — aggressiv normalizasiya.
- * - NFKC normalize (eyni görünən amma fərqli encoding olan hərflər birləşir)
- * - Bütün whitespace (\s, \u00a0, \u200b-\u200f, tabs, newlines) tək boşluğa
- * - Bütün defis növləri (— – − ‒ ﹣ －) standart hyphen-ə
- * - Bütün apostrof növləri (' ' ` ´) sadə apostrofa
- * - Lowercase
- * - Sonra/əvvəl boşluq trim
+ * smartNorm — aggresiv normalize:
+ *  NFKC unicode → bütün whitespace tək boşluğa → bütün defislər `-` → apostroflar `'` →
+ *  zero-width hərflər silinir → lowercase → trim.
  */
 export const smartNorm = (s: any): string => {
   if (s === null || s === undefined) return '';
   let v = String(s);
-  // Unicode normalize (eyni hərflərin müxtəlif encoding-ləri birləşir)
   try {
     v = v.normalize('NFKC');
   } catch {
     /* noop */
   }
-  // Bütün dash növlərini standart hyphen-ə
   v = v.replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-');
-  // Apostrof variantları
   v = v.replace(/[\u2018\u2019\u201A\u201B\u0060\u00B4]/g, "'");
-  // Zero-width və control chars sil
   v = v.replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '');
-  // Bütün whitespace-i (NBSP daxil) tək boşluğa
   v = v.replace(/[\s\u00A0]+/g, ' ');
-  // Lowercase + trim
   return v.toLowerCase().trim();
 };
 
 /**
- * Levenshtein distance — iki sətrin neçə hərflə fərqlənməsi.
- * Sürətli array-tabanlı implementasiya.
+ * skuNorm — SKU/kod üçün xüsusi normalize:
+ *  smartNorm + bütün non-alphanumerik hərflər silinir (— − - / . _ space və.s).
+ *  Beləliklə "LTP-1094E-7ARDF" və "ltp 1094 e 7ardf" eyni hesab olunur.
  */
+export const skuNorm = (s: any): string => {
+  const v = smartNorm(s);
+  return v.replace(/[^a-z0-9]/gi, '');
+};
+
 const levenshtein = (a: string, b: string): number => {
   if (a === b) return 0;
   if (!a.length) return b.length;
   if (!b.length) return a.length;
   const m = a.length;
   const n = b.length;
-  // Yalnız 2 sıra saxlayırıq (memory-efficient)
   let prev = new Array(n + 1);
   let curr = new Array(n + 1);
   for (let j = 0; j <= n; j++) prev[j] = j;
@@ -80,9 +83,9 @@ const levenshtein = (a: string, b: string): number => {
     for (let j = 1; j <= n; j++) {
       const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
       curr[j] = Math.min(
-        curr[j - 1] + 1,        // insertion
-        prev[j] + 1,            // deletion
-        prev[j - 1] + cost      // substitution
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
       );
     }
     [prev, curr] = [curr, prev];
@@ -90,10 +93,6 @@ const levenshtein = (a: string, b: string): number => {
   return prev[n];
 };
 
-/**
- * similarity — 0..1 arası oxşarlıq əmsalı (1 = eyni).
- * Levenshtein-i sətrin uzunluğuna görə normallaşdırır.
- */
 export const similarity = (a: string, b: string): number => {
   if (!a && !b) return 1;
   if (!a || !b) return 0;
@@ -102,83 +101,105 @@ export const similarity = (a: string, b: string): number => {
   return 1 - levenshtein(a, b) / maxLen;
 };
 
-/**
- * fuzzyMatchKey — ad + brend birləşməsindən fuzzy match key.
- * Format: "<normalizedName>||<normalizedBrand>"
- */
-export const fuzzyMatchKey = (name: string, brand: string): string =>
-  `${smartNorm(name)}||${smartNorm(brand)}`;
+// ───────────────────────────────────────────────────────────────────────────────
+// Match strategy
+// ───────────────────────────────────────────────────────────────────────────────
 
-/**
- * findBestMatch — verilmiş ad+brend üçün məhsullar siyahısından ən yaxşı match.
- *
- * Mərhələ 1: Tam smartNorm match (name + brand) → 100% match.
- * Mərhələ 2: Ad fuzzy similarity >= threshold VƏ brend tam match.
- * Mərhələ 3: Brend boşdursa, yalnız ad fuzzy match.
- *
- * @returns matched product + confidence, və ya null.
- */
 export interface MatchCandidate {
-  product: { id: string; name: any; brand: string; [k: string]: any };
-  confidence: number; // 0..1
-  reason: 'exact' | 'fuzzy-name' | 'fuzzy-name-only';
+  product: { id: string; name: any; brand: string; sku?: string; [k: string]: any };
+  confidence: number;
+  /**
+   * Niyə tapıldı:
+   *  - 'sku'           → məhsul kodu eyni (ən güclü)
+   *  - 'exact-name'    → smartNorm(ad) + smartNorm(brend) tam eyni
+   *  - 'exact-name-no-brand' → fayla brend yazılmayıb, yalnız ad smartNorm tam eyni
+   *  - 'fuzzy-name'    → ad fuzzy ≥ threshold (yalnız allowFuzzy=true halında)
+   */
+  reason: 'sku' | 'exact-name' | 'exact-name-no-brand' | 'fuzzy-name';
 }
 
+export interface FindMatchOptions {
+  /** Fuzzy match açıqdırmı? Defolt: false. */
+  allowFuzzy?: boolean;
+  /** Fuzzy threshold — defolt 0.95 (çox yüksək, yalnız aşkar typo-lar üçün). */
+  fuzzyThreshold?: number;
+}
+
+/**
+ * findBestMatch — verilmiş row (sku/ad/brend) üçün məhsul siyahısından ən yaxşı match.
+ *
+ * Prioritet sırası:
+ *   1) SKU eyni (skuNorm) → exact match (confidence=1)
+ *   2) smartNorm(ad)+smartNorm(brend) eyni → exact-name match
+ *   3) Brend boşdursa, yalnız smartNorm(ad) eyni → exact-name-no-brand
+ *   4) (opsional) ad fuzzy ≥ threshold (DEFAULT OFF)
+ */
 export const findBestMatch = (
+  rowSku: string,
   rowName: string,
   rowBrand: string,
-  products: Array<{ id: string; name: any; brand: string; [k: string]: any }>,
-  threshold = 0.88
+  products: Array<{ id: string; name: any; brand: string; sku?: string; [k: string]: any }>,
+  options: FindMatchOptions = {}
 ): MatchCandidate | null => {
+  const { allowFuzzy = false, fuzzyThreshold = 0.95 } = options;
+  const nSku = skuNorm(rowSku);
   const nName = smartNorm(rowName);
   const nBrand = smartNorm(rowBrand);
+
+  // 1) SKU exact match — ən güclü, ad/brend nəzərə alınmır
+  if (nSku) {
+    for (const p of products) {
+      const pSku = skuNorm(p.sku || '');
+      if (pSku && pSku === nSku) {
+        return { product: p, confidence: 1, reason: 'sku' };
+      }
+    }
+  }
+
   if (!nName) return null;
 
-  // Hər məhsul üçün ən yaxşı ad variantını (az / en / ru) götür
   const getProductNames = (p: any): string[] => {
     const n = p.name || {};
     return [n.az, n.en, n.ru].filter(Boolean).map(smartNorm);
   };
 
-  // 1) EXACT match: smartNorm(name) + smartNorm(brand) eyni
-  for (const p of products) {
-    const pBrand = smartNorm(p.brand);
-    if (nBrand && pBrand !== nBrand) continue;
-    const pNames = getProductNames(p);
-    if (pNames.some((pn) => pn === nName)) {
-      return { product: p, confidence: 1, reason: 'exact' };
+  // 2) Tam ad+brend match
+  if (nBrand) {
+    for (const p of products) {
+      if (smartNorm(p.brand) !== nBrand) continue;
+      const pNames = getProductNames(p);
+      if (pNames.some((pn) => pn === nName)) {
+        return { product: p, confidence: 1, reason: 'exact-name' };
+      }
     }
-  }
-
-  // 2) FUZZY match — brend eynidirsə, ad oxşarlığı >= threshold
-  let best: MatchCandidate | null = null;
-  for (const p of products) {
-    const pBrand = smartNorm(p.brand);
-    if (nBrand && pBrand !== nBrand) continue;
-    const pNames = getProductNames(p);
-    for (const pn of pNames) {
-      const score = similarity(nName, pn);
-      if (score >= threshold && (!best || score > best.confidence)) {
-        best = { product: p, confidence: score, reason: 'fuzzy-name' };
+  } else {
+    // 3) Brend yoxdur — yalnız ad
+    for (const p of products) {
+      const pNames = getProductNames(p);
+      if (pNames.some((pn) => pn === nName)) {
+        return { product: p, confidence: 1, reason: 'exact-name-no-brand' };
       }
     }
   }
-  if (best) return best;
 
-  // 3) Brend boşdursa, yalnız ad ilə fuzzy axtar (daha yüksək threshold)
-  if (!nBrand) {
+  // 4) Opsiyonal fuzzy (defolt OFF — yanlış uyğunlaşdırmanın qarşısını alır)
+  if (allowFuzzy) {
+    let best: MatchCandidate | null = null;
     for (const p of products) {
+      const pBrandN = smartNorm(p.brand);
+      if (nBrand && pBrandN !== nBrand) continue;
       const pNames = getProductNames(p);
       for (const pn of pNames) {
         const score = similarity(nName, pn);
-        if (score >= Math.max(0.92, threshold + 0.04) && (!best || score > best.confidence)) {
-          best = { product: p, confidence: score, reason: 'fuzzy-name-only' };
+        if (score >= fuzzyThreshold && (!best || score > best.confidence)) {
+          best = { product: p, confidence: score, reason: 'fuzzy-name' };
         }
       }
     }
+    if (best) return best;
   }
 
-  return best;
+  return null;
 };
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -186,20 +207,19 @@ export const findBestMatch = (
 // ───────────────────────────────────────────────────────────────────────────────
 
 const COLL = 'productMigrationLogs';
+// Firestore writeBatch atomik amma 500 əməliyyat limiti var.
+const BATCH_LIMIT = 450; // təhlükəsiz marja
 
 export interface MigrationUpdateEntry {
   productId: string;
   productName: string;
-  /** Köhnə dəyərlər — rollback üçün */
-  oldValues: { stock?: number; visibleTo?: string; [k: string]: any };
-  /** Tətbiq olunan yeni dəyərlər */
-  newValues: { stock?: number; visibleTo?: string; [k: string]: any };
+  oldValues: { stock?: number; price?: number; visibleTo?: string; [k: string]: any };
+  newValues: { stock?: number; price?: number; visibleTo?: string; [k: string]: any };
 }
 
 export interface MigrationCreationEntry {
   productId: string;
   productName: string;
-  /** Yaradılan tam məhsul snapshot-u (rollback-da yenidən qoymaq üçün lazım deyil, sadəcə silinəcək) */
   data: Record<string, any>;
 }
 
@@ -213,6 +233,8 @@ export interface MigrationLogDoc {
     createdCount: number;
     skippedCount: number;
     stockMode: 'replace' | 'add';
+    /** v2: hansı qiymət rejimi (defolt 'always') istifadə olunub */
+    priceMode?: 'always' | 'never';
   };
   updates: MigrationUpdateEntry[];
   creations: MigrationCreationEntry[];
@@ -223,7 +245,6 @@ export interface MigrationLogDoc {
 
 /**
  * saveMigrationLog — apply uğurlu olduqdan sonra çağrılır.
- * Migration metadata + bütün dəyişiklik snapshot-larını Firestore-da saxlayır.
  */
 export const saveMigrationLog = async (
   payload: Omit<MigrationLogDoc, 'id' | 'appliedAt' | 'status'>
@@ -245,18 +266,11 @@ export const listMigrationLogs = async (): Promise<MigrationLogDoc[]> => {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 };
 
-/**
- * detectRollbackConflicts — rollback etməzdən əvvəl yoxla:
- * əgər hər hansı update entry-nin məhsulu indiki dəyəri ilə fərqlənirsə
- * (yəni miqrasiyadan sonra başqa biri redaktə edib), conflict siyahısına əlavə et.
- */
 export interface RollbackConflict {
   productId: string;
   productName: string;
   field: string;
-  /** Miqrasiyada tətbiq olunan dəyər */
   expectedCurrent: any;
-  /** Bazada indi olan dəyər (sonradan dəyişdirilmiş) */
   actualCurrent: any;
 }
 
@@ -266,12 +280,11 @@ export const detectRollbackConflicts = async (
   const conflicts: RollbackConflict[] = [];
   for (const u of log.updates) {
     const snap = await getDoc(doc(db, 'products', u.productId));
-    if (!snap.exists()) continue; // məhsul artıq silinib, conflict yox (skip ediləcək)
+    if (!snap.exists()) continue;
     const data = snap.data() as any;
     for (const field of Object.keys(u.newValues)) {
       const expected = u.newValues[field];
       const actual = data[field];
-      // Dərin müqayisə sadə tipo üçün
       if (JSON.stringify(expected) !== JSON.stringify(actual)) {
         conflicts.push({
           productId: u.productId,
@@ -287,12 +300,67 @@ export const detectRollbackConflicts = async (
 };
 
 /**
- * rollbackMigration — log əsasında geri qaytarma:
- * 1) Hər update entry-də köhnə dəyərləri (oldValues) bazaya yaz.
- * 2) Hər creation entry-də yaradılmış məhsulu sil.
- * 3) Log-u 'rolled_back' kimi işarələ.
+ * applyMigrationBatch — Firestore writeBatch ilə atomik tətbiq.
  *
- * @param force — true olarsa, conflict olsa belə davam et (istifadəçi təsdiqindən sonra).
+ * Çağırılır ProductExcelImport-dan: updates + creations massivləri verilir,
+ * 450-lik chunks-da atomik commit olunur.
+ *
+ * @returns yaradılmış məhsulların productId massivi (creations sırası ilə) və
+ *   apply olunmuş updates sayı.
+ */
+export const applyMigrationBatch = async (params: {
+  updates: Array<{
+    productId: string;
+    patch: Record<string, any>;
+  }>;
+  creations: Array<{
+    /** id: əgər verilibsə həmin id ilə yaradılır, yoxdursa avtomatik generate olunur */
+    id?: string;
+    data: Record<string, any>;
+  }>;
+  onProgress?: (done: number, total: number) => void;
+}): Promise<{ createdIds: string[]; updatedCount: number }> => {
+  const { updates, creations, onProgress } = params;
+  const total = updates.length + creations.length;
+  let done = 0;
+  const createdIds: string[] = [];
+
+  // 1) Updates — chunks of BATCH_LIMIT
+  for (let i = 0; i < updates.length; i += BATCH_LIMIT) {
+    const chunk = updates.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const u of chunk) {
+      batch.update(doc(db, 'products', u.productId), u.patch);
+    }
+    await batch.commit();
+    done += chunk.length;
+    onProgress?.(done, total);
+  }
+
+  // 2) Creations — writeBatch ilə (yeni doc id-lərini biz seçirik ki, log-da saxlayaq)
+  for (let i = 0; i < creations.length; i += BATCH_LIMIT) {
+    const chunk = creations.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    const chunkIds: string[] = [];
+    for (const c of chunk) {
+      const ref = c.id ? doc(db, 'products', c.id) : doc(collection(db, 'products'));
+      batch.set(ref, c.data);
+      chunkIds.push(ref.id);
+    }
+    await batch.commit();
+    createdIds.push(...chunkIds);
+    done += chunk.length;
+    onProgress?.(done, total);
+  }
+
+  // 3) Cache invalidation — B2B/customer/admin tərəfdə güncəl miqdarlar görünsün
+  invalidateProductsCachePublic();
+
+  return { createdIds, updatedCount: updates.length };
+};
+
+/**
+ * rollbackMigration — log əsasında atomik geri qaytarma (writeBatch).
  */
 export const rollbackMigration = async (
   log: MigrationLogDoc,
@@ -307,17 +375,18 @@ export const rollbackMigration = async (
   let deletedCount = 0;
   let skippedCount = 0;
 
-  // 1) Updates → köhnə dəyərləri bərpa et
+  // 1) Updates rollback — köhnə dəyərləri qaytar
+  // Conflict yoxlaması: əgər force=false və indi olan dəyər miqrasiyada qoyulandan
+  // fərqlənirsə (sonradan biri redaktə edib), həmin malı atla.
+  const updatesToApply: Array<{ productId: string; oldValues: Record<string, any> }> = [];
   for (const u of log.updates) {
     const ref = doc(db, 'products', u.productId);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      // Məhsul artıq silinib — keçmişdə yaradılmadığı üçün sadəcə skip
       skippedCount++;
       continue;
     }
     if (!force) {
-      // Conflict yoxla (sonradan dəyişib?)
       const data = snap.data() as any;
       let hasConflict = false;
       for (const field of Object.keys(u.newValues)) {
@@ -331,11 +400,22 @@ export const rollbackMigration = async (
         continue;
       }
     }
-    await updateDoc(ref, u.oldValues);
-    updatedCount++;
+    updatesToApply.push({ productId: u.productId, oldValues: u.oldValues });
   }
 
-  // 2) Creations → məhsulları sil (əgər hələ də mövcuddur)
+  // Atomik batch commit
+  for (let i = 0; i < updatesToApply.length; i += BATCH_LIMIT) {
+    const chunk = updatesToApply.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const u of chunk) {
+      batch.update(doc(db, 'products', u.productId), u.oldValues);
+    }
+    await batch.commit();
+    updatedCount += chunk.length;
+  }
+
+  // 2) Creations rollback — yaradılmış malları sil
+  const creationsToDelete: string[] = [];
   for (const c of log.creations) {
     const ref = doc(db, 'products', c.productId);
     const snap = await getDoc(ref);
@@ -343,8 +423,16 @@ export const rollbackMigration = async (
       skippedCount++;
       continue;
     }
-    await deleteDoc(ref);
-    deletedCount++;
+    creationsToDelete.push(c.productId);
+  }
+  for (let i = 0; i < creationsToDelete.length; i += BATCH_LIMIT) {
+    const chunk = creationsToDelete.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      batch.delete(doc(db, 'products', id));
+    }
+    await batch.commit();
+    deletedCount += chunk.length;
   }
 
   // 3) Log-u rolled_back kimi işarələ
@@ -358,12 +446,12 @@ export const rollbackMigration = async (
     { merge: true }
   );
 
+  // 4) Cache invalidation
+  invalidateProductsCachePublic();
+
   return { updatedCount, deletedCount, skippedCount };
 };
 
-/**
- * deleteMigrationLog — log yazısını tamamilə sil (yalnız artıq rolled_back olanlar üçün).
- */
 export const deleteMigrationLog = async (logId: string): Promise<void> => {
   await deleteDoc(doc(db, COLL, logId));
 };
