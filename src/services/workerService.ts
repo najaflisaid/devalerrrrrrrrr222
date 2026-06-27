@@ -1,6 +1,7 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   addDoc, query, where, orderBy, Timestamp, onSnapshot, limit,
+  writeBatch,
 } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, getSecondaryAuth } from '../lib/firebase';
@@ -101,7 +102,80 @@ export const getWorkerByEmail = async (email: string): Promise<Worker | null> =>
 
 export const listWorkers = async (): Promise<Worker[]> => {
   const snap = await getDocs(query(collection(db, WORKERS), orderBy('createdAt', 'desc')));
-  return snap.docs.map(d => d.data() as Worker);
+  const workers = snap.docs.map(d => d.data() as Worker);
+  // Avtomatik aylıq hədəf rollover — ay 1-i olduqda hər işçinin hədəfi avtomatik
+  // yeni aya kopyalanır (admin yenidən daxil etməyə ehtiyac duymur).
+  // Idempotent: artıq edilibsə heç bir yazı baş vermir.
+  try {
+    await rolloverTargetsToCurrentMonthIfNeeded(workers);
+  } catch (e) {
+    // Rollover səhvi əsas siyahını blok etməsin
+    console.warn('rolloverTargets warning:', e);
+  }
+  return workers;
+};
+
+/**
+ * rolloverTargetsToCurrentMonthIfNeeded
+ *
+ * Cari ay üçün `targetsHistory[currentYM]` yoxdursa, əvvəlki ən son hədəfi
+ * (əvvəlcə `targetsHistory`-dən, sonra `monthlyTarget`-dən) götürür və cari aya
+ * yazır. Beləliklə yeni ay başlayanda admin yenidən eyni rəqəmi yazmağa məcbur
+ * deyil — köhnə hədəf avtomatik daşınır. Admin sonradan açıb dəyişə bilər.
+ *
+ * Atomik writeBatch — bir neçə işçi olsa belə tək batch-də yazılır.
+ * Yan effekt: işçi obyektləri inplace yenilənir ki, çağıran funksiya təzə dəyəri
+ * dərhal görsün (re-fetch lazım deyil).
+ */
+export const rolloverTargetsToCurrentMonthIfNeeded = async (workers: Worker[]): Promise<number> => {
+  const ym = monthYM();
+  const needs: Array<{ id: string; target: number; worker: Worker }> = [];
+
+  for (const w of workers) {
+    if (!w?.id) continue;
+    const th: Record<string, number> = (w as any).targetsHistory || {};
+    if (typeof th[ym] === 'number') continue; // artıq mövcuddur — atla
+
+    // Əvvəlki ən son hədəfi tap
+    const pastMonths = Object.keys(th).filter((k) => k < ym).sort().reverse();
+    let prevTarget = 0;
+    let prevSource: 'history' | 'monthlyTarget' | null = null;
+    if (pastMonths.length > 0) {
+      prevTarget = Number(th[pastMonths[0]]) || 0;
+      prevSource = 'history';
+    } else if (typeof w.monthlyTarget === 'number' && w.monthlyTarget > 0) {
+      prevTarget = w.monthlyTarget;
+      prevSource = 'monthlyTarget';
+    }
+
+    if (prevSource && prevTarget > 0) {
+      needs.push({ id: w.id, target: prevTarget, worker: w });
+    }
+  }
+
+  if (needs.length === 0) return 0;
+
+  // Firestore atomik batch (max 500 op)
+  const BATCH_LIMIT = 450;
+  for (let i = 0; i < needs.length; i += BATCH_LIMIT) {
+    const chunk = needs.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const n of chunk) {
+      batch.update(doc(db, WORKERS, n.id), {
+        [`targetsHistory.${ym}`]: n.target,
+        // monthlyTarget cari ay üçün ardıcıllıq saxlamaq üçün də yenilənir
+        monthlyTarget: n.target,
+      });
+    }
+    await batch.commit();
+    // İnplace dəyişiklik — caller təzə fetch etmədən görə bilsin
+    chunk.forEach((n) => {
+      const w: any = n.worker;
+      w.targetsHistory = { ...(w.targetsHistory || {}), [ym]: n.target };
+      w.monthlyTarget = n.target;
+    });
+  }
+  return needs.length;
 };
 
 export const updateWorker = async (id: string, patch: Partial<Worker>) => {
