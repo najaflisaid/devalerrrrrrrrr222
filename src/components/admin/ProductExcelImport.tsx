@@ -583,13 +583,18 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       }
 
       // ── 2) Creations → batch
+      // ÖNƏMLİ: qiyməti yox və ya şəkili yox olan yeni məhsullar DRAFT (isEnabled: false)
+      // kimi yaranır. Bu, "0 AZN, şəkilsiz" məhsulların müştəri saytında görünməsinin
+      // qarşısını alır. Admin sonradan qiymət və şəkil əlavə edib aktivləşdirir.
       const batchCreations: Array<{ data: Record<string, any> }> = result.created.map((c) => {
         const gender = ['men', 'women', 'unisex'].includes(c.row.gender) ? c.row.gender : 'unisex';
+        const hasPrice = c.row.hasPrice && c.row.price > 0;
+        const isDraft = !hasPrice; // şəkilsiz amma qiymətli məhsulu da aktiv saymırıq
         return {
           data: {
             name: { az: c.row.name, ru: c.row.name, en: c.row.name },
             description: { az: '', ru: '', en: '' },
-            price: c.row.hasPrice ? c.row.price : 0,
+            price: hasPrice ? c.row.price : 0,
             salePrice: null,
             b2bPrice: null,
             b2bSalePrice: null,
@@ -598,7 +603,9 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             category: c.row.category,
             gender,
             sku: c.row.sku || '',
-            isEnabled: true,
+            // DRAFT rejimi: qiymət/şəkil tam olmadıqda saytda görünməsin
+            isEnabled: !isDraft,
+            isDraft: isDraft,
             isBestseller: false,
             stock: c.totalStock,
             visibleTo: c.row.visibility ?? 'all',
@@ -1049,15 +1056,25 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             </div>
           )}
 
-          {result.created.length > 0 && (
+          {result.created.length > 0 && (() => {
+            const draftCount = result.created.filter((c) => !c.row.hasPrice || c.row.price <= 0).length;
+            return (
             <div>
               <p className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-blue-600" />
                 Yeni yaradılacaq ({result.created.length}){' '}
-                <span className="text-xs text-gray-500 font-normal">— şəkilsiz; sonradan admin əlavə edər</span>
+                {draftCount > 0 ? (
+                  <span className="text-xs text-orange-700 font-medium" data-testid="new-products-draft-count">
+                    — {draftCount} draft (qiyməti yox, saytda gizli)
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-500 font-normal">— şəkilsiz; sonradan admin əlavə edər</span>
+                )}
               </p>
               <div className="max-h-72 overflow-y-auto border border-blue-100 rounded-lg divide-y divide-gray-100 bg-white">
-                {result.created.map((c, i) => (
+                {result.created.map((c, i) => {
+                  const isDraft = !c.row.hasPrice || c.row.price <= 0;
+                  return (
                   <div key={i} className="px-3 py-2 text-xs flex items-center gap-3 flex-wrap" data-testid={`import-create-${i}`}>
                     <span className="flex-1 truncate min-w-[200px]">
                       <span className="font-medium">{c.row.name}</span>
@@ -1072,6 +1089,16 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                           ×{c.mergedRowCount}
                         </span>
                       )}
+                      {isDraft && (
+                        <span
+                          className="ml-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-700 rounded border border-orange-200 font-medium"
+                          title="Qiymət olmadığı üçün DRAFT (gizli) yaranır. Saytda görünməyəcək; admin paneldə qiymət əlavə edib aktivləşdirin."
+                          data-testid={`import-create-draft-${i}`}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          Draft (gizli)
+                        </span>
+                      )}
                     </span>
                     <span className="text-gray-500 text-[11px]">{c.row.category} · {c.row.brand}</span>
                     <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
@@ -1079,10 +1106,12 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                     </span>
                     <span className="font-mono tabular-nums">{c.row.hasPrice ? c.row.price : 0} AZN · stok: {c.totalStock}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {result.zeroedOut.length > 0 && (
             <div data-testid="zeroed-out-section">

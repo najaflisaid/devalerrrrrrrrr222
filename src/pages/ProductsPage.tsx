@@ -349,7 +349,10 @@ const ProductsPage: React.FC = () => {
           }
           return p.salePrice || p.price;
         })
-        .filter(price => typeof price === 'number' && price > 0);
+        // ÖNƏMLİ: price=0 olan məhsulları da min hesablamasına daxil edirik (defolt
+        // minimum 0 olsun). Əks halda Excel-dən qiymətsiz yaranan məhsullar müştəri
+        // saytında price filter-i ilə avtomatik gizlədilirdi.
+        .filter(price => typeof price === 'number' && price >= 0);
 
       const min = prices.length > 0 ? Math.max(0, Math.floor(Math.min(...prices))) : 0;
       const max = prices.length > 0 ? Math.max(min, Math.ceil(Math.max(...prices))) : 1000;
@@ -401,12 +404,14 @@ const ProductsPage: React.FC = () => {
         const descAz = typeof p.description === 'object' ? p.description.az : p.description;
         const descRu = typeof p.description === 'object' ? p.description.ru : '';
         const descEn = typeof p.description === 'object' ? p.description.en : '';
+        const sku = (p as any).sku || '';
 
         return nameAz?.toLowerCase().includes(query) ||
           nameRu?.toLowerCase().includes(query) ||
           nameEn?.toLowerCase().includes(query) ||
           p.brand?.toLowerCase().includes(query) ||
           p.category?.toLowerCase().includes(query) ||
+          sku.toLowerCase().includes(query) ||
           descAz?.toLowerCase().includes(query) ||
           descRu?.toLowerCase().includes(query) ||
           descEn?.toLowerCase().includes(query);

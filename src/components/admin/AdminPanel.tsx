@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot, AlertTriangle } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -386,6 +386,7 @@ const AdminPanel: React.FC = () => {
     imageScale: 1,
     imageOffsetX: 0,
     imageOffsetY: 0,
+    sku: '',
   });
 
   const [editProduct, setEditProduct] = useState({
@@ -410,6 +411,9 @@ const AdminPanel: React.FC = () => {
     imageScale: 1,
     imageOffsetX: 0,
     imageOffsetY: 0,
+    sku: '',
+    isDraft: false,
+    isEnabled: true,
   });
 
   const [newBrand, setNewBrand] = useState<{ name: string; logo: string; categoryNames: string[] }>({ name: '', logo: '', categoryNames: [] });
@@ -715,12 +719,40 @@ const AdminPanel: React.FC = () => {
       return;
     }
 
-    const existingProduct = products.find(p =>
-      p.name.az.toLowerCase().trim() === newProduct.nameAz.toLowerCase().trim()
-    );
+    // Duplicate detection: ad + (varsa) SKU üzrə yoxlanılır. Detallı mesaj ilə.
+    const trimmedName = newProduct.nameAz.toLowerCase().trim();
+    const trimmedSku = ((newProduct as any).sku || '').toLowerCase().trim().replace(/[^a-z0-9]/gi, '');
+
+    const existingProduct = products.find(p => {
+      const sameName =
+        (p.name?.az || '').toLowerCase().trim() === trimmedName ||
+        (p.name?.en || '').toLowerCase().trim() === trimmedName ||
+        (p.name?.ru || '').toLowerCase().trim() === trimmedName;
+      const pSku = ((p as any).sku || '').toLowerCase().trim().replace(/[^a-z0-9]/gi, '');
+      const sameSku = trimmedSku && pSku && pSku === trimmedSku;
+      return sameName || sameSku;
+    });
 
     if (existingProduct) {
-      alert('Bu adda məhsul artıq mövcuddur!');
+      const draft = (existingProduct as any).isDraft || (existingProduct as any).isEnabled === false;
+      const lines = [
+        'Bu məhsul artıq mövcuddur!',
+        '',
+        `Ad: ${existingProduct.name?.az || existingProduct.name?.en || ''}`,
+        existingProduct.sku ? `SKU: ${existingProduct.sku}` : '',
+        `Brend: ${existingProduct.brand}`,
+        `Kateqoriya: ${existingProduct.category}`,
+        `Stok: ${existingProduct.stock} · Qiymət: ${existingProduct.price} AZN`,
+        `Status: ${draft ? '⚠ DRAFT (gizli)' : 'Aktiv'}`,
+        '',
+        draft
+          ? 'Bu məhsul Excel miqrasiyası ilə yaradılıb amma qiyməti olmadığı üçün saytda gizli saxlanılır.'
+          : '',
+        'Məhsul siyahısında axtarış sahəsinə SKU və ya ad yazaraq tapıb redaktə edin.',
+      ].filter(Boolean);
+      alert(lines.join('\n'));
+      // Search-i avtomatik dolduraq ki, admin asanca tapsın
+      setProductSearchQuery(existingProduct.sku || existingProduct.name?.az || '');
       return;
     }
 
@@ -748,7 +780,9 @@ const AdminPanel: React.FC = () => {
         brand: newProduct.brand,
         category: newProduct.category,
         gender: newProduct.gender,
+        sku: newProduct.sku.trim(),
         isEnabled: true,
+        isDraft: false,
         isBestseller: newProduct.isBestseller,
         stock: Math.max(0, parseInt(newProduct.stock) || 0),
         visibleTo: newProduct.visibleTo,
@@ -782,6 +816,7 @@ const AdminPanel: React.FC = () => {
         imageScale: 1,
         imageOffsetX: 0,
         imageOffsetY: 0,
+        sku: '',
       });
       setShowAddProduct(false);
       alert('Məhsul uğurla əlavə edildi!');
@@ -817,6 +852,9 @@ const AdminPanel: React.FC = () => {
       imageScale: typeof product.imageScale === 'number' && product.imageScale > 0 ? product.imageScale : 1,
       imageOffsetX: typeof product.imageOffsetX === 'number' ? product.imageOffsetX : 0,
       imageOffsetY: typeof product.imageOffsetY === 'number' ? product.imageOffsetY : 0,
+      sku: (product as any).sku || '',
+      isDraft: (product as any).isDraft || false,
+      isEnabled: (product as any).isEnabled !== false,
     });
     setShowEditProduct(true);
   };
@@ -828,7 +866,7 @@ const AdminPanel: React.FC = () => {
     }
 
     const existingProduct = products.find(p =>
-      p.name.az.toLowerCase().trim() === editProduct.nameAz.toLowerCase().trim() &&
+      (p.name?.az || '').toLowerCase().trim() === editProduct.nameAz.toLowerCase().trim() &&
       p.id !== editingProduct.id
     );
 
@@ -845,6 +883,12 @@ const AdminPanel: React.FC = () => {
       const { db } = await import('../../lib/firebase');
 
       const validImages = editProduct.images.filter(img => img.trim() !== '');
+      const newPrice = Math.max(0, parseFloat(editProduct.price) || 0);
+      // Draft tamamlandı? Əgər məhsul DRAFT idi və indi qiymət >0 və şəkil varsa,
+      // avtomatik aktivləşdir (admin əl ilə hər dəfə "isDraft=false" işarələməyə
+      // ehtiyac qalmasın). isEnabled isə admin-in son toggle qərarına hörmət edir
+      // amma DRAFT açıq qaldıqda isEnabled aktivləşdirilməsi mümkün deyil.
+      const draftResolved = newPrice > 0 && validImages.length > 0;
       const updatedProduct = {
         name: {
           az: editProduct.nameAz,
@@ -856,7 +900,7 @@ const AdminPanel: React.FC = () => {
           ru: editProduct.descRu || editProduct.descAz,
           en: editProduct.descEn || editProduct.descAz
         },
-        price: Math.max(0, parseFloat(editProduct.price) || 0),
+        price: newPrice,
         salePrice: editProduct.salePrice ? Math.max(0, parseFloat(editProduct.salePrice)) : null,
         b2bPrice: editProduct.b2bPrice ? Math.max(0, parseFloat(editProduct.b2bPrice)) : null,
         b2bSalePrice: editProduct.b2bSalePrice ? Math.max(0, parseFloat(editProduct.b2bSalePrice)) : null,
@@ -864,8 +908,12 @@ const AdminPanel: React.FC = () => {
         brand: editProduct.brand,
         category: editProduct.category,
         gender: editProduct.gender,
+        sku: (editProduct.sku || '').trim(),
         isBestseller: editProduct.isBestseller,
         comingSoon: editProduct.comingSoon,
+        // DRAFT auto-resolution: qiymət və şəkil hazır olsa DRAFT-dan çıxarıb aktivləşdir
+        isDraft: draftResolved ? false : ((editProduct as any).isDraft || false),
+        isEnabled: draftResolved ? true : (editProduct as any).isEnabled !== false,
         stock: Math.max(0, parseInt(editProduct.stock) || 0),
         visibleTo: editProduct.visibleTo,
         imageScale: editProduct.imageScale || 1,
@@ -874,6 +922,9 @@ const AdminPanel: React.FC = () => {
       };
 
       await updateDoc(doc(db, 'products', editingProduct.id), updatedProduct);
+      // ProductService cache-i təmizlə ki, ana səhifə yenilənmiş məhsulu göstərsin
+      const { invalidateProductsCachePublic } = await import('../../services/productService');
+      invalidateProductsCachePublic();
       await loadData({ silent: true });
 
       setEditingProduct(null);
@@ -1780,11 +1831,13 @@ const AdminPanel: React.FC = () => {
                     const matchesSearch = !productSearchQuery || (() => {
                       const query = productSearchQuery.toLowerCase();
                       return (
-                        p.name.az.toLowerCase().includes(query) ||
-                        p.name.ru.toLowerCase().includes(query) ||
-                        (p.name.en && p.name.en.toLowerCase().includes(query)) ||
-                        p.brand.toLowerCase().includes(query) ||
-                        p.category.toLowerCase().includes(query)
+                        (p.name?.az || '').toLowerCase().includes(query) ||
+                        (p.name?.ru || '').toLowerCase().includes(query) ||
+                        (p.name?.en || '').toLowerCase().includes(query) ||
+                        (p.brand || '').toLowerCase().includes(query) ||
+                        (p.category || '').toLowerCase().includes(query) ||
+                        ((p as any).sku || '').toLowerCase().includes(query) ||
+                        (p.id || '').toLowerCase().includes(query)
                       );
                     })();
                     const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
@@ -1846,7 +1899,7 @@ const AdminPanel: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Məhsul axtar (ad, brend, kateqoriya)..."
+                  placeholder="Məhsul axtar (ad, brend, kateqoriya, SKU/kod, ID)..."
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
@@ -1980,6 +2033,7 @@ const AdminPanel: React.FC = () => {
                         onChange={(e) => setNewProduct({ ...newProduct, nameAz: e.target.value })}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                         placeholder="Məhsulun adı"
+                        data-testid="new-product-name-az"
                       />
                     </div>
                     <div>
@@ -2002,6 +2056,19 @@ const AdminPanel: React.FC = () => {
                         placeholder="Product Name"
                       />
                     </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Məhsul kodu (SKU) <span className="text-gray-400 font-normal">— Excel miqrasiyasında dəqiq tapılma açarı</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newProduct.sku}
+                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
+                      placeholder="məs. LTP-1094E-7ARDF"
+                      data-testid="new-product-sku"
+                    />
                   </div>
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
                     <div>
@@ -2309,11 +2376,37 @@ const AdminPanel: React.FC = () => {
                     </button>
                   </div>
                   <div className="pt-4">
+                {(editProduct as any).isDraft && (
+                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2" data-testid="edit-draft-banner">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-semibold text-orange-900 mb-0.5">Bu məhsul DRAFT statusundadır</p>
+                      <p className="text-orange-800">
+                        Excel miqrasiyası ilə yaradılıb amma qiymət və ya şəkili tam olmadığı üçün
+                        müştəri saytında <strong>gizli</strong>dir. Qiymət və ən az 1 şəkil əlavə
+                        edib yadda saxladıqda <strong>avtomatik aktiv</strong> olacaq.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Az) *</label><input type="text" value={editProduct.nameAz} onChange={(e) => setEditProduct({ ...editProduct, nameAz: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun adı" /></div>
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Ru)</label><input type="text" value={editProduct.nameRu} onChange={(e) => setEditProduct({ ...editProduct, nameRu: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Название продукта" /></div>
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (En)</label><input type="text" value={editProduct.nameEn} onChange={(e) => setEditProduct({ ...editProduct, nameEn: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Name" /></div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Məhsul kodu (SKU) <span className="text-gray-400 font-normal">— Excel miqrasiyasında dəqiq tapılma açarı</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editProduct.sku}
+                      onChange={(e) => setEditProduct({ ...editProduct, sku: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
+                      placeholder="məs. LTP-1094E-7ARDF"
+                      data-testid="edit-product-sku"
+                    />
                   </div>
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Məhsulun təsviri" /></div>
@@ -2394,11 +2487,13 @@ const AdminPanel: React.FC = () => {
                     const matchesSearch = !productSearchQuery || (() => {
                       const query = productSearchQuery.toLowerCase();
                       return (
-                        product.name.az.toLowerCase().includes(query) ||
-                        product.name.ru.toLowerCase().includes(query) ||
-                        (product.name.en && product.name.en.toLowerCase().includes(query)) ||
-                        product.brand.toLowerCase().includes(query) ||
-                        product.category.toLowerCase().includes(query)
+                        (product.name?.az || '').toLowerCase().includes(query) ||
+                        (product.name?.ru || '').toLowerCase().includes(query) ||
+                        (product.name?.en || '').toLowerCase().includes(query) ||
+                        (product.brand || '').toLowerCase().includes(query) ||
+                        (product.category || '').toLowerCase().includes(query) ||
+                        ((product as any).sku || '').toLowerCase().includes(query) ||
+                        (product.id || '').toLowerCase().includes(query)
                       );
                     })();
 
@@ -2445,7 +2540,24 @@ const AdminPanel: React.FC = () => {
                       data-testid={`admin-product-thumb-${product.id}`}
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{product.name.az}</h3>
+                      <h3 className="font-semibold text-gray-900">
+                        {product.name.az}
+                        {((product as any).isDraft || (product as any).isEnabled === false) && (
+                          <span
+                            className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-300 align-middle"
+                            title="DRAFT məhsul — qiyməti və ya şəkili tam deyil, saytda gizlidir"
+                            data-testid={`product-draft-badge-${product.id}`}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            DRAFT (saytda gizli)
+                          </span>
+                        )}
+                        {(product as any).sku && (
+                          <span className="ml-2 inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 align-middle" data-testid={`product-sku-${product.id}`}>
+                            {(product as any).sku}
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-sm text-gray-600">{product.brand} · {product.category}</p>
                       {product.createdAt && (
                         <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1" data-testid={`product-created-at-${product.id}`}>
