@@ -22,27 +22,59 @@ interface Props {
 }
 
 // ───── Şablon sütunları (case-insensitive) ─────
+// Minimal versiya: 4 əsas sütun (Brend, Mal adı, Satış qiyməti, Miqdar) +
+// 4 opsional (Məhsul kodu, Kateqoriya, Cins, Görünür kim?). Opsional sütunlar yoxdursa
+// avtomatik ağıllı defolt seçilir.
 const COL = {
   sku: 'Məhsul kodu',
   category: 'Kateqoriya',
   brand: 'Brend',
-  name: 'Məhsul adı',
-  price: 'Qiymət (AZN)',
+  name: 'Mal adı',
+  price: 'Satış qiyməti',
   stock: 'Miqdar',
   gender: 'Cins',
   visibility: 'Görünür kim?',
 } as const;
 
-// Alternativ sütun adları — istifadəçinin qoya biləcəyi variantlar
+// Alternativ sütun adları — istifadəçinin və ya başqa proqramın qoya biləcəyi variantlar.
+// AZ + TR + RU + EN dəstəyi. Raw Excel-i kənar proqramdan götürüb birbaşa import edə bilək.
 const COL_ALIASES: Record<keyof typeof COL, string[]> = {
-  sku: ['məhsul kodu', 'mehsul kodu', 'kod', 'sku', 'code', 'article', 'артикул'],
-  category: ['kateqoriya', 'category', 'категория'],
-  brand: ['brend', 'brand', 'бренд'],
-  name: ['məhsul adı', 'mehsul adi', 'ad', 'name', 'наименование', 'название'],
-  price: ['qiymət (azn)', 'qiymet (azn)', 'qiymət', 'qiymet', 'price', 'цена'],
-  stock: ['miqdar', 'stok', 'stock', 'quantity', 'qty', 'количество'],
-  gender: ['cins', 'gender', 'пол'],
-  visibility: ['görünür kim?', 'gorunur kim?', 'görünür', 'visibility', 'видимость'],
+  sku: [
+    'məhsul kodu', 'mehsul kodu', 'mal kodu', 'kod', 'sku', 'code', 'article',
+    'артикул', 'код товара', 'код', 'item code', 'product code', 'ürün kodu', 'urun kodu',
+    'reference', 'ref', 'barcode', 'barkod', 'штрихкод',
+  ],
+  category: [
+    'kateqoriya', 'category', 'категория', 'kategori', 'тип', 'tip', 'type', 'group',
+    'grup', 'qrup', 'mal qrupu',
+  ],
+  brand: [
+    'brend', 'brand', 'бренд', 'marka', 'maker', 'manufacturer', 'производитель',
+    'üretici', 'ureticisi', 'firma', 'mal markası', 'mal markasi',
+  ],
+  name: [
+    'mal adı', 'mal adi', 'məhsul adı', 'mehsul adi', 'ad', 'adı', 'adi', 'name',
+    'наименование', 'название', 'наименование товара', 'товар', 'product', 'product name',
+    'item name', 'item', 'ürün', 'urun', 'ürün adı', 'urun adi', 'malın adı', 'malin adi',
+    'description', 'desc', 'açıqlama',
+  ],
+  price: [
+    'satış qiyməti', 'satis qiymeti', 'satış qiymeti', 'satis qiyməti', 'satış', 'satis',
+    'qiymət (azn)', 'qiymet (azn)', 'qiymət', 'qiymet', 'price', 'sale price', 'selling price',
+    'цена', 'цена продажи', 'продажа', 'fiyat', 'satış fiyatı', 'satis fiyati',
+    'mal qiyməti', 'mal qiymeti',
+  ],
+  stock: [
+    'miqdar', 'miqdarı', 'miqdari', 'stok', 'stock', 'quantity', 'qty', 'количество',
+    'кол-во', 'остаток', 'adet', 'adət', 'sayı', 'sayi', 'qalıq', 'qaliq', 'mal sayı', 'mal sayi',
+  ],
+  gender: [
+    'cins', 'gender', 'пол', 'cinsiyyət', 'cinsiyyet', 'cinsiyet',
+  ],
+  visibility: [
+    'görünür kim?', 'gorunur kim?', 'görünür kim', 'gorunur kim', 'görünür', 'gorunur',
+    'visibility', 'visible to', 'видимость', 'видим', 'kim görür', 'kim gorur',
+  ],
 };
 
 type VisibleTo = 'all' | 'b2b' | 'customer';
@@ -120,73 +152,97 @@ const toNum = (v: any): number => {
 };
 
 // ───── Şablon yükləmə ─────
-const downloadTemplate = (format: 'xlsx' | 'xls' = 'xlsx') => {
-  const headers = [
-    COL.sku, COL.category, COL.brand, COL.name, COL.price, COL.stock, COL.gender, COL.visibility,
+// Minimal 4-sütunlu şablon. Daha çox detal verilmək istənirsə "advanced" rejimi
+// genişləndirilmiş sütunları əlavə edir.
+const downloadTemplate = (
+  format: 'xlsx' | 'xls' = 'xlsx',
+  variant: 'minimal' | 'advanced' = 'minimal'
+) => {
+  const minimalHeaders = [COL.brand, COL.name, COL.price, COL.stock];
+  const advancedHeaders = [
+    COL.sku, COL.brand, COL.name, COL.price, COL.stock, COL.category, COL.gender, COL.visibility,
   ];
-  const sampleRows = [
+  const headers = variant === 'advanced' ? advancedHeaders : minimalHeaders;
+
+  const minimalSample = [
+    { [COL.brand]: 'U.S. Polo ASSN.', [COL.name]: 'USPA1124-01', [COL.price]: 189, [COL.stock]: 10 },
+    { [COL.brand]: 'Casio', [COL.name]: 'LTP-1094E-7ARDF', [COL.price]: 89.9, [COL.stock]: 5 },
+  ];
+  const advancedSample = [
     {
       [COL.sku]: 'LTP-1094E-7ARDF',
-      [COL.category]: 'Saatlar',
       [COL.brand]: 'Casio',
       [COL.name]: 'Casio LTP-1094E-7ARDF',
       [COL.price]: 89.9,
       [COL.stock]: 5,
+      [COL.category]: 'Saatlar',
       [COL.gender]: 'women',
       [COL.visibility]: 'a',
     },
   ];
+  const sampleRows = variant === 'advanced' ? advancedSample : minimalSample;
+
   const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });
-  (ws as any)['!cols'] = [
-    { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 40 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 16 },
-  ];
+  (ws as any)['!cols'] =
+    variant === 'advanced'
+      ? [{ wch: 22 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 16 }]
+      : [{ wch: 22 }, { wch: 32 }, { wch: 14 }, { wch: 10 }];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Məhsullar');
 
-  const info = [
-    ['DE VALEUR — Məhsul miqrasiyası şablonu (v2)'],
-    [''],
-    ['ƏN VACİB DƏYİŞİKLİK: "Məhsul kodu" sütunu ƏLAVƏ olundu.'],
-    ['  Məhsul birinci növbədə kodla tapılır — fərqli kod = fərqli məhsul.'],
-    ['  Beləliklə "LTP-1094E-7ARDF" və "LTP-1094E-1ARDF" ayrı-ayrı məhsul kimi tanınır.'],
-    [''],
-    ['İstifadə qaydaları:'],
-    ['1. Sütun başlıqlarını dəyişməyin. Sıra dəyişə bilər.'],
-    ['2. Hər sətir 1 məhsul. Boş sətir atlanır.'],
-    ['3. Uyğunlaşdırma prioriteti:'],
-    ['     a. "Məhsul kodu" sütunu doldurulubsa — yalnız bu kod yoxlanır.'],
-    ['     b. Kod boşdursa — "Brend + Məhsul adı" tam uyğunluğu yoxlanır.'],
-    ['     c. Heç biri uyğunlaşmırsa — yeni məhsul yaradılır.'],
-    ['4. Yenilənmə davranışı:'],
-    ['   • Stok: aşağıdakı "Stok rejimi" seçiminizə görə (əvəz / üzərinə əlavə).'],
-    ['   • Qiymət: əgər "Qiymət (AZN)" sütunu doldurulubsa — Excel-dəki qiymət yazılır.'],
-    ['                Boş qoyularsa — köhnə qiymət saxlanır.'],
-    ['   • Görünürlük: əgər "Görünür kim?" doldurulubsa — yenilənir.'],
-    ['   • Kateqoriya, brend, ad, şəkillər: DƏYİŞMİR (köhnə məlumatlar qalır).'],
-    ['5. Yeni məhsul yaradılarkən:'],
-    ['   • Kateqoriya VƏ Brend sistemdə artıq mövcud olmalıdır.'],
-    ['   • "Məhsul kodu" sütununa kod yazsanız, gələcəkdə həmin kodla tapılacaq (tövsiyə olunur).'],
-    ['6. "Cins": men / women / unisex (boşdursa unisex).'],
-    ['7. "Görünür kim?" qısa kodları:'],
-    ['     a → Hamı (defolt) · b → Yalnız B2B · c → Yalnız adi müştəri'],
-    ['8. Qiymət yalnız rəqəm: 280 və ya 280.50'],
-    [''],
-    ['Eyni məhsula düşən bir neçə sətir:'],
-    ['  Excel-də eyni kod və ya ad+brend ilə 2 sətir varsa, sistem onları birləşdirir:'],
-    ['   • "Stoku artır" rejimində → miqdarlar TOPLANIR.'],
-    ['   • "Stoku yenilə" rejimində → SON sətrin miqdarı qəbul olunur (xəbərdarlıq verilir).'],
-    [''],
-    ['Atomik (writeBatch) yazı:'],
-    ['  Bütün yenilənmələr Firestore batch ilə atomik aparılır — yarımçıq qalma və ya'],
-    ['  miqdarın səhv mala düşməsi xətası baş vermir.'],
-  ];
+  const info = variant === 'minimal'
+    ? [
+        ['DE VALEUR — Minimal stok miqrasiya şablonu'],
+        [''],
+        ['Cəmi 4 sütun: Brend · Mal adı · Satış qiyməti · Miqdar.'],
+        ['Tez-tez stok yeniləməsi üçün ən rahat format.'],
+        [''],
+        ['Necə işləyir:'],
+        ['1. "Mal adı" + "Brend" birlikdə məhsulu tanıdır.'],
+        ['   Eyni brend + eyni ad → mövcud məhsul sayılır, stok yenilənir.'],
+        ['2. Tapılmırsa yeni məhsul yaranır:'],
+        ['   • Brend sistemdə olmalıdır (admin paneldə əlavə edin).'],
+        ['   • Qiyməti yoxdursa məhsul DRAFT (gizli) yaranır — sayt göstərmir.'],
+        ['     Admin sonradan qiymət/şəkil əlavə edib aktivləşdirir.'],
+        ['3. Stok rejimi:'],
+        ['   • "Stoku yenilə (əvəz et)" → fayldakı say saytdakını əvəz edir (defolt).'],
+        ['   • "Stoku artır (üzərinə əlavə)" → fayldakı say mövcud üzərinə gəlir.'],
+        ['4. Sütun başlıqlarını dəyişdirə bilərsiniz — sistem belə də tanıyır:'],
+        ['     Brend ↔ Marka, Brand, Бренд'],
+        ['     Mal adı ↔ Məhsul adı, Ad, Name, Наименование'],
+        ['     Satış qiyməti ↔ Qiymət, Price, Цена, Fiyat'],
+        ['     Miqdar ↔ Stok, Stock, Quantity, Количество, Adet'],
+        [''],
+        ['Başqa proqramdan (1C, Excel ixracı və.s.) götürdüyünüz fayl da işləyir —'],
+        ['sütun başlıqları yuxarıdakı variantlardan hər hansı biri olduqda avtomatik tanınır.'],
+        [''],
+        ['Genişləndirilmiş şablon (8 sütun: SKU, kateqoriya, cins, görünürlük)'],
+        ['"Şablon (genişləndirilmiş)" düyməsi ilə yüklənir.'],
+      ]
+    : [
+        ['DE VALEUR — Genişləndirilmiş şablon (8 sütun)'],
+        [''],
+        ['Sütunlar: Məhsul kodu (SKU), Brend, Mal adı, Satış qiyməti, Miqdar,'],
+        ['Kateqoriya, Cins, Görünür kim?'],
+        [''],
+        ['SKU varsa məhsul ona görə tapılır (ən dəqiq). Yoxdursa Brend+ad ilə.'],
+        ['Cins: men / women / unisex. Görünürlük: a (hamı) / b (b2b) / c (müştəri).'],
+        ['Kateqoriya və brend sistemdə qabaqcadan mövcud olmalıdır.'],
+      ];
+
   const infoWs = XLSX.utils.aoa_to_sheet(info);
   (infoWs as any)['!cols'] = [{ wch: 95 }];
   XLSX.utils.book_append_sheet(wb, infoWs, 'Təlimat');
+
+  const fname =
+    variant === 'minimal'
+      ? `devaleur-stok-minimal.${format}`
+      : `devaleur-mehsul-sablonu.${format}`;
   if (format === 'xls') {
-    XLSX.writeFile(wb, 'devaleur-mehsul-sablonu.xls', { bookType: 'biff8' });
+    XLSX.writeFile(wb, fname, { bookType: 'biff8' });
   } else {
-    XLSX.writeFile(wb, 'devaleur-mehsul-sablonu.xlsx');
+    XLSX.writeFile(wb, fname);
   }
 };
 
@@ -219,13 +275,19 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
     visibility: findCol('visibility'),
   };
 
-  // Ən az bir uyğunlaşdırma açarı (sku və ya name) olmalıdır
+  // Ən az bir uyğunlaşdırma açarı (sku və ya name) və miqdar olmalıdır
   if (!map.sku && !map.name) {
-    errors.push(`Şablonda "${COL.sku}" və ya "${COL.name}" sütunlarından biri olmalıdır. "Şablonu yüklə" düyməsindən hazır fayl götürün.`);
+    errors.push(
+      `Faylda "${COL.name}" (Brend/Marka, Ad, Name, Наименование və.s) və ya "${COL.sku}" sütunlarından heç biri tapılmadı. ` +
+      `Minimal şablon yükləyib həmin formatda doldurun.`
+    );
     return { rows: [], errors };
   }
   if (!map.stock) {
-    errors.push(`Şablonda "${COL.stock}" sütunu olmalıdır.`);
+    errors.push(
+      `Faylda "${COL.stock}" (Stok, Stock, Quantity, Количество və.s) sütunu tapılmadı. ` +
+      `Minimal şablon yükləyib həmin formatda doldurun.`
+    );
     return { rows: [], errors };
   }
 
@@ -290,13 +352,40 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       const data = d.data() as any;
       return (typeof data.name === 'object' ? data.name.az : data.name) || '';
     }).filter(Boolean);
+
+    // Brend → ilk kateqoriya xəritəsi: Kateqoriya sütunu Excel-də yoxdursa avtomatik təyin etmək üçün
+    const brandCategoryMap: Record<string, string> = {};
+    brandSnap.docs.forEach((d) => {
+      const data = d.data() as any;
+      const bname = (typeof data.name === 'object' ? data.name.az : data.name) || '';
+      const cArr: string[] = Array.isArray(data.categoryNames) ? data.categoryNames : [];
+      if (bname && cArr.length > 0) brandCategoryMap[norm(bname)] = cArr[0];
+    });
+    // Həmçinin mövcud məhsullardan da çıxara bilərik (brend → ən çox istifadə olunan kateqoriya)
+    const brandCatCount: Record<string, Record<string, number>> = {};
+    products.forEach((p) => {
+      if (!p.brand || !p.category) return;
+      const b = norm(p.brand);
+      brandCatCount[b] = brandCatCount[b] || {};
+      brandCatCount[b][p.category] = (brandCatCount[b][p.category] || 0) + 1;
+    });
+    Object.keys(brandCatCount).forEach((b) => {
+      if (brandCategoryMap[b]) return; // brands kolleksiyasındakı üstün gəlir
+      const counts = brandCatCount[b];
+      const top = Object.keys(counts).sort((x, y) => counts[y] - counts[x])[0];
+      if (top) brandCategoryMap[b] = top;
+    });
+
     const productBrands = Array.from(new Set(products.map((p) => p.brand).filter(Boolean)));
     const productCats = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
-    setDbCategories(Array.from(new Set([...cats, ...productCats])));
-    setDbBrands(Array.from(new Set([...brands, ...productBrands])));
+    const allCats = Array.from(new Set([...cats, ...productCats]));
+    const allBrands = Array.from(new Set([...brands, ...productBrands]));
+    setDbCategories(allCats);
+    setDbBrands(allBrands);
     return {
-      cats: Array.from(new Set([...cats, ...productCats])),
-      brands: Array.from(new Set([...brands, ...productBrands])),
+      cats: allCats,
+      brands: allBrands,
+      brandCategoryMap,
     };
   };
 
@@ -371,16 +460,8 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           if (!updatesMap.has(key)) updatesMap.set(key, { product: m.matched, items: [] });
           updatesMap.get(key)!.items.push(m);
         } else {
-          // Yeni məhsul üçün ön yoxlama
-          if (!m.row.category) {
-            skipped.push({ row: m.row, reason: 'Kateqoriya boşdur (yeni məhsul üçün tələb olunur)' });
-            continue;
-          }
-          const catExists = meta.cats.some((c) => norm(c) === norm(m.row.category));
-          if (!catExists) {
-            skipped.push({ row: m.row, reason: `Kateqoriya sistemdə yoxdur: "${m.row.category}". Əvvəlcə admin panelində yaradın.` });
-            continue;
-          }
+          // ── Yeni məhsul üçün ön yoxlama ──
+          // 1) Brend tələb olunur
           if (!m.row.brand) {
             skipped.push({ row: m.row, reason: 'Brend boşdur (yeni məhsul üçün tələb olunur)' });
             continue;
@@ -390,9 +471,39 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             skipped.push({ row: m.row, reason: `Brend sistemdə yoxdur: "${m.row.brand}". Əvvəlcə admin panelində yaradın.` });
             continue;
           }
+          // 2) Ad tələb olunur
           if (!m.row.name) {
-            skipped.push({ row: m.row, reason: 'Məhsul adı boşdur (yeni məhsul üçün tələb olunur)' });
+            skipped.push({ row: m.row, reason: 'Mal adı boşdur (yeni məhsul üçün tələb olunur)' });
             continue;
+          }
+          // 3) Kateqoriya — Excel-də verilməyibsə brend əsaslı avtomatik təyin et
+          if (!m.row.category) {
+            const auto = meta.brandCategoryMap[norm(m.row.brand)];
+            if (auto) {
+              m.row.category = auto;
+            } else if (meta.cats.length > 0) {
+              // Brendin kateqoriyası yoxdur — sistemin ilk kateqoriyasını fallback kimi al
+              m.row.category = meta.cats[0];
+            } else {
+              skipped.push({
+                row: m.row,
+                reason: 'Sistemdə kateqoriya yoxdur. Admin paneldə ən az 1 kateqoriya yaradın.',
+              });
+              continue;
+            }
+          } else {
+            // Verilibsə yoxla
+            const catExists = meta.cats.some((c) => norm(c) === norm(m.row.category));
+            if (!catExists) {
+              // Fayldakı kateqoriya tanınmadı — brend əsaslı fallback
+              const auto = meta.brandCategoryMap[norm(m.row.brand)] || meta.cats[0];
+              if (auto) {
+                m.row.category = auto;
+              } else {
+                skipped.push({ row: m.row, reason: `Kateqoriya sistemdə yoxdur: "${m.row.category}".` });
+                continue;
+              }
+            }
           }
           const nk = newKey(m.row);
           if (!newRowsByKey.has(nk)) newRowsByKey.set(nk, []);
@@ -554,12 +665,15 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
         }
 
         batchUpdates.push({ productId: m.product.id, patch });
+        const pNameAz =
+          (m.product.name as any)?.az ||
+          (m.product.name as any)?.en ||
+          String(m.product.name || '');
+        const pSku = (m.product as any).sku ? ` [${(m.product as any).sku}]` : '';
+        const pBrand = m.product.brand ? `${m.product.brand} · ` : '';
         logUpdates.push({
           productId: m.product.id,
-          productName:
-            (m.product.name as any)?.az ||
-            (m.product.name as any)?.en ||
-            String(m.product.name || ''),
+          productName: `${pBrand}${pNameAz}${pSku}`,
           oldValues,
           newValues,
         });
@@ -571,12 +685,15 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           productId: z.product.id,
           patch: { stock: 0 },
         });
+        const zNameAz =
+          (z.product.name as any)?.az ||
+          (z.product.name as any)?.en ||
+          String(z.product.name || '');
+        const zSku = (z.product as any).sku ? ` [${(z.product as any).sku}]` : '';
+        const zBrand = z.product.brand ? `${z.product.brand} · ` : '';
         logUpdates.push({
           productId: z.product.id,
-          productName:
-            (z.product.name as any)?.az ||
-            (z.product.name as any)?.en ||
-            String(z.product.name || ''),
+          productName: `${zBrand}${zNameAz}${zSku} (faylda yox)`,
           oldValues: { stock: z.oldStock },
           newValues: { stock: 0 },
         });
@@ -624,9 +741,11 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       // Creations log
       createdIds.forEach((id, idx) => {
         const c = result.created[idx];
+        const cBrand = c.row.brand ? `${c.row.brand} · ` : '';
+        const cSku = c.row.sku ? ` [${c.row.sku}]` : '';
         logCreations.push({
           productId: id,
-          productName: c.row.name,
+          productName: `${cBrand}${c.row.name}${cSku}`,
           data: batchCreations[idx].data,
         });
       });
@@ -704,36 +823,49 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           <FileSpreadsheet className="h-6 w-6 text-amber-700 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              Excel ilə məhsul miqrasiyası
+              Excel ilə stok / məhsul miqrasiyası
               <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-bold">
                 v2 · atomik
               </span>
             </h3>
             <p className="text-xs text-gray-600 mt-0.5 max-w-2xl">
-              Birinci növbədə <strong>Məhsul kodu</strong> ilə tapılır, sonra <strong>brend+ad</strong>{' '}
-              tam uyğunluğu ilə. Tapılsa — stok, qiymət (seçimə görə) və görünürlük yenilənir.
-              Yoxdursa yeni yaradılır. Eyni mala düşən sətrlər avtomatik birləşdirilir.
-              Yazılar Firestore <strong>writeBatch</strong> ilə atomik aparılır.
+              <strong>Tez stok yeniləməsi üçün:</strong> 4 sütunlu minimal şablon —{' '}
+              <span className="font-mono text-[11px] bg-white px-1 py-0.5 rounded border">
+                Brend · Mal adı · Satış qiyməti · Miqdar
+              </span>
+              . Başqa proqramdan ixrac edilmiş Excel də avtomatik tanınır (sütun adlarını sistem
+              təxmin edir). Brend + ad eyni olan məhsulda stok yenilənir, yenidirsə yaradılır.
+              Yazılar Firestore <strong>writeBatch</strong> ilə atomik.
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => downloadTemplate('xlsx')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
-            data-testid="product-import-template-btn"
+            onClick={() => downloadTemplate('xlsx', 'minimal')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-semibold shadow-sm"
+            data-testid="product-import-template-minimal-btn"
+            title="4 sütun: Brend, Mal adı, Satış qiyməti, Miqdar"
           >
             <Download className="h-4 w-4" />
-            Şablonu yüklə (.xlsx)
+            Şablon (minimal 4 sütun)
           </button>
           <button
-            onClick={() => downloadTemplate('xls')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-medium"
+            onClick={() => downloadTemplate('xlsx', 'advanced')}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium"
+            data-testid="product-import-template-advanced-btn"
+            title="8 sütun: + SKU, Kateqoriya, Cins, Görünürlük"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Genişləndirilmiş (8 sütun)
+          </button>
+          <button
+            onClick={() => downloadTemplate('xls', 'minimal')}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-xs"
             data-testid="product-import-template-xls-btn"
             title="Köhnə Excel versiyası (.xls)"
           >
-            <Download className="h-4 w-4" />
-            (.xls)
+            <Download className="h-3.5 w-3.5" />
+            .xls
           </button>
         </div>
       </div>
