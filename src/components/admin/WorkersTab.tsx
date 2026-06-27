@@ -86,8 +86,8 @@ const WorkersTab: React.FC = () => {
 
   const [allRequests, setAllRequests] = useState<WorkerRequest[]>([]);
 
-  const refresh = async () => {
-    setLoading(true);
+  const refresh = async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [w, r, p, b] = await Promise.all([listWorkers(), listRequests(), listPositions(), listBranches()]);
       setWorkers(w); setAllRequests(r); setPositions(p); setBranches(b);
@@ -113,7 +113,7 @@ const WorkersTab: React.FC = () => {
     return <WorkerForm positions={positions} branches={branches} onClose={() => setMode('list')} onSaved={async () => { setMode('list'); await refresh(); }} />;
   }
   if (mode === 'edit' && editing) {
-    return <WorkerDetail worker={editing} positions={positions} branches={branches} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh(); }} />;
+    return <WorkerDetail worker={editing} positions={positions} branches={branches} onClose={() => { setEditing(null); setMode('list'); }} onUpdated={async () => { await refresh({ silent: true }); }} />;
   }
 
   return (
@@ -845,7 +845,12 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
   const initialTotalRef = useRef<string>(initialTotal);
   const initialTargetRef = useRef<string>(initialTarget);
 
-  // worker / selectedYM dəyişəndə state-i yenilə
+  // worker DƏYİŞƏNDƏ (yəni id fərqlidirsə — yeni işçi açılır) state-i yenidən təyin et.
+  // ÖNƏMLİ: əvvəlki versiyada effect həm də worker.monthlyTarget, monthlyTotalSales
+  // kimi dəyərlər dəyişəndə işləyirdi. Bu admin yazarkən başqa səbəbdən (məs. ana
+  // siyahı refresh olduğu üçün) yeni `worker` obyektinin gəlməsi nəticəsində
+  // INPUT-un sıfırlanmasına səbəb olurdu — admin sayı yaza bilmirdi. İndi yalnız
+  // id dəyişəndə (başqa işçiyə keçildikdə) state sıfırlanır.
   useEffect(() => {
     const newInitTotal = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalSales === 'number')
       ? String(worker.monthlyTotalSales)
@@ -858,7 +863,7 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
     initialTotalRef.current = newInitTotal;
     initialTargetRef.current = newInitTarget;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worker.id, worker.monthlyTotalSales, worker.monthlyTotalMonth, worker.monthlyTarget, selectedYM]);
+  }, [worker.id, selectedYM]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -912,11 +917,21 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi ( AZN)</label>
-          <input type="number" min={0} value={target} onChange={(e) => setTarget(e.target.value)} className={inp} placeholder="0" data-testid="monthly-target-input" />
+          <input
+            type="number" min={0} value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+            className={inp} placeholder="0" data-testid="monthly-target-input"
+          />
         </div>
         <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Ümumi satış ( AZN)</label>
-          <input type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} className={inp} placeholder="0" data-testid="monthly-total-input" />
+          <input
+            type="number" min={0} value={total}
+            onChange={(e) => setTotal(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+            className={inp} placeholder="0" data-testid="monthly-total-input"
+          />
         </div>
 
         {targetNum > 0 && (
@@ -932,7 +947,7 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
         )}
 
         <div className="md:col-span-2 flex items-center gap-3 flex-wrap">
-          <button disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
+          <button type="submit" disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
           </button>
           {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı</span>}
