@@ -108,6 +108,8 @@ interface ImportResult {
   errors: string[];
   /** Excel-də neçə sətir eyni məhsula düşüb (xəbərdarlıq üçün) */
   mergeWarnings: { key: string; count: number; sampleName: string }[];
+  /** Faylda olmayan və stoku 0-a endiriləcək məhsullar (yalnız zeroOutUnlisted=true halında) */
+  zeroedOut: Array<{ product: Product; oldStock: number }>;
 }
 
 const norm = (s: any) => String(s ?? '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -269,6 +271,8 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
   const [stockMode, setStockMode] = useState<StockMode>('replace');
   const [priceMode, setPriceMode] = useState<PriceMode>('always');
   const [allowFuzzy, setAllowFuzzy] = useState(false);
+  /** Faylda olmayan məhsulların stokunu 0-a endir (yalnız replace modunda işləyir) */
+  const [zeroOutUnlisted, setZeroOutUnlisted] = useState(false);
 
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [dbBrands, setDbBrands] = useState<string[]>([]);
@@ -307,7 +311,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       ]);
       if (errors.length > 0 || rows.length === 0) {
         setResult({
-          updated: [], created: [], skipped: [], mergeWarnings: [],
+          updated: [], created: [], skipped: [], mergeWarnings: [], zeroedOut: [],
           errors: errors.length > 0 ? errors : ['Sətir tapılmadı'],
         });
         return;
@@ -492,10 +496,22 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
         }
       });
 
-      setResult({ updated, created, skipped, errors: [], mergeWarnings });
+      // ── 5) Faylda olmayan məhsulların stokunu 0-a endir (yalnız replace modunda)
+      const zeroedOut: ImportResult['zeroedOut'] = [];
+      if (zeroOutUnlisted && stockMode === 'replace') {
+        const matchedIds = new Set<string>(updated.map((u) => u.product.id));
+        for (const p of products) {
+          if (matchedIds.has(p.id)) continue;
+          const oldStock = typeof p.stock === 'number' ? p.stock : 0;
+          if (oldStock === 0) continue; // dəyişiklik lazım deyil
+          zeroedOut.push({ product: p, oldStock });
+        }
+      }
+
+      setResult({ updated, created, skipped, errors: [], mergeWarnings, zeroedOut });
     } catch (e) {
       setResult({
-        updated: [], created: [], skipped: [], mergeWarnings: [],
+        updated: [], created: [], skipped: [], mergeWarnings: [], zeroedOut: [],
         errors: ['Faylı oxumaq xətası: ' + (e as Error).message + '. Yalnız .xlsx / .xls / .csv formatı dəstəklənir.'],
       });
     } finally {
@@ -506,7 +522,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
   const apply = async () => {
     if (!result) return;
     setApplying(true);
-    setProgress({ done: 0, total: result.updated.length + result.created.length });
+    setProgress({ done: 0, total: result.updated.length + result.created.length + result.zeroedOut.length });
     try {
       // Migration log üçün snapshot-lar
       const logUpdates: MigrationUpdateEntry[] = [];
@@ -546,6 +562,23 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             String(m.product.name || ''),
           oldValues,
           newValues,
+        });
+      }
+
+      // ── 1b) ZEROED OUT — faylda olmayan məhsullar (stoku 0-a endir)
+      for (const z of result.zeroedOut) {
+        batchUpdates.push({
+          productId: z.product.id,
+          patch: { stock: 0 },
+        });
+        logUpdates.push({
+          productId: z.product.id,
+          productName:
+            (z.product.name as any)?.az ||
+            (z.product.name as any)?.en ||
+            String(z.product.name || ''),
+          oldValues: { stock: z.oldStock },
+          newValues: { stock: 0 },
         });
       }
 
@@ -617,7 +650,12 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       }
 
       const parts: string[] = [];
-      if (logUpdates.length > 0) parts.push(`${logUpdates.length} məhsul yeniləndi`);
+      if (logUpdates.length > 0) {
+        const zeroed = result.zeroedOut.length;
+        const realUpdates = logUpdates.length - zeroed;
+        if (realUpdates > 0) parts.push(`${realUpdates} məhsul yeniləndi`);
+        if (zeroed > 0) parts.push(`${zeroed} məhsulun stoku 0-a endirildi (faylda yox idi)`);
+      }
       if (logCreations.length > 0) parts.push(`${logCreations.length} yeni məhsul yaradıldı`);
       if (result.skipped.length > 0) parts.push(`${result.skipped.length} sətir atlandı`);
       if (result.mergeWarnings.length > 0) {
@@ -638,7 +676,9 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
   // Sayğaclar
   const counts = useMemo(() => {
     if (!result) return null;
-    const totalStockChange = result.updated.reduce((s, m) => s + (m.finalStock - m.oldStock), 0);
+    const updateStockChange = result.updated.reduce((s, m) => s + (m.finalStock - m.oldStock), 0);
+    const zeroedStockChange = result.zeroedOut.reduce((s, z) => s - z.oldStock, 0);
+    const totalStockChange = updateStockChange + zeroedStockChange;
     const priceChanges = result.updated.filter((m) => m.priceChanged).length;
     return {
       totalStockChange,
@@ -727,7 +767,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               <input
                 type="radio" name="stock-mode" value="add"
                 checked={stockMode === 'add'}
-                onChange={() => setStockMode('add')}
+                onChange={() => { setStockMode('add'); setZeroOutUnlisted(false); }}
                 className="mt-0.5 accent-emerald-600"
                 data-testid="stock-mode-add"
               />
@@ -810,6 +850,40 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
         </span>
       </div>
 
+      {/* Zero-out unlisted toggle — TƏHLÜKƏLİ rejim */}
+      <div
+        className={`mb-3 px-3 py-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+          zeroOutUnlisted && stockMode === 'replace'
+            ? 'border-red-300 bg-red-50/70'
+            : 'border-gray-200 bg-white/60'
+        } ${stockMode !== 'replace' ? 'opacity-60' : ''}`}
+        data-testid="zero-out-unlisted-panel"
+      >
+        <label className="inline-flex items-start gap-2 cursor-pointer flex-1" data-testid="zero-out-unlisted-label">
+          <input
+            type="checkbox"
+            checked={zeroOutUnlisted}
+            onChange={(e) => setZeroOutUnlisted(e.target.checked)}
+            disabled={stockMode !== 'replace'}
+            className="mt-0.5 accent-red-600 disabled:cursor-not-allowed"
+            data-testid="zero-out-unlisted"
+          />
+          <span>
+            <span className="font-semibold text-gray-900 inline-flex items-center gap-1">
+              <AlertTriangle className={`h-3.5 w-3.5 ${zeroOutUnlisted && stockMode === 'replace' ? 'text-red-600' : 'text-amber-500'}`} />
+              Tam sinxronizasiya: faylda olmayan məhsulların stokunu 0-a endir
+            </span>
+            <span className="block text-[11px] text-gray-600 mt-0.5">
+              Yalnız <strong>Stoku yenilə (əvəz et)</strong> rejimində işləyir. Açıqdırsa,
+              fayl sizin <strong>tam inventarınızın</strong> əksi sayılır — Excel-də olmayan bütün
+              məhsulların stoku sıfırlanır. <span className="text-red-600 font-medium">Diqqətli olun</span>:
+              səhv fayl yükləsəniz, bütün qalan stoklar silinə bilər. Geri qaytarma jurnaldan
+              mümkündür.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {/* Fayl seç */}
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -868,6 +942,15 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               {counts.mergedUpdates > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded">
                   {counts.mergedUpdates} təkrar sətr birləşdi
+                </span>
+              )}
+              {result.zeroedOut.length > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-700 rounded font-medium"
+                  data-testid="zeroed-out-summary"
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  {result.zeroedOut.length} məhsul 0-a endiriləcək
                 </span>
               )}
               <span className="ml-auto font-mono text-gray-600">
@@ -1001,6 +1084,42 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             </div>
           )}
 
+          {result.zeroedOut.length > 0 && (
+            <div data-testid="zeroed-out-section">
+              <p className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                Stoku 0-a endiriləcək ({result.zeroedOut.length})
+                <span className="text-[11px] text-gray-500 font-normal">
+                  — faylda olmayan məhsullar, tam sinxronizasiya
+                </span>
+              </p>
+              <div className="max-h-60 overflow-y-auto border border-red-100 rounded-lg divide-y divide-gray-100 bg-white">
+                {result.zeroedOut.map((z, i) => (
+                  <div
+                    key={i}
+                    className="px-3 py-2 text-xs flex items-center gap-3 flex-wrap"
+                    data-testid={`zeroed-out-item-${i}`}
+                  >
+                    <span className="flex-1 truncate min-w-[200px]">
+                      <span className="font-medium">{z.product.name?.az || z.product.name?.en}</span>
+                      {z.product.sku && (
+                        <span className="ml-1.5 inline-flex items-center text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono">
+                          {z.product.sku}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-gray-500">{z.product.category}</span>
+                    <span className="text-gray-500">{z.product.brand}</span>
+                    <span className="font-mono tabular-nums">
+                      Stok: {z.oldStock} →{' '}
+                      <span className="text-red-700 font-bold">0</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {result.skipped.length > 0 && (
             <div>
               <p className="text-sm font-medium text-gray-900 mb-2 flex items-center gap-1.5">
@@ -1052,7 +1171,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             </button>
             <button
               onClick={apply}
-              disabled={applying || (result.updated.length === 0 && result.created.length === 0)}
+              disabled={applying || (result.updated.length === 0 && result.created.length === 0 && result.zeroedOut.length === 0)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 font-medium"
               data-testid="product-import-apply"
             >
