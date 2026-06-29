@@ -1017,7 +1017,7 @@ const B2BOrdersTab: React.FC = () => {
                 <button
                   onClick={() => {
                     const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
-                    const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                    const url = `${window.location.origin}/customer-receive/order/${order.id}`;
                     const companyLabel = order.companyName && !String(order.companyName).includes('@')
                       ? ` · ${order.companyName}` : '';
                     const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;

@@ -52,6 +52,7 @@ const GiftCardSharePage = React.lazy(() => import('./pages/GiftCardSharePage'));
 const WorkerLogin = React.lazy(() => import('./pages/workers/WorkerLogin'));
 const WorkerDashboard = React.lazy(() => import('./pages/workers/WorkerDashboard'));
 const WarehouseOrderPage = React.lazy(() => import('./pages/WarehouseOrderPage'));
+const CustomerReceivePage = React.lazy(() => import('./pages/CustomerReceivePage'));
 const AiChatWidget = React.lazy(() => import('./components/AiChatWidget'));
 const CampaignPopup = React.lazy(() => import('./components/CampaignPopup'));
 const AdminGlobalNotifications = React.lazy(() => import('./components/AdminGlobalNotifications'));
@@ -158,6 +159,9 @@ const AppContent: React.FC = () => {
 
             {/* Public warehouse picker — no auth required, accessed via shared link */}
             <Route path="/warehouse/order/:orderId" element={<WarehouseOrderPage />} />
+
+            {/* Public customer receive — ayrıca link, müştəri təhvil alır + imza atır */}
+            <Route path="/customer-receive/order/:orderId" element={<CustomerReceivePage />} />
 
             {/* Existing Routes */}
             <Route path="/admin-login" element={<AdminLogin />} />

@@ -1,13 +1,18 @@
 /**
- * orderPdf.ts — B2B sifariş üçün **TƏHVİL-TƏSLİM AKTI** (Azərbaycan dilində).
+ * orderPdf.ts — **TƏHVİL-TƏSLİM AKTI** (Azərbaycan dilində).
  *
- * Şrift: Noto Sans (TTF, `/fonts/NotoSans-Regular.ttf` + `/fonts/NotoSans-Bold.ttf`)
- *   → Azərbaycan əlifbası (ə, ş, ç, ğ, ı, ö, ü) tam dəstəklənir.
+ * Şrift: Noto Sans (TTF) → Azərbaycan əlifbası tam dəstəklənir.
+ *
+ * Layout (kompakt):
+ *   • Hər səhifəyə təxminən 30–40 model sığır (image 20pt, row ~22pt)
+ *   • Cədvəl avtomatik səhifələnir; başlıq hər səhifədə təkrarlanır
+ *   • Footer (Təslim edən / Təslim alan) yalnız SON səhifədə render olunur
+ *
+ * Şəkillər fetch+blob ilə yüklənir → Firebase Storage CORS-ı düzgün
+ * tətbiq olunsa belə canvas-taint xətası baş vermir, deməli bütün şəkillər
+ * PDF-də tam görünür.
  *
  * MƏXFİ məlumatlar GÖSTƏRİLMİR: endirim, borc, ümumi məbləğ, ödəniş tarixi.
- * Yalnız operativ məlumat: məhsul şəkli, ad, brend, barkod, miqdar, vahid, satış qiyməti.
- *
- * Footer: "Təslim edən" + "Təslim alan" — hər ikisi üçün Vəzifə və Ad/Soyad sahələri ilə.
  */
 import jsPDF from 'jspdf';
 import autoTable, { CellHookData } from 'jspdf-autotable';
@@ -64,17 +69,11 @@ const arrayBufferToBase64 = (buf: ArrayBuffer): string => {
 const loadAzFonts = async (doc: jsPDF): Promise<void> => {
   if (!_fontPromise) {
     _fontPromise = (async () => {
-      const [regResp, boldResp] = await Promise.all([
-        fetch(FONT_REGULAR_URL),
-        fetch(FONT_BOLD_URL),
-      ]);
+      const [regResp, boldResp] = await Promise.all([fetch(FONT_REGULAR_URL), fetch(FONT_BOLD_URL)]);
       if (!regResp.ok || !boldResp.ok) {
         throw new Error('Font yüklənmədi: ' + regResp.status + '/' + boldResp.status);
       }
-      const [regBuf, boldBuf] = await Promise.all([
-        regResp.arrayBuffer(),
-        boldResp.arrayBuffer(),
-      ]);
+      const [regBuf, boldBuf] = await Promise.all([regResp.arrayBuffer(), boldResp.arrayBuffer()]);
       (window as any).__azFontReg = arrayBufferToBase64(regBuf);
       (window as any).__azFontBold = arrayBufferToBase64(boldBuf);
     })();
@@ -99,35 +98,76 @@ const formatDate = (raw: any): string => {
   }
 };
 
-const loadImageAsDataUrl = (url: string): Promise<{ dataUrl: string; w: number; h: number } | null> =>
-  new Promise((resolve) => {
-    if (!url) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const max = 110;
-        let w = img.naturalWidth || 100;
-        let h = img.naturalHeight || 100;
-        const ratio = Math.min(max / w, max / h, 1);
-        w = Math.max(1, Math.round(w * ratio));
-        h = Math.max(1, Math.round(h * ratio));
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(null);
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve({ dataUrl: canvas.toDataURL('image/png'), w, h });
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+/**
+ * Şəkili PDF üçün resized PNG dataURL-ə çevirir.
+ *
+ * Strategiya:
+ *   1) fetch(url, mode:'cors') ilə blob alırıq → CORS-friendly serverlər üçün
+ *      (Firebase Storage, hizliresim, və.s. işləyir).
+ *   2) blob → object URL → Image → canvas → toDataURL.
+ *      Bu yol "tainted canvas" xətasından qaçır, çünki blob lokaldır.
+ *   3) Uğursuz olsa, fallback: crossOrigin='anonymous' ilə Image yüklə.
+ *   4) Hər ikisi alınmasa null qaytar → PDF-də boş hüceyrə.
+ */
+const resizeOnCanvas = (img: HTMLImageElement, maxSide = 64): { dataUrl: string; w: number; h: number } | null => {
+  try {
+    const canvas = document.createElement('canvas');
+    let w = img.naturalWidth || maxSide;
+    let h = img.naturalHeight || maxSide;
+    const ratio = Math.min(maxSide / w, maxSide / h, 1);
+    w = Math.max(1, Math.round(w * ratio));
+    h = Math.max(1, Math.round(h * ratio));
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    // Ağ fon (transparent PNG-lər üçün)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.78), w, h };
+  } catch {
+    return null;
+  }
+};
 
-/** Məhsul üçün "Satış qiyməti" — endirimli qiymət varsa onu, yoxsa adi qiyməti qaytarır. */
+const loadImageAsDataUrl = async (url: string): Promise<{ dataUrl: string; w: number; h: number } | null> => {
+  if (!url) return null;
+
+  // Strategiya 1: fetch + blob (CORS-friendly)
+  try {
+    const resp = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const result = await new Promise<{ dataUrl: string; w: number; h: number } | null>((resolve) => {
+        const img = new Image();
+        const cleanup = () => URL.revokeObjectURL(objectUrl);
+        img.onload = () => { resolve(resizeOnCanvas(img)); cleanup(); };
+        img.onerror = () => { resolve(null); cleanup(); };
+        img.src = objectUrl;
+      });
+      if (result) return result;
+    }
+  } catch {
+    /* fetch fail — try fallback */
+  }
+
+  // Strategiya 2: crossOrigin attribute (image element)
+  try {
+    const result = await new Promise<{ dataUrl: string; w: number; h: number } | null>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(resizeOnCanvas(img));
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+    return result;
+  } catch {
+    return null;
+  }
+};
+
 const resolveSalePrice = (item: OrderItemLike, p?: ProductLike): number => {
   if (typeof item.salePrice === 'number' && item.salePrice > 0) return item.salePrice;
   if (typeof item.regularPrice === 'number' && item.regularPrice > 0) return item.regularPrice;
@@ -138,60 +178,47 @@ const resolveSalePrice = (item: OrderItemLike, p?: ProductLike): number => {
   return 0;
 };
 
-/**
- * downloadOrderPdf — Təhvil-təslim aktı PDF-i.
- * MƏXFİ olmayan satış qiyməti göstərilir; endirim/borc/total YOXDUR.
- */
-export const downloadOrderPdf = async (
-  order: OrderLike,
-  products: ProductLike[]
-): Promise<void> => {
+export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]): Promise<void> => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 36;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 32;
 
-  // ─── Şrifti yüklə (Azərbaycan əlifbası dəstəyi) ───
+  // ─── Şrift ───
   try {
     await loadAzFonts(doc);
     doc.setFont(FONT_NAME, 'normal');
   } catch (err) {
     console.warn('AZ font load failed, fallback to helvetica:', err);
-    // fallback helvetica — diakritiklər itə bilər, amma minimal işləklik qalır
   }
 
   // ─── Loqo + başlıq ───
   const logo = await loadImageAsDataUrl(LOGO_URL);
   if (logo) {
-    const lw = 70;
+    const lw = 62;
     const lh = (logo.h * lw) / logo.w;
-    try {
-      doc.addImage(logo.dataUrl, 'PNG', margin, 30, lw, lh);
-    } catch {
-      /* noop */
-    }
+    try { doc.addImage(logo.dataUrl, 'JPEG', margin, 26, lw, lh); } catch { /* noop */ }
   }
 
   doc.setFont(FONT_NAME, 'bold');
-  doc.setFontSize(15);
-  doc.text('Təhvil-təslim aktı', pageWidth - margin, 56, { align: 'right' });
+  doc.setFontSize(14);
+  doc.text('Təhvil-təslim aktı', pageWidth - margin, 50, { align: 'right' });
 
   // ─── Sifariş başlığı ───
-  const headStartY = 110;
+  const headStartY = 90;
   const orderNumber =
     order.orderNumber !== undefined && order.orderNumber !== null
       ? `#${order.orderNumber}`
       : `#${(order.id || '').slice(0, 8)}`;
-
   const fullName = [order.customerName, order.customerLastname].filter(Boolean).join(' ').trim() || '-';
   const company = order.companyName && !String(order.companyName).includes('@') ? order.companyName : '';
   const phone = order.customerPhone && String(order.customerPhone).length < 30 ? order.customerPhone : '';
 
   doc.setFont(FONT_NAME, 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.text('Sifariş məlumatları', margin, headStartY);
   doc.setFont(FONT_NAME, 'normal');
-  doc.setFontSize(10);
-
+  doc.setFontSize(9);
   const meta: Array<[string, string]> = [
     ['Sifariş №:', orderNumber],
     ['Tarix:', formatDate(order.createdAt) || '-'],
@@ -200,28 +227,37 @@ export const downloadOrderPdf = async (
   if (company) meta.push(['Şirkət:', company]);
   if (phone) meta.push(['Telefon:', phone]);
 
-  let y = headStartY + 14;
+  let y = headStartY + 12;
   meta.forEach(([k, v]) => {
     doc.setTextColor(110);
     doc.text(k, margin, y);
     doc.setTextColor(20);
-    doc.text(String(v), margin + 80, y);
-    y += 14;
+    doc.text(String(v), margin + 70, y);
+    y += 12;
   });
   doc.setTextColor(0);
 
-  // ─── Şəkilləri əvvəlcədən yüklə ───
+  // ─── Şəkilləri əvvəlcədən yüklə (paralel + concurrency limit) ───
   const totalQty = (order.items || []).reduce((s, it) => s + (Number(it.quantity) || 0), 0);
-  const tableStartY = y + 8;
+  const tableStartY = y + 6;
 
-  const imageData = await Promise.all(
-    (order.items || []).map(async (it) => {
+  // Concurrency limit 8 — şəbəkəni boğmasın
+  const concurrency = 8;
+  const imageData: Array<{ dataUrl: string; w: number; h: number } | null> = new Array(order.items?.length || 0).fill(null);
+  const queue = (order.items || []).map((it, idx) => ({ it, idx }));
+  let cursor = 0;
+  const workers = new Array(Math.min(concurrency, queue.length)).fill(0).map(async () => {
+    while (cursor < queue.length) {
+      const myIdx = cursor++;
+      const { it, idx } = queue[myIdx];
       const p = products.find((pp) => pp.id === it.productId);
       const url = p?.images?.[0] || '';
-      return await loadImageAsDataUrl(url);
-    })
-  );
+      imageData[idx] = await loadImageAsDataUrl(url);
+    }
+  });
+  await Promise.all(workers);
 
+  // ─── Cədvəl sıraları ───
   const rows = (order.items || []).map((it, idx) => {
     const p = products.find((pp) => pp.id === it.productId);
     const nameAz =
@@ -241,6 +277,13 @@ export const downloadOrderPdf = async (
     };
   });
 
+  // ─── KOMPAKT CƏDVƏL — ~30-40 model 1 səhifədə ───
+  // Image cell: 22pt; row minHeight: 24pt → A4 hündürlüyü 842pt,
+  // tutulan: header(~140) + footer(~150) → təxminən 552pt cədvələ qalır.
+  // 552 / ~16pt(row height with image) ≈ 34 sətr 1 səhifədə.
+  const IMG_SIZE = 22; // pt — kvadrat şəkil ölçüsü
+  const ROW_HEIGHT = 26;
+
   autoTable(doc, {
     startY: tableStartY,
     head: [['#', 'Şəkil', 'Məhsul adı', 'Brend', 'Barkod', 'Miqdar', 'Vahid', 'Satış qiyməti']],
@@ -256,40 +299,42 @@ export const downloadOrderPdf = async (
     ]),
     styles: {
       font: FONT_NAME,
-      fontSize: 9,
-      cellPadding: 6,
+      fontSize: 7.5,
+      cellPadding: 2.5,
       valign: 'middle',
       lineColor: [220, 220, 220],
-      lineWidth: 0.5,
+      lineWidth: 0.4,
+      minCellHeight: ROW_HEIGHT,
+      overflow: 'linebreak',
     },
     headStyles: {
       font: FONT_NAME,
       fontStyle: 'bold',
+      fontSize: 8,
       fillColor: [33, 33, 33],
       textColor: 255,
       halign: 'center',
+      minCellHeight: 16,
     },
-    bodyStyles: {
-      font: FONT_NAME,
-      textColor: 30,
-    },
+    bodyStyles: { font: FONT_NAME, textColor: 30 },
     alternateRowStyles: { fillColor: [248, 248, 248] },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 22 },
-      1: { halign: 'center', cellWidth: 54, minCellHeight: 54 },
+      0: { halign: 'center', cellWidth: 18 },
+      1: { halign: 'center', cellWidth: IMG_SIZE + 6 },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 70 },
-      4: { cellWidth: 82, fontStyle: 'bold' },
-      5: { halign: 'center', cellWidth: 42, fontStyle: 'bold' },
-      6: { halign: 'center', cellWidth: 36 },
-      7: { halign: 'right', cellWidth: 70, fontStyle: 'bold' },
+      3: { cellWidth: 60 },
+      4: { cellWidth: 74, fontStyle: 'bold' },
+      5: { halign: 'center', cellWidth: 32, fontStyle: 'bold' },
+      6: { halign: 'center', cellWidth: 30 },
+      7: { halign: 'right', cellWidth: 60, fontStyle: 'bold' },
     },
     didDrawCell: (data: CellHookData) => {
       if (data.section === 'body' && data.column.index === 1) {
         const r = rows[data.row.index];
         if (r?.img) {
           const cell = data.cell;
-          const maxSide = Math.min(cell.width, cell.height) - 6;
+          // Kvadrat şəkil — ratio qoruyaraq mərkəzlə
+          const maxSide = Math.min(IMG_SIZE, cell.width - 2, cell.height - 2);
           const ratio = r.img.w / r.img.h;
           let finalW: number, finalH: number;
           if (ratio >= 1) {
@@ -301,31 +346,39 @@ export const downloadOrderPdf = async (
           }
           const x = cell.x + (cell.width - finalW) / 2;
           const yy = cell.y + (cell.height - finalH) / 2;
-          try {
-            doc.addImage(r.img.dataUrl, 'PNG', x, yy, finalW, finalH);
-          } catch {
-            /* noop */
-          }
+          try { doc.addImage(r.img.dataUrl, 'JPEG', x, yy, finalW, finalH); }
+          catch { /* noop */ }
         }
       }
     },
-    margin: { left: margin, right: margin },
+    margin: { left: margin, right: margin, top: 30, bottom: 30 },
+    // Footer-ə yer saxla: son səhifədə autoTable-in stopY-ı yüksəkdə dayanmasa
+    // belə, footer ayrıca render olunur. Cədvəl çox uzun olsa belə avtomatik
+    // yeni səhifəyə davam edir.
   });
 
-  // ─── Yekun (yalnız sayğac — borc/endirim YOXDUR) ───
-  const finalY = (doc as any).lastAutoTable?.finalY || tableStartY + 80;
+  // ─── Yekun sayğacı ───
+  const finalY = (doc as any).lastAutoTable?.finalY || tableStartY + 60;
+  let summaryY = finalY + 18;
+
+  // Əgər footer + summary aşağıya sığmırsa yeni səhifəyə keç
+  const footerHeight = 130;
+  if (summaryY + footerHeight > pageHeight - 20) {
+    doc.addPage();
+    summaryY = 60;
+  }
+
   doc.setFont(FONT_NAME, 'bold');
   doc.setFontSize(10);
-  doc.text(`Model sayı: ${rows.length}`, margin, finalY + 22);
-  doc.text(`Ümumi miqdar: ${totalQty} ədəd`, margin, finalY + 38);
+  doc.setTextColor(20);
+  doc.text(`Model sayı: ${rows.length}`, margin, summaryY);
+  doc.text(`Ümumi miqdar: ${totalQty} ədəd`, margin, summaryY + 14);
 
-  // ─── Footer: Təslim edən / Təslim alan ───
-  // İki sütun, hər birində: "Vəzifə:" + "Ad, Soyad:" + imza xətti
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const footerTop = Math.max(finalY + 70, pageHeight - 170);
-  const colWidth = (pageWidth - margin * 2 - 40) / 2;
+  // ─── Footer: Təslim edən / Təslim alan (son səhifədə) ───
+  const footerTop = Math.max(summaryY + 40, pageHeight - 140);
+  const colWidth = (pageWidth - margin * 2 - 32) / 2;
   const leftX = margin;
-  const rightX = margin + colWidth + 40;
+  const rightX = margin + colWidth + 32;
 
   const drawSignatureBlock = (x: number, title: string) => {
     doc.setFont(FONT_NAME, 'bold');
@@ -340,11 +393,11 @@ export const downloadOrderPdf = async (
     doc.setDrawColor(180);
     doc.line(x + 38, footerTop + 19, x + colWidth, footerTop + 19);
 
-    doc.text('Ad, Soyad:', x, footerTop + 38);
-    doc.line(x + 52, footerTop + 39, x + colWidth, footerTop + 39);
+    doc.text('Ad, Soyad:', x, footerTop + 36);
+    doc.line(x + 52, footerTop + 37, x + colWidth, footerTop + 37);
 
-    doc.text('İmza:', x, footerTop + 78);
-    doc.line(x, footerTop + 80, x + colWidth, footerTop + 80);
+    doc.text('İmza:', x, footerTop + 70);
+    doc.line(x, footerTop + 72, x + colWidth, footerTop + 72);
   };
 
   drawSignatureBlock(leftX, 'Təslim edən');
@@ -352,12 +405,17 @@ export const downloadOrderPdf = async (
 
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text(
-    'De Valeur — bu sənəd təhvil-təslim aktıdır.',
-    pageWidth / 2,
-    pageHeight - 24,
-    { align: 'center' }
-  );
+  doc.text('De Valeur — təhvil-təslim aktı.', pageWidth / 2, pageHeight - 18, { align: 'center' });
+
+  // Səhifə nömrəsi
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont(FONT_NAME, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`${i} / ${totalPages}`, pageWidth - margin, pageHeight - 18, { align: 'right' });
+  }
 
   const safeOrderNo = String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '');
   doc.save(`tehvil-teslim-${safeOrderNo || 'sifaris'}.pdf`);

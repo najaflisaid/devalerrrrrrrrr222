@@ -595,7 +595,7 @@ const B2BOrdersPage: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                            const url = `${window.location.origin}/customer-receive/order/${order.id}`;
                             const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
                             const companyLabel = order.companyName && !String(order.companyName).includes('@')
                               ? ` · ${order.companyName}` : '';

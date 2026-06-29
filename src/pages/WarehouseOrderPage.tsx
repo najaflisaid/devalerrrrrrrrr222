@@ -1,12 +1,13 @@
 /**
  * WarehouseOrderPage — açıq link (auth tələb etmir).
  *
- * EYNI link iki mərhələdə istifadə olunur:
- *   1) Anbardar — yığım siyahısı: hər mal üçün "Əlavə olundu" / "Mövcud deyil",
- *      qeyd, vəzifə+ad+imza → Təsdiq. Təsdiqdən sonra anbardar düzəliş edə bilmir.
- *   2) Müştəri — anbardar təsdiqlədikdən sonra eyni link açılanda müştəri rejimi:
- *      siyahı oxunub, müştəri təhvil aldığı malları işarələyir, vəzifə+ad+imza atır,
- *      Təsdiq → status `delivered` olur, sifariş bağlanır.
+ * Yalnız ANBARDAR rejimi:
+ *   1) Hər mal üçün "Əlavə olundu" / "Mövcud deyil" düymələri
+ *   2) Sifariş statusunu dəyişdirə bilir (real-time admin/müştəri görür)
+ *   3) Anbardar qeydi
+ *   4) Vəzifə + Ad/Soyad + İmza ataraq TƏSDİQ → linkdən düzəliş bağlanır
+ *
+ * Müştəri tərəfi üçün ayrıca `/customer-receive/order/:orderId` route var.
  *
  * Qiymət / endirim / borc GÖSTƏRİLMİR.
  */
@@ -14,7 +15,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
-  Package, Check, X, Loader2, AlertCircle, ArrowLeft, FileText, Lock, ClipboardCheck, Truck,
+  Package, Check, X, Loader2, AlertCircle, ArrowLeft, FileText, Lock, ClipboardCheck,
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { productService } from '../services/productService';
@@ -24,8 +25,6 @@ import {
   updateB2BOrderWarehouseNote,
   updateB2BOrderStatusFromWarehouse,
   finalizeB2BOrderWarehouse,
-  updateB2BOrderCustomerReceiveChecks,
-  finalizeB2BOrderCustomerReceive,
   type WarehouseStatus,
 } from '../services/b2bOrderService';
 
@@ -52,12 +51,6 @@ interface OrderDoc {
   warehousePickerSignature?: string;
   warehouseFinalized?: boolean;
   warehouseFinalizedAt?: any;
-  customerReceiveChecks?: Record<string, boolean>;
-  customerReceiveName?: string;
-  customerReceivePosition?: string;
-  customerReceiveSignature?: string;
-  customerFinalized?: boolean;
-  customerFinalizedAt?: any;
 }
 
 const formatDate = (raw: any): string => {
@@ -87,22 +80,15 @@ const WarehouseOrderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Warehouse mode inputs
   const [noteDraft, setNoteDraft] = useState('');
   const [pickerName, setPickerName] = useState('');
   const [pickerPosition, setPickerPosition] = useState('');
   const [pickerSignature, setPickerSignature] = useState('');
 
-  // Customer mode inputs
-  const [receiverName, setReceiverName] = useState('');
-  const [receiverPosition, setReceiverPosition] = useState('');
-  const [receiverSignature, setReceiverSignature] = useState('');
-
   const [submittingFinalize, setSubmittingFinalize] = useState(false);
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
   const [statusSaving, setStatusSaving] = useState(false);
 
-  // 1) Subscribe to order doc (real-time)
   useEffect(() => {
     if (!orderId) return;
     const unsub = onSnapshot(
@@ -114,9 +100,7 @@ const WarehouseOrderPage: React.FC = () => {
           return;
         }
         const data = snap.data() as any;
-        const next: OrderDoc = { id: snap.id, ...data };
-        setOrder(next);
-        // Sinxronlaşdır note draft-ı yalnız istifadəçi hələ yazmayıbsa
+        setOrder({ id: snap.id, ...data });
         setNoteDraft((prev) => (prev === '' ? data.warehouseNote || '' : prev));
         setLoading(false);
       },
@@ -129,7 +113,6 @@ const WarehouseOrderPage: React.FC = () => {
     return () => unsub();
   }, [orderId]);
 
-  // 2) Load product catalog
   useEffect(() => {
     productService
       .getAll(true)
@@ -175,36 +158,20 @@ const WarehouseOrderPage: React.FC = () => {
     );
   }
 
-  // ── Mode hesablama ──
-  const warehouseFinalized = !!order.warehouseFinalized;
-  const customerFinalized = !!order.customerFinalized;
-  const mode: 'warehouse' | 'customer' | 'done' = customerFinalized
-    ? 'done'
-    : warehouseFinalized
-    ? 'customer'
-    : 'warehouse';
-
+  const finalized = !!order.warehouseFinalized;
   const orderNumberDisplay =
     order.orderNumber !== undefined && order.orderNumber !== null
       ? `#${order.orderNumber}`
       : `#${order.id.slice(0, 8)}`;
   const company = order.companyName && !String(order.companyName).includes('@') ? order.companyName : '';
-
   const checks = order.warehouseChecks || {};
-  const receiveChecks = order.customerReceiveChecks || {};
   const total = order.items?.length || 0;
   const availableCount = Object.values(checks).filter((v) => v === 'available').length;
   const unavailableCount = Object.values(checks).filter((v) => v === 'unavailable').length;
   const remainingCount = Math.max(0, total - availableCount - unavailableCount);
 
-  // Çatışmayan malların adları (admin və müştəri də xəbərdar edilir)
-  const unavailableItems = (order.items || [])
-    .map((it, idx) => ({ it, idx }))
-    .filter(({ idx }) => checks[idx.toString()] === 'unavailable');
-
-  // ── Actions ──
   const toggleStatus = async (idx: number, next: WarehouseStatus) => {
-    if (mode !== 'warehouse') return;
+    if (finalized) return;
     const prev = order.warehouseChecks || {};
     const current = prev[idx.toString()];
     const updated: Record<string, WarehouseStatus> = { ...prev };
@@ -225,7 +192,7 @@ const WarehouseOrderPage: React.FC = () => {
   };
 
   const onNoteBlur = async () => {
-    if (mode !== 'warehouse') return;
+    if (finalized) return;
     if (noteDraft === (order.warehouseNote || '')) return;
     try {
       await updateB2BOrderWarehouseNote(order.id, noteDraft.trim());
@@ -246,7 +213,7 @@ const WarehouseOrderPage: React.FC = () => {
     }
   };
 
-  const handleFinalizeWarehouse = async () => {
+  const handleFinalize = async () => {
     if (!pickerName.trim() || !pickerPosition.trim() || !pickerSignature) {
       alert('Vəzifə, ad/soyad və imza tamamlanmalıdır.');
       return;
@@ -268,73 +235,19 @@ const WarehouseOrderPage: React.FC = () => {
     }
   };
 
-  const toggleReceive = async (idx: number) => {
-    if (mode !== 'customer') return;
-    // Yalnız anbardarda "əlavə olundu" işarələnmiş malları müştəri təhvil ala bilər
-    if (checks[idx.toString()] !== 'available') return;
-    const prev = order.customerReceiveChecks || {};
-    const updated = { ...prev };
-    if (updated[idx.toString()]) {
-      delete updated[idx.toString()];
-    } else {
-      updated[idx.toString()] = true;
-    }
-    try {
-      setSavingIdx(idx);
-      await updateB2BOrderCustomerReceiveChecks(order.id, updated);
-    } catch (err) {
-      console.error('Customer receive update failed:', err);
-    } finally {
-      setSavingIdx(null);
-    }
-  };
-
-  const handleFinalizeCustomer = async () => {
-    if (!receiverName.trim() || !receiverPosition.trim() || !receiverSignature) {
-      alert('Vəzifə, ad/soyad və imza tamamlanmalıdır.');
-      return;
-    }
-    try {
-      setSubmittingFinalize(true);
-      await finalizeB2BOrderCustomerReceive(order.id, {
-        receiverName,
-        receiverPosition,
-        receiverSignature,
-        customerReceiveChecks: order.customerReceiveChecks,
-      });
-    } catch (err) {
-      console.error('Customer finalize failed:', err);
-      alert('Təsdiq alınmadı. Yenidən cəhd edin.');
-    } finally {
-      setSubmittingFinalize(false);
-    }
-  };
-
-  const headerSubtitle =
-    mode === 'warehouse'
-      ? 'Yığım siyahısı'
-      : mode === 'customer'
-      ? 'Təhvil-təslim — müştəri təsdiqi'
-      : 'Sifariş tamamlandı';
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img
-            src="https://i.hizliresim.com/tmu65g6.png"
-            alt="De Valeur"
-            className="h-7"
-          />
+          <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-7" />
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] uppercase tracking-wider text-gray-500">{headerSubtitle}</p>
+            <p className="text-[11px] uppercase tracking-wider text-gray-500">
+              {finalized ? 'Yığım tamamlandı' : 'Yığım siyahısı'}
+            </p>
             <p className="text-sm font-semibold text-gray-900 truncate">Sifariş {orderNumberDisplay}</p>
           </div>
-          {mode === 'done' ? (
+          {finalized ? (
             <Lock className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-          ) : mode === 'customer' ? (
-            <Truck className="h-5 w-5 text-indigo-600 flex-shrink-0" />
           ) : (
             <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
           )}
@@ -342,7 +255,6 @@ const WarehouseOrderPage: React.FC = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pt-5">
-        {/* Order meta */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 shadow-sm" data-testid="warehouse-order-meta">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
@@ -360,8 +272,7 @@ const WarehouseOrderPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Status select — warehouse mode only (admin may override after) */}
-        {mode === 'warehouse' && (
+        {!finalized && (
           <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 shadow-sm">
             <label className="block text-sm font-semibold text-gray-900 mb-2">Sifariş statusu</label>
             <div className="flex items-center gap-2">
@@ -384,7 +295,6 @@ const WarehouseOrderPage: React.FC = () => {
           </div>
         )}
 
-        {/* Summary */}
         <div className="grid grid-cols-3 gap-2 mb-4">
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center" data-testid="warehouse-summary-available">
             <p className="text-[10px] uppercase tracking-wider text-gray-500">Əlavə olundu</p>
@@ -400,32 +310,6 @@ const WarehouseOrderPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Missing items banner (customer + done modes — pre-warning) */}
-        {mode !== 'warehouse' && unavailableItems.length > 0 && (
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-4">
-            <p className="text-sm font-bold text-rose-900 mb-1.5 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Çatışmayan məhsullar ({unavailableItems.length})
-            </p>
-            <ul className="text-xs text-rose-900 space-y-1 ml-1 list-disc list-inside" data-testid="warehouse-missing-list">
-              {unavailableItems.map(({ it, idx }) => {
-                const p = productMap.get(it.productId);
-                const name =
-                  (typeof it.productName === 'object' ? it.productName?.az : it.productName) ||
-                  p?.name?.az || p?.name?.en || '-';
-                return (
-                  <li key={idx} data-testid={`warehouse-missing-item-${idx}`}>
-                    <span className="font-medium">{String(name)}</span>
-                    {p?.brand ? <span className="text-rose-700"> · {p.brand}</span> : null}
-                    <span className="text-rose-700"> · {it.quantity} ədəd</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        {/* Items list */}
         <div className="space-y-2.5">
           {(order.items || []).map((item, idx) => {
             const product = productMap.get(item.productId);
@@ -436,15 +320,11 @@ const WarehouseOrderPage: React.FC = () => {
               (typeof item.productName === 'object' ? item.productName?.az : item.productName) ||
               product?.name?.az || product?.name?.en || '-';
             const wStatus = checks[idx.toString()];
-            const isReceived = !!receiveChecks[idx.toString()];
             const rowSaving = savingIdx === idx;
-
             const borderClass =
-              wStatus === 'available'
-                ? 'border-emerald-300 bg-emerald-50/40'
-                : wStatus === 'unavailable'
-                ? 'border-rose-300 bg-rose-50/40'
-                : 'border-gray-200';
+              wStatus === 'available' ? 'border-emerald-300 bg-emerald-50/40'
+              : wStatus === 'unavailable' ? 'border-rose-300 bg-rose-50/40'
+              : 'border-gray-200';
 
             return (
               <div
@@ -454,21 +334,14 @@ const WarehouseOrderPage: React.FC = () => {
               >
                 <div className="flex gap-3 items-start">
                   {image ? (
-                    <img
-                      src={image}
-                      alt={String(name)}
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200 flex-shrink-0 bg-white"
-                    />
+                    <img src={image} alt={String(name)} className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200 flex-shrink-0 bg-white" />
                   ) : (
                     <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 flex items-center justify-center">
                       <Package className="h-7 w-7 text-gray-400" />
                     </div>
                   )}
-
                   <div className="flex-1 min-w-0">
-                    {brand && (
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">{brand}</p>
-                    )}
+                    {brand && <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">{brand}</p>}
                     <p className="font-semibold text-gray-900 text-sm sm:text-base leading-snug break-words" data-testid={`warehouse-item-name-${idx}`}>
                       {String(name)}
                     </p>
@@ -479,16 +352,13 @@ const WarehouseOrderPage: React.FC = () => {
                     )}
                     <div className="mt-2 flex items-baseline gap-1">
                       <span className="text-[10px] uppercase tracking-wider text-gray-500">Miqdar:</span>
-                      <span className="text-lg font-bold text-gray-900" data-testid={`warehouse-item-qty-${idx}`}>
-                        {item.quantity}
-                      </span>
+                      <span className="text-lg font-bold text-gray-900" data-testid={`warehouse-item-qty-${idx}`}>{item.quantity}</span>
                       <span className="text-xs text-gray-500">ədəd</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Warehouse mode: var/yox buttons */}
-                {mode === 'warehouse' && (
+                {!finalized ? (
                   <div className="flex gap-2 mt-3">
                     <button
                       type="button"
@@ -519,11 +389,8 @@ const WarehouseOrderPage: React.FC = () => {
                       Mövcud deyil
                     </button>
                   </div>
-                )}
-
-                {/* Customer mode: read-only warehouse status + "Təhvil aldım" checkbox */}
-                {mode !== 'warehouse' && (
-                  <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                ) : (
+                  <div className="mt-3">
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                         wStatus === 'available'
@@ -541,22 +408,6 @@ const WarehouseOrderPage: React.FC = () => {
                         'İşlənmədi'
                       )}
                     </span>
-                    {wStatus === 'available' && (
-                      <button
-                        type="button"
-                        onClick={() => toggleReceive(idx)}
-                        disabled={rowSaving || mode === 'done'}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
-                          isReceived
-                            ? 'bg-emerald-600 border-emerald-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-500'
-                        } ${rowSaving || mode === 'done' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        data-testid={`warehouse-item-receive-${idx}`}
-                      >
-                        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                        {isReceived ? 'Təhvil aldım' : 'Təhvil aldım?'}
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -564,14 +415,13 @@ const WarehouseOrderPage: React.FC = () => {
           })}
         </div>
 
-        {/* Warehouse note — yalnız anbardar mode-da edit, digərində read-only */}
-        {(mode === 'warehouse' || (order.warehouseNote && order.warehouseNote.trim())) && (
+        {(!finalized || (order.warehouseNote && order.warehouseNote.trim())) && (
           <div className="bg-white rounded-2xl border border-gray-200 p-4 mt-5 shadow-sm">
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Anbardar qeydi
-              <span className="text-xs text-gray-500 font-normal ml-1">— müştəri görəcək</span>
+              <span className="text-xs text-gray-500 font-normal ml-1">— admin və müştəri görəcək</span>
             </label>
-            {mode === 'warehouse' ? (
+            {!finalized ? (
               <textarea
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}
@@ -589,8 +439,7 @@ const WarehouseOrderPage: React.FC = () => {
           </div>
         )}
 
-        {/* === ANBARDAR TƏSDİQİ === */}
-        {mode === 'warehouse' && (
+        {!finalized ? (
           <div className="bg-white rounded-2xl border-2 border-gray-900 p-4 mt-5 shadow">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardCheck className="h-5 w-5 text-gray-900" />
@@ -624,21 +473,12 @@ const WarehouseOrderPage: React.FC = () => {
               </div>
             </div>
             <div className="mt-3">
-              <InlineSignaturePad
-                label="İmza"
-                value={pickerSignature}
-                onChange={setPickerSignature}
-              />
+              <InlineSignaturePad label="İmza" value={pickerSignature} onChange={setPickerSignature} />
             </div>
             <button
               type="button"
-              onClick={handleFinalizeWarehouse}
-              disabled={
-                submittingFinalize ||
-                !pickerName.trim() ||
-                !pickerPosition.trim() ||
-                !pickerSignature
-              }
+              onClick={handleFinalize}
+              disabled={submittingFinalize || !pickerName.trim() || !pickerPosition.trim() || !pickerSignature}
               className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
               data-testid="warehouse-finalize-btn"
             >
@@ -646,114 +486,25 @@ const WarehouseOrderPage: React.FC = () => {
               Təsdiq
             </button>
           </div>
-        )}
-
-        {/* === MÜŞTƏRİ TƏSDİQİ === */}
-        {mode === 'customer' && (
-          <div className="bg-white rounded-2xl border-2 border-indigo-700 p-4 mt-5 shadow">
-            <div className="flex items-center gap-2 mb-3">
-              <Truck className="h-5 w-5 text-indigo-700" />
-              <h3 className="text-base font-bold text-gray-900">Təhvili təsdiqlə (müştəri)</h3>
+        ) : (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mt-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="h-5 w-5 text-emerald-700" />
+              <p className="text-sm font-bold text-emerald-900">Yığım təsdiqləndi</p>
             </div>
-            <p className="text-xs text-gray-600 mb-3">
-              Təhvil aldığınız məhsulları yuxarıda işarələyin, ardından vəzifə, ad/soyad və imzanızı daxil edib təsdiqləyin.
-              Təsdiqdən sonra bu linkdə düzəliş edilə bilməz.
+            <p className="text-[10px] uppercase tracking-wider text-emerald-700">Yığımı edən</p>
+            <p className="text-sm font-semibold text-emerald-900">
+              {order.warehousePickerPosition} — {order.warehousePickerName}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Vəzifə</label>
-                <input
-                  type="text"
-                  value={receiverPosition}
-                  onChange={(e) => setReceiverPosition(e.target.value)}
-                  placeholder="Məs.: Mağaza müdiri"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                  data-testid="customer-receiver-position"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Ad, Soyad</label>
-                <input
-                  type="text"
-                  value={receiverName}
-                  onChange={(e) => setReceiverName(e.target.value)}
-                  placeholder="Məs.: Aysel Hüseynova"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                  data-testid="customer-receiver-name"
-                />
-              </div>
-            </div>
-            <div className="mt-3">
-              <InlineSignaturePad
-                label="İmza"
-                value={receiverSignature}
-                onChange={setReceiverSignature}
+            <p className="text-[10px] text-emerald-700 mt-0.5">{formatDate(order.warehouseFinalizedAt)}</p>
+            {order.warehousePickerSignature && (
+              <img
+                src={order.warehousePickerSignature}
+                alt="İmza"
+                className="mt-2 bg-white border border-emerald-200 rounded-lg p-2 max-h-28"
+                data-testid="warehouse-picker-signature-display"
               />
-            </div>
-            <button
-              type="button"
-              onClick={handleFinalizeCustomer}
-              disabled={
-                submittingFinalize ||
-                !receiverName.trim() ||
-                !receiverPosition.trim() ||
-                !receiverSignature
-              }
-              className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3 bg-indigo-700 hover:bg-indigo-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-              data-testid="customer-finalize-btn"
-            >
-              {submittingFinalize ? <Loader2 className="h-5 w-5 animate-spin" /> : <ClipboardCheck className="h-5 w-5" />}
-              Təsdiq
-            </button>
-          </div>
-        )}
-
-        {/* === İMZALAR (təsdiqdən sonra göstərilir) === */}
-        {(order.warehousePickerSignature || order.customerReceiveSignature) && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 mt-5 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Təsdiq imzaları</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {order.warehousePickerSignature && (
-                <div data-testid="warehouse-picker-signature-display">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Yığımı edən (anbardar)</p>
-                  <p className="text-xs font-semibold text-gray-900">
-                    {order.warehousePickerPosition} — {order.warehousePickerName}
-                  </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
-                    {formatDate(order.warehouseFinalizedAt)}
-                  </p>
-                  <img
-                    src={order.warehousePickerSignature}
-                    alt="İmza"
-                    className="mt-2 border border-gray-200 rounded-lg bg-white p-2 max-h-28"
-                  />
-                </div>
-              )}
-              {order.customerReceiveSignature && (
-                <div data-testid="customer-receiver-signature-display">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Təhvil alan (müştəri)</p>
-                  <p className="text-xs font-semibold text-gray-900">
-                    {order.customerReceivePosition} — {order.customerReceiveName}
-                  </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
-                    {formatDate(order.customerFinalizedAt)}
-                  </p>
-                  <img
-                    src={order.customerReceiveSignature}
-                    alt="İmza"
-                    className="mt-2 border border-gray-200 rounded-lg bg-white p-2 max-h-28"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {mode === 'done' && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mt-5 text-center">
-            <Lock className="h-6 w-6 text-emerald-700 mx-auto mb-1" />
-            <p className="text-sm font-semibold text-emerald-900">Sifariş tamamlanıb və bağlanıb.</p>
-            <p className="text-xs text-emerald-800 mt-0.5">Linkdən düzəliş etmək mümkün deyil. Lazım gəlsə admin paneldən redaktə edin.</p>
+            )}
           </div>
         )}
       </div>

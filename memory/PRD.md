@@ -1,15 +1,45 @@
 # De Valeur — PRD
 
-## Problem statement (latest request — 2026-01, iteration 2)
-B2B təhvil-təslim axınının təkmilləşdirilməsi:
-- WhatsApp linkində müştəri adı YOX, yalnız şirkət adı; "Anbardar üçün" və məxfilik notu silinsin.
-- Anbardar linkdən sifariş statusunu da dəyişə bilsin → admin və müştəri tərəfdə real-time avtomatik yenilənsin.
-- "Mövcud deyil" basılan məhsulun adı admin və müştəri tərəfdə görünsün.
-- Anbardar yığımdan sonra vəzifə+ad+imza ataraq TƏSDİQ etsin; təsdiqdən sonra linkdən düzəliş olunmasın.
-- "Var"/"Yoxdur" → "Əlavə olundu"/"Mövcud deyil"; "Yadda saxla" → "Təsdiq" (imzanın altında).
-- Yalnız admin paneldə admin düzəliş edə bilsin (post-finalize).
-- PDF Azərbaycan əlifbasında (ə, ş, ç, ğ, ı, ö, ü), başlıq "Təhvil-təslim aktı"; Satış qiyməti sütunu əlavə olunsun; Təslim edən/alan blokunda Vəzifə və Ad/Soyad sahələri olsun.
-- Eyni link daha sonra müştəriyə də göndəriləcək: müştəri təhvil aldığı malları işarələyir + vəzifə+ad+imza atır → təsdiq edir.
+## Problem statement (latest request — 2026-01, iteration 3)
+- Müştəri linki anbardar linkindən FƏRQLİ olsun (`/customer-receive/order/:orderId`); səhifədə müştəri hər malın qarşısında quş qoyub təhvil aldığını qeyd edir + ad/soyad/vəzifə + imza atır → admin görür.
+- PDF-də şəkillər yarımçıq düşür (çoxu görünmür) — düzəlt; kompakt et: ~40 model 1 səhifəyə sığsın, 40-ı keçəndə avtomatik 2-ci səhifəyə keçsin.
+
+## Architecture
+- React 18 + Vite + TypeScript, Tailwind, framer-motion, Firebase Firestore, i18next
+- Excel parse: `xlsx`
+- PDF: `jspdf` + `jspdf-autotable` + **NotoSans TTF** (`/app/public/fonts/NotoSans-{Regular,Bold}.ttf`) → Azərbaycan əlifbası dəstəyi
+- PDF şəkilləri: **fetch + blob + object URL → canvas → toDataURL** (CORS-friendly, "tainted canvas" xətası baş vermir)
+- Real-time sinxronizasiya: Firestore `onSnapshot`
+
+## Implemented (this iteration — Ayrı müştəri linki + PDF düzəlişi)
+- 2026-01: **Yeni route**: `/customer-receive/order/:orderId` (`src/pages/CustomerReceivePage.tsx`)
+  - Tək kliklə hər mala quş qoymaq (cards-as-buttons UI)
+  - Progress sayğacı: Cəmi / Təhvil aldım / Qalır
+  - Vəzifə + Ad/Soyad + İmza + **Təsdiq** düyməsi
+  - Təsdiqdən sonra səhifə oxunur, imza locked banner görünür
+- 2026-01: **WarehouseOrderPage sadələşdirildi** — yalnız anbardar rejimi (customer mode silindi; ayrıca route-a köçürüldü)
+- 2026-01: **WhatsApp share buttons yeniləndi**:
+  - "Anbardara göndər" → `/warehouse/order/{id}` (yığım siyahısı)
+  - "Müştəriyə göndər" → `/customer-receive/order/{id}` (təhvil-təslim — fərqli URL)
+- 2026-01: **PDF tamamilə rewrite** (`src/utils/orderPdf.ts`):
+  - **CORS fix**: `loadImageAsDataUrl()` fetch+blob+object URL strategiyası → Firebase Storage və başqa CORS-li serverlərdən şəkillər tam yüklənir; fallback: crossOrigin Image
+  - **Kompakt layout**: image 22pt × 22pt; row min 26pt; fontSize 7.5; cellPadding 2.5 → A4-də təxminən 30-34 sətr 1 səhifədə; 40+ keçdikdə avtomatik səhifələnir
+  - **Multi-page**: autoTable avtomatik səhifələyir; header hər səhifədə təkrarlanır; footer (Təslim edən/alan + summary) yalnız son səhifədə
+  - **Səhifə nömrəsi** (1/N format) hər səhifənin sağ-aşağısında
+  - JPEG ilə təsvirlər saxlanılır (PNG yerinə) — fayl ölçüsü ~2-3 dəfə kiçik
+  - Şəkillər paralel yüklənir (concurrency 8) — bir-birini gözləmir
+
+## Verified
+- TypeScript: `npx tsc --noEmit` → exit 0
+- Production build: `npx vite build` → uğurlu, 17.69s
+- ESLint: bütün dəyişdirilmiş fayllarda 0 issue
+- Smoke test: `/customer-receive/order/test-invalid-id` → "Sifariş tapılmadı" düzgün render edildi
+- Smoke test: `/warehouse/order/test-invalid-id` → düzgün render olunur
+
+## Previous iterations
+- 2026-01 (v2): Anbardar açıq link, PDF (ilk versiya), WhatsApp share, "Var/Yox" → "Əlavə olundu/Mövcud deyil", təsdiq+imza flow
+- 2026-01 (v1): Barkod field, axtarış, Excel miqrasiya `Barkod` sütunu, ilkin PDF & anbardar səhifəsi
+- 2026-01 (Excel v2): Excel məhsul miqrasiyası yenidən işləndi
 
 ## Architecture
 - React 18 + Vite + TypeScript, Tailwind, framer-motion, Firebase Firestore, i18next
