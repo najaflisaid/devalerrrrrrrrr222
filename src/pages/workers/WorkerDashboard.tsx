@@ -360,45 +360,10 @@ const WorkerDashboard: React.FC = () => {
               <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] transition-all duration-700" style={{ width: `${targetPercentBar}%` }} />
             </div>
           </div>
-
-          {/* Bonus kartı */}
-          {bonusSettings && netSales > 0 && (
-            <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 border border-emerald-100" data-testid="worker-bonus-card">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 font-semibold mb-1">Bu ayın bonusu</div>
-                  <div className="font-playfair text-3xl font-bold text-emerald-700 tabular-nums" data-testid="worker-bonus-amount">
-                    {bonusInfo.bonus.toLocaleString()} <span className="text-base font-normal text-emerald-500">AZN</span>
-                  </div>
-                  {bonusInfo.appliedTier && (
-                    <div className="text-[11px] text-gray-600 mt-1.5 flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 rounded font-mono text-emerald-700">
-                        {bonusInfo.appliedTier.percent}%
-                      </span>
-                      <span>
-                        ({bonusInfo.appliedTier.from.toLocaleString()}
-                        {bonusInfo.appliedTier.to ? ` − ${bonusInfo.appliedTier.to.toLocaleString()}` : '+'} AZN aralığı)
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {bonusSettings.mode === 'cumulative' && bonusInfo.breakdown.length > 1 && (
-                  <div className="text-[10px] text-gray-500 space-y-0.5">
-                    <div className="font-semibold uppercase tracking-wider">Bölgü:</div>
-                    {bonusInfo.breakdown.map((b, i) => (
-                      <div key={i} className="tabular-nums">
-                        {b.amountInTier.toLocaleString()} × {b.tier.percent}% = {b.bonusInTier.toLocaleString()} AZN
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </section>
 
         {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi (hədəf göstərilmir, çünki hər ay fərqli olur) */}
-        <SalesHistorySection salesHistory={worker.salesHistory} />
+        <SalesHistorySection salesHistory={worker.salesHistory} monthlyBonus={bonusInfo.bonus} />
 
         {/* Leaderboard — bütün işçilər üzrə performans reytinqi */}
         <LeaderboardSection items={leaderboard} currentId={worker.id} />
@@ -908,7 +873,7 @@ const NotificationsBell: React.FC<{ items: WorkerNotification[]; unread: number;
 export default WorkerDashboard;
 
 // ─── Satışlarım — açılan/bağlanan bölmə (12 aylıq qrafik, hədəfsiz)
-const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined }> = ({ salesHistory }) => {
+const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | undefined; monthlyBonus?: number }> = ({ salesHistory, monthlyBonus = 0 }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -941,6 +906,16 @@ const SalesHistorySection: React.FC<{ salesHistory: Record<string, number> | und
             showAverage={false}
             className="!p-0 !border-0 !shadow-none !rounded-none"
           />
+          {monthlyBonus > 0 && (
+            <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between" data-testid="worker-bonus-card">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 font-semibold">
+                Bu ayın bonusu
+              </div>
+              <div className="font-playfair text-2xl font-bold text-emerald-700 tabular-nums" data-testid="worker-bonus-amount">
+                {monthlyBonus.toLocaleString()} <span className="text-sm font-normal text-emerald-500">AZN</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>
