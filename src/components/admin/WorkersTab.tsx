@@ -3,7 +3,7 @@ import {
   Loader2, Plus, Search, Users, X, Edit2, Edit, Trash2, Save,
   AlertOctagon, Award as AwardIcon, TrendingUp,
   Inbox, CheckCircle2, Hourglass, BellPlus, Briefcase, Building2, GraduationCap, RotateCcw, Trophy, Activity,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Percent, RotateCw,
 } from 'lucide-react';
 import { siteConfirm } from '../ui/NotificationProvider';
 import { verifyPassword } from '../../services/adminPasswordService';
@@ -22,8 +22,14 @@ import {
   computePerformance,
   setMonthlyTotal,
   setMonthlySalesHistory,
+  setMonthlyReturnsHistory,
+  netSalesForMonth,
+  getBonusSettings,
+  saveBonusSettings,
+  computeBonus,
   monthYM,
 } from '../../services/workerService';
+import type { BonusSettings, BonusTier, BonusMode } from '../../services/workerService';
 import type {
   Worker, Fine, Reward, SalesEntry, WorkerRequest, RequestStatus, Position, Branch, Training,
   PerformanceBreakdown,
@@ -152,12 +158,20 @@ const WorkersTab: React.FC = () => {
                 <th className="py-3 pr-4">Email</th>
                 <th className="py-3 pr-4">İşə başlama</th>
                 <th className="py-3 pr-4">Hədəf ( AZN)</th>
-                <th className="py-3 pr-4">Aylıq cəmi ( AZN)</th>
+                <th className="py-3 pr-4">Satış ( AZN)</th>
+                <th className="py-3 pr-4">Qayt. ( AZN)</th>
+                <th className="py-3 pr-4">Xalis ( AZN)</th>
                 <th className="py-3 pr-4">Status</th>
                 <th className="py-3"></th>
               </tr></thead>
               <tbody>
-                {filtered.map(w => (
+                {filtered.map(w => {
+                  const isCurrent = w.monthlyTotalMonth === monthYM();
+                  const sales = isCurrent && typeof w.monthlyTotalSales === 'number' ? w.monthlyTotalSales : 0;
+                  const returns = isCurrent && typeof w.monthlyTotalReturns === 'number' ? w.monthlyTotalReturns : 0;
+                  const net = Math.max(0, sales - returns);
+                  const hasData = isCurrent && (sales > 0 || returns > 0);
+                  return (
                   <tr key={w.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-3">
@@ -171,11 +185,15 @@ const WorkersTab: React.FC = () => {
                     <td className="py-3 pr-4 text-gray-600">{w.branch || <span className="text-gray-300">—</span>}</td>
                     <td className="py-3 pr-4 text-gray-600 text-xs">{w.email}</td>
                     <td className="py-3 pr-4 text-gray-600">{fmt(w.hireDate)}</td>
-                    <td className="py-3 pr-4 text-gray-700">{w.monthlyTarget?.toLocaleString() || '—'}</td>
-                    <td className="py-3 pr-4 text-gray-700">
-                      {w.monthlyTotalMonth === monthYM() && typeof w.monthlyTotalSales === 'number'
-                        ? w.monthlyTotalSales.toLocaleString()
-                        : <span className="text-gray-300">—</span>}
+                    <td className="py-3 pr-4 text-gray-700 tabular-nums">{w.monthlyTarget?.toLocaleString() || '—'}</td>
+                    <td className="py-3 pr-4 text-gray-700 tabular-nums">
+                      {hasData ? sales.toLocaleString() : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="py-3 pr-4 text-orange-600 tabular-nums">
+                      {hasData && returns > 0 ? returns.toLocaleString() : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="py-3 pr-4 font-semibold text-gray-900 tabular-nums">
+                      {hasData ? net.toLocaleString() : <span className="text-gray-300 font-normal">—</span>}
                     </td>
                     <td className="py-3 pr-4">
                       <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${w.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -189,7 +207,8 @@ const WorkersTab: React.FC = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -198,6 +217,9 @@ const WorkersTab: React.FC = () => {
 
       {/* Requests inbox */}
       <RequestsInbox items={allRequests} workers={workers} onUpdated={refresh} />
+
+      {/* Bonus tier konfiqurasiyası — bütün işçilərə tətbiq olunur */}
+      <BonusTiersPanel />
 
       {/* Aşağıda: Vəzifələr, Filiallar, Təlim — kompakt 2x2 grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -818,6 +840,251 @@ const PerfCard: React.FC<{ label: string; value: string; highlight?: boolean }> 
   </div>
 );
 
+// ───────────────────── Bonus Tiers Panel (Bonus dərəcələri) ─────────────────────
+// Admin tier-ləri qurur (məs. 0-10000 = 1%, 10000-50000 = 2%, 50000+ = 3%).
+// Bütün işçilərə tətbiq olunur. Hər işçinin bonusu xalis satış (satış − qaytarılma)
+// məbləğinə görə avtomatik hesablanır.
+const BonusTiersPanel: React.FC = () => {
+  const [settings, setSettings] = useState<BonusSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState('');
+  const [collapsed, setCollapsed] = useState(true);
+
+  useEffect(() => {
+    getBonusSettings().then(setSettings).catch((e) => setErr(e?.message || ''));
+  }, []);
+
+  const updateTier = (idx: number, patch: Partial<BonusTier>) => {
+    if (!settings) return;
+    const tiers = settings.tiers.slice();
+    tiers[idx] = { ...tiers[idx], ...patch };
+    setSettings({ ...settings, tiers });
+  };
+  const addTier = () => {
+    if (!settings) return;
+    const last = settings.tiers[settings.tiers.length - 1];
+    const newFrom = last ? (last.to === null ? last.from + 10000 : last.to) : 0;
+    const tiers = [...settings.tiers, { from: newFrom, to: null, percent: 1 } as BonusTier];
+    setSettings({ ...settings, tiers });
+  };
+  const removeTier = (idx: number) => {
+    if (!settings) return;
+    if (settings.tiers.length <= 1) return;
+    const tiers = settings.tiers.filter((_, i) => i !== idx);
+    setSettings({ ...settings, tiers });
+  };
+
+  const save = async () => {
+    if (!settings) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await saveBonusSettings(settings);
+      const fresh = await getBonusSettings();
+      setSettings(fresh);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e: any) {
+      setErr(e?.message || 'Saxlanılmadı');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Vizual nümunə: 5k, 15k, 30k, 75k, 150k üçün hesablanmış bonus
+  const previewAmounts = [5000, 15000, 30000, 75000, 150000];
+
+  if (!settings) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 flex items-center gap-2 text-sm text-gray-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> Bonus parametrləri yüklənir...
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm" data-testid="bonus-tiers-panel">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between p-5 hover:bg-gray-50 rounded-xl"
+        data-testid="bonus-tiers-toggle"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+            <Percent className="h-4 w-4 text-emerald-700" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              Bonus dərəcələri (tier-lər)
+              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold">
+                {settings.tiers.length} tier
+              </span>
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Xalis satış məbləğinə görə avtomatik bonus təyini. Bütün işçilərə tətbiq olunur.
+            </p>
+          </div>
+        </div>
+        {collapsed ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronUp className="h-4 w-4 text-gray-400" />}
+      </button>
+
+      {!collapsed && (
+        <div className="px-5 pb-5 space-y-4 border-t border-gray-100 pt-4">
+          {/* Mode toggle */}
+          <div className="flex items-start gap-2">
+            <span className="text-xs text-gray-600 uppercase tracking-wider mt-1.5">Hesablama:</span>
+            <div className="flex gap-2">
+              <label className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-xs cursor-pointer transition ${
+                settings.mode === 'flat' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}>
+                <input
+                  type="radio" name="bonus-mode" checked={settings.mode === 'flat'}
+                  onChange={() => setSettings({ ...settings, mode: 'flat' })}
+                  className="mt-0.5 accent-emerald-600"
+                  data-testid="bonus-mode-flat"
+                />
+                <span>
+                  <span className="font-semibold text-gray-900">Düz (flat)</span>
+                  <span className="block text-[10px] text-gray-500 mt-0.5">
+                    Xalis satış düşdüyü tier-in faizi BÜTÜN məbləğə tətbiq olunur
+                  </span>
+                </span>
+              </label>
+              <label className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-xs cursor-pointer transition ${
+                settings.mode === 'cumulative' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}>
+                <input
+                  type="radio" name="bonus-mode" checked={settings.mode === 'cumulative'}
+                  onChange={() => setSettings({ ...settings, mode: 'cumulative' })}
+                  className="mt-0.5 accent-blue-600"
+                  data-testid="bonus-mode-cumulative"
+                />
+                <span>
+                  <span className="font-semibold text-gray-900">Pilləli (cumulative)</span>
+                  <span className="block text-[10px] text-gray-500 mt-0.5">
+                    Hər tier-in payı ayrıca hesablanıb cəmlənir
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Tier-lər */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-gray-500 px-1">
+              <div className="col-span-4">Aşağı hədd ( AZN, daxil)</div>
+              <div className="col-span-4">Yuxarı hədd ( AZN, boş = sonsuz)</div>
+              <div className="col-span-3">Faiz</div>
+              <div className="col-span-1"></div>
+            </div>
+            {settings.tiers.map((t, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2 items-center" data-testid={`bonus-tier-${i}`}>
+                <input
+                  type="number" min={0} value={t.from}
+                  onChange={(e) => updateTier(i, { from: Number(e.target.value) || 0 })}
+                  className={inp + ' col-span-4 text-sm py-1.5'}
+                  data-testid={`bonus-tier-from-${i}`}
+                />
+                <input
+                  type="number" min={0}
+                  value={t.to === null ? '' : t.to}
+                  onChange={(e) => updateTier(i, { to: e.target.value === '' ? null : (Number(e.target.value) || 0) })}
+                  placeholder="∞"
+                  className={inp + ' col-span-4 text-sm py-1.5'}
+                  data-testid={`bonus-tier-to-${i}`}
+                />
+                <div className="col-span-3 relative">
+                  <input
+                    type="number" min={0} step={0.01} value={t.percent}
+                    onChange={(e) => updateTier(i, { percent: Number(e.target.value) || 0 })}
+                    className={inp + ' text-sm py-1.5 pr-7'}
+                    data-testid={`bonus-tier-percent-${i}`}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <button
+                    type="button"
+                    disabled={settings.tiers.length <= 1}
+                    onClick={() => removeTier(i)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Sil"
+                    data-testid={`bonus-tier-remove-${i}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addTier}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 border border-dashed border-gray-300 rounded-lg hover:bg-gray-50"
+              data-testid="bonus-tier-add"
+            >
+              <Plus className="h-3.5 w-3.5" /> Tier əlavə et
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div className="bg-gradient-to-br from-emerald-50/40 to-white rounded-lg border border-emerald-100 p-4">
+            <div className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold mb-2 flex items-center gap-1.5">
+              <Activity className="h-3 w-3" /> Önizləmə — Müxtəlif xalis satışlar üçün bonus
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {previewAmounts.map((amount) => {
+                const r = computeBonus(amount, settings);
+                return (
+                  <div key={amount} className="bg-white rounded-md border border-gray-100 p-2 text-center">
+                    <div className="text-[10px] text-gray-500 tabular-nums">{amount.toLocaleString()} AZN</div>
+                    <div className="text-sm font-bold text-emerald-700 tabular-nums">
+                      {r.bonus.toLocaleString()}
+                    </div>
+                    {r.appliedTier && (
+                      <div className="text-[9px] text-emerald-600 font-medium">{r.appliedTier.percent}%</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {err && <div className="text-xs text-red-600 bg-red-50 p-2 rounded">{err}</div>}
+
+          <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy}
+              className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2"
+              data-testid="bonus-tiers-save"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
+            </button>
+            <button
+              type="button"
+              onClick={() => getBonusSettings().then(setSettings)}
+              disabled={busy}
+              className="px-3 py-2 text-xs text-gray-600 hover:bg-gray-100 rounded-lg inline-flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <RotateCw className="h-3.5 w-3.5" /> Yenidən yüklə
+            </button>
+            {saved && (
+              <span className="text-xs text-emerald-600 inline-flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Saxlanıldı
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
 // ─── Monthly Total panel (admin enters worker's monthly total sales for leaderboard + monthly target)
 // User tələbi: Admin konkret ay üçün (məs. April / May) hədəf və ümumi satış qeyd edə bilər.
 // Lakin admin/işçi UI-də konkret ay etiketi GÖRÜNMƏMƏLİDİR — sadəcə "Aylıq hədəf" görünür.
@@ -828,39 +1095,51 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
   const selectedYM = currentYM;
   const isCurrent = worker.monthlyTotalMonth === selectedYM;
   const history = worker.salesHistory || {};
+  const returnsHistory = worker.returnsHistory || {};
   const targetsHistory = (worker as any).targetsHistory as Record<string, number> | undefined;
 
   const initialTotal = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalSales === 'number')
     ? String(worker.monthlyTotalSales)
     : (typeof history[selectedYM] === 'number' ? String(history[selectedYM]) : '');
+  const initialReturns = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalReturns === 'number')
+    ? String(worker.monthlyTotalReturns)
+    : (typeof returnsHistory[selectedYM] === 'number' ? String(returnsHistory[selectedYM]) : '');
   const initialTarget = targetsHistory && typeof targetsHistory[selectedYM] === 'number'
     ? String(targetsHistory[selectedYM])
     : (selectedYM === currentYM ? String(worker.monthlyTarget || '') : '');
 
   const [total, setTotal] = useState<string>(initialTotal);
+  const [returns, setReturns] = useState<string>(initialReturns);
   const [target, setTarget] = useState<string>(initialTarget);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const initialTotalRef = useRef<string>(initialTotal);
+  const initialReturnsRef = useRef<string>(initialReturns);
   const initialTargetRef = useRef<string>(initialTarget);
 
+  // Bonus settings — bonus hesablaması üçün
+  const [bonusSettings, setBonusSettings] = useState<BonusSettings | null>(null);
+  useEffect(() => {
+    getBonusSettings().then(setBonusSettings).catch(() => undefined);
+  }, []);
+
   // worker DƏYİŞƏNDƏ (yəni id fərqlidirsə — yeni işçi açılır) state-i yenidən təyin et.
-  // ÖNƏMLİ: əvvəlki versiyada effect həm də worker.monthlyTarget, monthlyTotalSales
-  // kimi dəyərlər dəyişəndə işləyirdi. Bu admin yazarkən başqa səbəbdən (məs. ana
-  // siyahı refresh olduğu üçün) yeni `worker` obyektinin gəlməsi nəticəsində
-  // INPUT-un sıfırlanmasına səbəb olurdu — admin sayı yaza bilmirdi. İndi yalnız
-  // id dəyişəndə (başqa işçiyə keçildikdə) state sıfırlanır.
   useEffect(() => {
     const newInitTotal = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalSales === 'number')
       ? String(worker.monthlyTotalSales)
       : (typeof history[selectedYM] === 'number' ? String(history[selectedYM]) : '');
+    const newInitReturns = (selectedYM === worker.monthlyTotalMonth && typeof worker.monthlyTotalReturns === 'number')
+      ? String(worker.monthlyTotalReturns)
+      : (typeof returnsHistory[selectedYM] === 'number' ? String(returnsHistory[selectedYM]) : '');
     const newInitTarget = targetsHistory && typeof targetsHistory[selectedYM] === 'number'
       ? String(targetsHistory[selectedYM])
       : (selectedYM === currentYM ? String(worker.monthlyTarget || '') : '');
     setTotal(newInitTotal);
+    setReturns(newInitReturns);
     setTarget(newInitTarget);
     initialTotalRef.current = newInitTotal;
+    initialReturnsRef.current = newInitReturns;
     initialTargetRef.current = newInitTarget;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worker.id, selectedYM]);
@@ -872,8 +1151,9 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
     try {
       const targetChanged = target.trim() !== initialTargetRef.current.trim();
       const totalChanged = total.trim() !== initialTotalRef.current.trim();
+      const returnsChanged = returns.trim() !== initialReturnsRef.current.trim();
 
-      if (!targetChanged && !totalChanged) {
+      if (!targetChanged && !totalChanged && !returnsChanged) {
         setSaved(true); setTimeout(() => setSaved(false), 2000);
         return;
       }
@@ -889,8 +1169,13 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
       if (totalChanged) {
         await setMonthlySalesHistory(worker.id, selectedYM, Number(total) || 0);
       }
+      // Qaytarılmalar
+      if (returnsChanged) {
+        await setMonthlyReturnsHistory(worker.id, selectedYM, Number(returns) || 0);
+      }
 
       initialTotalRef.current = total;
+      initialReturnsRef.current = returns;
       initialTargetRef.current = target;
       setSaved(true); setTimeout(() => setSaved(false), 2500);
       await onSaved();
@@ -901,8 +1186,12 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
   };
 
   const totalNum = Number(total) || 0;
+  const returnsNum = Number(returns) || 0;
+  const netNum = Math.max(0, totalNum - returnsNum);
   const targetNum = Number(target) || 0;
-  const percent = targetNum > 0 ? Math.round((totalNum / targetNum) * 100) : 0;
+  const percent = targetNum > 0 ? Math.round((netNum / targetNum) * 100) : 0;
+  // Bonus hesabla — bonusSettings yüklənibsə
+  const bonusResult = bonusSettings ? computeBonus(netNum, bonusSettings) : { bonus: 0, appliedTier: null, breakdown: [] };
 
   return (
     <div className="bg-gray-50/60 rounded-lg p-5 border border-gray-100 space-y-4">
@@ -914,7 +1203,7 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
         İşçinin <strong>aylıq satış hədəfini</strong> və <strong>ümumi satışını</strong> daxil edin.
         İşçi panelində və ümumi cədvəldə ay etiketi göstərilmir, sadəcə "Aylıq hədəf" yazılır.
       </p>
-      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1">Aylıq satış hədəfi ( AZN)</label>
           <input
@@ -933,11 +1222,74 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
             className={inp} placeholder="0" data-testid="monthly-total-input"
           />
         </div>
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-gray-600 mb-1 flex items-center gap-1">
+            Qaytarılmalar ( AZN)
+            <span className="text-[10px] normal-case text-gray-400 tracking-normal">(satışdan çıxılır)</span>
+          </label>
+          <input
+            type="number" min={0} value={returns}
+            onChange={(e) => setReturns(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+            className={inp} placeholder="0" data-testid="monthly-returns-input"
+          />
+        </div>
+
+        {/* Xalis satış + bonus xülasə kartı */}
+        {(totalNum > 0 || returnsNum > 0 || targetNum > 0) && (
+          <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3 bg-white rounded-lg border border-gray-100 p-4">
+            <div data-testid="net-sales-cell">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">Xalis satış</div>
+              <div className="text-lg font-semibold text-gray-900 tabular-nums">
+                {netNum.toLocaleString()} <span className="text-xs font-normal text-gray-400">AZN</span>
+              </div>
+              {returnsNum > 0 && (
+                <div className="text-[10px] text-gray-400 mt-0.5 tabular-nums">
+                  {totalNum.toLocaleString()} − {returnsNum.toLocaleString()}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">Hədəfin %</div>
+              <div className={`text-lg font-semibold tabular-nums ${percent >= 100 ? 'text-emerald-600' : 'text-[#8a6d10]'}`}>
+                {targetNum > 0 ? `${percent}%` : '—'}
+              </div>
+            </div>
+            <div data-testid="bonus-cell">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                Bonus
+                {bonusResult.appliedTier && (
+                  <span className="text-[9px] px-1 py-0.5 bg-amber-50 text-amber-700 rounded font-mono normal-case tracking-normal">
+                    {bonusResult.appliedTier.percent}%
+                  </span>
+                )}
+              </div>
+              <div className="text-lg font-semibold text-emerald-700 tabular-nums">
+                {bonusResult.bonus.toLocaleString()} <span className="text-xs font-normal text-emerald-500">AZN</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-gray-500">Status</div>
+              <div className={`text-xs font-medium mt-1 inline-block px-2 py-1 rounded ${
+                netNum >= targetNum && targetNum > 0
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : netNum >= targetNum * 0.7 && targetNum > 0
+                  ? 'bg-amber-50 text-amber-700'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {!targetNum ? 'Hədəf yoxdur'
+                  : netNum >= targetNum ? '✓ Hədəfə çatdı'
+                  : netNum >= targetNum * 0.7 ? 'Yaxşı gedir'
+                  : 'Aşağı'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {targetNum > 0 && (
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-gray-600">Hədəfin yerinə yetirilməsi</span>
+              <span className="text-gray-600">Hədəfin yerinə yetirilməsi (xalis satışa görə)</span>
               <span className={`font-semibold ${percent >= 100 ? 'text-emerald-600' : 'text-[#8a6d10]'}`}>{percent}%</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -946,7 +1298,7 @@ const MonthlyTotalPanel: React.FC<{ worker: Worker; onSaved: () => Promise<void>
           </div>
         )}
 
-        <div className="md:col-span-2 flex items-center gap-3 flex-wrap">
+        <div className="md:col-span-3 flex items-center gap-3 flex-wrap">
           <button type="submit" disabled={busy} className="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-2" data-testid="monthly-total-save">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} <Save className="h-4 w-4" /> Saxla
           </button>

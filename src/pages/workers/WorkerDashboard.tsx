@@ -14,7 +14,9 @@ import {
   getMonthlyLeaderboard, getBranchLeaderboard,
   listTrainings, ensureBirthdayGreeting,
   monthYM, daysSince,
+  netSalesForMonth, getBonusSettings, computeBonus,
 } from '../../services/workerService';
+import type { BonusSettings } from '../../services/workerService';
 import type {
   Fine, Reward, SalesEntry, WorkerRequest,
   RequestType, WorkerNotification, PerformanceBreakdown, Training, BranchLeaderboardEntry,
@@ -111,6 +113,7 @@ const WorkerDashboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<Awaited<ReturnType<typeof getMonthlyLeaderboard>>>([]);
   const [branchLeaderboard, setBranchLeaderboard] = useState<BranchLeaderboardEntry[]>([]);
   const [trainings, setTrainings] = useState<Training[]>([]);
+  const [bonusSettings, setBonusSettings] = useState<BonusSettings | null>(null);
 
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqType, setReqType] = useState<RequestType>('leave');
@@ -125,7 +128,7 @@ const WorkerDashboard: React.FC = () => {
     // Doğum gününü yoxla və lazım gələrsə tebrik bildirişi yarat
     try { await ensureBirthdayGreeting(worker); } catch (err) { console.warn('Birthday greeting:', err); }
 
-    const [f, r, s, rq, nots, pf, lb, blb, tr] = await Promise.all([
+    const [f, r, s, rq, nots, pf, lb, blb, tr, bs] = await Promise.all([
       listFines(worker.id),
       listRewards(worker.id),
       listSales(worker.id, monthYM()),
@@ -135,9 +138,11 @@ const WorkerDashboard: React.FC = () => {
       getMonthlyLeaderboard(),
       getBranchLeaderboard(),
       listTrainings(),
+      getBonusSettings(),
     ]);
     setFines(f); setRewards(r); setSales(s); setRequests(rq); setNotifications(nots);
     setPerf(pf); setLeaderboard(lb); setBranchLeaderboard(blb); setTrainings(tr);
+    setBonusSettings(bs);
   };
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [worker]);
@@ -156,11 +161,29 @@ const WorkerDashboard: React.FC = () => {
     }
     return sales.reduce((s, x) => s + (x.amount || 0), 0);
   }, [sales, worker]);
-  // Display percent — gerçək faiz (100%-dən yuxarı da göstərə bilir)
+
+  // Qaytarılmalar (cari ay) və xalis satış
+  const monthlyReturns = useMemo(() => {
+    if (worker?.monthlyTotalMonth === monthYM() && typeof worker?.monthlyTotalReturns === 'number') {
+      return worker.monthlyTotalReturns;
+    }
+    const rh = worker?.returnsHistory;
+    if (rh && typeof rh[monthYM()] === 'number') return rh[monthYM()];
+    return 0;
+  }, [worker]);
+  const netSales = Math.max(0, totalSales - monthlyReturns);
+
+  // Bonus hesablanması
+  const bonusInfo = useMemo(() => {
+    if (!bonusSettings) return { bonus: 0, appliedTier: null as any, breakdown: [] as any[] };
+    return computeBonus(netSales, bonusSettings);
+  }, [netSales, bonusSettings]);
+
+  // Display percent — gerçək faiz (100%-dən yuxarı da göstərə bilir) — xalis satışa görə
   const targetPercentDisplay = useMemo(() => {
     if (!worker?.monthlyTarget) return 0;
-    return Math.round((totalSales / worker.monthlyTarget) * 100);
-  }, [totalSales, worker]);
+    return Math.round((netSales / worker.monthlyTarget) * 100);
+  }, [netSales, worker]);
   // Bar width — vizual üçün 100%-də saxlanır
   const targetPercentBar = Math.min(100, targetPercentDisplay);
 
@@ -316,15 +339,20 @@ const WorkerDashboard: React.FC = () => {
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-playfair text-xl text-black mb-1">Aylıq Hədəf</h3>
-              <p className="text-sm text-gray-500">Bu ay üzrə şəxsi satış göstəriciləriniz</p>
+              <p className="text-sm text-gray-500">Bu ay üzrə şəxsi satış və bonus göstəriciləriniz</p>
             </div>
             <TrendingUp className="h-5 w-5 text-[#D4AF37]" />
           </div>
           <div className="mt-4">
             <div className="flex items-end justify-between mb-2">
               <div>
-                <span className="font-playfair text-3xl text-black">{totalSales.toFixed(0)}</span>
+                <span className="font-playfair text-3xl text-black" data-testid="worker-net-sales">{netSales.toFixed(0)}</span>
                 <span className="text-sm text-gray-500"> / {worker.monthlyTarget?.toFixed(0) || '—'} AZN</span>
+                {monthlyReturns > 0 && (
+                  <div className="text-[11px] text-gray-400 mt-0.5 tabular-nums">
+                    Satış {totalSales.toFixed(0)} − Qaytarılma {monthlyReturns.toFixed(0)} = Xalis
+                  </div>
+                )}
               </div>
               <span className={`text-2xl font-light ${targetPercentDisplay >= 100 ? 'text-emerald-600' : 'text-[#D4AF37]'}`}>{targetPercentDisplay}%</span>
             </div>
@@ -332,6 +360,41 @@ const WorkerDashboard: React.FC = () => {
               <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E2A5] transition-all duration-700" style={{ width: `${targetPercentBar}%` }} />
             </div>
           </div>
+
+          {/* Bonus kartı */}
+          {bonusSettings && netSales > 0 && (
+            <div className="mt-5 p-4 rounded-xl bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 border border-emerald-100" data-testid="worker-bonus-card">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 font-semibold mb-1">Bu ayın bonusu</div>
+                  <div className="font-playfair text-3xl font-bold text-emerald-700 tabular-nums" data-testid="worker-bonus-amount">
+                    {bonusInfo.bonus.toLocaleString()} <span className="text-base font-normal text-emerald-500">AZN</span>
+                  </div>
+                  {bonusInfo.appliedTier && (
+                    <div className="text-[11px] text-gray-600 mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 rounded font-mono text-emerald-700">
+                        {bonusInfo.appliedTier.percent}%
+                      </span>
+                      <span>
+                        ({bonusInfo.appliedTier.from.toLocaleString()}
+                        {bonusInfo.appliedTier.to ? ` − ${bonusInfo.appliedTier.to.toLocaleString()}` : '+'} AZN aralığı)
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {bonusSettings.mode === 'cumulative' && bonusInfo.breakdown.length > 1 && (
+                  <div className="text-[10px] text-gray-500 space-y-0.5">
+                    <div className="font-semibold uppercase tracking-wider">Bölgü:</div>
+                    {bonusInfo.breakdown.map((b, i) => (
+                      <div key={i} className="tabular-nums">
+                        {b.amountInTier.toLocaleString()} × {b.tier.percent}% = {b.bonusInTier.toLocaleString()} AZN
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* 12 Aylıq satış qrafiki — açılan "Satışlarım" bölməsi (hədəf göstərilmir, çünki hər ay fərqli olur) */}

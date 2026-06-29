@@ -454,6 +454,164 @@ export const setMonthlySalesHistory = async (workerId: string, ym: string, amoun
   await updateDoc(doc(db, WORKERS, workerId), patch);
 };
 
+// ───────────────────── Qaytarılmalar (Returns) ─────────────────────
+/**
+ * setMonthlyReturnsHistory — verilmiş ay üçün qaytarılma məbləğini saxla.
+ * Cari aydırsa, `monthlyTotalReturns` pointer-i də yenilənir.
+ */
+export const setMonthlyReturnsHistory = async (workerId: string, ym: string, amount: number) => {
+  const patch: any = { [`returnsHistory.${ym}`]: amount };
+  if (ym === monthYM()) {
+    patch.monthlyTotalReturns = amount;
+  }
+  await updateDoc(doc(db, WORKERS, workerId), patch);
+};
+
+/** Xalis satış = ümumi satış − qaytarılma */
+export const netSalesForMonth = (worker: Worker, ym: string): number => {
+  const isCurrent = worker.monthlyTotalMonth === ym;
+  const sales =
+    isCurrent && typeof worker.monthlyTotalSales === 'number'
+      ? worker.monthlyTotalSales
+      : (worker.salesHistory?.[ym] ?? 0);
+  const returns =
+    isCurrent && typeof worker.monthlyTotalReturns === 'number'
+      ? worker.monthlyTotalReturns
+      : (worker.returnsHistory?.[ym] ?? 0);
+  return Math.max(0, (sales || 0) - (returns || 0));
+};
+
+// ───────────────────── Bonus Tier System ─────────────────────
+const BONUS_TIERS_COLL = 'worker_bonus_settings';
+const BONUS_TIERS_DOC = 'default';
+
+export type BonusTier = {
+  /** Aşağı hədd (daxil) */
+  from: number;
+  /** Yuxarı hədd (daxil deyil) — null = sonsuz */
+  to: number | null;
+  /** Faiz dərəcəsi (məs. 2 = 2%) */
+  percent: number;
+};
+
+export type BonusMode = 'flat' | 'cumulative';
+
+export interface BonusSettings {
+  /** Tier-lər from artan sıra ilə */
+  tiers: BonusTier[];
+  /**
+   * 'flat' — xalis satış hansı tier-ə düşürsə, BÜTÜN məbləğ o tier-in faizi ilə hesablanır.
+   *   məs. tier-lər: 0-10000=1%, 10000+=2%, xalis satış=12000 → bonus = 12000×2% = 240
+   * 'cumulative' — hər tier-in payı ayrıca hesablanıb cəmlənir.
+   *   məs. xalis satış=12000 → 10000×1% + 2000×2% = 100 + 40 = 140
+   */
+  mode: BonusMode;
+  updatedAt?: string;
+}
+
+const DEFAULT_BONUS_SETTINGS: BonusSettings = {
+  tiers: [
+    { from: 0, to: 10000, percent: 1 },
+    { from: 10000, to: 50000, percent: 2 },
+    { from: 50000, to: null, percent: 3 },
+  ],
+  mode: 'flat',
+};
+
+export const getBonusSettings = async (): Promise<BonusSettings> => {
+  try {
+    const ref = doc(db, BONUS_TIERS_COLL, BONUS_TIERS_DOC);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return DEFAULT_BONUS_SETTINGS;
+    const data = snap.data() as any;
+    const tiers = Array.isArray(data?.tiers) ? data.tiers : DEFAULT_BONUS_SETTINGS.tiers;
+    const mode: BonusMode = data?.mode === 'cumulative' ? 'cumulative' : 'flat';
+    return { tiers, mode, updatedAt: data?.updatedAt };
+  } catch {
+    return DEFAULT_BONUS_SETTINGS;
+  }
+};
+
+export const saveBonusSettings = async (settings: BonusSettings): Promise<void> => {
+  // Tier-ləri normalize et: from artan sıra, valid rəqəmlər, percent >=0
+  const tiers = (settings.tiers || [])
+    .map((t) => ({
+      from: Math.max(0, Number(t.from) || 0),
+      to: t.to === null || t.to === undefined || t.to === ('' as any) ? null : Math.max(0, Number(t.to) || 0),
+      percent: Math.max(0, Number(t.percent) || 0),
+    }))
+    .filter((t) => t.percent > 0 || t.from > 0 || (t.to !== null && t.to > 0))
+    .sort((a, b) => a.from - b.from);
+  await setDoc(doc(db, BONUS_TIERS_COLL, BONUS_TIERS_DOC), {
+    tiers,
+    mode: settings.mode === 'cumulative' ? 'cumulative' : 'flat',
+    updatedAt: nowIso(),
+  });
+};
+
+/**
+ * computeBonus — xalis satış məbləği və tier-ə görə bonus hesabla.
+ *
+ * @param netSales Xalis satış (satış − qaytarılma)
+ * @param settings Bonus parametrləri
+ * @returns Bonus AZN ilə (yuvarlaqlaşdırılmış 2 onluq)
+ */
+export const computeBonus = (netSales: number, settings: BonusSettings): {
+  bonus: number;
+  appliedTier: BonusTier | null;
+  breakdown: Array<{ tier: BonusTier; amountInTier: number; bonusInTier: number }>;
+} => {
+  const n = Math.max(0, Number(netSales) || 0);
+  const tiers = (settings.tiers || []).slice().sort((a, b) => a.from - b.from);
+  if (tiers.length === 0 || n <= 0) {
+    return { bonus: 0, appliedTier: null, breakdown: [] };
+  }
+
+  if (settings.mode === 'cumulative') {
+    let remaining = n;
+    let bonus = 0;
+    const breakdown: Array<{ tier: BonusTier; amountInTier: number; bonusInTier: number }> = [];
+    for (const tier of tiers) {
+      const high = tier.to === null ? Infinity : tier.to;
+      const low = tier.from;
+      const segment = Math.max(0, Math.min(high, n) - low);
+      if (segment > 0) {
+        const tBonus = (segment * tier.percent) / 100;
+        bonus += tBonus;
+        breakdown.push({ tier, amountInTier: segment, bonusInTier: round2(tBonus) });
+      }
+      remaining -= segment;
+      if (remaining <= 0) break;
+    }
+    return {
+      bonus: round2(bonus),
+      appliedTier: tiers[tiers.length - 1],
+      breakdown,
+    };
+  }
+
+  // Flat mode — xalis satış hansı tier-ə düşür?
+  let applied: BonusTier | null = null;
+  for (const tier of tiers) {
+    const high = tier.to === null ? Infinity : tier.to;
+    if (n >= tier.from && n < high) {
+      applied = tier;
+      break;
+    }
+  }
+  // Yuxarı sınır xaricindəsə son tier
+  if (!applied && n >= tiers[tiers.length - 1].from) applied = tiers[tiers.length - 1];
+
+  const bonus = applied ? round2((n * applied.percent) / 100) : 0;
+  return {
+    bonus,
+    appliedTier: applied,
+    breakdown: applied ? [{ tier: applied, amountInTier: n, bonusInTier: bonus }] : [],
+  };
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 // ───────────────────── Branches (Filiallar) ─────────────────────
 export const listBranches = async (): Promise<Branch[]> => {
   const snap = await getDocs(collection(db, BRANCHES));
@@ -541,7 +699,7 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
     listSales(worker.id, ym),
   ]);
 
-  // Cari ay göstəriciləri
+  // Cari ay göstəriciləri — XALIS satış (returns çıxılır)
   const monthSales = sales.reduce((s, x) => s + (x.amount || 0), 0);
   const adminTotalThisMonth = worker.monthlyTotalMonth === ym && typeof worker.monthlyTotalSales === 'number';
   const monthFinesCount = fines.filter(f => (f.date || '').startsWith(ym)).length;
@@ -552,7 +710,7 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
     adminTotalThisMonth || monthSales > 0 || monthFinesCount > 0 || monthRewardsCount > 0;
 
   // Hesablanacaq dövrü təyin edirik (cari ay vs. ən son fəal ay)
-  let evalSalesTotal = adminTotalThisMonth ? (worker.monthlyTotalSales as number) : monthSales;
+  let evalSalesTotal = adminTotalThisMonth ? netSalesForMonth(worker, ym) : monthSales;
   let evalFinesCount = monthFinesCount;
   let evalRewardsCount = monthRewardsCount;
 
@@ -562,7 +720,7 @@ export const computePerformance = async (worker: Worker): Promise<PerformanceBre
     const months = Object.keys(history).sort().reverse();
     const lastMonth = months[0] || worker.monthlyTotalMonth || '';
     if (lastMonth) {
-      evalSalesTotal = history[lastMonth] ?? (worker.monthlyTotalSales || 0);
+      evalSalesTotal = netSalesForMonth(worker, lastMonth);
       evalFinesCount = fines.filter(f => (f.date || '').startsWith(lastMonth)).length;
       evalRewardsCount = rewards.filter(r => (r.date || '').startsWith(lastMonth)).length;
     }
@@ -641,21 +799,22 @@ export interface LeaderboardEntry {
   performanceScore: number;
 }
 
-// Helper: ən son mövcud satış total-ını və ayını qaytarır.
+// Helper: ən son mövcud XALIS SATIŞ total-ını və ayını qaytarır.
 // Cari ay üçün admin daxil etmişsə cari ay götürür; yoxsa salesHistory-dən ən son ayı seçir.
+// Xalis = satış − qaytarılma (returns).
 const lastTotalForWorker = (w: Worker, currentYM: string): { total: number; fromMonth: string; hasTotal: boolean } => {
   if (w.monthlyTotalMonth === currentYM && typeof w.monthlyTotalSales === 'number') {
-    return { total: w.monthlyTotalSales, fromMonth: currentYM, hasTotal: true };
+    return { total: netSalesForMonth(w, currentYM), fromMonth: currentYM, hasTotal: true };
   }
   const history = w.salesHistory || {};
   const months = Object.keys(history).sort().reverse(); // ən yeni öncə
   if (months.length > 0) {
     const m = months[0];
-    return { total: history[m] || 0, fromMonth: m, hasTotal: true };
+    return { total: netSalesForMonth(w, m), fromMonth: m, hasTotal: true };
   }
   // Fallback: bəlkə monthlyTotalSales var amma ayı keçmişdir
   if (typeof w.monthlyTotalSales === 'number' && w.monthlyTotalMonth) {
-    return { total: w.monthlyTotalSales, fromMonth: w.monthlyTotalMonth, hasTotal: true };
+    return { total: netSalesForMonth(w, w.monthlyTotalMonth), fromMonth: w.monthlyTotalMonth, hasTotal: true };
   }
   return { total: 0, fromMonth: '', hasTotal: false };
 };

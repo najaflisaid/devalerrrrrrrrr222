@@ -18,6 +18,12 @@ export interface Worker {
   monthlyTotalSales?: number;
   monthlyTotalMonth?: string;
   salesHistory?: Record<string, number>;
+  /** Qaytarılma məbləği (returns/refunds) — cari ay üçün */
+  monthlyTotalReturns?: number;
+  /** Qaytarılmaların aylıq tarixçəsi */
+  returnsHistory?: Record<string, number>;
+  /** Hədəflərin aylıq tarixçəsi (aylıq dəyişikliklər saxlanır) */
+  targetsHistory?: Record<string, number>;
   birthdayGreetedYear?: number;
   loginPassword?: string;    // adminin görə bilməsi üçün saxlanan şifrə (Firebase Auth-da əsas şifrə)
   createdAt: string;
