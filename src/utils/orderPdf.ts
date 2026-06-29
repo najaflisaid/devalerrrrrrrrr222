@@ -1,21 +1,28 @@
 /**
- * orderPdf.ts — B2B sifariş üçün təhvil/yığım QAİMƏSI (Azərbaycan dilində).
+ * orderPdf.ts — B2B sifariş üçün **TƏHVİL-TƏSLİM AKTI** (Azərbaycan dilində).
  *
- * Mühüm: Bu sənəddə MƏXFİ məlumatlar GÖSTƏRİLMİR:
- *   • Qiymət, endirim, borc, ümumi məbləğ — YOXDUR.
- *   • Yalnız operativ siyahı: məhsul şəkli, ad, brend, barkod, miqdar, vahid.
+ * Şrift: Noto Sans (TTF, `/fonts/NotoSans-Regular.ttf` + `/fonts/NotoSans-Bold.ttf`)
+ *   → Azərbaycan əlifbası (ə, ş, ç, ğ, ı, ö, ü) tam dəstəklənir.
  *
- * İstifadə: `await downloadOrderPdf(order, products)` — yüklənmə avtomatik başlayır.
+ * MƏXFİ məlumatlar GÖSTƏRİLMİR: endirim, borc, ümumi məbləğ, ödəniş tarixi.
+ * Yalnız operativ məlumat: məhsul şəkli, ad, brend, barkod, miqdar, vahid, satış qiyməti.
+ *
+ * Footer: "Təslim edən" + "Təslim alan" — hər ikisi üçün Vəzifə və Ad/Soyad sahələri ilə.
  */
 import jsPDF from 'jspdf';
 import autoTable, { CellHookData } from 'jspdf-autotable';
 
 const LOGO_URL = 'https://i.hizliresim.com/tmu65g6.png';
+const FONT_REGULAR_URL = '/fonts/NotoSans-Regular.ttf';
+const FONT_BOLD_URL = '/fonts/NotoSans-Bold.ttf';
+const FONT_NAME = 'NotoSans';
 
 interface OrderItemLike {
   productId: string;
   productName: { az?: string; ru?: string; en?: string } | string;
   quantity: number;
+  regularPrice?: number;
+  salePrice?: number;
 }
 
 interface OrderLike {
@@ -36,7 +43,50 @@ interface ProductLike {
   images?: string[];
   sku?: string;
   barcode?: string;
+  price?: number;
+  salePrice?: number;
+  b2bPrice?: number;
+  b2bSalePrice?: number;
 }
+
+// ─── Font yükləmə (lazy, cache-li) ───
+let _fontPromise: Promise<void> | null = null;
+const arrayBufferToBase64 = (buf: ArrayBuffer): string => {
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+  }
+  return btoa(binary);
+};
+
+const loadAzFonts = async (doc: jsPDF): Promise<void> => {
+  if (!_fontPromise) {
+    _fontPromise = (async () => {
+      const [regResp, boldResp] = await Promise.all([
+        fetch(FONT_REGULAR_URL),
+        fetch(FONT_BOLD_URL),
+      ]);
+      if (!regResp.ok || !boldResp.ok) {
+        throw new Error('Font yüklənmədi: ' + regResp.status + '/' + boldResp.status);
+      }
+      const [regBuf, boldBuf] = await Promise.all([
+        regResp.arrayBuffer(),
+        boldResp.arrayBuffer(),
+      ]);
+      (window as any).__azFontReg = arrayBufferToBase64(regBuf);
+      (window as any).__azFontBold = arrayBufferToBase64(boldBuf);
+    })();
+  }
+  await _fontPromise;
+  const reg = (window as any).__azFontReg as string;
+  const bold = (window as any).__azFontBold as string;
+  doc.addFileToVFS('NotoSans-Regular.ttf', reg);
+  doc.addFileToVFS('NotoSans-Bold.ttf', bold);
+  doc.addFont('NotoSans-Regular.ttf', FONT_NAME, 'normal');
+  doc.addFont('NotoSans-Bold.ttf', FONT_NAME, 'bold');
+};
 
 const formatDate = (raw: any): string => {
   try {
@@ -49,10 +99,6 @@ const formatDate = (raw: any): string => {
   }
 };
 
-/**
- * Şəkli base64 PNG dataURL-ə çevirir. CORS-imkanlı (CORS izni olmayan
- * şəkillər üçün boş dataURL qaytarır — şəkilsiz hüceyrə görünəcək).
- */
 const loadImageAsDataUrl = (url: string): Promise<{ dataUrl: string; w: number; h: number } | null> =>
   new Promise((resolve) => {
     if (!url) return resolve(null);
@@ -61,8 +107,7 @@ const loadImageAsDataUrl = (url: string): Promise<{ dataUrl: string; w: number; 
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        // Maks 100x100 — PDF üçün kifayət, fayl ölçüsünü kiçik saxlayır
-        const max = 100;
+        const max = 110;
         let w = img.naturalWidth || 100;
         let h = img.naturalHeight || 100;
         const ratio = Math.min(max / w, max / h, 1);
@@ -82,9 +127,20 @@ const loadImageAsDataUrl = (url: string): Promise<{ dataUrl: string; w: number; 
     img.src = url;
   });
 
+/** Məhsul üçün "Satış qiyməti" — endirimli qiymət varsa onu, yoxsa adi qiyməti qaytarır. */
+const resolveSalePrice = (item: OrderItemLike, p?: ProductLike): number => {
+  if (typeof item.salePrice === 'number' && item.salePrice > 0) return item.salePrice;
+  if (typeof item.regularPrice === 'number' && item.regularPrice > 0) return item.regularPrice;
+  if (p) {
+    if (typeof p.salePrice === 'number' && p.salePrice > 0) return p.salePrice;
+    if (typeof p.price === 'number' && p.price > 0) return p.price;
+  }
+  return 0;
+};
+
 /**
- * downloadOrderPdf — qaimə generasiya edib brauzerdə yüklənmə başladır.
- * MƏXFİ məlumatlar (qiymət/endirim/borc) GÖSTƏRİLMİR.
+ * downloadOrderPdf — Təhvil-təslim aktı PDF-i.
+ * MƏXFİ olmayan satış qiyməti göstərilir; endirim/borc/total YOXDUR.
  */
 export const downloadOrderPdf = async (
   order: OrderLike,
@@ -94,6 +150,15 @@ export const downloadOrderPdf = async (
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 36;
 
+  // ─── Şrifti yüklə (Azərbaycan əlifbası dəstəyi) ───
+  try {
+    await loadAzFonts(doc);
+    doc.setFont(FONT_NAME, 'normal');
+  } catch (err) {
+    console.warn('AZ font load failed, fallback to helvetica:', err);
+    // fallback helvetica — diakritiklər itə bilər, amma minimal işləklik qalır
+  }
+
   // ─── Loqo + başlıq ───
   const logo = await loadImageAsDataUrl(LOGO_URL);
   if (logo) {
@@ -102,20 +167,15 @@ export const downloadOrderPdf = async (
     try {
       doc.addImage(logo.dataUrl, 'PNG', margin, 30, lw, lh);
     } catch {
-      /* loqo yüklənmədisə davam et */
+      /* noop */
     }
   }
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('QAIME', pageWidth - margin, 50, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(90);
-  doc.text('B2B sifaris teslim/yigim senedi', pageWidth - margin, 66, { align: 'right' });
-  doc.setTextColor(0);
+  doc.setFont(FONT_NAME, 'bold');
+  doc.setFontSize(15);
+  doc.text('Təhvil-təslim aktı', pageWidth - margin, 56, { align: 'right' });
 
-  // ─── Sifariş başlıq blokları ───
+  // ─── Sifariş başlığı ───
   const headStartY = 110;
   const orderNumber =
     order.orderNumber !== undefined && order.orderNumber !== null
@@ -126,18 +186,18 @@ export const downloadOrderPdf = async (
   const company = order.companyName && !String(order.companyName).includes('@') ? order.companyName : '';
   const phone = order.customerPhone && String(order.customerPhone).length < 30 ? order.customerPhone : '';
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(FONT_NAME, 'bold');
   doc.setFontSize(11);
-  doc.text('Sifaris melumatlari', margin, headStartY);
-  doc.setFont('helvetica', 'normal');
+  doc.text('Sifariş məlumatları', margin, headStartY);
+  doc.setFont(FONT_NAME, 'normal');
   doc.setFontSize(10);
 
   const meta: Array<[string, string]> = [
-    ['Sifaris N:', orderNumber],
+    ['Sifariş №:', orderNumber],
     ['Tarix:', formatDate(order.createdAt) || '-'],
-    ['Musteri:', fullName],
+    ['Müştəri:', fullName],
   ];
-  if (company) meta.push(['Sirket:', company]);
+  if (company) meta.push(['Şirkət:', company]);
   if (phone) meta.push(['Telefon:', phone]);
 
   let y = headStartY + 14;
@@ -145,22 +205,20 @@ export const downloadOrderPdf = async (
     doc.setTextColor(110);
     doc.text(k, margin, y);
     doc.setTextColor(20);
-    doc.text(String(v), margin + 70, y);
+    doc.text(String(v), margin + 80, y);
     y += 14;
   });
   doc.setTextColor(0);
 
-  // ─── Məhsulları cədvələ hazırla (şəkillər prefetched) ───
+  // ─── Şəkilləri əvvəlcədən yüklə ───
   const totalQty = (order.items || []).reduce((s, it) => s + (Number(it.quantity) || 0), 0);
   const tableStartY = y + 8;
 
-  // Şəkilləri əvvəlcədən yüklə (CORS imkan verirsə)
   const imageData = await Promise.all(
     (order.items || []).map(async (it) => {
       const p = products.find((pp) => pp.id === it.productId);
       const url = p?.images?.[0] || '';
-      const data = await loadImageAsDataUrl(url);
-      return data;
+      return await loadImageAsDataUrl(url);
     })
   );
 
@@ -171,6 +229,7 @@ export const downloadOrderPdf = async (
       p?.name?.az || p?.name?.en || '-';
     const brand = p?.brand || '-';
     const barcode = p?.barcode || p?.sku || '-';
+    const salePrice = resolveSalePrice(it, p);
     return {
       idx: idx + 1,
       img: imageData[idx],
@@ -178,15 +237,25 @@ export const downloadOrderPdf = async (
       brand,
       barcode,
       qty: Number(it.quantity) || 0,
+      price: salePrice,
     };
   });
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [['#', 'Sekil', 'Mehsul adi', 'Brend', 'Barkod', 'Miqdar', 'Vahid']],
-    body: rows.map((r) => [r.idx, '', r.name, r.brand, r.barcode, r.qty, 'eded']),
+    head: [['#', 'Şəkil', 'Məhsul adı', 'Brend', 'Barkod', 'Miqdar', 'Vahid', 'Satış qiyməti']],
+    body: rows.map((r) => [
+      r.idx,
+      '',
+      r.name,
+      r.brand,
+      r.barcode,
+      r.qty,
+      'ədəd',
+      r.price > 0 ? `${r.price.toFixed(2)} AZN` : '-',
+    ]),
     styles: {
-      font: 'helvetica',
+      font: FONT_NAME,
       fontSize: 9,
       cellPadding: 6,
       valign: 'middle',
@@ -194,34 +263,42 @@ export const downloadOrderPdf = async (
       lineWidth: 0.5,
     },
     headStyles: {
+      font: FONT_NAME,
+      fontStyle: 'bold',
       fillColor: [33, 33, 33],
       textColor: 255,
-      fontStyle: 'bold',
       halign: 'center',
     },
     bodyStyles: {
+      font: FONT_NAME,
       textColor: 30,
     },
     alternateRowStyles: { fillColor: [248, 248, 248] },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 24 },
-      1: { halign: 'center', cellWidth: 56, minCellHeight: 56 },
+      0: { halign: 'center', cellWidth: 22 },
+      1: { halign: 'center', cellWidth: 54, minCellHeight: 54 },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 80 },
-      4: { cellWidth: 90, fontStyle: 'bold' },
-      5: { halign: 'center', cellWidth: 50, fontStyle: 'bold' },
-      6: { halign: 'center', cellWidth: 40 },
+      3: { cellWidth: 70 },
+      4: { cellWidth: 82, fontStyle: 'bold' },
+      5: { halign: 'center', cellWidth: 42, fontStyle: 'bold' },
+      6: { halign: 'center', cellWidth: 36 },
+      7: { halign: 'right', cellWidth: 70, fontStyle: 'bold' },
     },
     didDrawCell: (data: CellHookData) => {
       if (data.section === 'body' && data.column.index === 1) {
         const r = rows[data.row.index];
         if (r?.img) {
           const cell = data.cell;
-          const max = Math.min(cell.width, cell.height) - 6;
-          const w = max;
-          const h = (r.img.h * max) / r.img.w;
-          const finalH = Math.min(h, max);
-          const finalW = (r.img.w * finalH) / r.img.h;
+          const maxSide = Math.min(cell.width, cell.height) - 6;
+          const ratio = r.img.w / r.img.h;
+          let finalW: number, finalH: number;
+          if (ratio >= 1) {
+            finalW = maxSide;
+            finalH = maxSide / ratio;
+          } else {
+            finalH = maxSide;
+            finalW = maxSide * ratio;
+          }
           const x = cell.x + (cell.width - finalW) / 2;
           const yy = cell.y + (cell.height - finalH) / 2;
           try {
@@ -235,33 +312,53 @@ export const downloadOrderPdf = async (
     margin: { left: margin, right: margin },
   });
 
-  // ─── Summary (yalnız əməliyyat üçün — qiymət YOXDUR) ───
+  // ─── Yekun (yalnız sayğac — borc/endirim YOXDUR) ───
   const finalY = (doc as any).lastAutoTable?.finalY || tableStartY + 80;
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(FONT_NAME, 'bold');
   doc.setFontSize(10);
-  doc.text(`Model sayi: ${rows.length}`, margin, finalY + 24);
-  doc.text(`Umumi miqdar: ${totalQty} eded`, margin, finalY + 40);
+  doc.text(`Model sayı: ${rows.length}`, margin, finalY + 22);
+  doc.text(`Ümumi miqdar: ${totalQty} ədəd`, margin, finalY + 38);
 
-  // ─── Footer: imza sahələri ───
-  const footerY = doc.internal.pageSize.getHeight() - 80;
-  doc.setDrawColor(180);
-  doc.line(margin, footerY, margin + 180, footerY);
-  doc.line(pageWidth - margin - 180, footerY, pageWidth - margin, footerY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(110);
-  doc.text('Teslim eden (imza)', margin, footerY + 14);
-  doc.text('Teslim alan (imza)', pageWidth - margin - 180, footerY + 14);
+  // ─── Footer: Təslim edən / Təslim alan ───
+  // İki sütun, hər birində: "Vəzifə:" + "Ad, Soyad:" + imza xətti
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const footerTop = Math.max(finalY + 70, pageHeight - 170);
+  const colWidth = (pageWidth - margin * 2 - 40) / 2;
+  const leftX = margin;
+  const rightX = margin + colWidth + 40;
+
+  const drawSignatureBlock = (x: number, title: string) => {
+    doc.setFont(FONT_NAME, 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(20);
+    doc.text(title, x, footerTop);
+
+    doc.setFont(FONT_NAME, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text('Vəzifə:', x, footerTop + 18);
+    doc.setDrawColor(180);
+    doc.line(x + 38, footerTop + 19, x + colWidth, footerTop + 19);
+
+    doc.text('Ad, Soyad:', x, footerTop + 38);
+    doc.line(x + 52, footerTop + 39, x + colWidth, footerTop + 39);
+
+    doc.text('İmza:', x, footerTop + 78);
+    doc.line(x, footerTop + 80, x + colWidth, footerTop + 80);
+  };
+
+  drawSignatureBlock(leftX, 'Təslim edən');
+  drawSignatureBlock(rightX, 'Təslim alan');
 
   doc.setFontSize(8);
-  doc.setTextColor(140);
+  doc.setTextColor(150);
   doc.text(
-    'De Valeur — bu qaime yalniz mehsul siyahisi/yigim ucun nezerde tutulub. Qiymet ve odenis melumatlari ayrica sened ile teqdim olunur.',
-    margin,
-    doc.internal.pageSize.getHeight() - 30,
-    { maxWidth: pageWidth - margin * 2 }
+    'De Valeur — bu sənəd təhvil-təslim aktıdır.',
+    pageWidth / 2,
+    pageHeight - 24,
+    { align: 'center' }
   );
 
   const safeOrderNo = String(orderNumber).replace(/[^a-zA-Z0-9_-]/g, '');
-  doc.save(`qaime-${safeOrderNo || 'siparis'}.pdf`);
+  doc.save(`tehvil-teslim-${safeOrderNo || 'sifaris'}.pdf`);
 };

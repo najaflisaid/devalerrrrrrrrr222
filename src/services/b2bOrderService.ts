@@ -275,6 +275,78 @@ export const updateB2BOrderWarehouseNote = async (orderId: string, warehouseNote
   return { id: orderId, warehouseNote };
 };
 
+/** Yığım səhifəsindən sifariş statusunun dəyişdirilməsi (anbardar üçün) */
+export const updateB2BOrderStatusFromWarehouse = async (orderId: string, status: string) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, { status });
+  return { id: orderId, status };
+};
+
+/** Anbardar tərəfi YIĞIMI bitirir — vəzifə + ad/soyad + imza ilə təsdiqləyir.
+ *  Bundan sonra linkdən anbardar düzəliş edə bilmir; müştəri modu açılır. */
+export const finalizeB2BOrderWarehouse = async (
+  orderId: string,
+  payload: {
+    pickerName: string;
+    pickerPosition: string;
+    pickerSignature: string; // dataURL
+    warehouseChecks?: Record<string, 'available' | 'unavailable'>;
+    warehouseNote?: string;
+  }
+) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  const patch: any = {
+    warehousePickerName: payload.pickerName.trim(),
+    warehousePickerPosition: payload.pickerPosition.trim(),
+    warehousePickerSignature: payload.pickerSignature,
+    warehouseFinalized: true,
+    warehouseFinalizedAt: Timestamp.now(),
+  };
+  if (payload.warehouseChecks) patch.warehouseChecks = payload.warehouseChecks;
+  if (payload.warehouseNote !== undefined) patch.warehouseNote = payload.warehouseNote;
+  await updateDoc(orderRef, patch);
+  return { id: orderId };
+};
+
+/** Müştəri öz tərəfindən hansı malları təhvil aldığını işarələyir (təsdiq edilməyən rejimə qədər). */
+export const updateB2BOrderCustomerReceiveChecks = async (
+  orderId: string,
+  customerReceiveChecks: Record<string, boolean>
+) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, { customerReceiveChecks });
+  return { id: orderId, customerReceiveChecks };
+};
+
+/** Müştəri tərəfi TƏHVİLİ təsdiqləyir — vəzifə + ad/soyad + imza ilə.
+ *  Bundan sonra linkdən düzəliş edilə bilməz. Order status='delivered' olur. */
+export const finalizeB2BOrderCustomerReceive = async (
+  orderId: string,
+  payload: {
+    receiverName: string;
+    receiverPosition: string;
+    receiverSignature: string; // dataURL
+    customerReceiveChecks?: Record<string, boolean>;
+  }
+) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  const patch: any = {
+    customerReceiveName: payload.receiverName.trim(),
+    customerReceivePosition: payload.receiverPosition.trim(),
+    customerReceiveSignature: payload.receiverSignature,
+    customerFinalized: true,
+    customerFinalizedAt: Timestamp.now(),
+    status: 'delivered',
+    deliveredAt: Timestamp.now(),
+    // Müştərinin əsas imzasına da yapışdırırıq ki, mövcud admin UI dərhal göstərsin
+    signature: payload.receiverSignature,
+    signedAt: Timestamp.now(),
+  };
+  if (payload.customerReceiveChecks) patch.customerReceiveChecks = payload.customerReceiveChecks;
+  await updateDoc(orderRef, patch);
+  return { id: orderId };
+};
+
 /** Single-fetch public read for the warehouse picker (no auth required). */
 export const getB2BOrderByIdPublic = async (orderId: string) => {
   const orderRef = doc(db, 'b2bOrders', orderId);

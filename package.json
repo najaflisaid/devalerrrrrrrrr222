@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@fontsource/noto-sans": "^5.2.10",
     "@supabase/supabase-js": "^2.57.4",
     "@types/crypto-js": "^4.2.2",
     "@types/react-router-dom": "^5.3.3",

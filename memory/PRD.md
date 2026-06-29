@@ -1,48 +1,58 @@
 # De Valeur — PRD
 
-## Problem statement (latest request — 2026-01)
-Saytda məhsul əlavə et bölməsinə barkod əlavə edək; miqrasiya şablonunda da barkod sütunu olsun; məhsulları axtaranda barkodla da çıxsın (admin və müştəri tərəfində).
-B2B müştəri sifarişləri üçün məxfi olmayan QAİMƏ (PDF) — qiymət/borc/endirim göstərilmir, yalnız məhsul şəkli, ad, brend, barkod, miqdar.
-B2B sifarişdən sonra anbardara WhatsApp ilə link göndərib açıq səhifədə real-time yığım siyahısı (var/yox işarələmə + qeyd) — qiymət görünmür.
+## Problem statement (latest request — 2026-01, iteration 2)
+B2B təhvil-təslim axınının təkmilləşdirilməsi:
+- WhatsApp linkində müştəri adı YOX, yalnız şirkət adı; "Anbardar üçün" və məxfilik notu silinsin.
+- Anbardar linkdən sifariş statusunu da dəyişə bilsin → admin və müştəri tərəfdə real-time avtomatik yenilənsin.
+- "Mövcud deyil" basılan məhsulun adı admin və müştəri tərəfdə görünsün.
+- Anbardar yığımdan sonra vəzifə+ad+imza ataraq TƏSDİQ etsin; təsdiqdən sonra linkdən düzəliş olunmasın.
+- "Var"/"Yoxdur" → "Əlavə olundu"/"Mövcud deyil"; "Yadda saxla" → "Təsdiq" (imzanın altında).
+- Yalnız admin paneldə admin düzəliş edə bilsin (post-finalize).
+- PDF Azərbaycan əlifbasında (ə, ş, ç, ğ, ı, ö, ü), başlıq "Təhvil-təslim aktı"; Satış qiyməti sütunu əlavə olunsun; Təslim edən/alan blokunda Vəzifə və Ad/Soyad sahələri olsun.
+- Eyni link daha sonra müştəriyə də göndəriləcək: müştəri təhvil aldığı malları işarələyir + vəzifə+ad+imza atır → təsdiq edir.
 
 ## Architecture
-- React 18 + Vite + TypeScript, Tailwind, framer-motion (12.38), Firebase Firestore, i18next
-- Excel parse: `xlsx` library
-- PDF: `jspdf` + `jspdf-autotable` (məhsul şəkilləri canvas-ə render edilir, base64 PNG kimi PDF-ə yapışdırılır)
-- Atomik yazılar: Firebase Firestore `writeBatch` (450-lik chunks)
-- Cache layer: `productService.getAll()` 60s in-memory cache (cache invalidation hooks)
-- Real-time anbardar səhifəsi: Firestore `onSnapshot`
+- React 18 + Vite + TypeScript, Tailwind, framer-motion, Firebase Firestore, i18next
+- Excel parse: `xlsx`
+- PDF: `jspdf` + `jspdf-autotable` + **NotoSans TTF** (`/app/public/fonts/NotoSans-{Regular,Bold}.ttf`) → Azərbaycan əlifbası dəstəyi
+- Real-time sinxronizasiya: Firestore `onSnapshot`
 
-## Implemented (this iteration — Barkod + B2B qaimə + Anbardar)
-- 2026-01: **Barkod field** məhsula əlavə olundu (`src/types/index.ts` — `barcode?: string`)
-- 2026-01: **Admin paneldə** məhsul əlavə et və redaktə et formalarında SKU-dan sonra barkod input sahəsi
-- 2026-01: **Axtarış genişləndirildi** — barkod ilə də tapır: Header axtarışı (`src/components/Header.tsx`), məhsullar səhifəsi (`src/pages/ProductsPage.tsx`), admin məhsul siyahısı (`src/components/admin/AdminPanel.tsx`)
-- 2026-01: **Excel miqrasiya şablonu** — `Barkod` ayrıca sütun kimi əlavə olundu (`src/components/admin/ProductExcelImport.tsx`); aliaslar: barcode, штрихкод, EAN, UPC, GTIN, QR; genişləndirilmiş şablon indi 9 sütundur. Excel-də barkod varsa avtomatik yenilənir / yeni məhsula yapışdırılır.
-- 2026-01: **PDF qaimə generatoru** (`src/utils/orderPdf.ts`):
-  - Loqo bazadan (`https://i.hizliresim.com/tmu65g6.png`)
-  - Sahələr: Sifariş №, tarix, müştəri, şirkət, telefon
-  - Məhsul cədvəli: #, şəkil (PNG, canvas resize → base64), ad, brend, barkod, miqdar, vahid
-  - MƏXFİ məlumatlar GÖSTƏRİLMİR: qiymət, endirim, borc, total
-  - Footer: təhvil edən/alan imza sahələri
-- 2026-01: **PDF qaimə düymələri**:
-  - Müştəri B2B sifarişlər səhifəsində (`src/pages/B2BOrdersPage.tsx`)
-  - Admin B2B sifarişlər tab-ında (`src/components/admin/B2BOrdersTab.tsx`)
-- 2026-01: **Anbardar üçün açıq link** səhifəsi (`/warehouse/order/:orderId`):
-  - Auth tələb etmir
-  - Real-time Firestore `onSnapshot` ilə sinxron
-  - Hər məhsul üçün: şəkil, ad, brend, barkod, miqdar (qiymət YOX)
-  - Hər malda iki düymə: ✓ Var (yaşıl) / ✗ Yoxdur (qırmızı) — Firestore-da `warehouseChecks` map kimi saxlanılır
-  - Ümumi qeyd sahəsi → `warehouseNote`
-  - Summary: var/yox/qalır sayğacı
-- 2026-01: **WhatsApp paylaşma düyməsi** — admin və B2B müştəri tərəfində; `https://wa.me/?text=...` URL-i ilə açılır, mesajda link var
-- 2026-01: **Anbardar status göstəricisi** — admin və müştəri sifariş kartlarında: var/yox/qalır + anbardar qeydi (real-time görünür)
-- 2026-01: `src/services/b2bOrderService.ts` — yeni funksiyalar: `updateB2BOrderWarehouseChecks`, `updateB2BOrderWarehouseNote`, `getB2BOrderByIdPublic`
+## Implemented (this iteration — B2B təhvil-təslim v2)
+- 2026-01: **PDF təhvil-təslim aktı yeniləndi** (`src/utils/orderPdf.ts`):
+  - NotoSans şrifti runtime fetch ilə yüklənir (cache-li, lazy)
+  - Başlıq "Təhvil-təslim aktı"; bütün mətnlər Azərbaycan əlifbasında
+  - Satış qiyməti sütunu əlavə olundu (regular/sale price avtomatik resolve)
+  - Footer: iki sütun — Təslim edən + Təslim alan; hər birində Vəzifə və Ad/Soyad sahələri + imza xətti
+- 2026-01: **WarehouseOrderPage tamamilə rewrite** (`src/pages/WarehouseOrderPage.tsx`):
+  - 3 rejim: `warehouse` (anbardar) → `customer` (müştəri təhvil) → `done` (bağlı)
+  - Anbardar rejimi: status select, "Əlavə olundu"/"Mövcud deyil" düymələri, qeyd, vəzifə+ad+imza, **Təsdiq**
+  - Müştəri rejimi: read-only siyahı + "Təhvil aldım" checkbox (yalnız "əlavə olundu" mallar), çatışmayan mallar bannerı, vəzifə+ad+imza, **Təsdiq**
+  - Done rejimi: locked, hər iki imza göstərilir
+  - Müştəri təsdiqindən sonra `status='delivered'` avtomatik təyin olunur
+- 2026-01: **Yeni service funksiyaları** (`src/services/b2bOrderService.ts`):
+  - `updateB2BOrderStatusFromWarehouse` — status real-time admin/müştəriyə yayılır
+  - `finalizeB2BOrderWarehouse` — vəzifə+ad+imza, `warehouseFinalized=true`
+  - `updateB2BOrderCustomerReceiveChecks` — müştəri təhvil aldığı malları işarələyir
+  - `finalizeB2BOrderCustomerReceive` — müştəri imza atır, sifariş `delivered` statusuna keçir
+- 2026-01: **WhatsApp paylaşma mesajları yeniləndi**:
+  - Yalnız şirkət adı, müştəri adı yoxdur
+  - "Anbardara göndər": "Yığım siyahısı: {url}"
+  - "Müştəriyə göndər" (yeni düymə): "Təhvil-təslim siyahısı: {url}"
+  - Hər iki düymə həm admin (B2BOrdersTab), həm B2B müştəri (B2BOrdersPage) tərəfində
+- 2026-01: **Admin və müştəri sifariş kartlarında**:
+  - Çatışmayan məhsulların adı/brendi/miqdarı göstərilir (rose-50 banner)
+  - Anbardar yığımı edən + müştəri təhvil alan imzaları + vəzifə + ad/soyad real-time görünür
+  - "Əlavə olundu"/"Mövcud deyil" terminologiyası
 
 ## Verified
 - TypeScript: `npx tsc --noEmit` → exit 0
-- Production build: `npx vite build` → uğurlu, 17.45s
-- ESLint: dəyişdirilmiş bütün fayllarda 0 issue
-- Smoke test: `/warehouse/order/test-invalid-id` → "Sifariş tapılmadı" UI düzgün render olundu
+- Production build: `npx vite build` → uğurlu, 18.35s
+- ESLint: bütün dəyişdirilmiş fayllarda 0 issue
+- Smoke test: `/warehouse/order/test-invalid-id` → "Sifariş tapılmadı" düzgün render
+- Font endpoint: `/fonts/NotoSans-Regular.ttf` → 200 OK (825 KB)
+
+## Previous iteration (Barkod + ilkin PDF/Anbardar v1 — referans)
+- 2026-01: Barkod field məhsula əlavə olundu; admin formaları, axtarış (Header, Products, Admin), Excel miqrasiya şablonu (`Barkod` sütunu, aliaslar EAN/UPC/штрихкод/QR), ilkin PDF və ilkin anbardar səhifəsi (`/warehouse/order/:orderId`)
 
 ## Previous iteration (Excel miqrasiya v2 — referans üçün)
 - 2026-01-XX: Excel məhsul miqrasiyası tam yenidən işləndi (`src/components/admin/ProductExcelImport.tsx`, `src/services/productMigrationService.ts`, `src/types/index.ts`)

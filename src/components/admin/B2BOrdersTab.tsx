@@ -989,19 +989,20 @@ const B2BOrdersTab: React.FC = () => {
                     }
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
-                  title="Qaiməni PDF olaraq yüklə (qiymət və borc göstərilmir)"
+                  title="Təhvil-təslim aktını PDF olaraq yüklə"
                   data-testid={`admin-order-pdf-${order.id}`}
                 >
                   <FileDown className="h-4 w-4" />
-                  PDF qaimə
+                  PDF yüklə
                 </button>
 
                 <button
                   onClick={() => {
-                    const url = `${window.location.origin}/warehouse/order/${order.id}`;
                     const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
-                    const customerLabel = [order.customerName, order.customerLastname].filter(Boolean).join(' ').trim() || '';
-                    const msg = `De Valeur — Sifariş #${orderNumber}${customerLabel ? ` · ${customerLabel}` : ''}\n\nAnbardar üçün yığım siyahısı:\n${url}\n\nQeyd: bu link yalnız operativ yığım üçündür, qiymət göstərilmir.`;
+                    const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                    const companyLabel = order.companyName && !String(order.companyName).includes('@')
+                      ? ` · ${order.companyName}` : '';
+                    const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nYığım siyahısı:\n${url}`;
                     const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                     window.open(wa, '_blank', 'noopener,noreferrer');
                   }}
@@ -1011,6 +1012,24 @@ const B2BOrdersTab: React.FC = () => {
                 >
                   <Send className="h-4 w-4" />
                   Anbardara göndər
+                </button>
+
+                <button
+                  onClick={() => {
+                    const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
+                    const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                    const companyLabel = order.companyName && !String(order.companyName).includes('@')
+                      ? ` · ${order.companyName}` : '';
+                    const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                    window.open(wa, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+                  title="Müştəriyə WhatsApp ilə linki göndər"
+                  data-testid={`admin-order-customer-send-${order.id}`}
+                >
+                  <Send className="h-4 w-4" />
+                  Müştəriyə göndər
                 </button>
 
                 {!order.adminNote && editingNoteOrderId !== order.id && (
@@ -1049,11 +1068,32 @@ const B2BOrdersTab: React.FC = () => {
               {(() => {
                 const checks = (order as any).warehouseChecks as Record<string, 'available' | 'unavailable'> | undefined;
                 const note = (order as any).warehouseNote as string | undefined;
-                const hasAny = (checks && Object.keys(checks).length > 0) || (note && note.trim());
+                const pickerSig = (order as any).warehousePickerSignature as string | undefined;
+                const pickerName = (order as any).warehousePickerName as string | undefined;
+                const pickerPos = (order as any).warehousePickerPosition as string | undefined;
+                const finalizedAt = (order as any).warehouseFinalizedAt;
+                const recvSig = (order as any).customerReceiveSignature as string | undefined;
+                const recvName = (order as any).customerReceiveName as string | undefined;
+                const recvPos = (order as any).customerReceivePosition as string | undefined;
+                const recvFinalizedAt = (order as any).customerFinalizedAt;
+                const hasAny =
+                  (checks && Object.keys(checks).length > 0) ||
+                  (note && note.trim()) ||
+                  pickerSig || recvSig;
                 if (!hasAny) return null;
                 const totalItems = order.items?.length || 0;
                 const av = checks ? Object.values(checks).filter((v) => v === 'available').length : 0;
                 const un = checks ? Object.values(checks).filter((v) => v === 'unavailable').length : 0;
+                const missingItems = (order.items || [])
+                  .map((it: any, idx: number) => ({ it, idx }))
+                  .filter(({ idx }: any) => checks && checks[idx.toString()] === 'unavailable');
+                const fmtTs = (ts: any) => {
+                  try {
+                    const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
+                    if (!d || isNaN(d.getTime())) return '';
+                    return d.toLocaleString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                  } catch { return ''; }
+                };
                 return (
                   <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3" data-testid={`admin-warehouse-status-${order.id}`}>
                     <div className="flex items-center gap-2 mb-1">
@@ -1061,14 +1101,56 @@ const B2BOrdersTab: React.FC = () => {
                       <p className="text-sm font-semibold text-indigo-900">Anbardar yığım statusu</p>
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs text-indigo-900">
-                      <span><span className="font-semibold text-emerald-700">Var:</span> {av}</span>
-                      <span><span className="font-semibold text-rose-700">Yox:</span> {un}</span>
+                      <span><span className="font-semibold text-emerald-700">Əlavə olundu:</span> {av}</span>
+                      <span><span className="font-semibold text-rose-700">Mövcud deyil:</span> {un}</span>
                       <span><span className="font-semibold">Qalır:</span> {Math.max(0, totalItems - av - un)} / {totalItems}</span>
                     </div>
+
+                    {missingItems.length > 0 && (
+                      <div className="mt-2 bg-rose-50 border border-rose-200 rounded p-2" data-testid={`admin-warehouse-missing-${order.id}`}>
+                        <p className="text-xs font-semibold text-rose-900 mb-1">Çatışmayan məhsullar:</p>
+                        <ul className="text-xs text-rose-900 list-disc list-inside space-y-0.5">
+                          {missingItems.map(({ it, idx }: any) => {
+                            const p = products.find((pp: any) => pp.id === it.productId);
+                            const name = (typeof it.productName === 'object' ? it.productName?.az : it.productName) ||
+                              p?.name?.az || p?.name?.en || '-';
+                            return (
+                              <li key={idx}>
+                                <span className="font-medium">{String(name)}</span>
+                                {p?.brand ? <span className="text-rose-700"> · {p.brand}</span> : null}
+                                <span className="text-rose-700"> · {it.quantity} ədəd</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+
                     {note && note.trim() && (
                       <p className="mt-2 text-xs text-indigo-900 whitespace-pre-wrap" data-testid={`admin-warehouse-note-${order.id}`}>
                         <span className="font-semibold">Qeyd: </span>{note}
                       </p>
+                    )}
+
+                    {(pickerSig || recvSig) && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-indigo-200">
+                        {pickerSig && (
+                          <div data-testid={`admin-warehouse-picker-${order.id}`}>
+                            <p className="text-[10px] uppercase tracking-wider text-indigo-700">Yığımı edən (anbardar)</p>
+                            <p className="text-xs font-semibold text-indigo-900">{pickerPos} — {pickerName}</p>
+                            {finalizedAt && <p className="text-[10px] text-indigo-700 mt-0.5">{fmtTs(finalizedAt)}</p>}
+                            <img src={pickerSig} alt="İmza" className="mt-1 bg-white border border-indigo-200 rounded p-1 max-h-20" />
+                          </div>
+                        )}
+                        {recvSig && (
+                          <div data-testid={`admin-customer-receive-${order.id}`}>
+                            <p className="text-[10px] uppercase tracking-wider text-indigo-700">Təhvil alan (müştəri)</p>
+                            <p className="text-xs font-semibold text-indigo-900">{recvPos} — {recvName}</p>
+                            {recvFinalizedAt && <p className="text-[10px] text-indigo-700 mt-0.5">{fmtTs(recvFinalizedAt)}</p>}
+                            <img src={recvSig} alt="İmza" className="mt-1 bg-white border border-indigo-200 rounded p-1 max-h-20" />
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
