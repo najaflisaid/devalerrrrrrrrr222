@@ -405,6 +405,7 @@ const ProductsPage: React.FC = () => {
         const descRu = typeof p.description === 'object' ? p.description.ru : '';
         const descEn = typeof p.description === 'object' ? p.description.en : '';
         const sku = (p as any).sku || '';
+        const barcode = (p as any).barcode || '';
 
         return nameAz?.toLowerCase().includes(query) ||
           nameRu?.toLowerCase().includes(query) ||
@@ -412,6 +413,7 @@ const ProductsPage: React.FC = () => {
           p.brand?.toLowerCase().includes(query) ||
           p.category?.toLowerCase().includes(query) ||
           sku.toLowerCase().includes(query) ||
+          barcode.toLowerCase().includes(query) ||
           descAz?.toLowerCase().includes(query) ||
           descRu?.toLowerCase().includes(query) ||
           descEn?.toLowerCase().includes(query);

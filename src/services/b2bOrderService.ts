@@ -248,6 +248,42 @@ export const updateB2BOrderCheckedItems = async (orderId: string, checkedItems: 
 };
 
 // =====================================================================
+// Warehouse flow — public link (no auth) for the warehouse picker.
+// The picker sees ONLY: product image, name, barcode, quantity (NO prices).
+// They tick ✓ "var" / ✗ "yox" per item and add a note.  Customer + admin
+// see this status in real-time via onSnapshot.
+// =====================================================================
+
+export type WarehouseStatus = 'available' | 'unavailable';
+
+/**
+ * Per-item warehouse status — stored as a map { [itemIndex]: 'available'|'unavailable' }.
+ * Indexes refer to the order.items array.
+ */
+export const updateB2BOrderWarehouseChecks = async (
+  orderId: string,
+  warehouseChecks: Record<string, WarehouseStatus>
+) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, { warehouseChecks });
+  return { id: orderId, warehouseChecks };
+};
+
+export const updateB2BOrderWarehouseNote = async (orderId: string, warehouseNote: string) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  await updateDoc(orderRef, { warehouseNote });
+  return { id: orderId, warehouseNote };
+};
+
+/** Single-fetch public read for the warehouse picker (no auth required). */
+export const getB2BOrderByIdPublic = async (orderId: string) => {
+  const orderRef = doc(db, 'b2bOrders', orderId);
+  const snap = await getDoc(orderRef);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+};
+
+// =====================================================================
 // Delivery-flow (courier captures a "receiver" signature on behalf of the
 // company employee actually present at delivery — separate from the
 // account holder's own signature in B2BOrdersPage).

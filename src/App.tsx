@@ -51,6 +51,7 @@ const GiftCardCheckoutPage = React.lazy(() => import('./pages/GiftCardCheckoutPa
 const GiftCardSharePage = React.lazy(() => import('./pages/GiftCardSharePage'));
 const WorkerLogin = React.lazy(() => import('./pages/workers/WorkerLogin'));
 const WorkerDashboard = React.lazy(() => import('./pages/workers/WorkerDashboard'));
+const WarehouseOrderPage = React.lazy(() => import('./pages/WarehouseOrderPage'));
 const AiChatWidget = React.lazy(() => import('./components/AiChatWidget'));
 const CampaignPopup = React.lazy(() => import('./components/CampaignPopup'));
 const AdminGlobalNotifications = React.lazy(() => import('./components/AdminGlobalNotifications'));
@@ -154,6 +155,9 @@ const AppContent: React.FC = () => {
             {/* Worker routes */}
             <Route path="/workers" element={<WorkerLogin />} />
             <Route path="/workers/dashboard" element={<WorkerDashboard />} />
+
+            {/* Public warehouse picker — no auth required, accessed via shared link */}
+            <Route path="/warehouse/order/:orderId" element={<WarehouseOrderPage />} />
 
             {/* Existing Routes */}
             <Route path="/admin-login" element={<AdminLogin />} />

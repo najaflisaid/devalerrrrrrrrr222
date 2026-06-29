@@ -387,6 +387,7 @@ const AdminPanel: React.FC = () => {
     imageOffsetX: 0,
     imageOffsetY: 0,
     sku: '',
+    barcode: '',
   });
 
   const [editProduct, setEditProduct] = useState({
@@ -412,6 +413,7 @@ const AdminPanel: React.FC = () => {
     imageOffsetX: 0,
     imageOffsetY: 0,
     sku: '',
+    barcode: '',
     isDraft: false,
     isEnabled: true,
   });
@@ -781,6 +783,7 @@ const AdminPanel: React.FC = () => {
         category: newProduct.category,
         gender: newProduct.gender,
         sku: newProduct.sku.trim(),
+        barcode: (newProduct.barcode || '').trim(),
         isEnabled: true,
         isDraft: false,
         isBestseller: newProduct.isBestseller,
@@ -817,6 +820,7 @@ const AdminPanel: React.FC = () => {
         imageOffsetX: 0,
         imageOffsetY: 0,
         sku: '',
+        barcode: '',
       });
       setShowAddProduct(false);
       alert('Məhsul uğurla əlavə edildi!');
@@ -853,6 +857,7 @@ const AdminPanel: React.FC = () => {
       imageOffsetX: typeof product.imageOffsetX === 'number' ? product.imageOffsetX : 0,
       imageOffsetY: typeof product.imageOffsetY === 'number' ? product.imageOffsetY : 0,
       sku: (product as any).sku || '',
+      barcode: (product as any).barcode || '',
       isDraft: (product as any).isDraft || false,
       isEnabled: (product as any).isEnabled !== false,
     });
@@ -909,6 +914,7 @@ const AdminPanel: React.FC = () => {
         category: editProduct.category,
         gender: editProduct.gender,
         sku: (editProduct.sku || '').trim(),
+        barcode: ((editProduct as any).barcode || '').trim(),
         isBestseller: editProduct.isBestseller,
         comingSoon: editProduct.comingSoon,
         // DRAFT auto-resolution: qiymət və şəkil hazır olsa DRAFT-dan çıxarıb aktivləşdir
@@ -1837,6 +1843,7 @@ const AdminPanel: React.FC = () => {
                         (p.brand || '').toLowerCase().includes(query) ||
                         (p.category || '').toLowerCase().includes(query) ||
                         ((p as any).sku || '').toLowerCase().includes(query) ||
+                        ((p as any).barcode || '').toLowerCase().includes(query) ||
                         (p.id || '').toLowerCase().includes(query)
                       );
                     })();
@@ -2068,6 +2075,21 @@ const AdminPanel: React.FC = () => {
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
                       placeholder="məs. LTP-1094E-7ARDF"
                       data-testid="new-product-sku"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Barkod <span className="text-gray-400 font-normal">— EAN/UPC; müştəri və admin axtarışında, qaimədə işlənir</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={(newProduct as any).barcode || ''}
+                      onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
+                      placeholder="məs. 4549526301094"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      data-testid="new-product-barcode"
                     />
                   </div>
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
@@ -2408,6 +2430,21 @@ const AdminPanel: React.FC = () => {
                       data-testid="edit-product-sku"
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Barkod <span className="text-gray-400 font-normal">— EAN/UPC; müştəri və admin axtarışında, qaimədə işlənir</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={(editProduct as any).barcode || ''}
+                      onChange={(e) => setEditProduct({ ...editProduct, barcode: e.target.value } as any)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
+                      placeholder="məs. 4549526301094"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      data-testid="edit-product-barcode"
+                    />
+                  </div>
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Az)</label><textarea value={editProduct.descAz} onChange={(e) => setEditProduct({ ...editProduct, descAz: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Məhsulun təsviri" /></div>
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Təsvir (Ru)</label><textarea value={editProduct.descRu} onChange={(e) => setEditProduct({ ...editProduct, descRu: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-y" placeholder="Описание продукта" /></div>
@@ -2493,6 +2530,7 @@ const AdminPanel: React.FC = () => {
                         (product.brand || '').toLowerCase().includes(query) ||
                         (product.category || '').toLowerCase().includes(query) ||
                         ((product as any).sku || '').toLowerCase().includes(query) ||
+                        ((product as any).barcode || '').toLowerCase().includes(query) ||
                         (product.id || '').toLowerCase().includes(query)
                       );
                     })();
@@ -2555,6 +2593,11 @@ const AdminPanel: React.FC = () => {
                         {(product as any).sku && (
                           <span className="ml-2 inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 align-middle" data-testid={`product-sku-${product.id}`}>
                             {(product as any).sku}
+                          </span>
+                        )}
+                        {(product as any).barcode && (
+                          <span className="ml-2 inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 align-middle" title="Barkod" data-testid={`product-barcode-${product.id}`}>
+                            {(product as any).barcode}
                           </span>
                         )}
                       </h3>

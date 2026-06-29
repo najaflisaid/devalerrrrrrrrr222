@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, ChevronDown, ChevronUp, User, Mail, Phone, Building2 } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, ChevronDown, ChevronUp, User, Mail, Phone, Building2, FileDown, Send } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { productService } from '../services/productService';
 import SignaturePad from '../components/SignaturePad';
+import { downloadOrderPdf } from '../utils/orderPdf';
 
 interface B2BOrder {
   id: string;
@@ -552,6 +553,77 @@ const B2BOrdersPage: React.FC = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* PDF qaimə + Anbardara göndər */}
+                    <div className="border-t border-gray-200 mt-4 pt-4">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await downloadOrderPdf(order as any, products as any);
+                            } catch (err) {
+                              console.error('PDF generate failed', err);
+                              alert('PDF yaratmaq alınmadı: ' + (err as Error).message);
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
+                          title="Qaiməni PDF olaraq yüklə (qiymət və borc göstərilmir)"
+                          data-testid={`b2b-order-pdf-${order.id}`}
+                        >
+                          <FileDown className="h-4 w-4" />
+                          PDF qaimə yüklə
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                            const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
+                            const customerLabel = [order.customerName, order.customerLastname].filter(Boolean).join(' ').trim() || '';
+                            const msg = `De Valeur — Sifariş #${orderNumber}${customerLabel ? ` · ${customerLabel}` : ''}\n\nAnbardar üçün yığım siyahısı:\n${url}\n\nQeyd: bu link yalnız operativ yığım üçündür, qiymət göstərilmir.`;
+                            const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                            window.open(wa, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          title="WhatsApp ilə anbardara linki göndər"
+                          data-testid={`b2b-order-warehouse-send-${order.id}`}
+                        >
+                          <Send className="h-4 w-4" />
+                          Anbardara göndər
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Anbardar yığım statusu (varsa göstər) */}
+                    {(() => {
+                      const checks = (order as any).warehouseChecks as Record<string, 'available' | 'unavailable'> | undefined;
+                      const note = (order as any).warehouseNote as string | undefined;
+                      const hasAny = (checks && Object.keys(checks).length > 0) || (note && note.trim());
+                      if (!hasAny) return null;
+                      const totalItems = order.items?.length || 0;
+                      const av = checks ? Object.values(checks).filter((v) => v === 'available').length : 0;
+                      const un = checks ? Object.values(checks).filter((v) => v === 'unavailable').length : 0;
+                      return (
+                        <div className="border-t border-gray-200 mt-4 pt-4" data-testid={`b2b-warehouse-status-${order.id}`}>
+                          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Package className="h-4 w-4 text-indigo-700" />
+                              <p className="text-sm font-semibold text-indigo-900">Anbardar yığım statusu</p>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-xs text-indigo-900">
+                              <span><span className="font-semibold text-emerald-700">Var:</span> {av}</span>
+                              <span><span className="font-semibold text-rose-700">Yox:</span> {un}</span>
+                              <span><span className="font-semibold">Qalır:</span> {Math.max(0, totalItems - av - un)} / {totalItems}</span>
+                            </div>
+                            {note && note.trim() && (
+                              <p className="mt-2 text-xs text-indigo-900 whitespace-pre-wrap" data-testid={`b2b-warehouse-note-${order.id}`}>
+                                <span className="font-semibold">Qeyd: </span>{note}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {(order.status === 'delivering' || (order.receiverSignature && !order.signature)) && !order.signature && (
                       <div className="border-t border-gray-200 mt-4 pt-4">

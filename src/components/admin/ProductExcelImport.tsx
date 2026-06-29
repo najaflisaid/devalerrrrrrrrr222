@@ -27,6 +27,7 @@ interface Props {
 // avtomatik ağıllı defolt seçilir.
 const COL = {
   sku: 'Məhsul kodu',
+  barcode: 'Barkod',
   category: 'Kateqoriya',
   brand: 'Brend',
   name: 'Mal adı',
@@ -42,7 +43,11 @@ const COL_ALIASES: Record<keyof typeof COL, string[]> = {
   sku: [
     'məhsul kodu', 'mehsul kodu', 'mal kodu', 'kod', 'sku', 'code', 'article',
     'артикул', 'код товара', 'код', 'item code', 'product code', 'ürün kodu', 'urun kodu',
-    'reference', 'ref', 'barcode', 'barkod', 'штрихкод',
+    'reference', 'ref',
+  ],
+  barcode: [
+    'barkod', 'barcode', 'штрихкод', 'штрих-код', 'штрих код', 'ean', 'ean13', 'ean-13',
+    'upc', 'gtin', 'qr', 'qr kodu', 'qr code',
   ],
   category: [
     'kateqoriya', 'category', 'категория', 'kategori', 'тип', 'tip', 'type', 'group',
@@ -91,6 +96,7 @@ const visibilityLabel = (v: VisibleTo): string =>
 
 interface ParsedRow {
   sku: string;
+  barcode: string;
   category: string;
   brand: string;
   name: string;
@@ -160,7 +166,7 @@ const downloadTemplate = (
 ) => {
   const minimalHeaders = [COL.brand, COL.name, COL.price, COL.stock];
   const advancedHeaders = [
-    COL.sku, COL.brand, COL.name, COL.price, COL.stock, COL.category, COL.gender, COL.visibility,
+    COL.sku, COL.barcode, COL.brand, COL.name, COL.price, COL.stock, COL.category, COL.gender, COL.visibility,
   ];
   const headers = variant === 'advanced' ? advancedHeaders : minimalHeaders;
 
@@ -171,6 +177,7 @@ const downloadTemplate = (
   const advancedSample = [
     {
       [COL.sku]: 'LTP-1094E-7ARDF',
+      [COL.barcode]: '4549526301094',
       [COL.brand]: 'Casio',
       [COL.name]: 'Casio LTP-1094E-7ARDF',
       [COL.price]: 89.9,
@@ -185,7 +192,7 @@ const downloadTemplate = (
   const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });
   (ws as any)['!cols'] =
     variant === 'advanced'
-      ? [{ wch: 22 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 16 }]
+      ? [{ wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 16 }]
       : [{ wch: 22 }, { wch: 32 }, { wch: 14 }, { wch: 10 }];
 
   const wb = XLSX.utils.book_new();
@@ -217,16 +224,17 @@ const downloadTemplate = (
         ['Başqa proqramdan (1C, Excel ixracı və.s.) götürdüyünüz fayl da işləyir —'],
         ['sütun başlıqları yuxarıdakı variantlardan hər hansı biri olduqda avtomatik tanınır.'],
         [''],
-        ['Genişləndirilmiş şablon (8 sütun: SKU, kateqoriya, cins, görünürlük)'],
+        ['Genişləndirilmiş şablon (9 sütun: SKU, Barkod, kateqoriya, cins, görünürlük)'],
         ['"Şablon (genişləndirilmiş)" düyməsi ilə yüklənir.'],
       ]
     : [
-        ['DE VALEUR — Genişləndirilmiş şablon (8 sütun)'],
+        ['DE VALEUR — Genişləndirilmiş şablon (9 sütun)'],
         [''],
-        ['Sütunlar: Məhsul kodu (SKU), Brend, Mal adı, Satış qiyməti, Miqdar,'],
+        ['Sütunlar: Məhsul kodu (SKU), Barkod, Brend, Mal adı, Satış qiyməti, Miqdar,'],
         ['Kateqoriya, Cins, Görünür kim?'],
         [''],
         ['SKU varsa məhsul ona görə tapılır (ən dəqiq). Yoxdursa Brend+ad ilə.'],
+        ['Barkod (EAN/UPC) saytda axtarış üçün istifadə olunur — boş ola bilər.'],
         ['Cins: men / women / unisex. Görünürlük: a (hamı) / b (b2b) / c (müştəri).'],
         ['Kateqoriya və brend sistemdə qabaqcadan mövcud olmalıdır.'],
       ];
@@ -266,6 +274,7 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
 
   const map = {
     sku: findCol('sku'),
+    barcode: findCol('barcode'),
     category: findCol('category'),
     brand: findCol('brand'),
     name: findCol('name'),
@@ -303,6 +312,7 @@ const parseFile = async (file: File): Promise<{ rows: ParsedRow[]; errors: strin
     const visibilityRaw = map.visibility ? String(r[map.visibility] || '').trim() : '';
     rows.push({
       sku,
+      barcode: map.barcode ? String(r[map.barcode] || '').trim() : '',
       category: map.category ? String(r[map.category] || '').trim() : '',
       brand: map.brand ? String(r[map.brand] || '').trim() : '',
       name,
@@ -663,6 +673,13 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           oldValues.sku = (m.product as any).sku || '';
           newValues.sku = excelSku;
         }
+        // Barkod yenilə (Excel-də barkod varsa, məhsulda yoxdursa və ya fərqlidirsə yenilə)
+        const excelBarcode = (m.rows.find((r) => r.barcode)?.barcode) || '';
+        if (excelBarcode && (m.product as any).barcode !== excelBarcode) {
+          patch.barcode = excelBarcode;
+          oldValues.barcode = (m.product as any).barcode || '';
+          newValues.barcode = excelBarcode;
+        }
 
         batchUpdates.push({ productId: m.product.id, patch });
         const pNameAz =
@@ -720,6 +737,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             category: c.row.category,
             gender,
             sku: c.row.sku || '',
+            barcode: c.row.barcode || '',
             // DRAFT rejimi: qiymət/şəkil tam olmadıqda saytda görünməsin
             isEnabled: !isDraft,
             isDraft: isDraft,
@@ -853,10 +871,10 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             onClick={() => downloadTemplate('xlsx', 'advanced')}
             className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium"
             data-testid="product-import-template-advanced-btn"
-            title="8 sütun: + SKU, Kateqoriya, Cins, Görünürlük"
+            title="9 sütun: + SKU, Barkod, Kateqoriya, Cins, Görünürlük"
           >
             <Download className="h-3.5 w-3.5" />
-            Genişləndirilmiş (8 sütun)
+            Genişləndirilmiş (9 sütun)
           </button>
           <button
             onClick={() => downloadTemplate('xls', 'minimal')}

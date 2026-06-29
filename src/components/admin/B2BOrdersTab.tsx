@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar, Search, ChevronDown, Users, List } from 'lucide-react';
+import { Package, Eye, Check, X, Clock, Loader2, Trash2, Edit, Save, Minus, Plus, User, Calendar, Search, ChevronDown, Users, List, FileDown, Send } from 'lucide-react';
 import { getB2BOrders, updateB2BOrderStatus, deleteB2BOrder, updateB2BOrderNote, updateOrderItemQuantity, removeOrderItem, updateB2BOrderCustomerInfo, updateB2BOrderPaymentInfo, updateB2BOrderCheckedItems } from '../../services/b2bOrderService';
 import { productService } from '../../services/productService';
+import { downloadOrderPdf } from '../../utils/orderPdf';
 
 interface B2BOrder {
   id: string;
@@ -969,13 +970,47 @@ const B2BOrdersTab: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedOrder(order)}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
                 >
                   <Eye className="h-4 w-4" />
                   Detallar
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await downloadOrderPdf(order as any, products as any);
+                    } catch (err) {
+                      console.error('PDF generate failed', err);
+                      alert('PDF yaratmaq alınmadı: ' + (err as Error).message);
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm"
+                  title="Qaiməni PDF olaraq yüklə (qiymət və borc göstərilmir)"
+                  data-testid={`admin-order-pdf-${order.id}`}
+                >
+                  <FileDown className="h-4 w-4" />
+                  PDF qaimə
+                </button>
+
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/warehouse/order/${order.id}`;
+                    const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
+                    const customerLabel = [order.customerName, order.customerLastname].filter(Boolean).join(' ').trim() || '';
+                    const msg = `De Valeur — Sifariş #${orderNumber}${customerLabel ? ` · ${customerLabel}` : ''}\n\nAnbardar üçün yığım siyahısı:\n${url}\n\nQeyd: bu link yalnız operativ yığım üçündür, qiymət göstərilmir.`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                    window.open(wa, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm"
+                  title="Anbardara WhatsApp ilə linki göndər"
+                  data-testid={`admin-order-warehouse-send-${order.id}`}
+                >
+                  <Send className="h-4 w-4" />
+                  Anbardara göndər
                 </button>
 
                 {!order.adminNote && editingNoteOrderId !== order.id && (
@@ -1009,6 +1044,35 @@ const B2BOrdersTab: React.FC = () => {
                   <option value="delivered">Təhvil verildi</option>
                 </select>
               </div>
+
+              {/* Anbardar yığım statusu (varsa göstər) */}
+              {(() => {
+                const checks = (order as any).warehouseChecks as Record<string, 'available' | 'unavailable'> | undefined;
+                const note = (order as any).warehouseNote as string | undefined;
+                const hasAny = (checks && Object.keys(checks).length > 0) || (note && note.trim());
+                if (!hasAny) return null;
+                const totalItems = order.items?.length || 0;
+                const av = checks ? Object.values(checks).filter((v) => v === 'available').length : 0;
+                const un = checks ? Object.values(checks).filter((v) => v === 'unavailable').length : 0;
+                return (
+                  <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3" data-testid={`admin-warehouse-status-${order.id}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Package className="h-4 w-4 text-indigo-700" />
+                      <p className="text-sm font-semibold text-indigo-900">Anbardar yığım statusu</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs text-indigo-900">
+                      <span><span className="font-semibold text-emerald-700">Var:</span> {av}</span>
+                      <span><span className="font-semibold text-rose-700">Yox:</span> {un}</span>
+                      <span><span className="font-semibold">Qalır:</span> {Math.max(0, totalItems - av - un)} / {totalItems}</span>
+                    </div>
+                    {note && note.trim() && (
+                      <p className="mt-2 text-xs text-indigo-900 whitespace-pre-wrap" data-testid={`admin-warehouse-note-${order.id}`}>
+                        <span className="font-semibold">Qeyd: </span>{note}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {order.deliveredAt && (
                 <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">

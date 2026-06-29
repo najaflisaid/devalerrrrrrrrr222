@@ -25,6 +25,8 @@ export interface Product {
   stock: number;
   /** Məhsul kodu / SKU — Excel miqrasiyasında dəqiq uyğunlaşdırma üçün istifadə olunur. */
   sku?: string;
+  /** Barkod (EAN/UPC və.s.) — müştəri və admin axtarışında, qaimədə və anbardar yığımında istifadə olunur. */
+  barcode?: string;
   visibleTo?: 'all' | 'b2b' | 'customer';
   imageScale?: number;
   imageOffsetX?: number;

@@ -584,6 +584,8 @@ const Header: React.FC = () => {
       const nameEn = p.name?.en?.toLowerCase() || '';
       const brand = (p.brand || '').toLowerCase();
       const category = (p.category || '').toLowerCase();
+      const sku = ((p as any).sku || '').toLowerCase();
+      const barcode = ((p as any).barcode || '').toLowerCase();
       // Diakritiksiz variantlar (Azərbaycan klaviaturasız istifadəçilər üçün)
       const nameAzN = normalizeAz(nameAz);
       const nameRuN = normalizeAz(nameRu);
@@ -611,6 +613,8 @@ const Header: React.FC = () => {
         brand.includes(token) || brandN.includes(tokenNorm) ||
         category.includes(token) || categoryN.includes(tokenNorm) ||
         catVariantsMatch ||
+        (sku && sku.includes(token)) ||
+        (barcode && barcode.includes(token)) ||
         genderHints
       );
     };

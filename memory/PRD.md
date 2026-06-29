@@ -1,15 +1,50 @@
 # De Valeur — PRD
 
-## Problem statement (latest request)
-Admin panelden miqrasiya bolmesi duzgun islemir: yeni mehsullar elave edende hamisi gorsenmir, miqdarlar yanlis mehsula gedir, jurnaldan geri qaytaranda evvelki say qalir. Exceldeki butun mallar tam ve duzgun miqrasiya olunsun. Mehsul sistemde varsa miqdar deyissin, yeni isə adı/qiyməti/miqdarı ilə yaransın. Yeni texnologiyalar isletmek.
+## Problem statement (latest request — 2026-01)
+Saytda məhsul əlavə et bölməsinə barkod əlavə edək; miqrasiya şablonunda da barkod sütunu olsun; məhsulları axtaranda barkodla da çıxsın (admin və müştəri tərəfində).
+B2B müştəri sifarişləri üçün məxfi olmayan QAİMƏ (PDF) — qiymət/borc/endirim göstərilmir, yalnız məhsul şəkli, ad, brend, barkod, miqdar.
+B2B sifarişdən sonra anbardara WhatsApp ilə link göndərib açıq səhifədə real-time yığım siyahısı (var/yox işarələmə + qeyd) — qiymət görünmür.
 
 ## Architecture
 - React 18 + Vite + TypeScript, Tailwind, framer-motion (12.38), Firebase Firestore, i18next
 - Excel parse: `xlsx` library
+- PDF: `jspdf` + `jspdf-autotable` (məhsul şəkilləri canvas-ə render edilir, base64 PNG kimi PDF-ə yapışdırılır)
 - Atomik yazılar: Firebase Firestore `writeBatch` (450-lik chunks)
 - Cache layer: `productService.getAll()` 60s in-memory cache (cache invalidation hooks)
+- Real-time anbardar səhifəsi: Firestore `onSnapshot`
 
-## Implemented (this iteration — Excel miqrasiya v2)
+## Implemented (this iteration — Barkod + B2B qaimə + Anbardar)
+- 2026-01: **Barkod field** məhsula əlavə olundu (`src/types/index.ts` — `barcode?: string`)
+- 2026-01: **Admin paneldə** məhsul əlavə et və redaktə et formalarında SKU-dan sonra barkod input sahəsi
+- 2026-01: **Axtarış genişləndirildi** — barkod ilə də tapır: Header axtarışı (`src/components/Header.tsx`), məhsullar səhifəsi (`src/pages/ProductsPage.tsx`), admin məhsul siyahısı (`src/components/admin/AdminPanel.tsx`)
+- 2026-01: **Excel miqrasiya şablonu** — `Barkod` ayrıca sütun kimi əlavə olundu (`src/components/admin/ProductExcelImport.tsx`); aliaslar: barcode, штрихкод, EAN, UPC, GTIN, QR; genişləndirilmiş şablon indi 9 sütundur. Excel-də barkod varsa avtomatik yenilənir / yeni məhsula yapışdırılır.
+- 2026-01: **PDF qaimə generatoru** (`src/utils/orderPdf.ts`):
+  - Loqo bazadan (`https://i.hizliresim.com/tmu65g6.png`)
+  - Sahələr: Sifariş №, tarix, müştəri, şirkət, telefon
+  - Məhsul cədvəli: #, şəkil (PNG, canvas resize → base64), ad, brend, barkod, miqdar, vahid
+  - MƏXFİ məlumatlar GÖSTƏRİLMİR: qiymət, endirim, borc, total
+  - Footer: təhvil edən/alan imza sahələri
+- 2026-01: **PDF qaimə düymələri**:
+  - Müştəri B2B sifarişlər səhifəsində (`src/pages/B2BOrdersPage.tsx`)
+  - Admin B2B sifarişlər tab-ında (`src/components/admin/B2BOrdersTab.tsx`)
+- 2026-01: **Anbardar üçün açıq link** səhifəsi (`/warehouse/order/:orderId`):
+  - Auth tələb etmir
+  - Real-time Firestore `onSnapshot` ilə sinxron
+  - Hər məhsul üçün: şəkil, ad, brend, barkod, miqdar (qiymət YOX)
+  - Hər malda iki düymə: ✓ Var (yaşıl) / ✗ Yoxdur (qırmızı) — Firestore-da `warehouseChecks` map kimi saxlanılır
+  - Ümumi qeyd sahəsi → `warehouseNote`
+  - Summary: var/yox/qalır sayğacı
+- 2026-01: **WhatsApp paylaşma düyməsi** — admin və B2B müştəri tərəfində; `https://wa.me/?text=...` URL-i ilə açılır, mesajda link var
+- 2026-01: **Anbardar status göstəricisi** — admin və müştəri sifariş kartlarında: var/yox/qalır + anbardar qeydi (real-time görünür)
+- 2026-01: `src/services/b2bOrderService.ts` — yeni funksiyalar: `updateB2BOrderWarehouseChecks`, `updateB2BOrderWarehouseNote`, `getB2BOrderByIdPublic`
+
+## Verified
+- TypeScript: `npx tsc --noEmit` → exit 0
+- Production build: `npx vite build` → uğurlu, 17.45s
+- ESLint: dəyişdirilmiş bütün fayllarda 0 issue
+- Smoke test: `/warehouse/order/test-invalid-id` → "Sifariş tapılmadı" UI düzgün render olundu
+
+## Previous iteration (Excel miqrasiya v2 — referans üçün)
 - 2026-01-XX: Excel məhsul miqrasiyası tam yenidən işləndi (`src/components/admin/ProductExcelImport.tsx`, `src/services/productMigrationService.ts`, `src/types/index.ts`)
   - **Yeni "Məhsul kodu" (SKU) sütunu** şablonda — birinci növbədə bununla tapılır.
   - **Multi-stage match**: SKU → exact(brand+name) → exact(name) → fuzzy(opsional, defolt OFF, 95%+).
