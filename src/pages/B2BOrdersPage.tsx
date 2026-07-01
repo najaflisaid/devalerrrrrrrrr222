@@ -554,7 +554,7 @@ const B2BOrdersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* PDF + Anbardara/Müştəriyə göndər düymələri */}
+                    {/* PDF + Təhvilat düymələri */}
                     <div className="border-t border-gray-200 mt-4 pt-4">
                       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                         <button
@@ -577,24 +577,6 @@ const B2BOrdersPage: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/warehouse/order/${order.id}`;
-                            const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
-                            const companyLabel = order.companyName && !String(order.companyName).includes('@')
-                              ? ` · ${order.companyName}` : '';
-                            const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nYığım siyahısı:\n${url}`;
-                            const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-                            window.open(wa, '_blank', 'noopener,noreferrer');
-                          }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
-                          title="WhatsApp ilə anbardara linki göndər"
-                          data-testid={`b2b-order-warehouse-send-${order.id}`}
-                        >
-                          <Send className="h-4 w-4" />
-                          Anbardara göndər
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
                             const url = `${window.location.origin}/customer-receive/order/${order.id}`;
                             const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
                             const companyLabel = order.companyName && !String(order.companyName).includes('@')
@@ -608,7 +590,7 @@ const B2BOrdersPage: React.FC = () => {
                           data-testid={`b2b-order-customer-send-${order.id}`}
                         >
                           <Send className="h-4 w-4" />
-                          Müştəriyə göndər
+                          Təhvilat
                         </button>
                       </div>
                     </div>
@@ -648,13 +630,19 @@ const B2BOrdersPage: React.FC = () => {
                           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-1">
                               <Package className="h-4 w-4 text-indigo-700" />
-                              <p className="text-sm font-semibold text-indigo-900">Anbardar yığım statusu</p>
+                              <p className="text-sm font-semibold text-indigo-900">
+                                {(checks && Object.keys(checks).length > 0) || pickerSig
+                                  ? 'Anbardar yığım statusu'
+                                  : 'Təhvilat statusu'}
+                              </p>
                             </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-indigo-900">
-                              <span><span className="font-semibold text-emerald-700">Əlavə olundu:</span> {av}</span>
-                              <span><span className="font-semibold text-rose-700">Mövcud deyil:</span> {un}</span>
-                              <span><span className="font-semibold">Qalır:</span> {Math.max(0, totalItems - av - un)} / {totalItems}</span>
-                            </div>
+                            {checks && Object.keys(checks).length > 0 && (
+                              <div className="flex flex-wrap gap-3 text-xs text-indigo-900">
+                                <span><span className="font-semibold text-emerald-700">Əlavə olundu:</span> {av}</span>
+                                <span><span className="font-semibold text-rose-700">Mövcud deyil:</span> {un}</span>
+                                <span><span className="font-semibold">Qalır:</span> {Math.max(0, totalItems - av - un)} / {totalItems}</span>
+                              </div>
+                            )}
 
                             {missingItems.length > 0 && (
                               <div className="mt-2 bg-rose-50 border border-rose-200 rounded p-2" data-testid={`b2b-warehouse-missing-${order.id}`}>
