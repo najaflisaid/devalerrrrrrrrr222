@@ -297,3 +297,13 @@ Bu dəyişiklikləri istifadəçinin saytında (`devaleur.az`) görmək üçün 
 
 ### Production deployment qeydi
 ⚠️ Bu dəyişikliklər real saytda görünməsi üçün **Vercel deploy** olunmalıdır. Lokal preview-də `/api/*` Vercel funksiyaları işləmir.
+
+## Update — Mobile Menu Accordion + Category Order (Jan 2026)
+- Mobile menu now opens **full-width** (100vw) instead of half-panel.
+- Categories now use **accordion pattern** with `+` / `×` toggle icons (Hermes-style).
+  - Tapping `+` expands sub-categories / brands **downward inline**; another tap collapses (`×`).
+  - Sub-categories also support in-line brand expansion.
+  - Removed the old horizontal slide-stack (View 0 / 1 / 2) — everything is inline now.
+- **Category display order (both mobile & desktop)**: `Saat → Gümüş → Dəri → …rest (admin order preserved)`.
+  - Implemented via `getCategoryPriority()` + stable sort in `Header.tsx`.
+  - Sub-categories are unchanged.

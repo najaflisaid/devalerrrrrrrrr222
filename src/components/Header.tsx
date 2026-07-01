@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, User, ShoppingBag, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift } from 'lucide-react';
+import { Search, User, ShoppingBag, Menu, X, LogOut, ChevronDown, Bell, Heart, Gift, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -467,6 +467,42 @@ const Header: React.FC = () => {
     return translated === translationKey ? category : translated;
   };
 
+  // Kateqoriya sıralaması — istifadəçi tələbi:
+  // 1. Saat  2. Gümüş  3. Dəri  … sonra qalanları admin paneldəki sıra ilə saxla.
+  const getCategoryPriority = (names: (string | undefined)[]): number => {
+    const groups: string[][] = [
+      ['saat', 'watch', 'watches', 'часы', 'час'], // 0 → Saat
+      ['gümüş', 'gumus', 'silver', 'серебро', 'серебр'], // 1 → Gümüş
+      ['dəri', 'deri', 'leather', 'кожа', 'кож'], // 2 → Dəri
+    ];
+    for (const name of names) {
+      if (!name) continue;
+      const n = name.toLowerCase().trim();
+      for (let i = 0; i < groups.length; i++) {
+        if (groups[i].some((k) => n === k || n.startsWith(k) || n.includes(k))) {
+          return i;
+        }
+      }
+    }
+    return 999;
+  };
+  const sortCategoriesByPriority = <T extends { nameAz?: string; nameRu?: string; nameEn?: string; name?: string }>(items: T[]): T[] => {
+    return [...items].sort((a, b) => {
+      const pa = getCategoryPriority([a.nameAz, a.name, a.nameEn, a.nameRu]);
+      const pb = getCategoryPriority([b.nameAz, b.name, b.nameEn, b.nameRu]);
+      if (pa !== pb) return pa - pb;
+      return 0; // Priority-siz kateqoriyalar üçün admin sırasını qoru (stable sort)
+    });
+  };
+  const sortStringCategoriesByPriority = (arr: string[]): string[] => {
+    return [...arr].sort((a, b) => {
+      const pa = getCategoryPriority([a]);
+      const pb = getCategoryPriority([b]);
+      if (pa !== pb) return pa - pb;
+      return 0;
+    });
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -781,8 +817,8 @@ const Header: React.FC = () => {
                         </button>
                       {(() => {
                         const categoryItems = categoryTree.length > 0
-                          ? categoryTree.map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name, node: n }))
-                          : categories.map(c => ({ key: c, displayName: getCategoryTranslation(c), lookupName: c, node: null as CategoryNode | null }));
+                          ? sortCategoriesByPriority(categoryTree).map(n => ({ key: n.id, displayName: n.name, lookupName: n.nameAz || n.name, node: n }))
+                          : sortStringCategoriesByPriority(categories).map(c => ({ key: c, displayName: getCategoryTranslation(c), lookupName: c, node: null as CategoryNode | null }));
 
                         const hoveredNode = hoveredCategory
                           ? categoryTree.find(n => n.nameAz === hoveredCategory || n.nameRu === hoveredCategory || n.nameEn === hoveredCategory || n.name === hoveredCategory)
@@ -1252,9 +1288,7 @@ const Header: React.FC = () => {
             ></div>
 
             <div
-              className={`dv-light-reset fixed top-0 left-0 h-full z-50 bg-white dv-menu-panel transition-[width,max-width] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                mobileCategoryOpen ? 'w-2/3 max-w-[480px]' : 'w-1/3 max-w-[260px]'
-              } ${isMobileMenuClosing ? 'is-closing' : ''}`}
+              className={`dv-light-reset fixed top-0 left-0 h-full w-full z-50 bg-white dv-menu-panel ${isMobileMenuClosing ? 'is-closing' : ''}`}
               style={{ boxShadow: '12px 0 48px -12px rgba(0,0,0,0.22)' }}
             >
               {/* Top header — luxurious */}
@@ -1270,16 +1304,18 @@ const Header: React.FC = () => {
                 <div className="w-7" aria-hidden="true" />
               </div>
 
-              <div className="flex flex-col h-[calc(100%-89px)] overflow-hidden">
-                <div className="flex-1 relative overflow-hidden min-h-0" data-testid="mobile-menu-stack">
-                  {/* Mobil menyu — kompdakı kimi addım-addım açılan paneller.
-                      View 0: kateqoriyalar | View 1: alt-kateqoriya VƏ YA brendlər (kategoriyada alt yoxdursa)
-                      | View 2: alt-kategoriya seçilibsə onun brendləri. */}
+              <div className="flex flex-col h-[calc(100%-89px)] overflow-y-auto">
+                <div data-testid="mobile-menu-stack">
+                  {/* Mobil menyu — akkordeon üslubu: hər kateqoriyanın yanında +/×.
+                      + basanda alt-kateqoriya / brendlər AŞAĞI genişlənir. */}
                   {(() => {
-                    const categoryItems = categoryTree.length > 0
+                    const rawCategoryItems = categoryTree.length > 0
                       ? categoryTree.map((node) => ({
                           key: node.id,
                           name: node.name,
+                          nameAz: node.nameAz,
+                          nameRu: node.nameRu,
+                          nameEn: node.nameEn,
                           displayName: node.name,
                           lookupName: node.nameAz || node.name,
                           lookupNames: [node.nameAz, node.nameRu, node.nameEn].filter(Boolean),
@@ -1288,217 +1324,163 @@ const Header: React.FC = () => {
                       : categories.map((c) => ({
                           key: c,
                           name: c,
+                          nameAz: c,
+                          nameRu: undefined,
+                          nameEn: undefined,
                           displayName: getCategoryTranslation(c),
                           lookupName: c,
                           lookupNames: [c],
                           children: [] as CategoryNode[],
                         }));
-
-                    const activeCat = mobileCategoryOpen
-                      ? categoryItems.find((c) => c.key === mobileCategoryOpen)
-                      : null;
-                    const subcats = activeCat?.children || [];
-                    const hasSubcats = subcats.length > 0;
-
-                    // Aktiv kategoriya altındakı brendlər (alt-kateqoriya yoxdursa istifadə olunur)
-                    const catBrands = activeCat
-                      ? Array.from(new Set(activeCat.lookupNames.flatMap((n: string) => productsByCategory[n] || [])))
-                          .sort((a: string, b: string) => a.localeCompare(b, 'az'))
-                      : [];
-
-                    const activeSub = mobileSubCategoryOpen
-                      ? subcats.find((s: CategoryNode) => s.id === mobileSubCategoryOpen)
-                      : null;
-                    const subLookups = activeSub
-                      ? [activeSub.nameAz, activeSub.nameRu, activeSub.nameEn].filter(Boolean)
-                      : [];
-                    const subBrands = activeSub
-                      ? Array.from(new Set(subLookups.flatMap((n: string) => productsByCategory[n] || [])))
-                          .sort((a: string, b: string) => a.localeCompare(b, 'az'))
-                      : [];
-
-                    // Cari "view" səviyyəsi: 0 = kateqoriyalar, 1 = alt VƏ YA brend, 2 = brendlər (alt seçilibsə)
-                    const level = !activeCat ? 0 : !activeSub ? 1 : 2;
+                    const categoryItems = sortCategoriesByPriority(rawCategoryItems);
 
                     return (
-                      <div
-                        className="absolute inset-0 flex transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
-                        style={{ width: '300%', transform: `translateX(-${level * (100 / 3)}%)` }}
-                      >
-                        {/* === VIEW 0 — Kateqoriyalar === */}
-                        <div className="w-1/3 h-full overflow-y-auto px-6 py-4">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-black/45 font-medium pb-3 mb-2 border-b border-black/[0.07]">
-                            {t('header.categories', { defaultValue: 'Kateqoriyalar' })}
-                          </p>
-                          <ul className="space-y-0.5">
-                            {categoryItems.map((cat) => {
-                              const hasChildren = (cat.children?.length || 0) > 0;
-                              return (
-                                <li key={cat.key}>
+                      <ul className="px-6 pt-2 pb-4">
+                        {categoryItems.map((cat) => {
+                          const isOpen = mobileCategoryOpen === cat.key;
+                          const hasChildren = (cat.children?.length || 0) > 0;
+                          const catBrands = Array.from(new Set(cat.lookupNames.flatMap((n: string) => productsByCategory[n] || [])))
+                            .sort((a: string, b: string) => a.localeCompare(b, 'az'));
+                          const hasContent = hasChildren || catBrands.length > 0;
+
+                          return (
+                            <li key={cat.key} className="border-b border-black/[0.08]">
+                              <button
+                                onClick={() => {
+                                  if (!hasContent) {
+                                    navigate(`/products?category=${encodeURIComponent(cat.lookupName)}`);
+                                    closeMobileMenu();
+                                    window.scrollTo({ top: 0, behavior: 'auto' });
+                                    return;
+                                  }
+                                  setMobileCategoryOpen(isOpen ? null : cat.key);
+                                  setMobileSubCategoryOpen(null);
+                                }}
+                                className="w-full flex items-center justify-between gap-3 py-5 text-left text-[15px] uppercase tracking-[0.08em] font-medium text-black hover:opacity-70 transition-opacity"
+                                data-testid={`mobile-category-toggle-${cat.name}`}
+                                aria-expanded={isOpen}
+                              >
+                                <span>{cat.displayName}</span>
+                                {hasContent && (
+                                  isOpen
+                                    ? <X className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                                    : <Plus className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                                )}
+                              </button>
+
+                              {isOpen && hasContent && (
+                                <div className="pb-4 pl-2">
+                                  {/* Hamısına bax */}
                                   <button
                                     onClick={() => {
-                                      setMobileCategoryOpen(cat.key);
-                                      setMobileSubCategoryOpen(null);
+                                      navigate(`/products?category=${encodeURIComponent(cat.lookupName)}`);
+                                      closeMobileMenu();
+                                      window.scrollTo({ top: 0, behavior: 'auto' });
                                     }}
-                                    className="group flex w-full items-center justify-between gap-3 text-left text-[15px] py-3 text-gray-800 hover:text-black transition-colors"
-                                    data-testid={`mobile-category-toggle-${cat.name}`}
+                                    className="block w-full text-left text-[12px] uppercase tracking-[0.14em] text-black/60 hover:text-black py-2 mb-1"
+                                    data-testid={`mobile-category-all-${cat.name}`}
                                   >
-                                    <span>{cat.displayName}</span>
-                                    <span className="text-base leading-none text-gray-400 group-hover:text-black">›</span>
+                                    {t('header.viewAll', { defaultValue: 'Hamısına bax' })} →
                                   </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
 
-                        {/* === VIEW 1 — Alt-kateqoriyalar VƏ YA brendlər === */}
-                        <div className="w-1/3 h-full overflow-y-auto px-6 py-4">
-                          {/* Geri qayıt başlığı */}
-                          <button
-                            onClick={() => {
-                              setMobileCategoryOpen(null);
-                              setMobileSubCategoryOpen(null);
-                            }}
-                            className="flex items-center gap-2 text-[12px] uppercase tracking-[0.18em] text-black/65 hover:text-black mb-3 transition-colors"
-                            data-testid="mobile-menu-back-1"
-                          >
-                            <span className="text-base leading-none">‹</span>
-                            <span>{t('header.categories', { defaultValue: 'Kateqoriyalar' })}</span>
-                          </button>
-                          {activeCat && (
-                            <>
-                              <p className="text-[10px] uppercase tracking-[0.22em] text-black/45 font-medium pb-3 mb-2 border-b border-black/[0.07]">
-                                {hasSubcats
-                                  ? t('header.subcategories', { defaultValue: 'Alt Kateqoriyalar' })
-                                  : t('header.brands', { defaultValue: 'Brendlər' })}
-                              </p>
-                              {/* "Hamısına bax" link — kateqoriyanın bütün məhsullarına keçid */}
-                              <button
-                                onClick={() => {
-                                  navigate(`/products?category=${encodeURIComponent(activeCat.lookupName)}`);
-                                  closeMobileMenu();
-                                  window.scrollTo({ top: 0, behavior: 'auto' });
-                                }}
-                                className="block w-full text-left text-[13px] uppercase tracking-wider text-black/70 hover:text-black py-2 mb-2 border-b border-black/[0.05]"
-                                data-testid={`mobile-category-all-${activeCat.name}`}
-                              >
-                                {activeCat.displayName} — {t('header.viewAll', { defaultValue: 'Hamısına bax' })} →
-                              </button>
-                              {hasSubcats ? (
-                                <ul className="space-y-0.5">
-                                  {subcats.map((sub: CategoryNode) => {
-                                    const sLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
-                                    const sBrands = Array.from(new Set(sLookups.flatMap((n: string) => productsByCategory[n] || [])));
-                                    const sHasBrands = sBrands.length > 0;
-                                    return (
-                                      <li key={sub.id}>
-                                        <button
-                                          onClick={() => {
-                                            if (sHasBrands) {
-                                              setMobileSubCategoryOpen(sub.id);
-                                            } else {
-                                              // Brend yoxdursa birbaşa alt-kateqoriyaya keçid
-                                              navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
+                                  {hasChildren ? (
+                                    <ul className="space-y-0">
+                                      {cat.children.map((sub: CategoryNode) => {
+                                        const subOpen = mobileSubCategoryOpen === sub.id;
+                                        const sLookups = [sub.nameAz, sub.nameRu, sub.nameEn].filter(Boolean);
+                                        const sBrands = Array.from(new Set(sLookups.flatMap((n: string) => productsByCategory[n] || [])))
+                                          .sort((a: string, b: string) => a.localeCompare(b, 'az'));
+                                        const sHasBrands = sBrands.length > 0;
+
+                                        return (
+                                          <li key={sub.id} className="border-t border-black/[0.05]">
+                                            <button
+                                              onClick={() => {
+                                                if (!sHasBrands) {
+                                                  navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
+                                                  closeMobileMenu();
+                                                  window.scrollTo({ top: 0, behavior: 'auto' });
+                                                  return;
+                                                }
+                                                setMobileSubCategoryOpen(subOpen ? null : sub.id);
+                                              }}
+                                              className="w-full flex items-center justify-between gap-3 py-3.5 text-left text-[14px] text-gray-800 hover:text-black transition-colors"
+                                              data-testid={`mobile-subcategory-toggle-${sub.name}`}
+                                              aria-expanded={subOpen}
+                                            >
+                                              <span>{sub.name}</span>
+                                              {sHasBrands && (
+                                                subOpen
+                                                  ? <X className="h-4 w-4 shrink-0 text-black/70" strokeWidth={1.5} />
+                                                  : <Plus className="h-4 w-4 shrink-0 text-black/70" strokeWidth={1.5} />
+                                              )}
+                                            </button>
+                                            {subOpen && sHasBrands && (
+                                              <div className="pb-3 pl-3">
+                                                <button
+                                                  onClick={() => {
+                                                    navigate(`/products?category=${encodeURIComponent(sub.nameAz || sub.name)}`);
+                                                    closeMobileMenu();
+                                                    window.scrollTo({ top: 0, behavior: 'auto' });
+                                                  }}
+                                                  className="block w-full text-left text-[11px] uppercase tracking-[0.14em] text-black/55 hover:text-black py-1.5 mb-1"
+                                                  data-testid={`mobile-sub-all-${sub.name}`}
+                                                >
+                                                  {t('header.viewAll', { defaultValue: 'Hamısına bax' })} →
+                                                </button>
+                                                <ul>
+                                                  {sBrands.map((b: string) => (
+                                                    <li key={`${sub.id}-${b}`}>
+                                                      <button
+                                                        onClick={() => {
+                                                          navigate(`/products?brand=${encodeURIComponent(b)}`);
+                                                          closeMobileMenu();
+                                                          window.scrollTo({ top: 0, behavior: 'auto' });
+                                                        }}
+                                                        className="block w-full text-left text-[13px] py-2 text-gray-700 hover:text-black transition-colors"
+                                                        data-testid={`mobile-sub-brand-${b}`}
+                                                      >
+                                                        {b}
+                                                      </button>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  ) : (
+                                    <ul>
+                                      {catBrands.map((b: string) => (
+                                        <li key={`${cat.key}-${b}`}>
+                                          <button
+                                            onClick={() => {
+                                              navigate(`/products?brand=${encodeURIComponent(b)}`);
                                               closeMobileMenu();
                                               window.scrollTo({ top: 0, behavior: 'auto' });
-                                            }
-                                          }}
-                                          className="group flex w-full items-center justify-between gap-3 text-left text-[15px] py-3 text-gray-800 hover:text-black transition-colors"
-                                          data-testid={`mobile-subcategory-toggle-${sub.name}`}
-                                        >
-                                          <span>{sub.name}</span>
-                                          {sHasBrands && (
-                                            <span className="text-base leading-none text-gray-400 group-hover:text-black">›</span>
-                                          )}
-                                        </button>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              ) : (
-                                catBrands.length > 0 ? (
-                                  <ul className="space-y-0.5">
-                                    {catBrands.map((b: string) => (
-                                      <li key={`${activeCat.key}-${b}`}>
-                                        <button
-                                          onClick={() => {
-                                            navigate(`/products?brand=${encodeURIComponent(b)}`);
-                                            closeMobileMenu();
-                                            window.scrollTo({ top: 0, behavior: 'auto' });
-                                          }}
-                                          className="block w-full text-left text-[14px] py-2.5 text-gray-700 hover:text-black transition-colors"
-                                          data-testid={`mobile-brand-${b}`}
-                                        >
-                                          {b}
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-xs text-gray-400 italic mt-2">Bu kateqoriyada brend yoxdur.</p>
-                                )
+                                            }}
+                                            className="block w-full text-left text-[14px] py-2.5 text-gray-700 hover:text-black transition-colors"
+                                            data-testid={`mobile-brand-${b}`}
+                                          >
+                                            {b}
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
                               )}
-                            </>
-                          )}
-                        </div>
-
-                        {/* === VIEW 2 — Seçilmiş alt-kategoriyanın brendləri === */}
-                        <div className="w-1/3 h-full overflow-y-auto px-6 py-4">
-                          <button
-                            onClick={() => setMobileSubCategoryOpen(null)}
-                            className="flex items-center gap-2 text-[12px] uppercase tracking-[0.18em] text-black/65 hover:text-black mb-3 transition-colors"
-                            data-testid="mobile-menu-back-2"
-                          >
-                            <span className="text-base leading-none">‹</span>
-                            <span>{activeCat?.displayName || t('header.categories', { defaultValue: 'Geri' })}</span>
-                          </button>
-                          {activeSub && (
-                            <>
-                              <p className="text-[10px] uppercase tracking-[0.22em] text-black/45 font-medium pb-3 mb-2 border-b border-black/[0.07]">
-                                {t('header.brands', { defaultValue: 'Brendlər' })}
-                              </p>
-                              <button
-                                onClick={() => {
-                                  navigate(`/products?category=${encodeURIComponent(activeSub.nameAz || activeSub.name)}`);
-                                  closeMobileMenu();
-                                  window.scrollTo({ top: 0, behavior: 'auto' });
-                                }}
-                                className="block w-full text-left text-[13px] uppercase tracking-wider text-black/70 hover:text-black py-2 mb-2 border-b border-black/[0.05]"
-                                data-testid={`mobile-sub-all-${activeSub.name}`}
-                              >
-                                {activeSub.name} — {t('header.viewAll', { defaultValue: 'Hamısına bax' })} →
-                              </button>
-                              {subBrands.length > 0 ? (
-                                <ul className="space-y-0.5">
-                                  {subBrands.map((b: string) => (
-                                    <li key={`${activeSub.id}-${b}`}>
-                                      <button
-                                        onClick={() => {
-                                          navigate(`/products?brand=${encodeURIComponent(b)}`);
-                                          closeMobileMenu();
-                                          window.scrollTo({ top: 0, behavior: 'auto' });
-                                        }}
-                                        className="block w-full text-left text-[14px] py-2.5 text-gray-700 hover:text-black transition-colors"
-                                        data-testid={`mobile-sub-brand-${b}`}
-                                      >
-                                        {b}
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic mt-2">Brend yoxdur.</p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     );
                   })()}
                 </div>
-                {/* Alt menyu — Hədiyyə Kartı, Dillər, Giriş (kateqoriya stack-indən ayrı, öz scroll-u ilə) */}
-                <nav className="flex-shrink-0 max-h-[42%] overflow-y-auto border-t border-black/[0.06]">
+                {/* Alt menyu — Hədiyyə Kartı, Dillər, Giriş */}
+                <nav className="flex-shrink-0 border-t border-black/[0.06]">
                   <div className="px-4 pt-4"></div>
 
                   <div className="dv-menu-item px-4 py-3 border-b border-black/[0.06]" style={{ ['--dv-i' as any]: 1 }}>
