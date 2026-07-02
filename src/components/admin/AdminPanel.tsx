@@ -319,7 +319,7 @@ const AdminPanel: React.FC = () => {
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
   const [productSearchQuery, setProductSearchQuery] = useState('');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('all');
   const [adminBrandFilter, setAdminBrandFilter] = useState('all');
   const [adminStockFilter, setAdminStockFilter] = useState('all');
@@ -1847,7 +1847,8 @@ const AdminPanel: React.FC = () => {
                         (p.id || '').toLowerCase().includes(query)
                       );
                     })();
-                    const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
+                    const priceNum = typeof p.price === 'number' && !isNaN(p.price) ? p.price : 0;
+                    const matchesPrice = priceNum >= priceRange[0] && priceNum <= priceRange[1];
                     const matchesCategory = adminCategoryFilter === 'all' || p.category === adminCategoryFilter;
                     const matchesBrand = adminBrandFilter === 'all' || p.brand === adminBrandFilter;
                     const matchesStock = adminStockFilter === 'all' || 
@@ -1930,8 +1931,8 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="1000"
-                      step="10"
+                      max="100000"
+                      step="50"
                       value={priceRange[0]}
                       onChange={(e) => setPriceRange([parseFloat(e.target.value), priceRange[1]])}
                       className="w-full"
@@ -1941,7 +1942,7 @@ const AdminPanel: React.FC = () => {
                     type="number"
                     min="0"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], Math.max(0, parseFloat(e.target.value) || 1000)])}
+                    onChange={(e) => setPriceRange([priceRange[0], Math.max(0, parseFloat(e.target.value) || 100000)])}
                     className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
                     placeholder="Max"
                   />
@@ -1949,8 +1950,8 @@ const AdminPanel: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="1000"
-                      step="10"
+                      max="100000"
+                      step="50"
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], parseFloat(e.target.value)])}
                       className="w-full"
@@ -2535,7 +2536,8 @@ const AdminPanel: React.FC = () => {
                       );
                     })();
 
-                    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+                    const priceNum = typeof product.price === 'number' && !isNaN(product.price) ? product.price : 0;
+                    const matchesPrice = priceNum >= priceRange[0] && priceNum <= priceRange[1];
                     const matchesCategory = adminCategoryFilter === 'all' || product.category === adminCategoryFilter;
                     const matchesBrand = adminBrandFilter === 'all' || product.brand === adminBrandFilter;
                     const matchesStock = adminStockFilter === 'all' || 
