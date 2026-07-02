@@ -1863,3 +1863,63 @@ button:active {
   z-index: 50;
   transition-delay: 0s;
 }
+
+
+/* === Axtarış chip düymələri üçün "güzgü / işıq" effekti === */
+/* Diaqonal bir işıq zolağı chip üzərindən keçir — nazik amma diqqətçəkən. */
+.dv-shine-chip {
+  isolation: isolate;
+}
+.dv-shine-chip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -140%;
+  width: 60%;
+  height: 100%;
+  z-index: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 70%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  transition: left 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dv-shine-chip:hover::before,
+.dv-shine-chip:focus-visible::before {
+  left: 140%;
+}
+/* Ağ (border-li) chip üçün daha zərif işıq */
+.dv-shine-chip.bg-white::before {
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(0, 0, 0, 0.08) 50%,
+    transparent 70%,
+    transparent 100%
+  );
+}
+.dv-shine-chip.bg-white:hover::before {
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 70%,
+    transparent 100%
+  );
+}
+/* Fokus üçün outline (klaviatura ilə naviqasiya) */
+.dv-shine-chip:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.35);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-shine-chip::before { display: none; }
+}

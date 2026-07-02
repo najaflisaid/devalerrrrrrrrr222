@@ -705,6 +705,23 @@ const Header: React.FC = () => {
 
     // Brend / kateqoriya tam uyğunluğunda olan məhsullar üst-də göstərilsin.
     // Sonra ad uyğunluqları. Müsadirə üçün stok və bestseller balansı.
+    // Brend və ya kateqoriya adına DƏQIQ uyğunluq varsa — bütün məhsulları göstər.
+    // Yoxsa 60 ilə məhdudlaşdır (ümumi axtarış üçün UI performansı).
+    const qCat = (categoryLangMap && Object.keys(categoryLangMap)) || [];
+    const hasBrandExact = matches.some((p) => (p.brand || '').toLowerCase() === q);
+    const hasCategoryExact = matches.some((p) => {
+      const c = (p.category || '').toLowerCase();
+      if (c === q) return true;
+      const variants = categoryLangMap[c] || [];
+      return variants.some((v) => v.toLowerCase() === q);
+    });
+    // "Partial" — sorğu brend/kateqoriya adının bir hissəsidir (min 3 hərf, ambiquity yoxdur)
+    const hasBrandPartial = q.length >= 3 && matches.some((p) => (p.brand || '').toLowerCase().startsWith(q));
+    const hasCategoryPartial = q.length >= 3 && matches.some((p) => (p.category || '').toLowerCase().startsWith(q));
+    void qCat;
+    const showAll = hasBrandExact || hasCategoryExact || hasBrandPartial || hasCategoryPartial;
+    const LIMIT = showAll ? 500 : 60; // Brend/kateqoriya seçildikdə praktiki olaraq bütün nəticələr
+
     const scored = matches
       .map((p) => {
         const brand = (p.brand || '').toLowerCase();
@@ -721,7 +738,7 @@ const Header: React.FC = () => {
       })
       .sort((a, b) => b.score - a.score)
       .map((x) => x.p)
-      .slice(0, 60);
+      .slice(0, LIMIT);
 
     setSearchResults(scored);
     setHighlightIndex(scored.length > 0 ? 0 : -1);
@@ -1772,7 +1789,9 @@ const Header: React.FC = () => {
                 n.children.forEach(walk);
               };
               categoryTree.forEach(walk);
-              const trendingList = fromAdmin.length > 0 ? fromAdmin : categories;
+              const rawList = fromAdmin.length > 0 ? fromAdmin : categories;
+              // İstifadəçi tələbi: Saat → Gümüş → Dəri → qalanları
+              const trendingList = sortStringCategoriesByPriority(rawList);
               if (trendingList.length === 0) return null;
               return (
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2.5 max-w-4xl mx-auto" data-testid="header-search-trending">
@@ -1812,7 +1831,7 @@ const Header: React.FC = () => {
               }
 
               // Uyğun kateqoriyalar — söz və ya normal (diakritiksiz) uyğunluq. Digər dillərin adları da yoxlanır.
-              const matchedCategories = allCategoryNames.filter(({ name }) => {
+              const matchedCategoriesRaw = allCategoryNames.filter(({ name }) => {
                 const lc = name.toLowerCase();
                 const nc = normalizeAz(lc);
                 if (lc.includes(qLower) || nc.includes(qNorm)) return true;
@@ -1824,7 +1843,9 @@ const Header: React.FC = () => {
                   const vn = normalizeAz(vl);
                   return vl.includes(qLower) || vn.includes(qNorm) || fuzzyIncludes(vn, qNorm);
                 });
-              }).slice(0, 8);
+              });
+              // Saat → Gümüş → Dəri prioriteti
+              const matchedCategories = sortCategoriesByPriority(matchedCategoriesRaw).slice(0, 8);
 
               // Uyğun brendlər — məhsullardan çıxarılır (unikal, sıralanmış)
               const brandSet = new Set<string>();
@@ -1846,7 +1867,7 @@ const Header: React.FC = () => {
                       <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
                         {t('header.categories', { defaultValue: 'Kateqoriyalar' })}
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2.5">
                         {matchedCategories.map((c) => (
                           <button
                             key={`cat-${c.name}`}
@@ -1856,11 +1877,11 @@ const Header: React.FC = () => {
                               closeSearchModal();
                               window.scrollTo({ top: 0, behavior: 'auto' });
                             }}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-black text-white text-[12.5px] rounded-full hover:bg-black/85 transition-colors"
+                            className="dv-shine-chip group relative overflow-hidden inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-[12.5px] font-medium rounded-full shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
                             data-testid={`header-search-suggest-category-${c.name}`}
                           >
-                            <span>{c.name}</span>
-                            <span className="opacity-60">→</span>
+                            <span className="relative z-10">{c.name}</span>
+                            <span className="relative z-10 inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/15 text-[10px] transition-transform duration-300 group-hover:translate-x-0.5">→</span>
                           </button>
                         ))}
                       </div>
@@ -1871,7 +1892,7 @@ const Header: React.FC = () => {
                       <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
                         {t('header.brands', { defaultValue: 'Brendlər' })}
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2.5">
                         {matchedBrands.map((b) => (
                           <button
                             key={`br-${b}`}
@@ -1881,11 +1902,11 @@ const Header: React.FC = () => {
                               closeSearchModal();
                               window.scrollTo({ top: 0, behavior: 'auto' });
                             }}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-black/25 text-black text-[12.5px] rounded-full hover:bg-black hover:text-white transition-colors"
+                            className="dv-shine-chip group relative overflow-hidden inline-flex items-center gap-2 px-4 py-2 bg-white border border-black/25 text-black text-[12.5px] font-medium rounded-full shadow-sm hover:bg-black hover:text-white hover:border-black hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
                             data-testid={`header-search-suggest-brand-${b}`}
                           >
-                            <span>{b}</span>
-                            <span className="opacity-60">→</span>
+                            <span className="relative z-10">{b}</span>
+                            <span className="relative z-10 inline-flex items-center justify-center w-4 h-4 rounded-full bg-black/8 group-hover:bg-white/20 text-[10px] transition-transform duration-300 group-hover:translate-x-0.5">→</span>
                           </button>
                         ))}
                       </div>
