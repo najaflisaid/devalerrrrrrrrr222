@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot, AlertTriangle } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot, AlertTriangle, Upload } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -2568,15 +2568,33 @@ const AdminPanel: React.FC = () => {
                   );
                 }
 
-                return filteredProducts.map((product) => (
+                return filteredProducts.map((product) => {
+                  const firstImage = Array.isArray(product.images) && product.images.length > 0
+                    ? product.images.find((u) => u && String(u).trim())
+                    : null;
+                  const hasImage = !!firstImage;
+                  return (
                   <div key={product.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all border border-gray-200">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name.az}
-                      className="w-16 h-16 object-cover rounded-lg dv-img-zoom"
-                      title="Şəkli böyütmək üçün üzərinə gəlin"
-                      data-testid={`admin-product-thumb-${product.id}`}
-                    />
+                    {hasImage ? (
+                      <img
+                        src={firstImage!}
+                        alt={product.name?.az || ''}
+                        className="w-16 h-16 object-cover rounded-lg dv-img-zoom"
+                        title="Şəkli böyütmək üçün üzərinə gəlin"
+                        data-testid={`admin-product-thumb-${product.id}`}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => handleEditProductClick(product)}
+                        className="w-16 h-16 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 hover:bg-amber-100 flex flex-col items-center justify-center gap-0.5 flex-shrink-0 transition-colors group"
+                        title="Şəkli yoxdur — klikləyib şəkil əlavə edin"
+                        data-testid={`admin-product-no-image-${product.id}`}
+                      >
+                        <Upload className="h-4 w-4 text-amber-600 group-hover:text-amber-700" />
+                        <span className="text-[8px] font-semibold text-amber-700 leading-none">ŞƏKİL</span>
+                        <span className="text-[8px] font-semibold text-amber-700 leading-none">əlavə et</span>
+                      </button>
+                    )}
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">
                         {product.name.az}
@@ -2674,7 +2692,8 @@ const AdminPanel: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ));
+                  );
+                });
               })()}
             </div>
           </div>
