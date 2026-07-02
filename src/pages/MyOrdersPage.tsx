@@ -553,7 +553,7 @@ const MyOrdersPage: React.FC = () => {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <p className="text-base font-semibold text-gray-900">
-                                {order.orderNumber ?? order.id?.slice(0, 6)}
+                                Sifariş № {order.orderNumber ?? order.id?.slice(0, 6)}
                               </p>
                               <span className="text-xs text-gray-400">·</span>
                               <p className="text-xs text-gray-500 truncate">

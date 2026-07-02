@@ -668,7 +668,7 @@ const B2BOrdersTab: React.FC = () => {
                     {getStatusText(order.status)}
                   </span>
                   <p className="text-xs font-semibold text-gray-700 mt-2">
-                    Sifariş {(order as any).orderNumber ?? order.id?.slice(0, 8)}
+                    Sifariş № {(order as any).orderNumber ?? order.id?.slice(0, 8)}
                   </p>
                   <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                 </div>

@@ -244,7 +244,7 @@ const B2BOrdersPage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-6xl">
         <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">{t('b2b.myOrders')}</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
           {/* Sol panel — Mənim məlumatlarım */}
           <aside className="lg:sticky lg:top-6 lg:self-start" data-testid="b2b-profile-sidebar">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -289,7 +289,12 @@ const B2BOrdersPage: React.FC = () => {
                     <Mail className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Email</p>
-                      <a href={`mailto:${profile.email}`} className="text-gray-900 break-all hover:underline">
+                      <a
+                        href={`mailto:${profile.email}`}
+                        className="block text-gray-900 text-[13px] leading-snug hover:underline"
+                        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+                        title={profile.email}
+                      >
                         {profile.email}
                       </a>
                     </div>
@@ -343,7 +348,7 @@ const B2BOrdersPage: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <p className="font-semibold text-gray-900 text-sm truncate">
-                            {(order as any).orderNumber ?? order.id.slice(0, 8)}
+                            Sifariş № {(order as any).orderNumber ?? order.id.slice(0, 8)}
                           </p>
                           <p className="text-xs text-gray-500 flex-shrink-0">{dateShort}</p>
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusInfo.color}`}>
@@ -553,8 +558,16 @@ const B2BOrdersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Təhvilat düyməsi — yalnız müştəri hələ imzalamayıbsa göstər */}
-                    {!((order as any).customerReceiveSignature) && (
+                    {/* Təhvilat düyməsi — yalnız təhvil hələ tamamlanmayıbsa göstər.
+                        Aşağıdakılardan biri varsa təhvil tamamlanmış hesab olunur:
+                        - customerReceiveSignature (təhvil alan işçinin imzası)
+                        - signature (müştərinin öz imzası)
+                        - receiverSignature (kuryer tərəfindən alınan imza)
+                        - status === 'delivered' */}
+                    {!((order as any).customerReceiveSignature)
+                      && !order.signature
+                      && !(order as any).receiverSignature
+                      && order.status !== 'delivered' && (
                       <div className="border-t border-gray-200 mt-4 pt-4">
                         <button
                           onClick={(e) => {
