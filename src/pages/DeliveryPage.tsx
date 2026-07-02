@@ -400,7 +400,7 @@ const DeliveryPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-xs">
               <span className="text-gray-500">Sifariş №:</span>
               <span className="font-mono text-gray-900 text-right">
-                #{selectedOrder.orderNumber || '—'}
+                {selectedOrder.orderNumber || '—'}
               </span>
               <span className="text-gray-500">Məhsul sayı:</span>
               <span className="font-semibold text-gray-900 text-right">{totalItems}</span>
@@ -451,7 +451,7 @@ const DeliveryPage: React.FC = () => {
                 >
                   {allOrdersForCustomer.map((o) => (
                     <option key={o.id} value={o.id}>
-                      #{o.orderNumber || o.id.slice(0, 6)}
+                      {o.orderNumber || o.id.slice(0, 6)}
                       {section !== 'b2b' && ` — ${Number(o.totalAmount || 0).toFixed(2)} AZN`}
                     </option>
                   ))}
@@ -726,7 +726,7 @@ const DeliveryPage: React.FC = () => {
                     <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">
-                        #{o.orderNumber || o.id.slice(0, 6)} · {title}
+                        {o.orderNumber || o.id.slice(0, 6)} · {title}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {o.receiverName} {o.receiverSurname}

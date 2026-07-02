@@ -584,10 +584,10 @@ const ProductsPage: React.FC = () => {
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:hidden mb-6 space-y-2">
-          {/* Mobile 4 quick-filter chips: Kateqoriya / Brend / Cins / Qiymət — yan-yana */}
-          <div className="grid grid-cols-4 gap-1.5">
+          {/* Mobile 4 quick-filter chips: (B2B üçün Kateqoriya gizlədilir) */}
+          <div className={`grid ${isB2BUser ? 'grid-cols-3' : 'grid-cols-4'} gap-1.5`}>
             {([
-              { key: 'category' as const, label: t('product.category', { defaultValue: 'Kateqoriya' }), isActive: selectedCategory !== 'all' },
+              ...(isB2BUser ? [] : [{ key: 'category' as const, label: t('product.category', { defaultValue: 'Kateqoriya' }), isActive: selectedCategory !== 'all' }]),
               { key: 'brand' as const, label: t('product.brand', { defaultValue: 'Brend' }), isActive: selectedBrand !== 'all' },
               { key: 'gender' as const, label: t('category.filterByGender', { defaultValue: 'Cins' }), isActive: selectedGender !== 'all' },
               { key: 'price' as const, label: t('category.priceShort', { defaultValue: 'Qiymət' }), isActive: priceInitialized && (currentMinPrice !== minPrice || currentMaxPrice !== maxPrice) },
@@ -826,24 +826,26 @@ const ProductsPage: React.FC = () => {
                 </FilterSection>
               )}
 
-              <FilterSection title={t('product.category')} testId="filter-section-category">
-                <div className="space-y-2">
-                  {categories.filter(c => c !== 'all').map((category) => (
-                    <label key={category} className="flex items-center cursor-pointer">
-                      <input
-                        type="radio"
-                        name="category"
-                        value={category}
-                        checked={selectedCategory === category}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                        className="mr-2"
-                        data-testid={`filter-category-${category}`}
-                      />
-                      <span className="text-sm">{category}</span>
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
+              {!isB2BUser && (
+                <FilterSection title={t('product.category')} testId="filter-section-category">
+                  <div className="space-y-2">
+                    {categories.filter(c => c !== 'all').map((category) => (
+                      <label key={category} className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="category"
+                          value={category}
+                          checked={selectedCategory === category}
+                          onChange={(e) => handleCategoryChange(e.target.value)}
+                          className="mr-2"
+                          data-testid={`filter-category-${category}`}
+                        />
+                        <span className="text-sm">{category}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterSection>
+              )}
 
               <FilterSection title={t('product.brand')} testId="filter-section-brand">
                 <div className="space-y-2 max-h-48 overflow-y-auto">

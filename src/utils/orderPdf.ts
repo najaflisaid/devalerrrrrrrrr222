@@ -15,7 +15,7 @@
  * MƏXFİ məlumatlar GÖSTƏRİLMİR: endirim, borc, ümumi məbləğ, ödəniş tarixi.
  */
 import jsPDF from 'jspdf';
-import autoTable, { CellHookData } from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const LOGO_URL = 'https://i.hizliresim.com/tmu65g6.png';
 const FONT_REGULAR_URL = '/fonts/NotoSans-Regular.ttf';
@@ -109,30 +109,29 @@ const formatDate = (raw: any): string => {
  *   3) Uğursuz olsa, fallback: crossOrigin='anonymous' ilə Image yüklə.
  *   4) Hər ikisi alınmasa null qaytar → PDF-də boş hüceyrə.
  */
-const resizeOnCanvas = (img: HTMLImageElement, maxSide = 64): { dataUrl: string; w: number; h: number } | null => {
-  try {
-    const canvas = document.createElement('canvas');
-    let w = img.naturalWidth || maxSide;
-    let h = img.naturalHeight || maxSide;
-    const ratio = Math.min(maxSide / w, maxSide / h, 1);
-    w = Math.max(1, Math.round(w * ratio));
-    h = Math.max(1, Math.round(h * ratio));
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    // Ağ fon (transparent PNG-lər üçün)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    return { dataUrl: canvas.toDataURL('image/jpeg', 0.78), w, h };
-  } catch {
-    return null;
-  }
-};
-
-const loadImageAsDataUrl = async (url: string): Promise<{ dataUrl: string; w: number; h: number } | null> => {
+const loadImageAsDataUrl = async (url: string, maxSide = 64): Promise<{ dataUrl: string; w: number; h: number } | null> => {
   if (!url) return null;
+
+  const resize = (img: HTMLImageElement): { dataUrl: string; w: number; h: number } | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      let w = img.naturalWidth || maxSide;
+      let h = img.naturalHeight || maxSide;
+      const ratio = Math.min(maxSide / w, maxSide / h, 1);
+      w = Math.max(1, Math.round(w * ratio));
+      h = Math.max(1, Math.round(h * ratio));
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), w, h };
+    } catch {
+      return null;
+    }
+  };
 
   // Strategiya 1: fetch + blob (CORS-friendly)
   try {
@@ -143,7 +142,7 @@ const loadImageAsDataUrl = async (url: string): Promise<{ dataUrl: string; w: nu
       const result = await new Promise<{ dataUrl: string; w: number; h: number } | null>((resolve) => {
         const img = new Image();
         const cleanup = () => URL.revokeObjectURL(objectUrl);
-        img.onload = () => { resolve(resizeOnCanvas(img)); cleanup(); };
+        img.onload = () => { resolve(resize(img)); cleanup(); };
         img.onerror = () => { resolve(null); cleanup(); };
         img.src = objectUrl;
       });
@@ -158,7 +157,7 @@ const loadImageAsDataUrl = async (url: string): Promise<{ dataUrl: string; w: nu
     const result = await new Promise<{ dataUrl: string; w: number; h: number } | null>((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(resizeOnCanvas(img));
+      img.onload = () => resolve(resize(img));
       img.onerror = () => resolve(null);
       img.src = url;
     });
@@ -193,11 +192,12 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
   }
 
   // ─── Loqo + başlıq ───
-  const logo = await loadImageAsDataUrl(LOGO_URL);
+  // Loqo daha yüksək ölçüdə yüklənir ki, PDF-də piksel görünməsin
+  const logo = await loadImageAsDataUrl(LOGO_URL, 320);
   if (logo) {
-    const lw = 62;
+    const lw = 60;
     const lh = (logo.h * lw) / logo.w;
-    try { doc.addImage(logo.dataUrl, 'JPEG', margin, 26, lw, lh); } catch { /* noop */ }
+    try { doc.addImage(logo.dataUrl, 'JPEG', margin, 24, lw, lh); } catch { /* noop */ }
   }
 
   doc.setFont(FONT_NAME, 'bold');
@@ -208,8 +208,8 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
   const headStartY = 90;
   const orderNumber =
     order.orderNumber !== undefined && order.orderNumber !== null
-      ? `#${order.orderNumber}`
-      : `#${(order.id || '').slice(0, 8)}`;
+      ? `${order.orderNumber}`
+      : `${(order.id || '').slice(0, 8)}`;
   const fullName = [order.customerName, order.customerLastname].filter(Boolean).join(' ').trim() || '-';
   const company = order.companyName && !String(order.companyName).includes('@') ? order.companyName : '';
   const phone = order.customerPhone && String(order.customerPhone).length < 30 ? order.customerPhone : '';
@@ -237,25 +237,9 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
   });
   doc.setTextColor(0);
 
-  // ─── Şəkilləri əvvəlcədən yüklə (paralel + concurrency limit) ───
+  // ─── Sifariş məhsulları — SƏKILSİZ (şəkillər çıxarıldı) ───
   const totalQty = (order.items || []).reduce((s, it) => s + (Number(it.quantity) || 0), 0);
   const tableStartY = y + 6;
-
-  // Concurrency limit 8 — şəbəkəni boğmasın
-  const concurrency = 8;
-  const imageData: Array<{ dataUrl: string; w: number; h: number } | null> = new Array(order.items?.length || 0).fill(null);
-  const queue = (order.items || []).map((it, idx) => ({ it, idx }));
-  let cursor = 0;
-  const workers = new Array(Math.min(concurrency, queue.length)).fill(0).map(async () => {
-    while (cursor < queue.length) {
-      const myIdx = cursor++;
-      const { it, idx } = queue[myIdx];
-      const p = products.find((pp) => pp.id === it.productId);
-      const url = p?.images?.[0] || '';
-      imageData[idx] = await loadImageAsDataUrl(url);
-    }
-  });
-  await Promise.all(workers);
 
   // ─── Cədvəl sıraları ───
   const rows = (order.items || []).map((it, idx) => {
@@ -268,7 +252,6 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
     const salePrice = resolveSalePrice(it, p);
     return {
       idx: idx + 1,
-      img: imageData[idx],
       name: String(nameAz),
       brand,
       barcode,
@@ -277,19 +260,17 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
     };
   });
 
-  // ─── KOMPAKT CƏDVƏL — ~30-40 model 1 səhifədə ───
-  // Image cell: 22pt; row minHeight: 24pt → A4 hündürlüyü 842pt,
-  // tutulan: header(~140) + footer(~150) → təxminən 552pt cədvələ qalır.
-  // 552 / ~16pt(row height with image) ≈ 34 sətr 1 səhifədə.
-  const IMG_SIZE = 22; // pt — kvadrat şəkil ölçüsü
-  const ROW_HEIGHT = 26;
+  // ─── KOMPAKT CƏDVƏL — 40-a qədər sətir 1 səhifədə sığır ───
+  // A4 hündürlüyü 842pt. Başlıq (~145pt) + footer (~150pt) + summary (~40pt) → ~505pt cədvələ qalır.
+  // 40 sətir üçün row height ~12pt lazımdır.
+  const ROW_HEIGHT = rows.length > 30 ? 12 : (rows.length > 20 ? 15 : 18);
+  const FONT_SIZE = rows.length > 30 ? 7 : 7.5;
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [['#', 'Şəkil', 'Məhsul adı', 'Brend', 'Barkod', 'Miqdar', 'Vahid', 'Satış qiyməti']],
+    head: [['#', 'Məhsul adı', 'Brend', 'Barkod', 'Miqdar', 'Vahid', 'Satış qiyməti']],
     body: rows.map((r) => [
       r.idx,
-      '',
       r.name,
       r.brand,
       r.barcode,
@@ -299,8 +280,8 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
     ]),
     styles: {
       font: FONT_NAME,
-      fontSize: 7.5,
-      cellPadding: 2.5,
+      fontSize: FONT_SIZE,
+      cellPadding: 2,
       valign: 'middle',
       lineColor: [220, 220, 220],
       lineWidth: 0.4,
@@ -310,51 +291,24 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
     headStyles: {
       font: FONT_NAME,
       fontStyle: 'bold',
-      fontSize: 8,
+      fontSize: FONT_SIZE + 0.5,
       fillColor: [33, 33, 33],
       textColor: 255,
       halign: 'center',
-      minCellHeight: 16,
+      minCellHeight: 14,
     },
     bodyStyles: { font: FONT_NAME, textColor: 30 },
     alternateRowStyles: { fillColor: [248, 248, 248] },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 18 },
-      1: { halign: 'center', cellWidth: IMG_SIZE + 6 },
-      2: { cellWidth: 'auto' },
-      3: { cellWidth: 60 },
-      4: { cellWidth: 74, fontStyle: 'bold' },
-      5: { halign: 'center', cellWidth: 32, fontStyle: 'bold' },
-      6: { halign: 'center', cellWidth: 30 },
-      7: { halign: 'right', cellWidth: 60, fontStyle: 'bold' },
-    },
-    didDrawCell: (data: CellHookData) => {
-      if (data.section === 'body' && data.column.index === 1) {
-        const r = rows[data.row.index];
-        if (r?.img) {
-          const cell = data.cell;
-          // Kvadrat şəkil — ratio qoruyaraq mərkəzlə
-          const maxSide = Math.min(IMG_SIZE, cell.width - 2, cell.height - 2);
-          const ratio = r.img.w / r.img.h;
-          let finalW: number, finalH: number;
-          if (ratio >= 1) {
-            finalW = maxSide;
-            finalH = maxSide / ratio;
-          } else {
-            finalH = maxSide;
-            finalW = maxSide * ratio;
-          }
-          const x = cell.x + (cell.width - finalW) / 2;
-          const yy = cell.y + (cell.height - finalH) / 2;
-          try { doc.addImage(r.img.dataUrl, 'JPEG', x, yy, finalW, finalH); }
-          catch { /* noop */ }
-        }
-      }
+      0: { halign: 'center', cellWidth: 22 },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 68 },
+      3: { cellWidth: 78, fontStyle: 'bold' },
+      4: { halign: 'center', cellWidth: 42, fontStyle: 'bold' },
+      5: { halign: 'center', cellWidth: 32 },
+      6: { halign: 'right', cellWidth: 66, fontStyle: 'bold' },
     },
     margin: { left: margin, right: margin, top: 30, bottom: 30 },
-    // Footer-ə yer saxla: son səhifədə autoTable-in stopY-ı yüksəkdə dayanmasa
-    // belə, footer ayrıca render olunur. Cədvəl çox uzun olsa belə avtomatik
-    // yeni səhifəyə davam edir.
   });
 
   // ─── Yekun sayğacı ───
@@ -402,10 +356,6 @@ export const downloadOrderPdf = async (order: OrderLike, products: ProductLike[]
 
   drawSignatureBlock(leftX, 'Təslim edən');
   drawSignatureBlock(rightX, 'Təslim alan');
-
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('De Valeur — təhvil-təslim aktı.', pageWidth / 2, pageHeight - 18, { align: 'center' });
 
   // Səhifə nömrəsi
   const totalPages = doc.getNumberOfPages();

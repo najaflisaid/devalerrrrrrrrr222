@@ -307,3 +307,19 @@ Bu dəyişiklikləri istifadəçinin saytında (`devaleur.az`) görmək üçün 
 - **Category display order (both mobile & desktop)**: `Saat → Gümüş → Dəri → …rest (admin order preserved)`.
   - Implemented via `getCategoryPriority()` + stable sort in `Header.tsx`.
   - Sub-categories are unchanged.
+
+## Update — B2B & PDF Cleanup (Jan 2026)
+### B2B Müştəri "Sifarişlərim" səhifəsi
+- **Kateqoriya filteri gizlədildi** (ProductsPage — B2B istifadəçilər üçün mobil chip + desktop panel).
+- **"PDF yüklə" düyməsi silindi** — yalnız admin paneldə qalır.
+- **"Təhvilat" düyməsi** avtomatik gizlədilir müştəri imzalayandan sonra (`customerReceiveSignature` mövcud olduqda).
+- Sifariş nömrəsindən "#" silindi. Bütün istifadəçi tərəfli səhifələrdə (My orders, B2B, admin B2B/Customer, Delivery, Courier).
+- Sifariş kartlarında qısa tarix artıq ili də göstərir (dd.MM.yyyy).
+
+### PDF (Təhvil-təslim aktı)
+- Məhsul şəkilləri sütunu tamamilə çıxarıldı.
+- "Miqdar" sütunu eni artırıldı (kəsilməsin).
+- Sətir hündürlüyü dinamik: 30+ məhsul üçün 12pt → 40-a qədər model 1 səhifədə sığır.
+- Loqo yüksək çözünürlükdə yüklənir (`maxSide=320`) — təmiz görünür.
+- Səhifə altında "De Valeur — təhvil-təslim aktı." mətni silindi.
+- Sifariş nömrəsi PDF-də "#"-siz göstərilir.

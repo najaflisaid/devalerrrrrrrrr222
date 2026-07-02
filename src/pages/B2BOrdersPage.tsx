@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, ChevronDown, ChevronUp, User, Mail, Phone, Building2, FileDown, Send } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, Home, AlertCircle, Calendar, ChevronDown, ChevronUp, User, Mail, Phone, Building2, Send } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { productService } from '../services/productService';
 import SignaturePad from '../components/SignaturePad';
-import { downloadOrderPdf } from '../utils/orderPdf';
 
 interface B2BOrder {
   id: string;
@@ -320,7 +319,7 @@ const B2BOrdersPage: React.FC = () => {
               const dateShort = (() => {
                 const d = orderDate;
                 const pad = (n: number) => n.toString().padStart(2, '0');
-                return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+                return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
               })();
               const dateFormatted = (() => {
                 const d = orderDate;
@@ -344,7 +343,7 @@ const B2BOrdersPage: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <p className="font-semibold text-gray-900 text-sm truncate">
-                            #{(order as any).orderNumber ?? order.id.slice(0, 8)}
+                            {(order as any).orderNumber ?? order.id.slice(0, 8)}
                           </p>
                           <p className="text-xs text-gray-500 flex-shrink-0">{dateShort}</p>
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusInfo.color}`}>
@@ -554,26 +553,9 @@ const B2BOrdersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* PDF + Təhvilat düymələri */}
-                    <div className="border-t border-gray-200 mt-4 pt-4">
-                      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              await downloadOrderPdf(order as any, products as any);
-                            } catch (err) {
-                              console.error('PDF generate failed', err);
-                              alert('PDF yaratmaq alınmadı: ' + (err as Error).message);
-                            }
-                          }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
-                          title="Təhvil-təslim aktını PDF olaraq yüklə"
-                          data-testid={`b2b-order-pdf-${order.id}`}
-                        >
-                          <FileDown className="h-4 w-4" />
-                          PDF yüklə
-                        </button>
+                    {/* Təhvilat düyməsi — yalnız müştəri hələ imzalamayıbsa göstər */}
+                    {!((order as any).customerReceiveSignature) && (
+                      <div className="border-t border-gray-200 mt-4 pt-4">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -581,11 +563,11 @@ const B2BOrdersPage: React.FC = () => {
                             const orderNumber = (order as any).orderNumber ?? order.id?.slice(0, 8);
                             const companyLabel = order.companyName && !String(order.companyName).includes('@')
                               ? ` · ${order.companyName}` : '';
-                            const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;
+                            const msg = `De Valeur — Sifariş ${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;
                             const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                             window.open(wa, '_blank', 'noopener,noreferrer');
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
                           title="WhatsApp ilə təhvil alan tərəfə linki göndər"
                           data-testid={`b2b-order-customer-send-${order.id}`}
                         >
@@ -593,7 +575,7 @@ const B2BOrdersPage: React.FC = () => {
                           Təhvilat
                         </button>
                       </div>
-                    </div>
+                    )}
 
                     {/* Anbardar yığım statusu + imzalar (varsa göstər) */}
                     {(() => {

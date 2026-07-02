@@ -223,7 +223,7 @@ const CustomerOrdersTab: React.FC = () => {
                 <div>
                   <p className="text-xs text-gray-400 uppercase">Sifariş</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    #{order.orderNumber ?? order.id?.slice(0, 6)}
+                    {order.orderNumber ?? order.id?.slice(0, 6)}
                   </p>
                   <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                 </div>

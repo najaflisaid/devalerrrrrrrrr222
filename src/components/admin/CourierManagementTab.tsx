@@ -426,7 +426,7 @@ const CourierManagementTab: React.FC = () => {
                         {o._kind}
                       </span>
                       <span className="ml-2 text-sm font-semibold text-gray-900">
-                        #{o.orderNumber || o.id.slice(0, 6)}
+                        {o.orderNumber || o.id.slice(0, 6)}
                       </span>
                     </div>
                     <span className="text-[11px] text-gray-500">{when}</span>

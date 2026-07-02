@@ -668,7 +668,7 @@ const B2BOrdersTab: React.FC = () => {
                     {getStatusText(order.status)}
                   </span>
                   <p className="text-xs font-semibold text-gray-700 mt-2">
-                    Sifariş #{(order as any).orderNumber ?? order.id?.slice(0, 8)}
+                    Sifariş {(order as any).orderNumber ?? order.id?.slice(0, 8)}
                   </p>
                   <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                 </div>
@@ -1002,7 +1002,7 @@ const B2BOrdersTab: React.FC = () => {
                     const url = `${window.location.origin}/warehouse/order/${order.id}`;
                     const companyLabel = order.companyName && !String(order.companyName).includes('@')
                       ? ` · ${order.companyName}` : '';
-                    const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nYığım siyahısı:\n${url}`;
+                    const msg = `De Valeur — Sifariş ${orderNumber}${companyLabel}\n\nYığım siyahısı:\n${url}`;
                     const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                     window.open(wa, '_blank', 'noopener,noreferrer');
                   }}
@@ -1020,7 +1020,7 @@ const B2BOrdersTab: React.FC = () => {
                     const url = `${window.location.origin}/customer-receive/order/${order.id}`;
                     const companyLabel = order.companyName && !String(order.companyName).includes('@')
                       ? ` · ${order.companyName}` : '';
-                    const msg = `De Valeur — Sifariş #${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;
+                    const msg = `De Valeur — Sifariş ${orderNumber}${companyLabel}\n\nTəhvil-təslim siyahısı:\n${url}\n\nMəhsulları təhvil aldıqdan sonra linkdən təsdiqləyin.`;
                     const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                     window.open(wa, '_blank', 'noopener,noreferrer');
                   }}
