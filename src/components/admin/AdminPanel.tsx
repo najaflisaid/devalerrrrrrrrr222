@@ -1914,51 +1914,8 @@ const AdminPanel: React.FC = () => {
                 />
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Qiymət aralığı: {priceRange[0]} AZN - {priceRange[1]} AZN
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="number"
-                    min="0"
-                    value={priceRange[0]}
-                    onChange={(e) => setPriceRange([Math.max(0, parseFloat(e.target.value) || 0), priceRange[1]])}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
-                    placeholder="Min"
-                  />
-                  <div className="flex-1">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100000"
-                      step="50"
-                      value={priceRange[0]}
-                      onChange={(e) => setPriceRange([parseFloat(e.target.value), priceRange[1]])}
-                      className="w-full"
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], Math.max(0, parseFloat(e.target.value) || 100000)])}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
-                    placeholder="Max"
-                  />
-                  <div className="flex-1">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100000"
-                      step="50"
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseFloat(e.target.value)])}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
+
+
 
               {/* Category, Brand, Stock, Visibility Filters */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
