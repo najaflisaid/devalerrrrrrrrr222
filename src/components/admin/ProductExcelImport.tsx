@@ -158,95 +158,61 @@ const toNum = (v: any): number => {
 };
 
 // ───── Şablon yükləmə ─────
-// Minimal 4-sütunlu şablon. Daha çox detal verilmək istənirsə "advanced" rejimi
-// genişləndirilmiş sütunları əlavə edir.
+// Minimal 5-sütunlu şablon: Brend · Mal adı · Satış qiyməti · Miqdar · Barkod.
+// Barkod (EAN) axtarış üçün dəyərlidir; boş qala bilər.
 const downloadTemplate = (
   format: 'xlsx' | 'xls' = 'xlsx',
-  variant: 'minimal' | 'advanced' = 'minimal'
 ) => {
-  const minimalHeaders = [COL.brand, COL.name, COL.price, COL.stock];
-  const advancedHeaders = [
-    COL.sku, COL.barcode, COL.brand, COL.name, COL.price, COL.stock, COL.category, COL.gender, COL.visibility,
-  ];
-  const headers = variant === 'advanced' ? advancedHeaders : minimalHeaders;
+  const headers = [COL.brand, COL.name, COL.price, COL.stock, COL.barcode];
 
-  const minimalSample = [
-    { [COL.brand]: 'U.S. Polo ASSN.', [COL.name]: 'USPA1124-01', [COL.price]: 189, [COL.stock]: 10 },
-    { [COL.brand]: 'Casio', [COL.name]: 'LTP-1094E-7ARDF', [COL.price]: 89.9, [COL.stock]: 5 },
+  const sampleRows = [
+    { [COL.brand]: 'U.S. Polo ASSN.', [COL.name]: 'USPA1124-01', [COL.price]: 189, [COL.stock]: 10, [COL.barcode]: '' },
+    { [COL.brand]: 'Casio', [COL.name]: 'LTP-1094E-7ARDF', [COL.price]: 89.9, [COL.stock]: 5, [COL.barcode]: '4549526301094' },
   ];
-  const advancedSample = [
-    {
-      [COL.sku]: 'LTP-1094E-7ARDF',
-      [COL.barcode]: '4549526301094',
-      [COL.brand]: 'Casio',
-      [COL.name]: 'Casio LTP-1094E-7ARDF',
-      [COL.price]: 89.9,
-      [COL.stock]: 5,
-      [COL.category]: 'Saatlar',
-      [COL.gender]: 'women',
-      [COL.visibility]: 'a',
-    },
-  ];
-  const sampleRows = variant === 'advanced' ? advancedSample : minimalSample;
 
   const ws = XLSX.utils.json_to_sheet(sampleRows, { header: headers });
-  (ws as any)['!cols'] =
-    variant === 'advanced'
-      ? [{ wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 10 }, { wch: 16 }]
-      : [{ wch: 22 }, { wch: 32 }, { wch: 14 }, { wch: 10 }];
+  (ws as any)['!cols'] = [{ wch: 22 }, { wch: 32 }, { wch: 14 }, { wch: 10 }, { wch: 18 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Məhsullar');
 
-  const info = variant === 'minimal'
-    ? [
-        ['DE VALEUR — Minimal stok miqrasiya şablonu'],
-        [''],
-        ['Cəmi 4 sütun: Brend · Mal adı · Satış qiyməti · Miqdar.'],
-        ['Tez-tez stok yeniləməsi üçün ən rahat format.'],
-        [''],
-        ['Necə işləyir:'],
-        ['1. "Mal adı" + "Brend" birlikdə məhsulu tanıdır.'],
-        ['   Eyni brend + eyni ad → mövcud məhsul sayılır, stok yenilənir.'],
-        ['2. Tapılmırsa yeni məhsul yaranır:'],
-        ['   • Brend sistemdə olmalıdır (admin paneldə əlavə edin).'],
-        ['   • Qiyməti yoxdursa məhsul DRAFT (gizli) yaranır — sayt göstərmir.'],
-        ['     Admin sonradan qiymət/şəkil əlavə edib aktivləşdirir.'],
-        ['3. Stok rejimi:'],
-        ['   • "Stoku yenilə (əvəz et)" → fayldakı say saytdakını əvəz edir (defolt).'],
-        ['   • "Stoku artır (üzərinə əlavə)" → fayldakı say mövcud üzərinə gəlir.'],
-        ['4. Sütun başlıqlarını dəyişdirə bilərsiniz — sistem belə də tanıyır:'],
-        ['     Brend ↔ Marka, Brand, Бренд'],
-        ['     Mal adı ↔ Məhsul adı, Ad, Name, Наименование'],
-        ['     Satış qiyməti ↔ Qiymət, Price, Цена, Fiyat'],
-        ['     Miqdar ↔ Stok, Stock, Quantity, Количество, Adet'],
-        [''],
-        ['Başqa proqramdan (1C, Excel ixracı və.s.) götürdüyünüz fayl da işləyir —'],
-        ['sütun başlıqları yuxarıdakı variantlardan hər hansı biri olduqda avtomatik tanınır.'],
-        [''],
-        ['Genişləndirilmiş şablon (9 sütun: SKU, Barkod, kateqoriya, cins, görünürlük)'],
-        ['"Şablon (genişləndirilmiş)" düyməsi ilə yüklənir.'],
-      ]
-    : [
-        ['DE VALEUR — Genişləndirilmiş şablon (9 sütun)'],
-        [''],
-        ['Sütunlar: Məhsul kodu (SKU), Barkod, Brend, Mal adı, Satış qiyməti, Miqdar,'],
-        ['Kateqoriya, Cins, Görünür kim?'],
-        [''],
-        ['SKU varsa məhsul ona görə tapılır (ən dəqiq). Yoxdursa Brend+ad ilə.'],
-        ['Barkod (EAN/UPC) saytda axtarış üçün istifadə olunur — boş ola bilər.'],
-        ['Cins: men / women / unisex. Görünürlük: a (hamı) / b (b2b) / c (müştəri).'],
-        ['Kateqoriya və brend sistemdə qabaqcadan mövcud olmalıdır.'],
-      ];
+  const info = [
+    ['DE VALEUR — Stok / məhsul miqrasiya şablonu'],
+    [''],
+    ['Cəmi 5 sütun: Brend · Mal adı · Satış qiyməti · Miqdar · Barkod.'],
+    ['Barkod (EAN) boş qala bilər — məhsulun tanınmasına təsir etmir.'],
+    [''],
+    ['Necə işləyir:'],
+    ['1. "Mal adı" + "Brend" birlikdə məhsulu tanıdır.'],
+    ['   Eyni brend + eyni ad → mövcud məhsul sayılır, stok yenilənir.'],
+    ['2. Tapılmırsa yeni məhsul yaranır:'],
+    ['   • Brend sistemdə olmalıdır (admin paneldə əlavə edin).'],
+    ['   • Qiyməti yoxdursa məhsul DRAFT (gizli) yaranır — sayt göstərmir.'],
+    ['     Admin sonradan qiymət/şəkil əlavə edib aktivləşdirir.'],
+    ['3. Stok rejimi:'],
+    ['   • "Stoku yenilə (əvəz et)" → fayldakı say saytdakını əvəz edir (defolt).'],
+    ['   • "Stoku artır (üzərinə əlavə)" → fayldakı say mövcud üzərinə gəlir.'],
+    ['4. Barkod (EAN/UPC): boş ola bilər. Doldurulubsa məhsulda saxlanır və axtarışda işlənir.'],
+    ['5. Sütun başlıqlarını dəyişdirə bilərsiniz — sistem belə də tanıyır:'],
+    ['     Brend ↔ Marka, Brand, Бренд'],
+    ['     Mal adı ↔ Məhsul adı, Ad, Name, Наименование'],
+    ['     Satış qiyməti ↔ Qiymət, Price, Цена, Fiyat'],
+    ['     Miqdar ↔ Stok, Stock, Quantity, Количество, Adet'],
+    ['     Barkod ↔ EAN, EAN13, UPC, GTIN, Штрихкод'],
+    [''],
+    ['Başqa proqramdan (1C, Excel ixracı və.s.) götürdüyünüz fayl da işləyir —'],
+    ['sütun başlıqları yuxarıdakı variantlardan hər hansı biri olduqda avtomatik tanınır.'],
+    [''],
+    ['B2B görünürlüyü: Yeni məhsullar əlavə olunduqda admin panelində sizdən'],
+    ['soruşulacaq: "B2B müştəriləri də görsün?" Bəli → hamı görür (a). Xeyr → yalnız'],
+    ['adi müştərilər görür (c). Sonradan hər məhsulun görünürlüyünü ayrıca dəyişdirmək olar.'],
+  ];
 
   const infoWs = XLSX.utils.aoa_to_sheet(info);
   (infoWs as any)['!cols'] = [{ wch: 95 }];
   XLSX.utils.book_append_sheet(wb, infoWs, 'Təlimat');
 
-  const fname =
-    variant === 'minimal'
-      ? `devaleur-stok-minimal.${format}`
-      : `devaleur-mehsul-sablonu.${format}`;
+  const fname = `devaleur-stok-sablonu.${format}`;
   if (format === 'xls') {
     XLSX.writeFile(wb, fname, { bookType: 'biff8' });
   } else {
@@ -348,6 +314,10 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
 
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [dbBrands, setDbBrands] = useState<string[]>([]);
+  // B2B visibility confirmation modal — yeni məhsullar yaradılarkən açılır
+  const [showB2BConfirm, setShowB2BConfirm] = useState(false);
+  // Override tətbiq zamanı yeni məhsullar üçün — 'all' (hamı görür) və ya 'customer' (yalnız müştəri)
+  const [b2bVisibilityOverride, setB2BVisibilityOverride] = useState<'all' | 'customer' | null>(null);
 
   const loadDbMeta = async () => {
     const [catSnap, brandSnap] = await Promise.all([
@@ -640,6 +610,16 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
     }
   };
 
+  // Tətbiq düyməsinə basanda: yeni məhsul varsa əvvəlcə B2B görünürlüyünü soruş
+  const handleApplyClick = () => {
+    if (!result) return;
+    if (result.created.length > 0 && b2bVisibilityOverride === null) {
+      setShowB2BConfirm(true);
+      return;
+    }
+    void apply();
+  };
+
   const apply = async () => {
     if (!result) return;
     setApplying(true);
@@ -743,7 +723,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             isDraft: isDraft,
             isBestseller: false,
             stock: c.totalStock,
-            visibleTo: c.row.visibility ?? 'all',
+            visibleTo: b2bVisibilityOverride ?? c.row.visibility ?? 'all',
             createdAt: new Date(),
           },
         };
@@ -808,6 +788,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       alert(parts.join('\n') || 'Heç bir dəyişiklik edilmədi');
       setResult(null);
       setProgress(null);
+      setB2BVisibilityOverride(null); // sonrakı miqrasiyada yenidən soruş
       if (fileRef.current) fileRef.current.value = '';
       onDone?.();
     } catch (e) {
@@ -847,9 +828,9 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               </span>
             </h3>
             <p className="text-xs text-gray-600 mt-0.5 max-w-2xl">
-              <strong>Tez stok yeniləməsi üçün:</strong> 4 sütunlu minimal şablon —{' '}
+              <strong>Tez stok yeniləməsi üçün:</strong> 5 sütunlu şablon —{' '}
               <span className="font-mono text-[11px] bg-white px-1 py-0.5 rounded border">
-                Brend · Mal adı · Satış qiyməti · Miqdar
+                Brend · Mal adı · Satış qiyməti · Miqdar · Barkod
               </span>
               . Başqa proqramdan ixrac edilmiş Excel də avtomatik tanınır (sütun adlarını sistem
               təxmin edir). Brend + ad eyni olan məhsulda stok yenilənir, yenidirsə yaradılır.
@@ -859,25 +840,16 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => downloadTemplate('xlsx', 'minimal')}
+            onClick={() => downloadTemplate('xlsx')}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-500 text-amber-700 rounded-lg hover:bg-amber-50 text-sm font-semibold shadow-sm"
             data-testid="product-import-template-minimal-btn"
-            title="4 sütun: Brend, Mal adı, Satış qiyməti, Miqdar"
+            title="5 sütun: Brend, Mal adı, Satış qiyməti, Miqdar, Barkod"
           >
             <Download className="h-4 w-4" />
-            Şablon (minimal 4 sütun)
+            Şablonu yüklə (.xlsx)
           </button>
           <button
-            onClick={() => downloadTemplate('xlsx', 'advanced')}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium"
-            data-testid="product-import-template-advanced-btn"
-            title="9 sütun: + SKU, Barkod, Kateqoriya, Cins, Görünürlük"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Genişləndirilmiş (9 sütun)
-          </button>
-          <button
-            onClick={() => downloadTemplate('xls', 'minimal')}
+            onClick={() => downloadTemplate('xls')}
             className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-xs"
             data-testid="product-import-template-xls-btn"
             title="Köhnə Excel versiyası (.xls)"
@@ -1341,7 +1313,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
-              onClick={() => { setResult(null); setProgress(null); }}
+              onClick={() => { setResult(null); setProgress(null); setB2BVisibilityOverride(null); }}
               disabled={applying}
               className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-60"
               data-testid="product-import-cancel"
@@ -1349,7 +1321,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
               <X className="h-4 w-4 inline mr-1" /> Ləğv et
             </button>
             <button
-              onClick={apply}
+              onClick={handleApplyClick}
               disabled={applying || (result.updated.length === 0 && result.created.length === 0 && result.zeroedOut.length === 0)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-60 font-medium"
               data-testid="product-import-apply"
@@ -1370,6 +1342,80 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
           <div>
             <p className="font-medium text-gray-600 mb-1">Sistemdəki brendlər ({dbBrands.length}):</p>
             <p className="truncate">{dbBrands.slice(0, 20).join(', ')}{dbBrands.length > 20 ? '...' : ''}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ B2B görünürlük təsdiqi — yeni məhsul yaradıldıqda ═══ */}
+      {showB2BConfirm && result && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          data-testid="b2b-visibility-confirm-modal"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">
+                  B2B görünürlüyü
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Bu miqrasiyada <strong>{result.created.length}</strong> yeni məhsul yaradılacaq.
+                  Bu məhsullar B2B müştəri girişində də görünsün?
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-5">
+              <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
+                <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>Bəli</strong> — Həm adi qonaq/müştəri, həm də B2B müştəri girişində görünsün <span className="text-gray-400">(görünürlük: hamı)</span>
+                </span>
+              </div>
+              <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
+                <X className="h-3.5 w-3.5 text-rose-600 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>Xeyr</strong> — Yalnız normal müştəri saytında görünsün, B2B-də görünməsin <span className="text-gray-400">(görünürlük: müştəri)</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowB2BConfirm(false);
+                  setB2BVisibilityOverride('customer');
+                  setTimeout(() => void apply(), 0);
+                }}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                data-testid="b2b-visibility-no"
+              >
+                Xeyr — yalnız müştəri
+              </button>
+              <button
+                onClick={() => {
+                  setShowB2BConfirm(false);
+                  setB2BVisibilityOverride('all');
+                  setTimeout(() => void apply(), 0);
+                }}
+                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
+                data-testid="b2b-visibility-yes"
+                autoFocus
+              >
+                Bəli — B2B də görsün
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowB2BConfirm(false)}
+              className="mt-3 w-full text-xs text-gray-500 hover:text-gray-700 py-1"
+              data-testid="b2b-visibility-cancel"
+            >
+              Ləğv et
+            </button>
           </div>
         </div>
       )}
