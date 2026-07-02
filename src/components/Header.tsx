@@ -594,7 +594,47 @@ const Header: React.FC = () => {
       .replace(/ö/g, 'o')
       .replace(/ü/g, 'u')
       .replace(/ğ/g, 'g')
+      // Rus/İngilis mübadiləsi (transliterasiya) — часы→chasy, seat→saat kimi hallar üçün
+      .replace(/й/g, 'y').replace(/ы/g, 'y').replace(/ю/g, 'yu').replace(/я/g, 'ya')
+      .replace(/ч/g, 'ch').replace(/ш/g, 'sh').replace(/щ/g, 'sh').replace(/ц/g, 'ts')
+      .replace(/ж/g, 'zh').replace(/х/g, 'h').replace(/ъ/g, '').replace(/ь/g, '')
+      .replace(/[аaа]/g, 'a').replace(/[еeэ]/g, 'e').replace(/[оoо]/g, 'o')
       .trim();
+  };
+
+  // Levenshtein — 1 hərf fərqinə icazə (yazı səhvləri: "saat" ↔ "sat", "seat" ↔ "saat")
+  const levenshtein = (a: string, b: string): number => {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    if (Math.abs(a.length - b.length) > 2) return 99;
+    const dp: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = dp[0];
+      dp[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const tmp = dp[j];
+        dp[j] = a[i - 1] === b[j - 1]
+          ? prev
+          : 1 + Math.min(prev, dp[j], dp[j - 1]);
+        prev = tmp;
+      }
+    }
+    return dp[b.length];
+  };
+
+  // Fuzzy uyğunluq — söz uzunluğu ≥ 4 olduqda 1 hərf səhvə icazə verir.
+  // "seat" → "saat", "kasio" → "casio" kimi hallar.
+  const fuzzyIncludes = (haystack: string, needle: string): boolean => {
+    if (!needle || !haystack) return false;
+    if (haystack.includes(needle)) return true;
+    if (needle.length < 4) return false;
+    // Sözləri ayrı-ayrı yoxla
+    const words = haystack.split(/[\s\-_.,/]+/).filter(Boolean);
+    return words.some((w) => {
+      if (w.length < needle.length - 1 || w.length > needle.length + 2) return false;
+      return levenshtein(w, needle) <= 1;
+    });
   };
 
   // Filter products as user types + analytics tracking (debounced)
@@ -651,7 +691,13 @@ const Header: React.FC = () => {
         catVariantsMatch ||
         (sku && sku.includes(token)) ||
         (barcode && barcode.includes(token)) ||
-        genderHints
+        genderHints ||
+        // Fuzzy — 1 hərf fərqinə icazə (yazı səhvləri üçün)
+        fuzzyIncludes(nameAzN, tokenNorm) ||
+        fuzzyIncludes(nameRuN, tokenNorm) ||
+        fuzzyIncludes(nameEnN, tokenNorm) ||
+        fuzzyIncludes(brandN, tokenNorm) ||
+        fuzzyIncludes(categoryN, tokenNorm)
       );
     };
 
@@ -1718,7 +1764,7 @@ const Header: React.FC = () => {
 
             {/* Category quick-picks — admin-in qoyduğu kateqoriyalar (məhsullardakı köhnə dəyərlər deyil) */}
             {!searchQuery && (categoryTree.length > 0 || categories.length > 0) && (() => {
-              // Admin-in tərif etdiyi kateqoriyalardan istifadə et (parent + alt — düz siyahı)
+              // Bütün kateqoriyalar (əsas + alt) — düz siyahı halında
               const fromAdmin: string[] = [];
               const walk = (n: CategoryNode) => {
                 const display = n.name || n.nameAz || n.nameEn || n.nameRu;
@@ -1726,17 +1772,16 @@ const Header: React.FC = () => {
                 n.children.forEach(walk);
               };
               categoryTree.forEach(walk);
-              // Admin kateqoriyası yoxdursa fallback: məhsulların kateqoriyaları
               const trendingList = fromAdmin.length > 0 ? fromAdmin : categories;
               if (trendingList.length === 0) return null;
               return (
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3" data-testid="header-search-trending">
-                  {trendingList.slice(0, 6).map((c) => (
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2.5 max-w-4xl mx-auto" data-testid="header-search-trending">
+                  {trendingList.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setSearchQuery(c)}
-                      className="text-[13px] text-black/85 hover:text-black hover:underline underline-offset-4 transition-colors"
+                      className="text-[12.5px] text-black/80 hover:text-black hover:underline underline-offset-4 transition-colors"
                       data-testid={`header-search-trending-${c}`}
                     >
                       {c}
@@ -1749,6 +1794,106 @@ const Header: React.FC = () => {
 
           {/* Results / Default grid */}
           <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pb-16">
+            {/* ═══ Kateqoriya / Brend uyğunluqları — istifadəçi axtardığı söz ilə üst-üstə düşənlər ═══ */}
+            {searchQuery.trim() && (() => {
+              const qLower = searchQuery.trim().toLowerCase();
+              const qNorm = normalizeAz(qLower);
+
+              // Bütün kateqoriyalar (əsas + alt) — həm admin tree, həm də düz siyahı
+              const allCategoryNames: Array<{ name: string; lookupName: string }> = [];
+              const walkCat = (n: CategoryNode) => {
+                const display = n.name || n.nameAz || n.nameEn || n.nameRu;
+                if (display) allCategoryNames.push({ name: display, lookupName: n.nameAz || display });
+                n.children.forEach(walkCat);
+              };
+              categoryTree.forEach(walkCat);
+              if (allCategoryNames.length === 0) {
+                categories.forEach((c) => allCategoryNames.push({ name: c, lookupName: c }));
+              }
+
+              // Uyğun kateqoriyalar — söz və ya normal (diakritiksiz) uyğunluq. Digər dillərin adları da yoxlanır.
+              const matchedCategories = allCategoryNames.filter(({ name }) => {
+                const lc = name.toLowerCase();
+                const nc = normalizeAz(lc);
+                if (lc.includes(qLower) || nc.includes(qNorm)) return true;
+                if (fuzzyIncludes(nc, qNorm)) return true;
+                // Kateqoriyanın digər dildəki variantları (categoryLangMap-dən)
+                const variants = categoryLangMap[lc] || [];
+                return variants.some((v) => {
+                  const vl = v.toLowerCase();
+                  const vn = normalizeAz(vl);
+                  return vl.includes(qLower) || vn.includes(qNorm) || fuzzyIncludes(vn, qNorm);
+                });
+              }).slice(0, 8);
+
+              // Uyğun brendlər — məhsullardan çıxarılır (unikal, sıralanmış)
+              const brandSet = new Set<string>();
+              allProducts.forEach((p) => {
+                const b = (p.brand || '').trim();
+                if (!b) return;
+                const bl = b.toLowerCase();
+                const bn = normalizeAz(bl);
+                if (bl.includes(qLower) || bn.includes(qNorm) || fuzzyIncludes(bn, qNorm)) brandSet.add(b);
+              });
+              const matchedBrands = Array.from(brandSet).sort((a, b) => a.localeCompare(b, 'az')).slice(0, 10);
+
+              if (matchedCategories.length === 0 && matchedBrands.length === 0) return null;
+
+              return (
+                <div className="mb-8 space-y-4" data-testid="header-search-suggestions">
+                  {matchedCategories.length > 0 && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
+                        {t('header.categories', { defaultValue: 'Kateqoriyalar' })}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {matchedCategories.map((c) => (
+                          <button
+                            key={`cat-${c.name}`}
+                            type="button"
+                            onClick={() => {
+                              navigate(`/products?category=${encodeURIComponent(c.lookupName)}`);
+                              closeSearchModal();
+                              window.scrollTo({ top: 0, behavior: 'auto' });
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-black text-white text-[12.5px] rounded-full hover:bg-black/85 transition-colors"
+                            data-testid={`header-search-suggest-category-${c.name}`}
+                          >
+                            <span>{c.name}</span>
+                            <span className="opacity-60">→</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {matchedBrands.length > 0 && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
+                        {t('header.brands', { defaultValue: 'Brendlər' })}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {matchedBrands.map((b) => (
+                          <button
+                            key={`br-${b}`}
+                            type="button"
+                            onClick={() => {
+                              navigate(`/products?brand=${encodeURIComponent(b)}`);
+                              closeSearchModal();
+                              window.scrollTo({ top: 0, behavior: 'auto' });
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-black/25 text-black text-[12.5px] rounded-full hover:bg-black hover:text-white transition-colors"
+                            data-testid={`header-search-suggest-brand-${b}`}
+                          >
+                            <span>{b}</span>
+                            <span className="opacity-60">→</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {(() => {
               const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
               const isQuery = !!searchQuery.trim();
@@ -1768,6 +1913,27 @@ const Header: React.FC = () => {
               if (isQuery && searchResults.length === 0) {
                 // Don't show "no results" while products are still loading
                 if (allProducts.length === 0) return null;
+                // Kateqoriya/brend təklifləri varsa "nəticə tapılmadı" göstərməyək —
+                // istifadəçi hələ də chip-lərə klik edə bilər.
+                const q2 = searchQuery.trim().toLowerCase();
+                const q2Norm = normalizeAz(q2);
+                const anyCatMatch = (categoryTree.length > 0 || categories.length > 0) &&
+                  ((() => {
+                    const check = (name: string) => {
+                      const lc = name.toLowerCase();
+                      const nc = normalizeAz(lc);
+                      return lc.includes(q2) || nc.includes(q2Norm) || fuzzyIncludes(nc, q2Norm);
+                    };
+                    const walkAny = (n: CategoryNode): boolean =>
+                      check(n.name || n.nameAz || n.nameEn || n.nameRu || '') || n.children.some(walkAny);
+                    return categoryTree.some(walkAny) || categories.some(check);
+                  })());
+                const anyBrandMatch = allProducts.some((p) => {
+                  const b = (p.brand || '').toLowerCase();
+                  const bn = normalizeAz(b);
+                  return b && (b.includes(q2) || bn.includes(q2Norm) || fuzzyIncludes(bn, q2Norm));
+                });
+                if (anyCatMatch || anyBrandMatch) return null;
                 return (
                   <div className="text-center py-20" data-testid="header-search-no-results">
                     <p className="text-[14px] text-black/55">

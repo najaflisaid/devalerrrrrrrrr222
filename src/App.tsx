@@ -63,12 +63,12 @@ import SuccessNotification from './components/SuccessNotification';
 import ScrollToTop from './components/ScrollToTop';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './components/ui/NotificationProvider';
-import LogoLoader from './components/LogoLoader';
 import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 
-// Minimal səhifə yüklənmə fallback-i — De Valeur logosu + zərif pulse (ekranın ortasında)
-const PageFallback: React.FC = () => <LogoLoader fullScreen={false} />;
+// Səhifə yüklənmə fallback-i — görünməz (heç bir spinner/logo, ilişmə hissi olmasın).
+// Kritik ilkin render dərhal görsənir; lazy komponent gələnə qədər boş div qalır.
+const PageFallback: React.FC = () => <div aria-hidden style={{ minHeight: '1px' }} />;
 
 const DEFAULT_SECTION_ORDER = [
   'collectionTiles',
