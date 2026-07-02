@@ -2067,19 +2067,6 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Məhsul kodu (SKU) <span className="text-gray-400 font-normal">— Excel miqrasiyasında dəqiq tapılma açarı</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={newProduct.sku}
-                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
-                      placeholder="məs. LTP-1094E-7ARDF"
-                      data-testid="new-product-sku"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Barkod <span className="text-gray-400 font-normal">— EAN/UPC; müştəri və admin axtarışında, qaimədə işlənir</span>
                     </label>
                     <input
@@ -2417,19 +2404,6 @@ const AdminPanel: React.FC = () => {
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Az) *</label><input type="text" value={editProduct.nameAz} onChange={(e) => setEditProduct({ ...editProduct, nameAz: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Məhsulun adı" /></div>
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (Ru)</label><input type="text" value={editProduct.nameRu} onChange={(e) => setEditProduct({ ...editProduct, nameRu: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Название продукта" /></div>
                     <div><label className="block text-xs font-medium text-gray-700 mb-1">Ad (En)</label><input type="text" value={editProduct.nameEn} onChange={(e) => setEditProduct({ ...editProduct, nameEn: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent" placeholder="Product Name" /></div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Məhsul kodu (SKU) <span className="text-gray-400 font-normal">— Excel miqrasiyasında dəqiq tapılma açarı</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={editProduct.sku}
-                      onChange={(e) => setEditProduct({ ...editProduct, sku: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-mono"
-                      placeholder="məs. LTP-1094E-7ARDF"
-                      data-testid="edit-product-sku"
-                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">
