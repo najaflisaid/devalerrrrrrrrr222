@@ -84,14 +84,20 @@ const ScrollToTop = () => {
   }, []);
 
   useEffect(() => {
-    // Route dəyişdiyi anda köhnə route-un scroll dəyərini SON DƏFƏ təzələ,
-    // sonra 500ms scroll save-i ignor et — yeni səhifədəki avtomatik scrollTo(0)
-    // köhnə açara yazılmasın.
-    if (!isFirstRun.current && __currentKey && __currentKey !== key) {
+    // Route dəyişdi. Əgər click-based save yeni deyilsə (ignoreUntil-də vaxt qalmayıb),
+    // köhnə route-un cari scroll dəyərini yaz. Klik ilə navigation olduqda click handler
+    // artıq düzgün dəyəri yazıb — burada təkrar yazsaq, sonrakı frame-lərdə dəyişilmiş
+    // scrollY-i saxlaya bilərik ki, düzgün olmaz.
+    const now0 = performance.now();
+    if (!isFirstRun.current && __currentKey && __currentKey !== key && now0 >= __ignoreUntil) {
       setScroll(__currentKey, window.scrollY);
     }
     __currentKey = key;
-    __ignoreUntil = performance.now() + 500;
+    // Yalnız click-based ignoreUntil hələ aktivdirsə saxla — əks halda 500ms
+    // qoy. Kliklə naviqasiyada click handler zamanı 1000ms verilib, onu qoruyaq.
+    if (now0 >= __ignoreUntil) {
+      __ignoreUntil = now0 + 500;
+    }
     isFirstRun.current = false;
 
     if (navType === 'POP') {
