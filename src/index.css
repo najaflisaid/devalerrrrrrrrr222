@@ -242,15 +242,11 @@ input[type='number'] {
   }
 }
 
-/* Smooth scrolling — yalnız anchor jump-lar üçün; iOS-da scroll-during-animation
-   stutter etməsin deyə mobil ekranlarda söndürürük (native momentum daha yaxşıdır). */
+/* Smooth scrolling silindi — səhifə keçidləri zamanı scroll bərpası ilə
+   toqquşma yaradırdı (geri qayıdanda əvvəlki mövqedən yuxarıya smooth animation).
+   Anchor keçidləri üçün istifadəçi anlıq scroll edir. */
 html {
-  scroll-behavior: smooth;
-}
-@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
-  html {
-    scroll-behavior: auto;
-  }
+  scroll-behavior: auto;
 }
 
 /* Custom scrollbar */
@@ -1765,9 +1761,9 @@ body.dv-home-active select {
   color: #fff;
 }
 
-/* Smooth scroll for anchor links */
+/* Smooth scroll silindi — bax yuxarıda */
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 /* Hide ugly default focus rings, replace with elegant ones */

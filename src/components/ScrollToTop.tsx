@@ -103,22 +103,67 @@ const ScrollToTop = () => {
     if (navType === 'POP') {
       const saved = getScroll(key);
       if (typeof saved === 'number' && saved > 0) {
+        const origScrollTo = window.scrollTo.bind(window);
+        (window as any).__dvOrigScrollTo = origScrollTo;
+        (window as any).__dvRestoring = true;
+        const restoreDeadline = performance.now() + 8000;
+        // Sürətli, instant scroll — CSS scroll-behavior: smooth-i keçir
+        const instantScroll = (y: number) => {
+          try {
+            origScrollTo({ top: y, left: 0, behavior: 'instant' as ScrollBehavior });
+          } catch {
+            origScrollTo(0, y);
+          }
+        };
+        // Restore döngüsündə istənilən scrollTo(0)/instant scroll cəhdlərini SAVED-ə yönləndir
+        (window as any).scrollTo = function (...args: any[]) {
+          try {
+            let y: number | undefined;
+            if (typeof args[0] === 'object' && args[0] !== null && 'top' in args[0]) y = (args[0] as any).top;
+            else if (typeof args[1] === 'number') y = args[1];
+            const now = performance.now();
+            if (now < restoreDeadline && (y === 0 || y === undefined)) {
+              instantScroll(saved);
+              return;
+            }
+          } catch { /* noop */ }
+          return origScrollTo.apply(window, args as any);
+        };
+        // Smooth scrolling-i restore müddətində müvəqqəti söndür
+        const htmlEl = document.documentElement;
+        const prevScrollBehavior = htmlEl.style.scrollBehavior;
+        htmlEl.style.scrollBehavior = 'auto';
+
         let attempts = 0;
-        const maxAttempts = 60;
+        const maxAttempts = 200; // 8 saniyəyə qədər content-i gözlə
         const tryRestore = () => {
           const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
           if (maxScroll >= saved - 4) {
-            window.scrollTo(0, saved);
-            setTimeout(() => window.scrollTo(0, saved), 200);
-            setTimeout(() => window.scrollTo(0, saved), 500);
-            // Restore olduqdan sonra scroll save-i yenidən aktivləşdir
-            setTimeout(() => { __ignoreUntil = 0; }, 700);
+            instantScroll(saved);
+            // rAF-əsaslı davamlı bərpa — 3.5 saniyəyə qədər hər frame-də saved-ə qayıt
+            const rafHold = () => {
+              if (performance.now() >= restoreDeadline) {
+                (window as any).scrollTo = origScrollTo;
+                (window as any).__dvRestoring = false;
+                htmlEl.style.scrollBehavior = prevScrollBehavior;
+                __ignoreUntil = 0;
+                return;
+              }
+              if (Math.abs(window.scrollY - saved) > 4) {
+                instantScroll(saved);
+              }
+              requestAnimationFrame(rafHold);
+            };
+            requestAnimationFrame(rafHold);
             return;
           }
           if (++attempts < maxAttempts) {
             setTimeout(tryRestore, 40);
           } else {
-            window.scrollTo(0, Math.min(saved, Math.max(0, maxScroll)));
+            instantScroll(Math.min(saved, Math.max(0, maxScroll)));
+            (window as any).scrollTo = origScrollTo;
+            (window as any).__dvRestoring = false;
+            htmlEl.style.scrollBehavior = prevScrollBehavior;
             __ignoreUntil = 0;
           }
         };
