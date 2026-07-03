@@ -103,8 +103,9 @@ export const userService = {
       const users = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
-          id: doc.id,
           ...data,
+          // Firestore sənəd ID-si həmişə üstün olsun — daxili `id` field-i uyğunsuz ola bilər
+          id: doc.id,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt || new Date())
         };
       }) as User[];
@@ -118,14 +119,22 @@ export const userService = {
 
   async deleteUser(userId: string): Promise<void> {
     try {
+      // 1. Sənəd id-si ilə birbaşa tap (Firebase Auth UID kimi doc ID-si)
+      const directRef = doc(db, 'users', userId);
+      const directSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+      if (!directSnap.empty) {
+        await deleteDoc(directRef);
+        return;
+      }
+      // 2. `id` field-i ilə axtar (köhnə istifadəçilər üçün)
       const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
-
       if (!usersSnapshot.empty) {
         const userDoc = usersSnapshot.docs[0];
         await deleteDoc(userDoc.ref);
+        return;
       }
-
-      console.log('User deleted from Firestore successfully');
+      // 3. Heç biri tapılmadısa xəta at (indi silinə bilməz)
+      throw new Error('İstifadəçi tapılmadı (id / doc ID uyğunlaşmır)');
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
@@ -133,33 +142,55 @@ export const userService = {
   },
 
   async setUserRole(userId: string, role: 'customer' | 'admin' | 'b2b'): Promise<void> {
+    // 1. Doc ID-si ilə birbaşa yeniləmə cəhdi (yeni istifadəçilər)
+    const directRef = doc(db, 'users', userId);
+    const directSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+    if (!directSnap.empty) {
+      await updateDoc(directRef, { role });
+      return;
+    }
+    // 2. `id` field-i ilə axtar (köhnə istifadəçilər)
     const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
     if (!usersSnapshot.empty) {
       await updateDoc(usersSnapshot.docs[0].ref, { role });
-    } else {
-      throw new Error('İstifadəçi tapılmadı');
+      return;
     }
+    throw new Error('İstifadəçi tapılmadı (id / doc ID uyğunlaşmır)');
   },
 
   // Admin user üçün detallı icazələri saxla. Boş array → bütün tablara icazəsi yoxdur,
   // undefined → super-admin / geriyə uyğunluq (bütün tablar açıq).
   async setAdminPermissions(userId: string, permissions: string[]): Promise<void> {
+    const directRef = doc(db, 'users', userId);
+    const directSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+    if (!directSnap.empty) {
+      await updateDoc(directRef, { adminPermissions: permissions });
+      return;
+    }
     const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
     if (!usersSnapshot.empty) {
       await updateDoc(usersSnapshot.docs[0].ref, { adminPermissions: permissions });
-    } else {
-      throw new Error('İstifadəçi tapılmadı');
+      return;
     }
+    throw new Error('İstifadəçi tapılmadı (id / doc ID uyğunlaşmır)');
   },
 
   // localStorage userId ilə istifadəçi məlumatını gətir (admin icazələri üçün lazımdır)
   async getUserById(userId: string): Promise<User | null> {
     try {
-      const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
-      if (usersSnapshot.empty) return null;
-      const data = usersSnapshot.docs[0].data() as any;
+      // 1. Doc ID-si ilə birbaşa yoxla
+      let data: any = null;
+      const directSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+      if (!directSnap.empty) {
+        data = directSnap.docs[0].data();
+      } else {
+        // 2. Köhnə `id` field-i ilə axtar
+        const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+        if (usersSnapshot.empty) return null;
+        data = usersSnapshot.docs[0].data();
+      }
       return {
-        id: data.id,
+        id: data.id || userId,
         email: data.email || '',
         name: data.name || '',
         surname: data.surname || '',
@@ -183,27 +214,28 @@ export const userService = {
     discountExpiresAt?: string | null
   ): Promise<void> {
     try {
-      const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+      const updateData: any = {
+        discountPercentage,
+        discountUsed: false,
+      };
+      if (discountUsageType) updateData.discountUsageType = discountUsageType;
+      if (discountExpiresAt) updateData.discountExpiresAt = new Date(discountExpiresAt);
+      else updateData.discountExpiresAt = null;
 
-      if (!usersSnapshot.empty) {
-        const userDoc = usersSnapshot.docs[0];
-        const updateData: any = {
-          discountPercentage,
-          discountUsed: false
-        };
-
-        if (discountUsageType) {
-          updateData.discountUsageType = discountUsageType;
-        }
-
-        if (discountExpiresAt) {
-          updateData.discountExpiresAt = new Date(discountExpiresAt);
-        } else {
-          updateData.discountExpiresAt = null;
-        }
-
-        await updateDoc(userDoc.ref, updateData);
+      // 1. Doc ID-si ilə birbaşa cəhd
+      const directRef = doc(db, 'users', userId);
+      const directSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+      if (!directSnap.empty) {
+        await updateDoc(directRef, updateData);
+        return;
       }
+      // 2. `id` field-i ilə fallback
+      const usersSnapshot = await getDocs(query(collection(db, 'users'), where('id', '==', userId)));
+      if (!usersSnapshot.empty) {
+        await updateDoc(usersSnapshot.docs[0].ref, updateData);
+        return;
+      }
+      throw new Error('İstifadəçi tapılmadı (id / doc ID uyğunlaşmır)');
     } catch (error) {
       console.error('Error updating user discount:', error);
       throw error;
