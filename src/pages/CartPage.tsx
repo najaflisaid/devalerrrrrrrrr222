@@ -66,6 +66,43 @@ const CartPage: React.FC = () => {
   const [promoLoading, setPromoLoading] = useState(false);
   const userDiscount = getUserDiscount();
 
+  // KRITIK: B2B istifadəçi üçün endirim faizini Firestore-dan təzələ.
+  // Admin sonradan endirim təyin edə bilər — köhnə localStorage səbətin
+  // görsənişinə düzgün təsir etməsi üçün. Sifariş verilməzdən əvvəl də
+  // handleB2BOrder-da fresh fetch olunur.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const role = localStorage.getItem('userRole');
+      const uid = localStorage.getItem('userId');
+      if (role !== 'b2b' || !uid) return;
+      try {
+        const { collection: fsCol, query: fsQ, where: fsW, getDocs: fsGetDocs, limit: fsLim } = await import('firebase/firestore');
+        const { db: fsDbLocal } = await import('../lib/firebase');
+        const snap = await fsGetDocs(fsQ(fsCol(fsDbLocal, 'users'), fsW('id', '==', uid), fsLim(1)));
+        if (cancelled || snap.empty) return;
+        const u = snap.docs[0].data() as any;
+        const currentLS = localStorage.getItem('userData');
+        if (!currentLS) return;
+        const parsed = JSON.parse(currentLS);
+        const changed =
+          parsed.discountPercentage !== u.discountPercentage ||
+          parsed.discountUsageType !== u.discountUsageType ||
+          parsed.discountUsed !== u.discountUsed;
+        if (changed) {
+          parsed.discountPercentage = Number(u.discountPercentage) || 0;
+          parsed.discountUsageType = u.discountUsageType || 'unlimited';
+          parsed.discountUsed = !!u.discountUsed;
+          parsed.discountExpiresAt = u.discountExpiresAt || null;
+          localStorage.setItem('userData', JSON.stringify(parsed));
+          // Səbətin yenidən hesablanması üçün yenilə
+          window.dispatchEvent(new Event('storage'));
+        }
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('userId'));
   useEffect(() => {
     const sync = () => setIsLoggedIn(!!localStorage.getItem('userId'));
@@ -758,8 +795,67 @@ const CartPage: React.FC = () => {
         };
       });
 
-      const userDiscountAmount = getDiscountAmount();
-      const finalTotal = getDiscountedTotal();
+      // KRİTİK: endirim faizini birbaşa Firestore-dan oxu ki, localStorage-dəki köhnə
+      // (admin sonradan endirim qoyub, amma müştəri hələ yenidən daxil olmayıb) dəyər
+      // istifadə olunmasın. Bu, sifarişin discountAmount=0 saxlanmasının qarşısını alır.
+      let freshDiscountPct = 0;
+      let freshDiscountType: string = 'unlimited';
+      let freshDiscountUsed = false;
+      let freshDiscountExpiresAt: any = null;
+      try {
+        const userIdLS = localStorage.getItem('userId');
+        if (userIdLS) {
+          const { collection: fsCol, query: fsQ, where: fsW, getDocs: fsGetDocs, limit: fsLim } = await import('firebase/firestore');
+          const { db: fsDbLocal } = await import('../lib/firebase');
+          const snap = await fsGetDocs(
+            fsQ(fsCol(fsDbLocal, 'users'), fsW('id', '==', userIdLS), fsLim(1))
+          );
+          if (!snap.empty) {
+            const u = snap.docs[0].data() as any;
+            freshDiscountPct = Number(u.discountPercentage) || 0;
+            freshDiscountType = u.discountUsageType || 'unlimited';
+            freshDiscountUsed = !!u.discountUsed;
+            freshDiscountExpiresAt = u.discountExpiresAt || null;
+            // localStorage-i də təzələ ki, gələcək açılışlarda düzgün göstərsin
+            const currentLS = localStorage.getItem('userData');
+            if (currentLS) {
+              try {
+                const parsed = JSON.parse(currentLS);
+                parsed.discountPercentage = freshDiscountPct;
+                parsed.discountUsageType = freshDiscountType;
+                parsed.discountUsed = freshDiscountUsed;
+                parsed.discountExpiresAt = freshDiscountExpiresAt;
+                localStorage.setItem('userData', JSON.stringify(parsed));
+              } catch { /* noop */ }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Fresh discount fetch failed, falling back to cached:', e);
+      }
+
+      // Effektiv endirim faizini hesabla (növ, istifadə olunub-olunmadığı, müddət)
+      let effectiveDiscount = 0;
+      if (freshDiscountPct > 0) {
+        if (freshDiscountType === 'unlimited') {
+          effectiveDiscount = freshDiscountPct;
+        } else if (freshDiscountType === 'once' && !freshDiscountUsed) {
+          effectiveDiscount = freshDiscountPct;
+        } else if (freshDiscountType === 'time_limited' && freshDiscountExpiresAt) {
+          try {
+            const exp = new Date(freshDiscountExpiresAt.toDate ? freshDiscountExpiresAt.toDate() : freshDiscountExpiresAt);
+            if (!isNaN(exp.getTime()) && exp > new Date()) effectiveDiscount = freshDiscountPct;
+          } catch { /* noop */ }
+        }
+      }
+      // Yerli hesablanan (getUserDiscount) endirim ilə maks. götür — istifadəçi lehinə
+      const cachedDiscount = getUserDiscount();
+      const finalDiscountPct = Math.max(effectiveDiscount, cachedDiscount);
+
+      // Subtotal — endirimdən əvvəlki
+      const subtotalAmt = orderItems.reduce((s, it) => s + (it.regularPrice * it.quantity), 0);
+      const userDiscountAmount = +(subtotalAmt * finalDiscountPct / 100).toFixed(2);
+      const finalTotal = +(subtotalAmt - userDiscountAmount).toFixed(2);
 
       const userDataStr = localStorage.getItem('userData');
       const userData = userDataStr ? JSON.parse(userDataStr) : null;

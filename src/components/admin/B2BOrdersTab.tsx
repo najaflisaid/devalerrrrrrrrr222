@@ -801,6 +801,48 @@ const B2BOrdersTab: React.FC = () => {
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Endirim</p>
                   <p className="text-base sm:text-lg font-semibold text-green-600 break-words">-{order.discountAmount.toFixed(2)} AZN</p>
+                  {/* Endirim tətbiq edilməyibsə, admin yenidən hesablaya bilər (köhnə sifarişlər üçün) */}
+                  {order.discountAmount === 0 && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          // Müştərinin cari endirim faizini istifadəçi hesabından götür
+                          const { collection: fsCol, query: fsQ, where: fsW, getDocs: fsGetDocs, limit: fsLim, doc: fsDoc, updateDoc: fsUpd } = await import('firebase/firestore');
+                          const { db: fsDbLocal } = await import('../../lib/firebase');
+                          let discountPct = 0;
+                          const email = (order as any).customerEmail;
+                          if (email) {
+                            const snap = await fsGetDocs(fsQ(fsCol(fsDbLocal, 'users'), fsW('email', '==', email), fsLim(1)));
+                            if (!snap.empty) discountPct = Number(snap.docs[0].data().discountPercentage) || 0;
+                          }
+                          const promptVal = prompt(
+                            `Bu sifariş üçün endirim faizini daxil edin (%):`,
+                            String(discountPct)
+                          );
+                          if (promptVal === null) return;
+                          const pct = Math.max(0, Math.min(100, parseFloat(promptVal) || 0));
+                          const subtotalCalc = (order as any).subtotal || order.items.reduce((s: number, it: any) => s + (it.regularPrice * it.quantity), 0);
+                          const newDiscountAmount = +(subtotalCalc * pct / 100).toFixed(2);
+                          const newTotal = +(subtotalCalc - newDiscountAmount).toFixed(2);
+                          await fsUpd(fsDoc(fsDbLocal, 'b2bOrders', order.id), {
+                            subtotal: subtotalCalc,
+                            discountAmount: newDiscountAmount,
+                            totalAmount: newTotal,
+                          });
+                          alert(`Endirim yeniləndi: ${pct}% (-${newDiscountAmount.toFixed(2)} AZN). Səhifəni yeniləyin.`);
+                          window.location.reload();
+                        } catch (err) {
+                          alert('Xəta: ' + (err as Error).message);
+                        }
+                      }}
+                      className="mt-1 text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline"
+                      title="Bu sifariş üçün endirimi əl ilə hesabla (köhnə sifarişlər üçün)"
+                      data-testid={`admin-recalc-discount-${order.id}`}
+                    >
+                      + Endirimi hesabla
+                    </button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600">Ödəniləcək məbləğ</p>

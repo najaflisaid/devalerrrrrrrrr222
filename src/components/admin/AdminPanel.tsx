@@ -4245,7 +4245,18 @@ const AdminPanel: React.FC = () => {
                         </label>
                         <input
                           type="datetime-local"
-                          defaultValue={user.discountExpiresAt ? new Date(user.discountExpiresAt).toISOString().slice(0, 16) : ''}
+                          defaultValue={(() => {
+                            const raw = user.discountExpiresAt;
+                            if (!raw) return '';
+                            try {
+                              // Firestore Timestamp → Date, ISO string və ya Date obyekti
+                              const d: Date = (raw as any)?.toDate
+                                ? (raw as any).toDate()
+                                : new Date(raw as any);
+                              if (isNaN(d.getTime())) return '';
+                              return d.toISOString().slice(0, 16);
+                            } catch { return ''; }
+                          })()}
                           id={`discount-expires-${user.id}`}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
                         />
