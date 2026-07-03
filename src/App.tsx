@@ -67,8 +67,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 
 // Səhifə yüklənmə fallback-i — görünməz (heç bir spinner/logo, ilişmə hissi olmasın).
-// Kritik ilkin render dərhal görsənir; lazy komponent gələnə qədər boş div qalır.
-const PageFallback: React.FC = () => <div aria-hidden style={{ minHeight: '1px' }} />;
+// Kritik: viewport hündürlüyünə yaxın min-hündürlük saxlayır ki, lazy komponent
+// yüklənən zaman Footer yuxarıya sıçrayıb "ekranın yuxarısında" görünməsin.
+const PageFallback: React.FC = () => <div aria-hidden style={{ minHeight: '70vh' }} />;
 
 const DEFAULT_SECTION_ORDER = [
   'collectionTiles',
@@ -173,7 +174,7 @@ const AppContent: React.FC = () => {
             <Route path="/*" element={
               <>
                 <Header />
-                <main>
+                <main style={{ minHeight: '70vh' }}>
                   <Suspense fallback={<PageFallback />}>
                     <Routes>
                       <Route path="/" element={<HomePage />} />
