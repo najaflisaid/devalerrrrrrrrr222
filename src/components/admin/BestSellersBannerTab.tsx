@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Upload, AlertCircle, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import {
   getBestSellersBanner,
   saveBestSellersBanner,
-  uploadBestSellersBannerImage,
   defaultBanner,
   type BestSellersBanner,
 } from '../../services/bestSellersBannerService';
+import MediaInputRow from './MediaInputRow';
 
 const BestSellersBannerTab: React.FC = () => {
   const [data, setData] = useState<BestSellersBanner>(defaultBanner());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
@@ -27,25 +26,6 @@ const BestSellersBannerTab: React.FC = () => {
     value: string
   ) => {
     setData((d) => ({ ...d, [field]: { ...d[field], [lang]: value } }));
-  };
-
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setMsg({ type: 'err', text: 'Şəkil 5MB-dan böyük ola bilməz' });
-      return;
-    }
-    setUploading(true);
-    try {
-      const url = await uploadBestSellersBannerImage(file);
-      setData((d) => ({ ...d, imageUrl: url }));
-      setMsg({ type: 'ok', text: 'Şəkil yükləndi' });
-    } catch (err: any) {
-      setMsg({ type: 'err', text: 'Yükləmə xətası: ' + (err?.message || 'naməlum') });
-    } finally {
-      setUploading(false);
-    }
   };
 
   const handleSave = async () => {
@@ -128,40 +108,16 @@ const BestSellersBannerTab: React.FC = () => {
                 <ImageIcon className="h-8 w-8 text-gray-300" />
               )}
             </div>
-            <div className="flex-1 space-y-2">
-              <label className="inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
-                <Upload className="h-4 w-4" />
-                {uploading ? 'Yüklənir...' : 'Şəkil yüklə (fayl)'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImage}
-                  className="hidden"
-                  data-testid="bsb-image"
-                />
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider">və ya link</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-              <input
-                type="text"
+            <div className="flex-1">
+              <MediaInputRow
                 value={data.imageUrl}
-                onChange={(e) => setData((d) => ({ ...d, imageUrl: e.target.value }))}
-                placeholder="https://...jpg"
-                className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:border-gray-900 focus:outline-none font-mono"
-                data-testid="bsb-image-url"
+                onChange={(url) => setData((d) => ({ ...d, imageUrl: url }))}
+                onRemove={data.imageUrl ? () => setData((d) => ({ ...d, imageUrl: '' })) : undefined}
+                placeholder="https://... və ya faylı yüklə"
+                folder="bestsellers-banner"
+                accept="image"
+                testId="bsb-image"
               />
-              {data.imageUrl && (
-                <button
-                  type="button"
-                  onClick={() => setData((d) => ({ ...d, imageUrl: '' }))}
-                  className="text-[11px] text-red-600 hover:underline"
-                  data-testid="bsb-image-clear"
-                >
-                  Şəkli sil
-                </button>
-              )}
             </div>
           </div>
         </div>

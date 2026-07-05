@@ -22,7 +22,7 @@ import CareersTab from './CareersTab';
 import DeliveryPolicyTab from './DeliveryPolicyTab';
 import ProductBannersTab from './ProductBannersTab';
 import ProductImagePreview from './ProductImagePreview';
-import ImageInputRow from './ImageInputRow';
+import MediaInputRow from './MediaInputRow';
 import PasswordProtectedSection from './PasswordProtectedSection';
 import AdminToggleModal from './AdminToggleModal';
 import ConfirmModal from './ConfirmModal';
@@ -2260,7 +2260,7 @@ const AdminPanel: React.FC = () => {
                     />
                     <div className="mt-3" />
                     {newProduct.images.map((img, index) => (
-                      <ImageInputRow
+                      <MediaInputRow
                         key={index}
                         value={img}
                         onChange={(url) => {
@@ -2272,8 +2272,9 @@ const AdminPanel: React.FC = () => {
                           const newImages = newProduct.images.filter((_, i) => i !== index);
                           setNewProduct({ ...newProduct, images: newImages });
                         } : undefined}
-                        placeholder={`Şəkil ${index + 1} URL və ya Yüklə`}
+                        placeholder={`Şəkil ${index + 1} URL və ya faylı yüklə`}
                         folder="products"
+                        accept="image"
                         testId={`new-product-image-${index}`}
                       />
                     ))}
@@ -2405,13 +2406,14 @@ const AdminPanel: React.FC = () => {
                   })()}</select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Cins *</label><select value={editProduct.gender} onChange={(e) => setEditProduct({ ...editProduct, gender: e.target.value as 'men' | 'women' | 'unisex' })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"><option value="unisex">Unisex</option><option value="men">Kişi</option><option value="women">Qadın</option></select></div>
                   <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Şəkillər URL və ya Yüklə</label><ProductImagePreview imageUrl={editProduct.images[0] || ''} name={editProduct.nameAz} brand={editProduct.brand} price={editProduct.price} salePrice={editProduct.salePrice} scale={editProduct.imageScale} offsetX={editProduct.imageOffsetX} offsetY={editProduct.imageOffsetY} onScaleChange={(s) => setEditProduct({ ...editProduct, imageScale: s })} onOffsetChange={(x, y) => setEditProduct({ ...editProduct, imageOffsetX: x, imageOffsetY: y })} /><div className="mt-3" />{editProduct.images.map((img, index) => (
-                    <ImageInputRow
+                    <MediaInputRow
                       key={index}
                       value={img}
                       onChange={(url) => { const newImages = [...editProduct.images]; newImages[index] = url; setEditProduct({ ...editProduct, images: newImages }); }}
                       onRemove={index > 0 ? () => { const newImages = editProduct.images.filter((_, i) => i !== index); setEditProduct({ ...editProduct, images: newImages }); } : undefined}
-                      placeholder={`Şəkil ${index + 1} URL və ya Yüklə`}
+                      placeholder={`Şəkil ${index + 1} URL və ya faylı yüklə`}
                       folder="products"
+                      accept="image"
                       testId={`edit-product-image-${index}`}
                     />
                   ))}<button onClick={() => setEditProduct({ ...editProduct, images: [...editProduct.images, ''] })} className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all" data-testid="edit-product-add-image-btn"><Plus className="h-4 w-4 inline mr-1" /> Şəkil əlavə et</button></div>

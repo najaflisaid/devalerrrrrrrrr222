@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, Image as ImageIcon, Loader2, X, Upload, Video } from 'lucide-react';
+import { Plus, Trash2, Edit, Image as ImageIcon, Loader2, X, Video } from 'lucide-react';
 import { getAllBanners, createBanner, updateBanner, deleteBanner, Banner } from '../../services/bannerService';
-import { storage } from '../../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import MediaInputRow from './MediaInputRow';
 
 const BannerManagementTab: React.FC = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -22,8 +21,6 @@ const BannerManagementTab: React.FC = () => {
     duration: 4
   });
   const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   useEffect(() => {
     loadBanners();
@@ -41,48 +38,19 @@ const BannerManagementTab: React.FC = () => {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Fayl ölçüsü 5MB-dan çox olmamalıdır');
-        return;
-      }
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const timestamp = Date.now();
-    const filename = `banner_${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `banners/${filename}`);
-    await uploadBytes(storageRef, file);
-    const downloadUrl = await getDownloadURL(storageRef);
-    return downloadUrl;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setUploading(true);
-      let imageUrl = formData.imageUrl;
-
-      if (selectedFile) {
-        imageUrl = await uploadImage(selectedFile);
-      }
+      const imageUrl = formData.imageUrl;
 
       if (formData.mediaType === 'image' && !imageUrl) {
-        alert('Zəhmət olmasa şəkil seçin və ya URL daxil edin');
+        alert('Zəhmət olmasa şəkil URL daxil edin və ya faylı yükləyin');
         return;
       }
 
       if (formData.mediaType === 'video' && !formData.videoUrl) {
-        alert('Zəhmət olmasa video URL daxil edin');
+        alert('Zəhmət olmasa video URL daxil edin və ya faylı yükləyin');
         return;
       }
 
@@ -147,8 +115,6 @@ const BannerManagementTab: React.FC = () => {
       videoUrl: '',
       duration: 4
     });
-    setSelectedFile(null);
-    setPreviewUrl('');
   };
 
   if (loading) {
@@ -278,66 +244,37 @@ const BannerManagementTab: React.FC = () => {
               </div>
 
               {formData.mediaType === 'image' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Şəkil Yüklə</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        id="banner-upload"
-                      />
-                      <label htmlFor="banner-upload" className="cursor-pointer">
-                        {previewUrl || formData.imageUrl ? (
-                          <div className="space-y-2">
-                            <img src={previewUrl || formData.imageUrl} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
-                            <p className="text-sm text-blue-600 hover:text-blue-700">Başqa şəkil seçin</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Upload className="h-12 w-12 text-gray-400 mx-auto" />
-                            <p className="text-gray-600">Şəkil yükləmək üçün klikləyin</p>
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF (max 5MB)</p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">və ya</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Şəkil URL</label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                      placeholder="https://example.com/image.jpg"
-                    />
-                  </div>
-                </>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Şəkil (URL və ya faylı yüklə)</label>
+                  <MediaInputRow
+                    value={formData.imageUrl}
+                    onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                    onRemove={formData.imageUrl ? () => setFormData({ ...formData, imageUrl: '' }) : undefined}
+                    placeholder="https://example.com/image.jpg və ya faylı yüklə"
+                    folder="banners"
+                    accept="image"
+                    showPreview
+                    testId="banner-image"
+                  />
+                </div>
               )}
 
               {formData.mediaType === 'video' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
-                  <input
-                    type="url"
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Video (URL və ya faylı yüklə)</label>
+                  <MediaInputRow
                     value={formData.videoUrl}
-                    onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="https://www.youtube.com/embed/..."
-                    required
+                    onChange={(url) => setFormData({ ...formData, videoUrl: url })}
+                    onRemove={formData.videoUrl ? () => setFormData({ ...formData, videoUrl: '' }) : undefined}
+                    placeholder="https://... .mp4 və ya faylı yüklə (yaxud YouTube embed URL)"
+                    folder="banners"
+                    accept="video"
+                    showPreview
+                    testId="banner-video"
                   />
-                  <p className="mt-2 text-xs text-gray-500">YouTube üçün: https://www.youtube.com/embed/VIDEO_ID</p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Fayl yüklə (.mp4, .webm) və ya URL yapışdır. YouTube üçün: https://www.youtube.com/embed/VIDEO_ID
+                  </p>
                 </div>
               )}
 

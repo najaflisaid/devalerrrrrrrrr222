@@ -1,149 +1,193 @@
-# Cloudflare R2 — Şəkil yükləmə quraşdırma bələdçisi
+# Cloudflare R2 + Worker — Şəkil/Video yükləmə (Vercel env variable-larsız)
 
-De Valeur admin paneli indi məhsul şəkillərini iki üsulla dəstəkləyir:
-1. **URL yapışdırmaq** (əvvəlki kimi) — kənar linki daxil et
-2. **Faylı yüklə** — kompüterdən şəkil seç → Cloudflare R2-yə yüklənir → URL avtomatik doldurulur
-
-Fayl yükləmə funksiyasının işləməsi üçün Cloudflare R2 quraşdırmaq lazımdır.
+Bu yanaşmada:
+- ✅ **Vercel-də heç bir env variable əlavə etmək lazım deyil**
+- ✅ Bütün açarlar Cloudflare-in Worker-inin içində gizli qalır
+- ✅ Frontend birbaşa Worker-ə fayl göndərir
+- ✅ Bucket və Worker eyni Cloudflare hesabında bir yerdədir (R2 binding — API açarlarına ehtiyac yoxdur)
 
 ---
 
-## 1. Cloudflare R2 hesabı və bucket yaratmaq
+## Addım 1 — R2 bucket və Public URL (əgər hələ etməmisən)
 
-### Addım 1.1 — R2-ni aktivləşdir
-1. https://dash.cloudflare.com hesabına daxil ol
-2. Sol menyudan **R2 Object Storage** seç
-3. **"Purchase R2"** düyməsinə bas (10 GB / ay + 1M yazma pulsuzdur)
+Sən artıq bucket yaratmısan (`devaleur`) və Public URL almısan (`https://pub-8757540963484f9695b95960b729f3fa.r2.dev`). Bu addım hazırdır. ✅
 
-### Addım 1.2 — Bucket yarat
-1. **"Create bucket"** düyməsi
-2. Ad ver: məsələn `devaleur-images`
-3. **Location**: `Automatic` və ya `Eastern Europe`
-4. **Create bucket** düyməsini bas
+Public URL-i qeyd saxla — Worker konfiqurasiyasında istifadə edəcəyik.
 
-### Addım 1.3 — Public access aktiv et (şəkillərin brauzerdə görünməsi üçün)
-Bucket-in Settings tab-ına gir → **Public access** bölməsi:
+---
 
-**Variant A: R2.dev subdomain (test üçün rahat)**
-- **"Allow Access"** düyməsinə bas
-- Public URL veriləcək: `https://pub-xxxxxxxxxxx.r2.dev`
-- Bunu qeyd et — `R2_PUBLIC_URL` env-i olacaq
+## Addım 2 — CORS quraşdır bucket üçün
 
-**Variant B: Custom domain (production üçün tövsiyə edilir)**
-- **Custom Domains** → **Connect Domain** → məsələn `cdn.devaleur.az`
-- DNS CNAME avtomatik əlavə ediləcək
-- `R2_PUBLIC_URL=https://cdn.devaleur.az`
-
-### Addım 1.4 — CORS quraşdır
-Bucket → **Settings** → **CORS Policy** → **Add CORS policy**:
+1. Cloudflare Dashboard → **R2** → `devaleur` bucket → **Settings** tab
+2. Aşağıya sürüş → **CORS Policy** bölməsi → **Add CORS policy**
+3. Aşağıdakı JSON-u yapışdır:
 
 ```json
 [
   {
-    "AllowedOrigins": ["https://devaleur.az", "https://*.vercel.app", "http://localhost:5173"],
-    "AllowedMethods": ["GET", "PUT", "POST"],
+    "AllowedOrigins": [
+      "https://devaleur.az",
+      "https://www.devaleur.az",
+      "https://*.vercel.app",
+      "http://localhost:5173"
+    ],
+    "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
     "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 3600
   }
 ]
 ```
 
----
-
-## 2. API açarları yaratmaq
-
-1. R2 səhifəsində **Manage R2 API Tokens** düyməsinə bas
-2. **Create API token**:
-   - Ad: `devaleur-uploader`
-   - Permissions: **Object Read & Write**
-   - Specify bucket: yalnız `devaleur-images` seç (təhlükəsizlik üçün)
-   - TTL: `Forever` (və ya istədiyin müddət)
-3. **Create API Token** düyməsinə bas
-4. Ekranda çıxan **3 dəyəri kopyala**:
-   - `Access Key ID`
-   - `Secret Access Key`
-   - `Endpoint` (bunun içindəki account ID lazımdır — məsələn `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`)
-
-> ⚠️ Secret Access Key yalnız bir dəfə göstərilir. Dərhal kopyala!
-
-Həmçinin Cloudflare dashboardun sağ tərəfində **Account ID** yazılıb — o da lazımdır.
+4. **Save** düyməsinə bas.
 
 ---
 
-## 3. Vercel-də Environment Variables əlavə et
+## Addım 3 — Cloudflare Worker yarat və deploy et
 
-Vercel dashboard → Proyektinin **Settings** → **Environment Variables**:
+### Variant A — Cloudflare Dashboard (ən sadə, brauzerdə)
 
-| Variable | Nümunə dəyər |
-|---|---|
-| `R2_ACCOUNT_ID` | `1a2b3c4d5e6f7g8h9i0j` |
-| `R2_ACCESS_KEY_ID` | `abcdef...` |
-| `R2_SECRET_ACCESS_KEY` | `xyz123...` |
-| `R2_BUCKET` | `devaleur-images` |
-| `R2_PUBLIC_URL` | `https://pub-xxxxxxx.r2.dev` (və ya custom domain) |
+1. Cloudflare Dashboard → sol menyudan **Workers & Pages** → **Overview**
+2. **Create application** düyməsi → **Create Worker** seç
+3. Ad ver: `devaleur-uploader` (və ya istədiyin ad — məsələn `silent-pine-862b` onsuz da var)
+4. **Deploy** düyməsi (default kod ilə deploy olacaq)
 
-Save edəndən sonra **Deployments** tab → son deploy → **Redeploy** düyməsi ilə yenidən deploy et.
+5. Worker deploy olduqdan sonra **Edit code** düyməsinə bas
+6. Sağ tərəfdə açılan editor-də mövcud kodun **hamısını sil**
+7. `/app/worker/r2-upload-worker.js` faylının məzmununu **kopyala və yapışdır**
+8. Yuxarı sağda **Deploy** (mavi) düyməsinə bas
+9. Deploy olduqdan sonra sağ üstdə Worker URL-ni görəcəksən:
+   ```
+   https://devaleur-uploader.najaflisaid35.workers.dev
+   ```
+   VƏ YA (əgər `silent-pine-862b`-i istifadə etdinsə):
+   ```
+   https://silent-pine-862b.najaflisaid35.workers.dev
+   ```
+   **Bu URL-i qeyd et** — sonra frontend kodunda göstərəcəyik.
 
----
+### Addım 3.1 — Worker-ə R2 bucket bindingi əlavə et (KRİTİK!)
 
-## 4. Yoxlama
+10. Worker səhifəsində **Settings** tab-a keç
+11. Sol tərəfdə **Variables and Secrets** və **Bindings** bölmələri var
+12. **Bindings** bölməsinə keç → **Add binding**
+13. **R2 bucket** seç:
+    - **Variable name**: `BUCKET` (mütləq bu ad — böyük hərflərlə)
+    - **R2 bucket**: `devaleur` seç dropdown-dan
+    - **Save** düyməsi
 
-1. Deploy tamamlandıqdan sonra `/admin` səhifəsinə gir
-2. **Məhsullar** tabına keç → **Yeni məhsul əlavə et**
-3. **Şəkillər URL və ya Yüklə** sahəsində **"Yüklə"** (yaşıl-qara) düyməsinə bas
-4. Kompüterdən şəkil seç (maks. 10 MB)
-5. Bir neçə saniyədə URL avtomatik doldurulur — məhsulu saxla
+14. İndi **Variables and Secrets** bölməsinə keç → **Add variable**
+    - **Variable name**: `PUBLIC_URL`
+    - **Value**: `https://pub-8757540963484f9695b95960b729f3fa.r2.dev`
+    - **Type**: `Plain Text` qoy
+    - **Save**
 
-Yüklənmiş şəkillərin R2 URL-i belə görünəcək:
+15. Sağ üstdə yenidən **Deploy** düyməsinə bas (yeni binding aktiv olsun)
+
+### Addım 3.2 — Yoxla
+
+Brauzerdə aç:
 ```
-https://pub-xxxxxxx.r2.dev/products/<random-uuid>.jpg
+https://silent-pine-862b.najaflisaid35.workers.dev/health
 ```
-
----
-
-## Problemlər (troubleshooting)
-
-**"R2 credentials not configured" xətası:**
-- Vercel env variables saxlanmayıb və ya deploy yenilənməyib. Redeploy et.
-
-**"Access Denied" / "Forbidden":**
-- API tokeni yenidən yarat və bu dəfə **Object Read & Write** icazəsi ver
-- Token-in scope-u seçilmiş bucket-a uyğundurmu?
-
-**URL açılır amma şəkil göstərilmir:**
-- Bucket üçün **Public access** aktiv deyil. Addım 1.3-ə qayıt.
-
-**CORS xətası (brauzer console):**
-- Bucket CORS Policy-si düzgün deyil. Addım 1.4-ə qayıt.
-
----
-
-## Texniki qeydlər
-
-- Fayllar `products/` prefix ilə saxlanır (folder parametri ilə dəyişdirmək olar)
-- Fayl adı təsadüfi UUID + orijinal fayl uzantısıdır (kolliziya yoxdur)
-- Maksimum fayl ölçüsü: 10 MB (Vercel serverless body limit-i)
-- Daha böyük fayllar üçün presigned URL yanaşması lazımdır (gələcək iterasiya)
-- Cache-Control: `public, max-age=31536000, immutable` (1 il CDN cache)
-
-## API endpoint
-
-`POST /api/r2-upload`
-
-Body (JSON):
+Cavab belə olmalıdır:
 ```json
-{
-  "fileBase64": "iVBORw0KGgo...",  // data URI prefixi olmadan və ya prefiks ilə
-  "filename": "photo.jpg",
-  "contentType": "image/jpeg",
-  "folder": "products"
-}
+{"ok":true,"publicUrl":"https://pub-8757540963484f9695b95960b729f3fa.r2.dev"}
 ```
 
-Response:
-```json
-{
-  "url": "https://pub-xxxxxxx.r2.dev/products/abc-123.jpg",
-  "key": "products/abc-123.jpg"
-}
+✅ Əgər `publicUrl` null deyilsə, Worker düzgün quraşdırılıb.
+
+---
+
+## Addım 4 — Frontend-də Worker URL-i göstər
+
+**Fayl**: `/app/src/services/imageUploadService.ts`
+
+Faylın yuxarısında bunu tap:
+
+```typescript
+const WORKER_URL =
+  (import.meta as any).env?.VITE_R2_WORKER_URL ||
+  'https://silent-pine-862b.najaflisaid35.workers.dev';
 ```
+
+Əgər sənin Worker URL-in **fərqlidir**, sadəcə hardcoded fallback URL-i öz Worker URL-inlə əvəz et. Vercel-də env variable əlavə etməyə **ehtiyac yoxdur** — hardcoded URL kifayətdir.
+
+---
+
+## Addım 5 — Deploy et
+
+Adi qaydada Vercel-də deploy et:
+
+```bash
+git add .
+git commit -m "R2 upload via Cloudflare Worker"
+git push
+```
+
+Vercel avtomatik yeni deploy edəcək.
+
+---
+
+## Addım 6 — Test et
+
+1. `https://devaleur.az/admin` aç
+2. **Məhsullar** tabı → **Yeni məhsul əlavə et**
+3. Aşağı sürüş → **Şəkillər URL və ya Yüklə** sahəsi
+4. Qara **"Yüklə"** düyməsinə bas
+5. Kompüterdən şəkil seç → 2-3 saniyəyə URL avtomatik doldurulur
+
+**Digər yerlərdə də test et:**
+- Admin → **Banner idarəetməsi** — şəkil VƏ video yükləmə (URL və ya fayl)
+- Admin → **Bestseller Banner** — şəkil (URL və ya fayl)
+- Admin → **Məhsul bannerləri** — şəkil / video (URL və ya fayl)
+
+---
+
+## Nə saxlanılır və harada
+
+| Kontent | Bucket-də folder | Nümunə URL |
+|---|---|---|
+| Məhsul şəkilləri | `products/` | `pub-xxx.r2.dev/products/uuid.jpg` |
+| Ana banner (image/video) | `banners/` | `pub-xxx.r2.dev/banners/uuid.mp4` |
+| Bestseller banner | `bestsellers-banner/` | `pub-xxx.r2.dev/bestsellers-banner/uuid.jpg` |
+| Məhsul banneri (image/video) | `product-banners/` | `pub-xxx.r2.dev/product-banners/uuid.jpg` |
+
+---
+
+## Problemlər (Troubleshooting)
+
+**"R2 BUCKET binding not configured"** xətası
+- Addım 3.1 edilməyib. Worker Settings → Bindings → R2 binding əlavə et (name: `BUCKET`).
+
+**"PUBLIC_URL env var not set"** xətası
+- Addım 3.1 kimi Environment Variable əlavə et (`PUBLIC_URL`).
+
+**"CORS error" brauzer console-da**
+- Addım 2 (CORS policy) atlanıb. R2 bucket → Settings → CORS Policy əlavə et.
+
+**Şəkil URL açılır amma boşdur / 404**
+- Bucket-in Public Access aktiv deyil. Cloudflare → R2 → bucket → Settings → Public Access → **Allow Access**.
+
+**"Şəbəkə xətası — Worker URL və CORS quraşdırmasını yoxlayın"**
+- Worker URL frontend-də səhv göstərilib. `imageUploadService.ts`-də URL-i yoxla.
+- Health endpoint-i test et: `<worker-url>/health` — 200 gəlməlidir.
+
+---
+
+## Təhlükəsizlik qeydləri
+
+- **Worker-in URL-i açıqdır** — hər kəs POST edib fayl yükləyə bilər. Bu sənin ictimai sayt üçün OK-dir (məhsul şəkilləri saxlanır), amma:
+  - Böyük ölçülü limit qoyulub (100 MB)
+  - Yalnız image/video/pdf uzantıları qəbul edilir
+  - Sonradan lazım olarsa authentication əlavə edə bilərik (istifadəçi tokeni yoxlanışı Worker-də)
+- R2 bucket-i **öz bucketindir**, Worker binding vasitəsilə yazır — S3 API açarları paylaşılmır
+- Chat-də paylaşdığın Access Key ID və Secret Access Key artıq lazım deyil — istəsən Cloudflare-də sil (Manage R2 API Tokens → köhnə token-i "Revoke" et)
+
+---
+
+## Növbəti addımlar (istəyə görə)
+
+- **Custom domain**: `cdn.devaleur.az` kimi öz domenini bucket-ə bağla (Cloudflare Dashboard → R2 → bucket → Settings → Custom Domains)
+- **Auth qoruması**: Worker-də admin token yoxlaması əlavə et
+- **Image optimization**: Cloudflare Images ilə avtomatik WebP + resize

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Plus, Edit, Trash2, X } from 'lucide-react';
 import { getAllProductBanners, createProductBanner, updateProductBanner, deleteProductBanner, type ProductBanner } from '../../services/contentService';
 import { siteConfirm } from '../ui/NotificationProvider';
+import MediaInputRow from './MediaInputRow';
 
 const ProductBannersTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -185,24 +186,26 @@ const ProductBannersTab: React.FC = () => {
 
             {formData.content_type === 'image' ? (
               <div>
-                <label className="block text-sm font-medium mb-2">Şəkil URL</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium mb-2">Şəkil (URL və ya faylı yüklə)</label>
+                <MediaInputRow
                   value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-                  placeholder="https://example.com/image.jpg"
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  placeholder="https://example.com/image.jpg və ya faylı yüklə"
+                  folder="product-banners"
+                  accept="image"
+                  testId="product-banner-image"
                 />
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium mb-2">Video URL</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium mb-2">Video (URL və ya faylı yüklə)</label>
+                <MediaInputRow
                   value={formData.video_url}
-                  onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-                  placeholder="https://example.com/video.mp4"
+                  onChange={(url) => setFormData({ ...formData, video_url: url })}
+                  placeholder="https://example.com/video.mp4 və ya faylı yüklə"
+                  folder="product-banners"
+                  accept="video"
+                  testId="product-banner-video"
                 />
               </div>
             )}
