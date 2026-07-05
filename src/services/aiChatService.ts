@@ -45,13 +45,14 @@ export interface ChatRequest {
   sessionId?: string;
 }
 
-// Backend proxy (preview/dev) → OpenAI direct fallback (production/netlify).
-// Bu sxem həm Emergent preview-da (backend var), həm də Netlify/Vercel deploy-da
-// (backend yox) chat-ın işləməsini təmin edir.
-const ENV_OPENAI_KEY: string =
-  (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
-const OPENAI_MODEL = 'gpt-4o-mini';
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// Gemini (Google AI Studio) — new AQ. auth key format (post-2026).
+// Direct browser calls (Gemini supports CORS for API key auth).
+// Açar frontend-də hardcoded — Vercel env-lərə ehtiyac yoxdur.
+const GEMINI_API_KEY: string =
+  (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+  'AQ.Ab8RN6K-_cQpHcnCijKMXuIr6Z7Y060m2Uf62VuwjFyhC-WZBg';
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
@@ -290,89 +291,61 @@ const buildSystemMessage = (req: ChatRequest): string => {
 };
 
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
-  // Vercel deploy-da env variable lazım deyil — `window.location.origin` istifadə olunur
-  // çünki `/api/chat` Vercel serverless function-u eyni domendədir.
-  const BACKEND_URL: string =
-    (import.meta as any).env?.VITE_BACKEND_URL ||
-    (import.meta as any).env?.REACT_APP_BACKEND_URL ||
-    (typeof window !== 'undefined' ? window.location.origin : '');
-
-  const sessionId =
-    req.sessionId ||
-    (typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? (crypto as any).randomUUID()
-      : `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
-
-  // 1) İlk cəhd: backend proxy (emergent preview-da işləyir, açar gizli qalır)
-  // Backend bəzən gec cavab verir və ya 502 qaytarır — istifadəçinin "tez-tez cavab vermir"
-  // problemini həll etmək üçün backend istəyini 6 saniyə ilə zaman aşımına saxlayırıq və
-  // uğursuzluqda dərhal birbaşa OpenAI fallback-inə keçirik.
-  if (BACKEND_URL) {
-    const payload = {
-      session_id: sessionId,
-      message: req.message.trim(),
-      history: (req.history || []).slice(-8).map((h) => ({
-        role: h.role,
-        content: h.content,
-      })),
-      products: req.products || [],
-      knowledge: req.knowledge || null,
-      language: req.language || 'az',
-    };
-
-    try {
-      const ctrl = new AbortController();
-      // 25 saniyə timeout — OpenAI bəzən soyuq başlanğıcda 8-15 saniyə çəkə bilir.
-      // Daha əvvəl 6 saniyə idi və yavaş cavablar fallback-ə düşürdü.
-      const timer = setTimeout(() => ctrl.abort(), 25000);
-      const res = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: ctrl.signal,
-      });
-      clearTimeout(timer);
-
-      if (res.ok) {
-        const data = await res.json();
-        const reply: string = (data?.reply || '').trim();
-        if (reply) return reply;
-      }
-      console.warn('[AI] Backend proxy boş/xəta cavab verdi, OpenAI-a keçirik:', res.status);
-    } catch (err) {
-      console.warn('[AI] Backend proxy çatmır, OpenAI-a keçirik:', err);
-    }
-  }
-
-  // 2) Fallback: birbaşa OpenAI — 1 dəfə yenidən cəhd ilə
-  if (!ENV_OPENAI_KEY) {
-    throw new Error(
-      'AI xidməti hazırda əlçatan deyil (VITE_OPENAI_API_KEY env-də qoyulmayıb).'
-    );
+  if (!GEMINI_API_KEY) {
+    throw new Error('AI xidməti hazırda əlçatan deyil (Gemini API açarı qoyulmayıb).');
   }
 
   const systemMessage = buildSystemMessage(req);
-  const recentTurns = (req.history || []).slice(-8).map((h) => ({
-    role: h.role,
-    content: h.content,
-  }));
-  const messages = [
-    { role: 'system', content: systemMessage },
-    ...recentTurns,
-    { role: 'user', content: req.message.trim() },
-  ];
+  const recentTurns = (req.history || []).slice(-8);
 
-  const callOpenAI = async (): Promise<Response> => {
+  // Gemini "contents" formatına çeviririk (user/model roles)
+  const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+  for (const h of recentTurns) {
+    contents.push({
+      role: h.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: h.content }],
+    });
+  }
+  contents.push({
+    role: 'user',
+    parts: [{ text: req.message.trim() }],
+  });
+
+  const body = {
+    system_instruction: {
+      parts: [{ text: systemMessage }],
+    },
+    contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 1500,
+      // Gemini 2.5 Flash-ın "thinking" modunu söndür — chat üçün lazım deyil,
+      // token büdcəsini yeyir və cavabları yavaşladır.
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  };
+
+  const callGemini = async (): Promise<Response> => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 25000);
     try {
-      return await fetch(OPENAI_URL, {
+      // Yeni AQ. key formatı üçün — həm ?key= query, həm x-goog-api-key header dəstəklənir.
+      // Header istifadə edirik ki, URL log-larında açar görünməsin.
+      return await fetch(GEMINI_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${ENV_OPENAI_KEY}`,
+          'x-goog-api-key': GEMINI_API_KEY,
         },
-        body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.7 }),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
     } finally {
@@ -383,27 +356,30 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
   // 1-ci cəhd
   let res: Response;
   try {
-    res = await callOpenAI();
+    res = await callGemini();
   } catch (err) {
-    console.warn('[AI] OpenAI 1-ci cəhd uğursuz, 1 dəfə təkrar:', err);
-    // Qısa pauzadan sonra 1 dəfə təkrar
+    console.warn('[AI] Gemini 1-ci cəhd uğursuz, 1 dəfə təkrar:', err);
     await new Promise((r) => setTimeout(r, 600));
-    res = await callOpenAI();
+    res = await callGemini();
   }
 
-  // 429 (rate limit) və ya 5xx olarsa 1 dəfə təkrar
+  // 429 / 5xx üçün 1 dəfə də təkrar
   if (!res.ok && (res.status === 429 || res.status >= 500)) {
-    console.warn('[AI] OpenAI status', res.status, '— 1 dəfə təkrar');
+    console.warn('[AI] Gemini status', res.status, '— 1 dəfə təkrar');
     await new Promise((r) => setTimeout(r, 800));
-    res = await callOpenAI();
+    res = await callGemini();
   }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`AI xidməti (${res.status}): ${errText.slice(0, 120)}`);
+    throw new Error(`AI xidməti (${res.status}): ${errText.slice(0, 160)}`);
   }
 
   const data = await res.json();
-  const reply: string = data?.choices?.[0]?.message?.content || '';
+  // Gemini response: candidates[0].content.parts[0].text
+  const reply: string =
+    data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || '').join('') ||
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    '';
   return reply.trim() || 'Bağışlayın, cavab yarana bilmədi.';
 };

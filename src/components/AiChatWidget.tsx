@@ -679,13 +679,13 @@ const AiChatWidget: React.FC = () => {
         </div>
       )}
 
-      {/* Chat panel — minimalist luxe */}
+      {/* Chat panel — minimalist luxe, tam yumru */}
       {open && (
         <div
-          className="fixed bottom-5 right-5 z-[9999] bg-white flex flex-col overflow-hidden dv-ai-panel"
+          className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[9999] bg-white flex flex-col overflow-hidden dv-ai-panel rounded-3xl"
           style={{
-            width: 'min(360px, calc(100vw - 24px))',
-            height: 'min(580px, calc(100vh - 60px))',
+            width: 'min(380px, calc(100vw - 20px))',
+            height: 'min(600px, calc(100vh - 40px))',
             border: '1px solid #D4AF37',
             boxShadow: '0 24px 60px -20px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(212,175,55,0.3)',
           }}

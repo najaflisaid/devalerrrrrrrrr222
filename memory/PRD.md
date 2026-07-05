@@ -1,9 +1,51 @@
 # De Valeur — PRD
 
-## Problem statement (latest — 2026-01, Cloudflare R2 + Worker, universal media upload)
-- Vercel env variable-lara ehtiyac olmadan, tam frontend-based upload sistemi
-- Bütün media yerlərində (məhsul şəkilləri, ana bannerlər, məhsul bannerləri, bestseller banner, video bannerlər) həm link, həm faylı yüklə seçimi olsun
-- Yükləmələr Cloudflare R2-yə Cloudflare Worker vasitəsilə keçir (R2 binding — S3 açarları paylaşılmır)
+## Problem statement (latest — 2026-01, Gemini AI chat + admin-only media upload)
+- Media upload yalnız admin panelində olsun, istifadəçi səhifələrində yox
+- Saytın sağında De Valeur AI chat olsun (istifadəçi üçün)
+- Gemini API açarı ilə (yeni "AQ." prefix formatı) — frontend-only, Vercel env-siz
+- Chat forması yumru, De Valeur logosu, minimalist dizayn, responsive
+
+## Implemented (this iteration — Gemini 2.5 Flash + rounded UI)
+- 2026-01: **AI Chat Service Gemini-yə keçirildi** (`src/services/aiChatService.ts`):
+  - OpenAI backend proxy silindi; Gemini 2.5 Flash `generativelanguage.googleapis.com/v1beta`
+  - Yeni "AQ." prefix auth key formatı (`x-goog-api-key` header ilə)
+  - API açar hardcoded — heç bir Vercel env variable lazım deyil
+  - Gemini "thinking" modu söndürüldü (`thinkingBudget: 0`) — cavab sürətli və ucuz
+  - Multi-turn history (max 8 mesaj), system prompt (De Valeur persona), safety settings
+  - 25s timeout, 429/5xx üçün 1 dəfə retry
+  - Terminal test: 94 total tokens → OpenAI 4o-mini ilə müqayisədə ~25× ucuz
+- 2026-01: **AI Chat panel yumru dizayn** (`AiChatWidget.tsx`):
+  - `rounded-3xl` əlavə olundu → daha yumşaq və luxury görünüş
+  - Genişlik `min(380px, calc(100vw - 20px))`, hündürlük `min(600px, calc(100vh - 40px))`
+  - Mobil: `bottom-4 right-4`, desktop: `sm:bottom-5 sm:right-5`
+  - De Valeur logosu header + launcher-də (mövcud idi, saxlandı)
+  - Gold accent line, minimal buttons, animasiyalı online nöqtəsi
+- 2026-01: **Media upload istifadəçi səhifələrindən uzaqda** — yalnız admin komponentlərində:
+  - `AdminPanel.tsx` (məhsul), `BannerManagementTab.tsx`, `BestSellersBannerTab.tsx`, `ProductBannersTab.tsx`
+  - İstifadəçi tərəfli komponentlər (Header, Product, Cart və s.) toxunulmadı
+- 2026-01: **AiChatWidgetGate saxlanıldı** — admin/b2b/worker rollarında AI chat göstərilmir (yalnız retail müştəri + qonaqlar)
+
+## Verified
+- Build: `npx vite build` → uğurlu (17.18s)
+- Gemini API terminal test: cavab AZ dilində, 94 total tokens
+- AI Launcher screenshot: bottom-right küncdə görünür, "BIZƏ YAZ" + logo + yaşıl nöqtə
+
+## Setup notes
+- Gemini API açar (`AQ.Ab8RN6K-_cQpHcnCijKMXuIr6Z7Y060m2Uf62VuwjFyhC-WZBg`) — frontend-də hardcoded
+- Cloudflare Worker R2 upload üçün hələ də lazımdır (media upload)
+- Vercel-də HEÇ BİR env variable əlavə etmək lazım deyil
+
+## Backlog
+- P1: Gemini API açarını .env-ə köçürmək (təhlükəsizlik üçün) — `VITE_GEMINI_API_KEY`
+- P2: Streaming response (token-by-token)
+- P2: Domain restriction Gemini açar üzərində (Google AI Studio-da HTTP referrer restriction)
+- P3: Digər admin tab-larda MediaInputRow: HomeSectionsTab, AboutManagementTab
+
+---
+
+## Problem statement (previous — 2026-01, Cloudflare R2 + Worker)
+- Frontend-only media upload (Vercel env-siz), universal MediaInputRow, Cloudflare Worker
 
 ## Implemented (this iteration — R2 Worker + universal MediaInputRow)
 - 2026-01: **Cloudflare Worker** `worker/r2-upload-worker.js`:
