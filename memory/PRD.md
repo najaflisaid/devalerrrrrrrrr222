@@ -1,6 +1,50 @@
 # De Valeur — PRD
 
-## Problem statement (latest request — 2026-01, iteration 3)
+## Problem statement (latest — 2026-01, Cloudflare R2 image upload)
+- Admin paneldə məhsul şəkilləri həm URL ilə (əvvəlki kimi), həm də faylı yükləmə (upload) yolu ilə əlavə edilsin.
+- Yüklənən şəkillər Cloudflare R2-də saxlansın (S3-uyumlu, ucuz, pulsuz zone).
+
+## Implemented (this iteration — R2 upload + dual input)
+- 2026-01: **Yeni Vercel serverless function** `api/r2-upload.js`:
+  - AWS S3 SDK ilə R2 endpoint-inə yazır (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`)
+  - Base64 JSON body qəbul edir (10 MB limit, Vercel body limit-i)
+  - Random UUID + fayl uzantısı ilə key generasiya edir → `products/<uuid>.jpg`
+  - `Cache-Control: public, max-age=31536000, immutable` header əlavə edir (1 il CDN cache)
+  - Xəta: env vars quraşdırılmasa təfsilatlı 500 qaytarır
+- 2026-01: **Yeni service** `src/services/imageUploadService.ts`:
+  - `uploadImageToR2(file, folder)` — File → base64 → POST /api/r2-upload → URL qaytarır
+  - Client-side validation: yalnız `image/*` MIME, maks. 10 MB
+- 2026-01: **Yeni komponent** `src/components/admin/ImageInputRow.tsx`:
+  - Bir sətirdə [URL input] + [Yüklə düyməsi] + [Sil (opsional)]
+  - "Yüklə" düyməsi kliklənəndə fayl seçici açılır, yüklənəndə URL avtomatik doldurulur
+  - Loading state (spinner) və inline error mesajı
+  - data-testid-lər: `{id}-url`, `{id}-upload-btn`, `{id}-file-input`, `{id}-remove-btn`, `{id}-error`
+- 2026-01: **AdminPanel.tsx** — həm yeni məhsul, həm redaktə formalarında image inputları `ImageInputRow` ilə əvəz olundu; label "Şəkillər URL" → "Şəkillər URL və ya Yüklə"
+- 2026-01: **Env variables** və setup guide:
+  - `.env.example` yaradıldı — `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`
+  - `CLOUDFLARE_R2_SETUP.md` — bucket yaratmaq, public access, CORS, API token, Vercel env var addım-addım təlimat
+- 2026-01: **Dependencies**: `@aws-sdk/client-s3` əlavə edildi
+
+## Verified
+- Build: `npx vite build` → uğurlu (17.23s)
+- Lint: `ImageInputRow.tsx`, `imageUploadService.ts` — 0 issue
+- TS: yeni fayllarda 0 error (pre-existing unrelated errors saxlanır)
+
+## Testing note
+- R2 upload endpoint-i **yalnız Vercel-də real işləyir** (env vars + real R2 bucket lazımdır)
+- Preview mühitində fayl yükləmə UI-si görünür, amma serverless funksiya ancaq deploy sonra işə düşür
+- URL sahəsi (manuel yapışdırma) hər yerdə işləyir
+
+## Backlog
+- P1: Sürükle-bırak (drag & drop) file upload
+- P2: Presigned URL yanaşması (10 MB-dan böyük fayllar üçün)
+- P2: Image compression / auto-resize (WebP conversion client-side)
+- P2: R2 galereya (mövcud fayllar arasından seçmək)
+- P3: Bulk delete unused images
+
+---
+
+## Problem statement (previous — 2026-01, iteration 3)
 - Müştəri linki anbardar linkindən FƏRQLİ olsun (`/customer-receive/order/:orderId`); səhifədə müştəri hər malın qarşısında quş qoyub təhvil aldığını qeyd edir + ad/soyad/vəzifə + imza atır → admin görür.
 - PDF-də şəkillər yarımçıq düşür (çoxu görünmür) — düzəlt; kompakt et: ~40 model 1 səhifəyə sığsın, 40-ı keçəndə avtomatik 2-ci səhifəyə keçsin.
 
