@@ -11,7 +11,7 @@
 // Priority: Vite env → hardcoded fallback
 const WORKER_URL =
   (import.meta as any).env?.VITE_R2_WORKER_URL ||
-  'https://silent-pine-862b.najaflisaid35.workers.dev';
+  'https://orange-cloud-4565.najaflisaid35.workers.dev';
 
 export type UploadProgress = (percent: number) => void;
 
