@@ -56,6 +56,7 @@ const CustomerReceivePage = React.lazy(() => import('./pages/CustomerReceivePage
 const AiChatWidget = React.lazy(() => import('./components/AiChatWidget'));
 const CampaignPopup = React.lazy(() => import('./components/CampaignPopup'));
 const AdminGlobalNotifications = React.lazy(() => import('./components/AdminGlobalNotifications'));
+const ChatPage = React.lazy(() => import('./pages/ChatPage'));
 
 import { WorkerAuthProvider } from './context/WorkerAuthContext';
 import { useCart } from './context/CartContext';
@@ -178,6 +179,7 @@ const AppContent: React.FC = () => {
                   <Suspense fallback={<PageFallback />}>
                     <Routes>
                       <Route path="/" element={<HomePage />} />
+                      <Route path="/chat" element={<ChatPage />} />
                       <Route path="/products" element={<ProductsPage />} />
                       <Route path="/product/:id" element={<ProductPage />} />
                       <Route path="/products/:id" element={<ProductPage />} />

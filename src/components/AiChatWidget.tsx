@@ -349,10 +349,14 @@ const AiChatWidget: React.FC = () => {
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [bubbleClosing, setBubbleClosing] = useState(false);
   const [bubbleDismissed, setBubbleDismissed] = useState(false);
+  // Mobile keyboard handling with visualViewport API
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isMobileFull, setIsMobileFull] = useState(false);
   const productsRef = useRef<Product[]>([]);
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
 
@@ -402,6 +406,49 @@ const AiChatWidget: React.FC = () => {
     window.addEventListener('dv:open-chat', handler);
     return () => window.removeEventListener('dv:open-chat', handler);
   }, []);
+
+  // Mobile keyboard handling with visualViewport API.
+  // When keyboard opens, resize the chat panel to fit remaining viewport.
+  useEffect(() => {
+    if (!open) return;
+    const vv = (window as any).visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      const vh = window.innerHeight;
+      const vvHeight = vv.height;
+      const kbHeight = vh - vvHeight;
+      setKeyboardHeight(kbHeight > 50 ? kbHeight : 0);
+      // Enable mobile full-screen mode when keyboard is visible
+      setIsMobileFull(kbHeight > 100);
+    };
+
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    handleResize();
+
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+    };
+  }, [open]);
+
+  // iOS Safari touch optimization: prevent body scroll when chat panel is open
+  useEffect(() => {
+    if (open && isMobileFull) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.width = '';
+      };
+    }
+    return undefined;
+  }, [open, isMobileFull]);
 
   // Init: load session id + history from localStorage (safe-wrapped for Safari private mode)
   useEffect(() => {
@@ -682,10 +729,18 @@ const AiChatWidget: React.FC = () => {
       {/* Chat panel — minimalist luxe, tam yumru */}
       {open && (
         <div
-          className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[9999] bg-white flex flex-col overflow-hidden dv-ai-panel rounded-3xl"
-          style={{
+          ref={panelRef}
+          className={`fixed z-[9999] bg-white flex flex-col overflow-hidden dv-ai-panel rounded-3xl ${
+            isMobileFull ? 'inset-0 rounded-none' : 'bottom-4 right-4 sm:bottom-5 sm:right-5'
+          }`}
+          style={isMobileFull ? {
+            width: '100vw',
+            height: '100vh',
+            border: 'none',
+            boxShadow: 'none',
+          } : {
             width: 'min(380px, calc(100vw - 20px))',
-            height: 'min(600px, calc(100vh - 40px))',
+            height: `min(600px, calc(100vh - 40px - ${keyboardHeight}px))`,
             border: '1px solid #D4AF37',
             boxShadow: '0 24px 60px -20px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(212,175,55,0.3)',
           }}
