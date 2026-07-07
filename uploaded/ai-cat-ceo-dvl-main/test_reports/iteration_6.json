@@ -1,0 +1,56 @@
+{
+  "summary": "Frontend testing of CartPage checkout auth toggle (login/register tabs), duplicate-phone detection, validation rings, and inline Epoint widget. 6/8 features verified working. 2 issues found: wrong-password error text is silently overwritten to empty by flagMissing(), and the inline Epoint iframe could not be verified because the Epoint widget API returns HTTP 403 in the preview environment (config issue, not strictly a code bug).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/epoint/widget-url (or backend proxy)", "issue": "Epoint widget URL request returns HTTP 403 in preview env. Console: 'Epoint widget cavabı: HTTP 403'. Could be missing/incorrect Epoint API keys in Firestore admin config. Blocks end-to-end verification of inline iframe rendering."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "CartPage – wrong password login flow",
+        "issue": "When login with wrong password, the user-visible error toast ends up EMPTY. Root cause: in handleEpointCheckout (CartPage.tsx ~line 380-389) the catch sets errorMessage='Nömrə və ya şifrə yanlışdır...' then calls flagMissing('checkout-login-password', ''). flagMissing() at line 274 immediately overwrites errorMessage with the empty string passed in, so the SuccessNotification toast renders with no text. Red ring on password input does appear briefly (~5s) then clears, but the textual feedback users expect is gone.",
+        "selector": "[data-testid=\"checkout-login-password\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Inline Epoint payment widget",
+        "issue": "Could not verify [data-testid=\"inline-epoint-widget\"] / [data-testid=\"inline-epoint-iframe\"] rendering because fetchEpointWidgetUrl fails with HTTP 403 from Epoint API. Need valid Epoint credentials in Firestore admin/payments config (or backend env) for the preview deployment so testing can confirm iframe src is non-null and that no external redirect happens.",
+        "affected_selectors": ["[data-testid=\"inline-epoint-widget\"]", "[data-testid=\"inline-epoint-iframe\"]", "[data-testid=\"inline-epoint-close\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "verified_features": [
+    "/cart?checkout=1 with cart in localStorage shows [data-testid=\"checkout-auth-tabs\"] containing checkout-auth-tab-register and checkout-auth-tab-login (PASS)",
+    "Default register tab renders checkout-first-name, checkout-last-name, checkout-phone-input, checkout-password, checkout-password2 (PASS)",
+    "Switching to 'Hesabım var' tab shows checkout-login-form with only phone + checkout-login-password, and register fields disappear (PASS)",
+    "Login tab shows checkout-forgot-password and checkout-switch-register links (PASS)",
+    "Empty form + 'Ödənişə keç' triggers red ring on checkout-phone-input (class includes 'border-red-500 ring-2 ring-red-500/30 animate-pulse') (PASS)",
+    "Typing a previously-registered phone (e.g., 559867215) in register tab auto-switches to login form within ~500ms and shows [data-testid=\"checkout-existing-account-hint\"] with text 'Bu nömrə artıq qeydiyyatdadır. Şifrənizi daxil edib davam edin — yenidən qeydiyyatdan keçməyə ehtiyac yoxdur.' Phone value '55 986 72 15' is preserved across the auto switch. (PASS)"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Fix wrong-password error message: in CartPage.tsx around line 389, change flagMissing('checkout-login-password', '') so it does NOT overwrite the existing errorMessage. Either (a) pass the same error text into flagMissing, or (b) split out a setMissingField+focus helper that does not touch errorMessage/showError when message is empty.",
+    "Configure valid Epoint widget API credentials in the preview environment (or admin/payments Firestore doc) so the inline iframe flow can be end-to-end validated. Without valid keys, fetchEpointWidgetUrl will keep returning HTTP 403 and the inline widget never opens.",
+    "Optional: when an auth attempt or duplicate detection triggers an auto-switch to login, also clear/reset loginPassword so stale wrong-password values from earlier sessions are not pre-filled."
+  ],
+  "critical_code_review_comments": [
+    "CartPage.tsx is 1505 lines — exceeds 700-line guideline. Recommend splitting auth section, address section, summary panel and inline-Epoint widget into sub-components in /src/pages/cart/.",
+    "flagMissing helper has a side-effect on errorMessage (always overwrites) which makes call sites that pre-set a custom errorMessage brittle (the wrong-password bug is a direct consequence).",
+    "handleEpointCheckout function is very long (~280 lines starting ~210) and mixes validation, Firebase auth, Firestore writes and Epoint API calls. Hard to test in isolation — recommend extracting validateCheckoutForm(), ensureAuthenticatedCustomer() and openInlineEpoint() helpers.",
+    "Wrong-password path uses both setTimeout(setShowError(false), 6000) and flagMissing()'s internal 4500ms timeout — these race and the toast hides earlier than the developer intent.",
+    "Inline iframe error path: if fetchEpointWidgetUrl throws (e.g., HTTP 403), there is no user-visible error toast in the current preview run (console-only). Recommend surfacing 'Ödəniş hazırlanmadı, yenidən cəhd edin' to the user."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "75% (6/8 features verified; 1 UI bug, 1 env-blocked verification)"},
+  "test_credentials": "Phone: 559867215 / Password: test123456 (created during testing via register flow; Firebase Auth email used internally: 559867215@dvphone.local). This phone now triggers duplicate detection. Other test_credentials.md file unchanged.",
+  "seed_data_creation": "Seeded cart via localStorage.setItem('cart', [{product:{id:'test-product-1',name:{az:'Test',...},price:100,salePrice:80,images:[..]},quantity:1}]). Created Firebase Auth user 559867215@dvphone.local + Firestore users doc with phone 559867215.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use phone 559867215 to test duplicate detection (already registered). Use any unused phone (e.g., 50xxxxxxx generated from timestamp) for new registration. Epoint widget URL endpoint currently returns 403 — until that is fixed, inline iframe assertions cannot pass. Seed cart with localStorage 'cart' key, then navigate to /cart?checkout=1. To force logout between tests use: await page.evaluate(async()=>{const m=await import('/src/lib/firebase.ts'); const fa=await import('firebase/auth'); await fa.signOut(m.auth); localStorage.clear();}); then re-seed cart.",
+  "rca_of_the_issue": "Wrong-password silent toast bug: The catch block at CartPage.tsx ~line 379-390 first sets errorMessage to the localized message and shows the toast, but immediately afterwards calls flagMissing('checkout-login-password', '') which (line 274) executes setErrorMessage('') unconditionally. React batches these state updates and the LAST setErrorMessage('') wins, so the SuccessNotification toast renders with an empty message. Fix: pass the same human-readable message into flagMissing, OR refactor flagMissing to only set errorMessage when a non-empty message is supplied."
+}

@@ -164,12 +164,13 @@ export function verifyMetaSignature(rawBodyBuf, signatureHeader, appSecret) {
 
 function resolveAiKey(cfg) {
   if (cfg.use_custom_key && (cfg.custom_api_key || '').trim()) return cfg.custom_api_key.trim();
-  // Fall back to the same OpenAI key used by /api/chat.js so the OpenAI provider
-  // works out of the box on Vercel without extra env setup.
+  // Fall back to shared NVIDIA key so provider works out of the box on Vercel
+  // without extra env setup (OpenAI-compatible endpoint).
   return (
+    process.env.NVIDIA_API_KEY ||
     process.env.OPENAI_API_KEY ||
     process.env.EMERGENT_LLM_KEY ||
-    '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'
+    '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'
   );
 }
 
@@ -196,14 +197,18 @@ export async function generateAiReply({ cfg, platform, inboundText, history }) {
   messages.push({ role: 'user', content: inboundText });
 
   if (provider === 'openai') {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Use NVIDIA Integrate (OpenAI-compatible) endpoint by default so the
+    // shared NVIDIA key works out of the box. Override with env if needed.
+    const baseUrl = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+    const useModel = model && model.startsWith('gpt-4') ? 'openai/gpt-oss-20b' : model;
+    const r = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model, messages, temperature: 0.5, max_tokens: 400 }),
+      body: JSON.stringify({ model: useModel, messages, temperature: 0.5, max_tokens: 400 }),
     });
     if (!r.ok) {
       const t = await r.text().catch(() => '');
-      throw new Error(`OpenAI ${r.status}: ${t.slice(0, 200)}`);
+      throw new Error(`AI ${r.status}: ${t.slice(0, 200)}`);
     }
     const data = await r.json();
     return (data?.choices?.[0]?.message?.content || '').trim();

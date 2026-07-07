@@ -1,0 +1,202 @@
+import { 
+  collection, 
+  doc,
+  addDoc, 
+  getDocs, 
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface StoreQRToken {
+  id: string;
+  token: string;
+  magaza: string;
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
+  usedBy: string[]; // Bu token-i istifadə edən işçilərin ID-ləri
+}
+
+const COLLECTION = 'store_qr_tokens';
+const TOKEN_VALIDITY_HOURS = 1; // 1 saat
+
+// Mağaza üçün yeni QR token yarat
+export const generateStoreQRToken = async (magaza: string): Promise<StoreQRToken> => {
+  try {
+    // Əvvəlki aktiv tokenləri deaktiv et
+    await deactivateOldStoreTokens(magaza);
+    
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + TOKEN_VALIDITY_HOURS * 60 * 60 * 1000);
+    
+    const token = `STORE_${magaza.replace(/\s+/g, '_')}_${uuidv4()}`;
+    
+    const qrToken = {
+      token,
+      magaza,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      isActive: true,
+      usedBy: []
+    };
+    
+    const docRef = await addDoc(collection(db, COLLECTION), qrToken);
+    
+    return {
+      id: docRef.id,
+      ...qrToken
+    };
+  } catch (error) {
+    console.error('Store QR Token yaratma xətası:', error);
+    throw error;
+  }
+};
+
+// Köhnə tokenləri deaktiv et
+const deactivateOldStoreTokens = async (magaza: string): Promise<void> => {
+  try {
+    const q = query(
+      collection(db, COLLECTION),
+      where('magaza', '==', magaza),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    for (const docSnap of snapshot.docs) {
+      await updateDoc(docSnap.ref, { isActive: false });
+    }
+  } catch (error) {
+    console.error('Köhnə tokenləri deaktiv etmə xətası:', error);
+  }
+};
+
+// Mağazanın aktiv QR token-ini al
+export const getActiveStoreToken = async (magaza: string): Promise<StoreQRToken | null> => {
+  try {
+    // Sadə query - bütün aktiv tokenləri al
+    const q = query(
+      collection(db, COLLECTION),
+      where('isActive', '==', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return null;
+    }
+    
+    // Mağazaya görə filter et və ən sonuncunu tap
+    let latestToken: StoreQRToken | null = null;
+    let latestDate = new Date(0);
+    
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      
+      if (data.magaza === magaza) {
+        const now = new Date();
+        const expiresAt = new Date(data.expiresAt);
+        
+        // Vaxtı keçibsə, deaktiv et
+        if (now > expiresAt) {
+          await updateDoc(docSnap.ref, { isActive: false });
+          continue;
+        }
+        
+        const createdAt = new Date(data.createdAt);
+        if (createdAt > latestDate) {
+          latestDate = createdAt;
+          latestToken = {
+            id: docSnap.id,
+            ...data
+          } as StoreQRToken;
+        }
+      }
+    }
+    
+    return latestToken;
+  } catch (error) {
+    console.error('Aktiv store token alma xətası:', error);
+    return null;
+  }
+};
+
+// QR token-i yoxla və işçini qeyd et
+export const validateStoreQRToken = async (
+  token: string, 
+  employeeId: string,
+  action: 'checkin' | 'checkout'
+): Promise<{ valid: boolean; message: string; magaza?: string }> => {
+  try {
+    console.log('🔍 QR validation başladı:', { token, employeeId, action });
+    
+    // Bütün tokenləri al
+    const snapshot = await getDocs(collection(db, COLLECTION));
+    console.log('📦 Firestore-dan alınan token sayı:', snapshot.size);
+    
+    let tokenDoc = null;
+    let tokenData = null;
+    
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      console.log('🔎 Token yoxlanılır:', { storedToken: data.token, isActive: data.isActive, scannedToken: token });
+      
+      if (data.token === token && data.isActive) {
+        tokenDoc = doc;
+        tokenData = data;
+        console.log('✅ Token tapıldı!');
+        break;
+      }
+    }
+    
+    if (!tokenDoc || !tokenData) {
+      console.log('❌ Token tapılmadı');
+      return { valid: false, message: 'QR kod tapılmadı və ya keçərsizdir' };
+    }
+    
+    // Vaxt yoxla
+    const now = new Date();
+    const expiresAt = new Date(tokenData.expiresAt);
+    
+    if (now > expiresAt) {
+      await updateDoc(tokenDoc.ref, { isActive: false });
+      return { valid: false, message: 'QR kod vaxtı keçib. Yeni QR kod tələb edin.' };
+    }
+    
+    // Giriş üçün: eyni işçi eyni QR ilə 2 dəfə giriş edə bilməz
+    if (action === 'checkin') {
+      const usedBy = tokenData.usedBy || [];
+      if (usedBy.includes(employeeId)) {
+        return { valid: false, message: 'Bu QR kod ilə artıq giriş etmisiniz' };
+      }
+      
+      // İşçini qeyd et
+      await updateDoc(tokenDoc.ref, {
+        usedBy: [...usedBy, employeeId]
+      });
+    }
+    
+    return { 
+      valid: true, 
+      message: action === 'checkin' ? 'Giriş uğurlu!' : 'Çıxış uğurlu!',
+      magaza: tokenData.magaza
+    };
+    
+  } catch (error) {
+    console.error('Store QR validation xətası:', error);
+    return { valid: false, message: 'QR yoxlanarkən xəta baş verdi' };
+  }
+};
+
+// Token-in qalan vaxtını al (dəqiqə)
+export const getTokenRemainingTime = (expiresAt: string): number => {
+  const now = new Date();
+  const expires = new Date(expiresAt);
+  const diff = expires.getTime() - now.getTime();
+  return Math.max(0, Math.floor(diff / 60000));
+};

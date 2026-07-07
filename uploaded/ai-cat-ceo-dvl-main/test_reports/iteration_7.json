@@ -1,0 +1,48 @@
+{
+  "summary": "Comprehensive frontend retest of the GUEST → REGISTRATION → PAY cart-preservation fix in src/components/Header.tsx (line 96: only clearCart when previousRole && previousRole !== newRole). End-to-end critical flow PASSED on preview env (https://salam-platform-79.preview.emergentagent.com): cart with 1 item was preserved across new-customer registration + Firebase Auth state change + Firestore order write + inline Epoint widget render. Order id YHORbyIxuxt9ieW5c1e0 written to Firestore. Inline Epoint iframe loaded with real payment buttons (Ödəniş / Taksitlə / portmanat / bir pay) — preview env Epoint config is now working unlike iteration_6. Duplicate-phone auto-switch flow and previous wrong-password toast fix (flagMissing no longer overwrites errorMessage when message is empty — confirmed at CartPage.tsx lines 336-340) also verified visually. No regressions detected for the reported bug ('mobilde/kompdada yeni musteri qeydiyyatdan kecib odenise kec eden zaman ... sebet bosdur sehifesi acilir').",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "Firestore counters/customerOrders", "issue": "Firestore RPC BatchGetDocuments returns HTTP 429 / 'resource-exhausted' during order id counter increment. Code falls back to timestamp-based order id and order still gets created, but every checkout logs the quota warning. Worth raising Firestore quota or batching counter reads."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "console_warnings": [
+      {"warning": "validateDOMNesting: <a> cannot appear as a descendant of <a> (LinkWithRef from react-router-dom)", "where": "ProductsPage / brand link area", "priority": "LOW"}
+    ]
+  },
+  "verified_features": [
+    "GUEST + seeded cart (1 item) → /cart?checkout=1 → register tab visible (PASS — no 'Səbətiniz boşdur' screen)",
+    "Typing brand-new phone in register tab does NOT auto-switch to login form (login-form count = 0) (PASS)",
+    "Fill first-name/last-name/phone(556627448)/password×2 + delivery option + address → click Ödənişə keç (PASS)",
+    "After pay click: localStorage.cart length = 1 (preserved), userId set to Firebase uid, userRole='customer', userName='TestAd TestSoyad' (PASS — CRITICAL FIX VERIFIED)",
+    "sessionStorage.pending_epoint_order_id = 'YHORbyIxuxt9ieW5c1e0' written (Firestore order created) (PASS)",
+    "inline-epoint-widget rendered (count=1) and inline-epoint-iframe loaded (count=1) with full Epoint payment UI visible — Ödəniş / Taksitlə ödəniş / portmanat / bir pay (PASS)",
+    "Navigation /products?brand=TestBrand reached directly without BrandPage redirect chain (PASS)",
+    "checkout-auth-tabs, checkout-auth-tab-register/login, checkout-first-name/last-name/phone-input/password/password2, delivery-method-option-*, checkout-address-input, checkout-pay-btn data-testids all present and functional (PASS)"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "(Optional, code quality) CartPage.tsx still 1662 lines — split into checkout/auth/address/summary subcomponents in /src/pages/cart/.",
+    "(Optional) Fix nested <a><a> warning from react-router LinkWithRef in ProductsPage / brand link rendering.",
+    "(Optional) Raise Firestore quota or debounce customerOrders counter reads so checkout no longer emits 429 warnings on every order.",
+    "(Optional) Consider adding a tiny integration test that asserts localStorage.cart.length stays > 0 across an onAuthStateChanged event for guest→customer transition, to prevent regression."
+  ],
+  "critical_code_review_comments": [
+    "Header.tsx fix at line 96 (`if (previousRole && previousRole !== newRole) clearCart(true)`) correctly gates clearCart on a real role *change* and intentionally lets guest→customer preserve the local cart — this is the right semantics for checkout flows.",
+    "CartPage.tsx flagMissing helper now properly guards `if (message) setErrorMessage(message)` (lines 336-340) — the earlier silent-empty-toast bug from iteration_6 is fixed.",
+    "CartPage.tsx is still 1662 lines — exceeds 700-line guideline; recommend splitting.",
+    "handleEpointCheckout is still very long (~280+ lines from line 295) mixing validation, Firebase auth, Firestore writes and Epoint API calls — recommend extracting validateCheckoutForm(), ensureAuthenticatedCustomer(), openInlineEpoint() helpers for testability."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "100% on critical flow (cart preserved + order created + Epoint inline widget rendered)"},
+  "test_credentials": "Reused phone 559867215 / test123456 for duplicate-detect smoke-check. NEW customer created during this run: phone 556627448 / password test123456 (uid lJ4xbI9LX8NDBtoe1jYjwUmX6nz2, Firestore order id YHORbyIxuxt9ieW5c1e0).",
+  "seed_data_creation": "Seeded localStorage 'cart' with 1 test product (id=test-product-1, qty=2, price 100/sale 80). Created Firebase Auth user 556627448 + Firestore users doc + 1 Firestore order doc during the verified checkout. Cleanup not required per problem statement.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Critical Header.tsx cart-preservation fix verified end-to-end on https://salam-platform-79.preview.emergentagent.com. Use REACT_APP_BACKEND_URL from /app/frontend/.env (proyektle-hub, not devaleur-glow — the latter returns 404). Use data-testid='checkout-address-input' (not checkout-address) and 'delivery-method-option-*' selectors. To repro: localStorage.clear() + signOut(auth), seed cart, /cart?checkout=1, fill register form + delivery + address, click checkout-pay-btn, wait ~10-15s for Firebase + Firestore + Epoint widget API. Watch for Firestore 429 warnings (non-blocking).",
+  "rca_of_the_issue": "Original bug: src/components/Header.tsx onAuthStateChanged listener unconditionally called clearCart(true) every time a Firebase user appeared, including when the user was JUST signing up from guest mode mid-checkout. That wiped the cart immediately after handleEpointCheckout's signUpAndCreateUser succeeded, so the next render of /cart saw items.length===0 and showed the 'Səbətiniz boşdur' screen — the customer never reached Epoint. Fix: gate clearCart on `previousRole && previousRole !== newRole` so the cart is only cleared when an already-logged-in role transitions to a different role (e.g. b2b→customer). Guest→customer (previousRole=null) now preserves the local cart as expected, and registration + order creation + inline Epoint render all proceed normally."
+}

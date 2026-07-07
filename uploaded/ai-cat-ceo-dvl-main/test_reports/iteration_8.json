@@ -1,0 +1,54 @@
+{
+  "summary": "Backend testing of the new AI Inbox section (WhatsApp + Instagram auto-reply) on https://salam-platform-79.preview.emergentagent.com. Created /app/backend/tests/test_ai_inbox.py (pytest, 19 test cases) covering Meta webhook verification, Meta-style payload acceptance, admin auth, config GET/POST, conversations list, and real AI generation via Emergent LLM key. All 19 tests PASSED. Real AI test endpoint returned Azerbaijani persona-aware reply: 'Salam! Bəli, qadın saatlarımız mövcuddur ... https://devaleur.az ...'. Firebase Admin SDK is not initialized in this env (as expected) — POST /api/admin/ai-inbox/config returns 503 'Firebase Admin SDK aktiv deyil' and GET conversations returns [] gracefully without crashing.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/webhooks/whatsapp & /api/webhooks/instagram", "issue": "META_APP_SECRET is empty in the env, so verify_meta_signature() returns True for ANY request (test-mode). This is intentional and documented, but must be set in production before going live — otherwise anyone on the internet can POST fake Meta webhooks. Recommend adding a startup log warning and/or refusing in production mode."},
+      {"endpoint": "POST /api/admin/ai-inbox/config", "issue": "Returns 503 because Firebase service account file is not mounted in this preview env. Expected per the review request. Main agent should confirm prod deployment mounts the service account."},
+      {"endpoint": "AI Inbox webhook persistence", "issue": "All Firestore-backed flows (persist message, dedup, history, conv list) silently no-op when firebase_ready=False. End-to-end auto-reply path (inbound webhook → Firestore → AI → outbound Meta send) can therefore only be smoke-tested via the /test endpoint in this env. Recommend integration testing once Firebase + Meta tokens are provisioned in staging."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "verified_features": [
+    "GET /api/webhooks/whatsapp returns hub.challenge body when hub.verify_token matches devaleur-meta-2026 (200)",
+    "GET /api/webhooks/whatsapp returns 403 on wrong token / missing params",
+    "GET /api/webhooks/instagram same verify flow works (200 on match, 403 otherwise)",
+    "POST /api/webhooks/whatsapp accepts Meta-style whatsapp_business_account payload, returns {status:'ok'}",
+    "POST /api/webhooks/whatsapp returns {status:'ignored'} for non-WA objects and does NOT crash on empty body",
+    "POST /api/webhooks/instagram accepts object='instagram' and object='page' (returns ok), ignores other objects",
+    "POST endpoints do NOT crash when META_APP_SECRET is empty (signature check bypassed in test mode)",
+    "Admin endpoints reject missing/wrong X-Admin-Secret with 401 (config GET, conversations GET, test POST)",
+    "GET /api/admin/ai-inbox/config with valid secret returns full AiInboxConfigPublic shape: global_enabled, wa_enabled, ig_enabled, provider='openai', model='gpt-4o-mini', allowed_models {openai/anthropic/gemini lists populated}, persona (Az text, default De Valeur persona), webhook_urls.whatsapp + webhook_urls.instagram point at correct /api/webhooks/{platform}, firebase_ready=false bool present",
+    "POST /api/admin/ai-inbox/config returns 503 'Firebase Admin SDK aktiv deyil' as expected (Firebase not initialized)",
+    "GET /api/admin/ai-inbox/conversations returns [] without crashing when Firebase not ready",
+    "POST /api/admin/ai-inbox/test with Azerbaijani text 'Salam, qadın saatları var?' returns {ok:true, reply:<Az text>}. Real reply: 'Salam! Bəli, qadın saatlarımız mövcuddur. Müxtəlif brendlərdən və dizaynlardan seçim edə bilərsiniz. Daha ətraflı məlumat üçün saytımıza baxmağı tövsiyə edirəm: https://devaleur.az.' — references persona (saatlar, devaleur.az) and is in Azerbaijani — soft assertion PASSED",
+    "Emergent LLM key (sk-emergent-...) is wired correctly via emergentintegrations LlmChat with default provider=openai / model=gpt-4o-mini"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_ai_inbox.py",
+    "/app/test_reports/pytest/ai_inbox_results.xml"
+  ],
+  "action_items": [
+    "(Production hardening) Set META_APP_SECRET in /app/backend/.env before going live and tighten verify_meta_signature so it does NOT auto-pass when secret is empty in production mode. Consider gating the bypass on an explicit DEV_MODE/ENVIRONMENT flag rather than secret-empty.",
+    "(Deployment) Mount Firebase Admin service account file in this env so the AI Inbox can actually persist conversations and so POST /api/admin/ai-inbox/config can save. Currently every Firestore-backed admin action returns 503 / empty.",
+    "(Provisioning) Configure WhatsApp Cloud API credentials (WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_ACCESS_TOKEN in env) and Instagram (instagram_page_id + instagram_access_token via admin config) — without these, outbound auto-reply will silently fail with 'whatsapp_not_configured' / 'instagram_not_configured'.",
+    "(Nice-to-have) /api/admin/ai-inbox/test path is great for smoke; add a tiny end-to-end integration test in staging once Firebase + Meta are wired."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 1924 lines — exceeds the 700-line guideline. AI Inbox (lines 1132-1924) is a self-contained ~800-line module and should be extracted to /app/backend/ai_inbox.py (a FastAPI router) for maintainability and testability.",
+    "verify_meta_signature() returns True when app_secret is empty — convenient for dev but is a production footgun. Should be gated on an explicit ENV='dev' flag, not the absence of the secret.",
+    "AI_INBOX_DEFAULTS reads os.environ at import time (META_VERIFY_TOKEN, META_APP_SECRET) — values are snapshotted once at startup. If admin updates them via Firestore that is fine, but in-process .env edits won't take effect until restart. Acceptable, just document it.",
+    "ai_inbox_persist_message() does sync Firestore I/O inside async webhook handlers — under load this will block the event loop. Consider running fb_db calls in a thread pool (run_in_executor) or using the async Firestore client.",
+    "Webhook receive handlers return {status:'ok'} but do not bound payload size or message count per request — Meta retries on non-2xx, so this is mostly fine, but a max-entries cap would protect against malicious oversized payloads.",
+    "POST /api/admin/ai-inbox/config silently strips fields containing '•' to avoid overwriting masked secrets — good. But there is no separate 'clear secret' path; admin cannot blank out custom_api_key once set without sending an empty string (which is allowed). Minor UX concern.",
+    "ai_inbox_get_history sorts in Python after Firestore DESC fetch — fine for limit≤200, but on /messages endpoint the limit is 200 hard-coded which could be slow. Add pagination.",
+    "Instagram outbound uses Graph API v22.0 (current as of Jan 2026) — good. WhatsApp send function not shown in this review excerpt but should also pin api version."
+  ],
+  "updated_files": ["/app/backend/tests/test_ai_inbox.py"],
+  "success_rate": {"backend": "100% (19/19 tests passed)", "frontend": "n/a (backend-only test per request)"},
+  "test_credentials": "X-Admin-Secret: devaleur-admin-2026 ; Meta verify token: devaleur-meta-2026 ; Emergent LLM key: configured in /app/backend/.env (sk-emergent-...) — confirmed working.",
+  "seed_data_creation": "No persistent data created (Firestore not active in this env). Webhook POSTs created in-memory state only — no Firestore docs persisted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AI Inbox backend is fully functional in dev mode. Re-run /app/backend/tests/test_ai_inbox.py via `pytest /app/backend/tests/test_ai_inbox.py -v` after Firebase Admin service account is mounted — then POST /api/admin/ai-inbox/config should return 200 (not 503) and conversations list will start populating. To test inbound WA webhook end-to-end, set META_APP_SECRET and use ngrok + real Meta dashboard. Real AI replies in Azerbaijani are confirmed via /api/admin/ai-inbox/test."
+}

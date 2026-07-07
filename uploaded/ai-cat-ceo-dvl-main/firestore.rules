@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ───────── Site / Public Content ─────────
+    match /site_settings/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /contact_messages/{document=**} {
+      allow read, write: if true;
+    }
+    
+    match /banners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /products/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /categories/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /brands/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /blog_posts/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /partners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /users/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /b2b_requests/{document=**} {
+      allow read, write: if true;
+    }
+    
+    match /b2b_orders/{document=**} {
+      allow read, write: if true;
+    }
+    
+    match /about_content/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /product_banners/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /coming_soon/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    match /orders/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ───────── Worker Management ─────────
+    // Bütün giriş etmiş istifadəçilər oxuya bilər (leaderboard üçün lazımdır),
+    // yalnız admin yaza bilər (default rule ilə icazə verilib — sonra admin claim əlavə edə bilərsən).
+
+    // İşçilər kolleksiyası
+    match /workers/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Vəzifələr (admin tərəfindən idarə olunur)
+    match /worker_positions/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Davamiyyət (işə başlama / bitirmə)
+    match /worker_attendance/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Cərimələr
+    match /worker_fines/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Mükafatlar
+    match /worker_rewards/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Satışlar (aylıq hədəf izləmə üçün)
+    match /worker_sales/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Ərizə və müraciətlər
+    match /worker_requests/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Bildirişlər
+    match /worker_notifications/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // ───────── Default (development) ─────────
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

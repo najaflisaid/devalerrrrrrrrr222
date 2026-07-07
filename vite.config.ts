@@ -44,6 +44,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: true,
+    // Proxy /api/* to the FastAPI backend so dev/preview environments work
+    // the same as Vercel (where /api/* is served by serverless functions).
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
+    },
     // Slow file-change detection so the page doesn't auto-refresh while browsing.
     // Vite will only check for code changes every 2 minutes.
     watch: {

@@ -5,10 +5,10 @@
  * Bu sayədə deploy zamanı heç bir env variable lazım deyil — açar burada gizli qalır.
  */
 
-// OpenAI açarı burada saxlanılır (server-side only — frontend bundle-da görsənmir)
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
-
-const OPENAI_MODEL = 'gpt-4o-mini';
+// NVIDIA Integrate API (OpenAI-compatible) — server-side only, frontend bundle-da görsənmir
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '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';
+const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b';
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
@@ -192,18 +192,13 @@ export default async function handler(req, res) {
       formatHistory(history) +
       '\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver.';
 
-    // Build user content — if image URLs present, use OpenAI vision multi-modal format
+    // Build user content
+    // Note: openai/gpt-oss-20b is text-only. If images are attached, mention their URLs in text.
     const imageUrls = extractImageUrls(message);
-    const cleanedMessage = stripImageMarkers(message) || (imageUrls.length ? 'Bu şəkil haqqında nə deyə bilərsiniz?' : message);
-    let userContent;
-    if (imageUrls.length > 0) {
-      userContent = [
-        { type: 'text', text: cleanedMessage },
-        ...imageUrls.slice(0, 4).map((url) => ({ type: 'image_url', image_url: { url } })),
-      ];
-    } else {
-      userContent = message;
-    }
+    const cleanedMessage = stripImageMarkers(message) || (imageUrls.length ? 'Müştəri şəkil paylaşdı.' : message);
+    const userContent = imageUrls.length > 0
+      ? `${cleanedMessage}\n\n[Müştəri şəkil(lər) əlavə etdi: ${imageUrls.slice(0, 4).join(', ')}]`
+      : message;
 
     const messages = [
       { role: 'system', content: systemMessage },
@@ -211,23 +206,33 @@ export default async function handler(req, res) {
       { role: 'user', content: userContent },
     ];
 
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiRes = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${NVIDIA_API_KEY}`,
       },
-      body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.7 }),
+      body: JSON.stringify({
+        model: NVIDIA_MODEL,
+        messages,
+        temperature: 0.7,
+        top_p: 1,
+        max_tokens: 4096,
+        stream: false,
+      }),
     });
 
-    if (!openaiRes.ok) {
-      const errText = await openaiRes.text().catch(() => '');
-      res.status(502).json({ error: `OpenAI xəta: ${openaiRes.status}`, detail: errText.slice(0, 200) });
+    if (!aiRes.ok) {
+      const errText = await aiRes.text().catch(() => '');
+      res.status(502).json({ error: `AI provayder xətası: ${aiRes.status}`, detail: errText.slice(0, 300) });
       return;
     }
 
-    const data = await openaiRes.json();
-    const reply = (data?.choices?.[0]?.message?.content || '').trim() || 'Bağışlayın, cavab yarana bilmədi.';
+    const data = await aiRes.json();
+    const msgObj = data?.choices?.[0]?.message || {};
+    let reply = (msgObj.content || '').trim();
+    if (!reply) reply = (msgObj.reasoning_content || msgObj.reasoning || '').trim();
+    reply = reply || 'Bağışlayın, cavab yarana bilmədi.';
     res.status(200).json({ reply });
   } catch (err) {
     console.error('[Chat API] Error:', err);

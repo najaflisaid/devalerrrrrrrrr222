@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ShoppingCart } from 'lucide-react';
+import { productService } from '../services/productService';
+import { useCart } from '../context/CartContext';
+import CreditApplicationForm from '../components/CreditApplicationForm';
+import CreditCalculator from '../components/CreditCalculator';
+import ProductReviews from '../components/ProductReviews';
+import SimilarProducts from '../components/SimilarProducts';
+import { trackProductView } from '../services/analyticsService';
+import type { Product } from '../types';
+
+const ProductDetailsPage: React.FC = () => {
+  const { productId } = useParams();
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const { addToCart, addNotification } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const [isB2BUser, setIsB2BUser] = useState(false);
+  const [showCreditForm, setShowCreditForm] = useState(false);
+
+  useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    setIsB2BUser(userRole === 'b2b');
+    loadProduct();
+  }, [productId]);
+
+  const loadProduct = async () => {
+    try {
+      if (!productId) return;
+      const allProductsList = await productService.getAll();
+      setAllProducts(allProductsList);
+      const found = allProductsList.find(p => p.id === productId);
+      if (found) {
+        setProduct(found);
+        const name = found.name?.az || found.name?.en || '';
+        trackProductView(found.id, { name, image: found.images?.[0] }).catch(() => undefined);
+      }
+    } catch (error) {
+      console.error('Error loading product:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDisplayPrice = () => {
+    if (!product) return 0;
+
+    if (isB2BUser) {
+      if (product.b2bSalePrice) {
+        return product.b2bSalePrice;
+      } else if (product.b2bPrice) {
+        return product.b2bPrice;
+      } else if (product.salePrice) {
+        return product.salePrice;
+      } else {
+        return product.price;
+      }
+    } else {
+      return product.salePrice || product.price;
+    }
+  };
+
+  const getOriginalPrice = () => {
+    if (!product) return null;
+
+    if (isB2BUser) {
+      if (product.b2bSalePrice) {
+        return product.b2bPrice || product.price;
+      }
+    } else {
+      if (product.salePrice) {
+        return product.price;
+      }
+    }
+
+    return null;
+  };
+
+  const handleWhatsAppOrder = async () => {
+    // Customers now use Epoint via cart
+    if (!product) return;
+    if (product.stock === 0) {
+      addNotification('Mövcud deyil', 'error');
+      return;
+    }
+    addToCart(product, quantity);
+    navigate('/cart');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('product.notFound')}</h2>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-black text-white px-6 py-2 rounded hover:bg-gray-900 transition-colors"
+          >
+            {t('product.backToHome')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const displayPrice = getDisplayPrice();
+  const originalPrice = getOriginalPrice();
+  // Stok 0 olarsa BÜTÜN istifadəçilər üçün "Mövcud deyil" göstər və əlavə etməyə icazə vermə
+  const isOutOfStock = product.stock === 0;
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-8 transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5 mr-2" />
+          {t('product.backToProducts')}
+        </button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div>
+            <div className="bg-gray-50 rounded-lg overflow-hidden mb-6 aspect-square relative">
+              {!isOutOfStock && product.salePrice && (
+                <span className="absolute top-4 left-4 bg-red-500 text-white text-xs px-2 py-1 font-medium z-10">
+                  {t('product.sale')}
+                </span>
+              )}
+              <img
+                src={product.images[0]}
+                alt={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en}
+                className="w-full h-full object-contain p-4 bg-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              {product.images.map((image, idx) => (
+                <button
+                  key={idx}
+                  className="bg-white rounded-lg overflow-hidden aspect-square border-2 border-gray-100 hover:border-gray-300 transition-colors"
+                >
+                  <img src={image} alt={`View ${idx + 1}`} className="w-full h-full object-contain p-2 bg-white" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-6">
+              <h1 className="text-4xl font-light text-gray-900 mb-2">
+                {product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
+              </h1>
+              <div className="space-y-1">
+                <p className="text-gray-600">
+                  {product.brand}
+                </p>
+                <p className="text-sm text-gray-500">
+                  <span className="font-medium">{t('product.gender')}:</span> {t(`category.${product.gender}`)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <div>
+                {product.salePrice ? (
+                  <>
+                    <span
+                      className="dv-savings-shimmer relative inline-flex items-center justify-center px-3 py-1 mb-3 text-[13px] font-semibold tabular-nums bg-[#D14545] text-white overflow-hidden rounded-md"
+                      data-testid="product-savings-badge"
+                    >
+                      <span className="relative z-[1]">−{(product.price - product.salePrice).toFixed(0)} AZN qənaət</span>
+                    </span>
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <p className="text-4xl font-bold text-gray-900 tabular-nums">{product.salePrice.toFixed(2)} AZN</p>
+                      <p className="dv-price-strike relative text-4xl font-light text-gray-500 tabular-nums">{product.price.toFixed(2)} AZN</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-4xl font-bold text-gray-900">{product.price.toFixed(2)} AZN</p>
+                )}
+                {isOutOfStock && isB2BUser && (
+                  <p className="text-sm text-red-600 font-medium mt-2">Bitdi</p>
+                )}
+              </div>
+            </div>
+
+            {isB2BUser && (
+              <div className="mb-6">
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+                  isOutOfStock ? 'bg-red-50 border border-red-200' :
+                  product.stock <= 5 ? 'bg-orange-50 border border-orange-200' :
+                  'bg-green-50 border border-green-200'
+                }`}>
+                  <span className={`text-sm font-semibold ${
+                    isOutOfStock ? 'text-red-700' :
+                    product.stock <= 5 ? 'text-orange-700' :
+                    'text-green-700'
+                  }`}>
+                    {isOutOfStock ? 'Bitdi' : `Mövcud: ${product.stock} ədəd`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <p className="text-gray-700 mb-8">
+              {product.description[i18n.language as 'az' | 'ru']}
+            </p>
+
+            {!isOutOfStock && (
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('product.quantity')}
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={product.stock}
+                      value={quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        setQuantity(Math.min(Math.max(1, val), product.stock));
+                      }}
+                      className="w-16 text-center border border-gray-300 rounded px-2 py-2"
+                    />
+                    <button
+                      onClick={() => setQuantity(Math.min(quantity + 1, product.stock))}
+                      disabled={quantity >= product.stock}
+                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {t('product.totalPrice')}: {(displayPrice * quantity).toFixed(2)} AZN
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!isOutOfStock && (
+              <div className="space-y-3">
+                <button
+                  onClick={handleWhatsAppOrder}
+                  className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg hover:bg-gray-800 transition-colors font-medium tracking-wide uppercase"
+                >
+                  {t('product.buyNow')}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (product) {
+                      // Stok 0 olduqda bütün istifadəçilər üçün bloklanır
+                      if (product.stock === 0) {
+                        addNotification('Mövcud deyil', 'error');
+                        return;
+                      }
+                      addToCart(product, quantity);
+                    }
+                  }}
+                  className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg hover:bg-gray-800 transition-colors font-medium tracking-wide uppercase flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {t('product.addToCart')}
+                </button>
+
+                <button
+                  onClick={() => setShowCreditForm(true)}
+                  className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg hover:bg-gray-800 transition-colors font-medium tracking-wide uppercase"
+                >
+                  {t('product.buyWithCredit')}
+                </button>
+              </div>
+            )}
+
+            {/* Kredit kalkulyatoru — yalnız adi müştəri.
+                Hesablama HƏMİŞƏ orijinal qiymət üzərində — endirim tətbiq olunmur. */}
+            {!isB2BUser && product && (
+              <div className="mt-8" data-testid="product-credit-calculator">
+                <CreditCalculator
+                  price={product.price}
+                  brand={product.brand || ''}
+                />
+              </div>
+            )}
+
+            <div className="mt-8 space-y-4 text-sm text-gray-600">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                  <span>✓</span>
+                </div>
+                <span>{t('product.deliveryInfo')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                  <span>✓</span>
+                </div>
+                <span>{t('product.whatsappSupport')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {product && allProducts.length > 1 && (
+          <SimilarProducts current={product} all={allProducts} />
+        )}
+
+        {product && (
+          <div className="max-w-4xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
+            <ProductReviews productId={product.id} />
+          </div>
+        )}
+      </div>
+
+      {showCreditForm && product && (
+        <CreditApplicationForm
+          productName={product.name[i18n.language as 'az' | 'ru' | 'en'] || product.name.en || product.name.az}
+          productPrice={displayPrice}
+          onClose={() => setShowCreditForm(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ProductDetailsPage;

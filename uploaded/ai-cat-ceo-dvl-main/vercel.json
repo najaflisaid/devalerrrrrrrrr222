@@ -1,0 +1,56 @@
+{
+  "buildCommand": "yarn build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "yarn install",
+  "rewrites": [
+    {
+      "source": "/product/:id",
+      "destination": "/api/og-product?id=:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
+      "source": "/products/:id",
+      "destination": "/api/og-product?id=:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
+      "source": "/category/:name",
+      "destination": "/api/og-category?category=:name",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
+      "source": "/brand/:name",
+      "destination": "/api/og-category?brand=:name",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+        }
+      ]
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

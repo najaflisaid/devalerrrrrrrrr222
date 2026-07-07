@@ -25,7 +25,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+# NVIDIA Integrate API (OpenAI-compatible) for De Valeur AI chat
+NVIDIA_API_KEY = os.environ.get(
+    "NVIDIA_API_KEY",
+    "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",
+)
+NVIDIA_BASE_URL = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "openai/gpt-oss-20b")
 
 # Firebase Admin SDK (used for password reset operations)
 import firebase_admin
@@ -217,7 +223,7 @@ class ChatKnowledge(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    session_id: str = Field(..., min_length=4, max_length=128)
+    session_id: Optional[str] = Field(default=None, max_length=128)
     message: str = Field(..., min_length=1, max_length=2000)
     history: List[ChatHistoryItem] = Field(default_factory=list)
     products: List[ChatProduct] = Field(default_factory=list)
@@ -337,9 +343,8 @@ def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI açarı konfiqurasiya edilməyib.")
+    if not NVIDIA_API_KEY:
+        raise HTTPException(status_code=500, detail="AI provayder açarı konfiqurasiya edilməyib.")
 
     lang_directive = {
         "az": "Cavab DİLİ: Azərbaycan dilində (sənin əsas dilin).",
@@ -361,18 +366,43 @@ async def chat_endpoint(req: ChatRequest):
         + "\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına: əvvəlcə zehnində nə istədiyini analiz et, sonra qısa, təbii, satış yönümlü cavab ver. Cinsi və büdcəni mütləq yoxla."
     )
 
-    try:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=req.session_id,
-            system_message=system_message,
-        ).with_model("openai", "gpt-4o-mini")
+    messages: List[Dict[str, str]] = [{"role": "system", "content": system_message}]
+    for h in (req.history or [])[-8:]:
+        if h.role in ("user", "assistant") and (h.content or "").strip():
+            messages.append({"role": h.role, "content": h.content})
+    messages.append({"role": "user", "content": req.message.strip()})
 
-        user_msg = UserMessage(text=req.message.strip())
-        reply = await chat.send_message(user_msg)
-        if not isinstance(reply, str):
-            reply = str(reply)
-        return ChatResponse(reply=reply.strip() or "Bağışlayın, cavab yarana bilmədi.")
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            r = await client.post(
+                f"{NVIDIA_BASE_URL}/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                },
+                json={
+                    "model": NVIDIA_MODEL,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "top_p": 1,
+                    "max_tokens": 4096,
+                    "stream": False,
+                },
+            )
+        if r.status_code >= 400:
+            logger.warning("NVIDIA chat HTTP %s: %s", r.status_code, r.text[:400])
+            raise HTTPException(status_code=502, detail=f"AI provayder xətası: HTTP {r.status_code}")
+        data = r.json()
+        msg_obj = ((data.get("choices") or [{}])[0].get("message") or {})
+        reply = (msg_obj.get("content") or "").strip()
+        # gpt-oss models sometimes put final answer in `reasoning_content` when
+        # `content` comes back empty — fall back so users still get a reply.
+        if not reply:
+            reply = (msg_obj.get("reasoning_content") or msg_obj.get("reasoning") or "").strip()
+        reply = reply or "Bağışlayın, cavab yarana bilmədi."
+        return ChatResponse(reply=reply)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Chat error: %s", e)
         raise HTTPException(status_code=500, detail=f"AI cavab verə bilmədi: {e}")
