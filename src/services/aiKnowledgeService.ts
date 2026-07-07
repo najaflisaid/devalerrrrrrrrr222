@@ -1,6 +1,13 @@
 import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+export interface ConversationExample {
+  id: string;
+  userMessage: string;
+  assistantMessage: string;
+  note?: string;
+}
+
 export interface AiKnowledge {
   enabled: boolean;          // Chat widget visible on the site
   greetBubbleText: string;   // Tooltip text shown next to the AI launcher (e.g. "Mütəxəssisdən tövsiyə al")
@@ -10,6 +17,7 @@ export interface AiKnowledge {
   policiesInfo: string;      // Zəmanət, çatdırılma, qaytarma siyasəti
   productsInfo: string;      // Konkret məhsullar haqqında əlavə qeydlər
   additionalNotes: string;   // Əlavə kontekst, FAQ, satış qaydaları
+  conversationExamples?: ConversationExample[]; // Few-shot examples
   updatedAt?: any;
 }
 
@@ -24,6 +32,7 @@ export const EMPTY_KNOWLEDGE: AiKnowledge = {
   policiesInfo: '',
   productsInfo: '',
   additionalNotes: '',
+  conversationExamples: [],
 };
 
 export const getAiKnowledge = async (): Promise<AiKnowledge> => {
@@ -41,6 +50,7 @@ export const getAiKnowledge = async (): Promise<AiKnowledge> => {
       policiesInfo: d.policiesInfo || '',
       productsInfo: d.productsInfo || '',
       additionalNotes: d.additionalNotes || '',
+      conversationExamples: Array.isArray(d.conversationExamples) ? d.conversationExamples : [],
     };
   } catch (e) {
     console.warn('getAiKnowledge failed:', e);

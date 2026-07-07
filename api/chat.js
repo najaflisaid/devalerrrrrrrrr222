@@ -118,9 +118,27 @@ const formatKnowledge = (k) => {
   if (k.policiesInfo && k.policiesInfo.trim()) sections.push('🛡️ ZƏMANƏT/ÇATDIRILMA/QAYTARMA:\n' + k.policiesInfo.trim());
   if (k.productsInfo && k.productsInfo.trim()) sections.push('📦 MƏHSULLAR HAQQINDA:\n' + k.productsInfo.trim());
   if (k.additionalNotes && k.additionalNotes.trim()) sections.push('📝 ƏLAVƏ KONTEKST:\n' + k.additionalNotes.trim());
+  if (Array.isArray(k.conversationExamples) && k.conversationExamples.length > 0) {
+    const exBlock = k.conversationExamples
+      .filter((e) => (e.userMessage || '').trim() && (e.assistantMessage || '').trim())
+      .map((e, i) => `Nümunə ${i + 1}:\nMüştəri: ${e.userMessage.trim()}\nDe Valeur AI: ${e.assistantMessage.trim()}${e.note ? '\n(Kontekst: ' + e.note + ')' : ''}`)
+      .join('\n\n');
+    if (exBlock) sections.push('💡 DİALOQ NÜMUNƏLƏRİ (bu tərzdə cavab ver):\n' + exBlock);
+  }
   if (sections.length === 0) return '';
   return '\n\n📚 ŞİRKƏT BİLİK BAZASI:\n' + sections.join('\n\n');
 };
+
+// Extract image URLs from a message ("[şəkil: URL] text") for vision support
+const extractImageUrls = (text) => {
+  const urls = [];
+  const re = /\[şəkil:\s*(https?:\/\/[^\]\s]+)\]/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) urls.push(m[1]);
+  return urls;
+};
+
+const stripImageMarkers = (text) => text.replace(/\[şəkil:\s*https?:\/\/[^\]\s]+\]/gi, '').trim();
 
 const setCorsHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -174,10 +192,23 @@ export default async function handler(req, res) {
       formatHistory(history) +
       '\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver.';
 
+    // Build user content — if image URLs present, use OpenAI vision multi-modal format
+    const imageUrls = extractImageUrls(message);
+    const cleanedMessage = stripImageMarkers(message) || (imageUrls.length ? 'Bu şəkil haqqında nə deyə bilərsiniz?' : message);
+    let userContent;
+    if (imageUrls.length > 0) {
+      userContent = [
+        { type: 'text', text: cleanedMessage },
+        ...imageUrls.slice(0, 4).map((url) => ({ type: 'image_url', image_url: { url } })),
+      ];
+    } else {
+      userContent = message;
+    }
+
     const messages = [
       { role: 'system', content: systemMessage },
       ...history.slice(-8).map((h) => ({ role: h.role, content: h.content })),
-      { role: 'user', content: message },
+      { role: 'user', content: userContent },
     ];
 
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -172,6 +172,9 @@ const AppContent: React.FC = () => {
             <Route path="/b2b-login" element={<B2BLogin />} />
             <Route path="/delivery" element={<DeliveryPage />} />
             <Route path="/gift-card/:code" element={<GiftCardSharePage />} />
+            {/* Public consultant chat — Instagram/WhatsApp bio linkindən açılır (tam ekran) */}
+            <Route path="/consultant" element={<ChatPage />} />
+            <Route path="/chat" element={<ChatPage />} />
             <Route path="/*" element={
               <>
                 <Header />
@@ -179,7 +182,6 @@ const AppContent: React.FC = () => {
                   <Suspense fallback={<PageFallback />}>
                     <Routes>
                       <Route path="/" element={<HomePage />} />
-                      <Route path="/chat" element={<ChatPage />} />
                       <Route path="/products" element={<ProductsPage />} />
                       <Route path="/product/:id" element={<ProductPage />} />
                       <Route path="/products/:id" element={<ProductPage />} />

@@ -1,25 +1,24 @@
 import React, { useEffect } from 'react';
+import AiChatWidget from '../components/AiChatWidget';
 
 /**
- * ChatPage — /chat deep link route.
+ * ConsultantPage — /consultant və /chat deep-link route.
  *
- * When user navigates directly to /chat (e.g., from a shared link, notification,
- * or marketing email), this page opens the AI chat widget automatically after
- * a brief delay to allow the widget to mount.
+ * Bu səhifə tam ekran AI konsultant söhbətini göstərir.
+ * Instagram/WhatsApp/Bio linklərindən birbaşa buraya yönləndirilə bilər:
+ *   https://devaleur.az/consultant
+ *
+ * `embedded` mode-da AiChatWidget avtomatik açıq və full-screen olur.
  */
 const ChatPage: React.FC = () => {
   useEffect(() => {
-    // Trigger the global event that AiChatWidget listens for
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('dv:open-chat'));
-    }, 300);
-    return () => clearTimeout(timer);
+    // Ensure header/footer scroll doesn't leak through
+    document.title = 'De Valeur Konsultant';
   }, []);
 
-  // Placeholder while chat opens — minimal, centered
   return (
-    <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
-      <p className="text-gray-400 text-sm">AI söhbət açılır...</p>
+    <div className="fixed inset-0 z-[9997] bg-white" data-testid="consultant-page">
+      <AiChatWidget embedded />
     </div>
   );
 };

@@ -12,7 +12,7 @@ import EpointSettingsTab from './EpointSettingsTab';
 import DeliveryMethodsTab from './DeliveryMethodsTab';
 import AnalyticsTab from './AnalyticsTab';
 import ReviewsTab from './ReviewsTab';
-import AiKnowledgeTab from './AiKnowledgeTab';
+import AiConsultantTab from './AiConsultantTab';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
@@ -37,7 +37,6 @@ import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
 import CampaignsTab from './CampaignsTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
-import AiInboxTab from './AiInboxTab';
 import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
@@ -1727,8 +1726,7 @@ const AdminPanel: React.FC = () => {
       label: 'AI & Analitika',
       items: [
         { id: 'analytics', label: 'Analitika', icon: BarChart3 },
-        { id: 'aiKnowledge', label: 'AI Bilik Bazası', icon: Sparkles },
-        { id: 'aiInbox', label: 'AI Inbox (WhatsApp & Instagram)', icon: Bot },
+        { id: 'aiConsultant', label: 'AI Konsultant', icon: Sparkles },
       ],
     },
     {
@@ -4064,17 +4062,11 @@ const AdminPanel: React.FC = () => {
           </PasswordProtectedSection>
         )}
 
-        {activeTab === 'aiKnowledge' && (
+        {activeTab === 'aiConsultant' && (
           <PasswordProtectedSection sectionName="aiKnowledge">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <AiKnowledgeTab />
+              <AiConsultantTab />
             </div>
-          </PasswordProtectedSection>
-        )}
-
-        {activeTab === 'aiInbox' && (
-          <PasswordProtectedSection sectionName="aiInbox">
-            <AiInboxTab />
           </PasswordProtectedSection>
         )}
 
