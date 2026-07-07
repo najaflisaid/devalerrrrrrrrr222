@@ -409,6 +409,230 @@ async def chat_endpoint(req: ChatRequest):
 
 
 # ---------------------------------------------------------------------------
+# AI SEO — generate SEO metadata (title, meta description, keywords, slug, alt)
+# for a product in az / ru / en using the same NVIDIA gpt-oss-20b model.
+# Admin panel calls this per-product; frontend batches through all products.
+# ---------------------------------------------------------------------------
+
+import re as _re
+
+
+class SeoProductInput(BaseModel):
+    id: str
+    name_az: str = ""
+    name_ru: str = ""
+    name_en: str = ""
+    description_az: str = ""
+    description_ru: str = ""
+    description_en: str = ""
+    brand: str = ""
+    category: str = ""
+    gender: str = ""
+    price: Optional[float] = None
+    salePrice: Optional[float] = None
+
+
+class SeoLangBlock(BaseModel):
+    title: str = ""
+    description: str = ""
+    keywords: str = ""
+    imageAlt: str = ""
+
+
+class SeoResult(BaseModel):
+    az: SeoLangBlock
+    ru: SeoLangBlock
+    en: SeoLangBlock
+    slug: str
+
+
+class SeoGenerateRequest(BaseModel):
+    product: SeoProductInput
+    site_name: str = "DE VALEUR"
+    site_url: str = "https://devaleur.az"
+
+
+class SeoGenerateResponse(BaseModel):
+    success: bool
+    seo: Optional[SeoResult] = None
+    error: Optional[str] = None
+    raw: Optional[str] = None
+
+
+def _slugify(text: str) -> str:
+    """Turn a product name into a URL-safe ASCII slug.
+    Handles Azerbaijani special characters."""
+    if not text:
+        return ""
+    tr = {
+        "ə": "e", "ı": "i", "ö": "o", "ü": "u", "ç": "c", "ş": "s", "ğ": "g",
+        "Ə": "e", "İ": "i", "Ö": "o", "Ü": "u", "Ç": "c", "Ş": "s", "Ğ": "g",
+        "й": "y", "ы": "y", "ю": "yu", "я": "ya",
+    }
+    out = "".join(tr.get(c, c) for c in text.lower())
+    out = _re.sub(r"[^a-z0-9]+", "-", out)
+    out = _re.sub(r"-+", "-", out).strip("-")
+    return out[:80]
+
+
+SEO_SYSTEM_PROMPT = """You are an expert e-commerce SEO copywriter for a luxury Azerbaijani watches and accessories store called "DE VALEUR".
+You will receive one product's data and must return SEO metadata for THREE languages: Azerbaijani (az), Russian (ru), English (en).
+
+CRITICAL RULES:
+- Output STRICT JSON only. No prose, no markdown, no code fences.
+- All strings must be plain text (no HTML, no emoji).
+- Title: 50-65 characters. Include the brand + product name + a strong keyword. Never end with an ellipsis.
+- Description (meta): 140-160 characters. Include benefits, brand, key features, and a subtle call-to-action.
+- Keywords: 6-10 comma-separated relevant search terms per language. Include brand, category, gender, use-cases.
+- imageAlt: 8-14 words describing the product for accessibility & Google Image search.
+- Use natural, human copy. Never keyword-stuff or repeat the brand more than twice.
+- Azerbaijani copy must be in proper Azerbaijani (ə, ı, ö, ü, ç, ş, ğ) — not Turkish.
+- Russian copy must be in proper Cyrillic Russian.
+- English copy must be idiomatic international English.
+
+JSON SHAPE (exact keys, no extra keys):
+{
+  "az": {"title": "...", "description": "...", "keywords": "...", "imageAlt": "..."},
+  "ru": {"title": "...", "description": "...", "keywords": "...", "imageAlt": "..."},
+  "en": {"title": "...", "description": "...", "keywords": "...", "imageAlt": "..."}
+}
+"""
+
+
+def _extract_json_block(text: str) -> Optional[dict]:
+    """Extract the first {...} JSON object from an LLM reply. Tolerates
+    fenced code blocks and leading commentary."""
+    if not text:
+        return None
+    # Strip common fences
+    t = text.strip()
+    if t.startswith("```"):
+        t = _re.sub(r"^```(?:json)?\s*", "", t)
+        t = _re.sub(r"\s*```$", "", t)
+    # Find first {...} block
+    start = t.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    end = -1
+    for i in range(start, len(t)):
+        ch = t[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end < 0:
+        return None
+    try:
+        return json.loads(t[start:end + 1])
+    except Exception:
+        return None
+
+
+@app.post("/api/seo/generate", response_model=SeoGenerateResponse)
+async def seo_generate(req: SeoGenerateRequest):
+    if not NVIDIA_API_KEY:
+        raise HTTPException(status_code=500, detail="NVIDIA API açarı konfiqurasiya edilməyib.")
+
+    p = req.product
+    # Build a rich, structured user prompt so the model has all context
+    price_line = ""
+    if p.salePrice and p.price and p.salePrice < p.price:
+        price_line = f"Price: {p.salePrice:.0f} AZN (was {p.price:.0f} AZN — discounted)"
+    elif p.price:
+        price_line = f"Price: {p.price:.0f} AZN"
+    gender_map = {"men": "Men", "women": "Women", "unisex": "Unisex"}
+    gender_line = f"Gender: {gender_map.get(p.gender, p.gender or 'N/A')}"
+
+    user_prompt = f"""Product data:
+- Brand: {p.brand or 'N/A'}
+- Product name (AZ): {p.name_az or 'N/A'}
+- Product name (RU): {p.name_ru or 'N/A'}
+- Product name (EN): {p.name_en or 'N/A'}
+- Category: {p.category or 'N/A'}
+- {gender_line}
+- {price_line}
+- Description (AZ): {(p.description_az or '').strip()[:600]}
+- Description (RU): {(p.description_ru or '').strip()[:600]}
+- Description (EN): {(p.description_en or '').strip()[:600]}
+
+Site: {req.site_name} ({req.site_url})
+
+Return the JSON as specified in the system prompt. Do not include any text outside the JSON."""
+
+    messages = [
+        {"role": "system", "content": SEO_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(
+                f"{NVIDIA_BASE_URL}/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                },
+                json={
+                    "model": NVIDIA_MODEL,
+                    "messages": messages,
+                    "temperature": 0.4,
+                    "top_p": 1,
+                    "max_tokens": 4096,
+                    "stream": False,
+                    "reasoning_effort": "low",
+                },
+            )
+    except httpx.HTTPError as e:
+        logger.exception("NVIDIA SEO network error: %s", e)
+        raise HTTPException(status_code=502, detail=f"AI ilə əlaqə qurulmadı: {e}")
+
+    if r.status_code >= 400:
+        logger.warning("NVIDIA SEO HTTP %s: %s", r.status_code, r.text[:400])
+        return SeoGenerateResponse(success=False, error=f"AI provayder xətası: HTTP {r.status_code}", raw=r.text[:600])
+
+    try:
+        data = r.json()
+    except Exception:
+        return SeoGenerateResponse(success=False, error="AI cavabı JSON deyil", raw=r.text[:600])
+
+    msg_obj = ((data.get("choices") or [{}])[0].get("message") or {})
+    content = (msg_obj.get("content") or "").strip()
+    if not content:
+        content = (msg_obj.get("reasoning_content") or msg_obj.get("reasoning") or "").strip()
+
+    parsed = _extract_json_block(content)
+    if not parsed:
+        return SeoGenerateResponse(success=False, error="AI cavabından JSON çıxarıla bilmədi", raw=content[:600])
+
+    def _lang_block(node: Any) -> SeoLangBlock:
+        if not isinstance(node, dict):
+            return SeoLangBlock()
+        return SeoLangBlock(
+            title=str(node.get("title") or "").strip()[:120],
+            description=str(node.get("description") or "").strip()[:250],
+            keywords=str(node.get("keywords") or "").strip()[:400],
+            imageAlt=str(node.get("imageAlt") or node.get("alt") or "").strip()[:200],
+        )
+
+    az = _lang_block(parsed.get("az"))
+    ru = _lang_block(parsed.get("ru"))
+    en = _lang_block(parsed.get("en"))
+
+    # Build the SEO slug from the EN or AZ product name + brand for stability
+    slug_source = " ".join(x for x in [p.brand, p.name_en or p.name_az or p.name_ru] if x)
+    slug = _slugify(slug_source) or _slugify(p.id)
+
+    return SeoGenerateResponse(
+        success=True,
+        seo=SeoResult(az=az, ru=ru, en=en, slug=slug),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Epoint.az — official payment-request flow
 # Matches the official WooCommerce plugin (epoint.az/api/1/request):
 #   data      = base64(json_encode(payload))

@@ -38,6 +38,139 @@ const ProductPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [id]);
 
+  // Inject AI-generated SEO meta tags into <head> whenever product or
+  // language changes. Falls back to product name/description when SEO is
+  // missing so page is never SEO-empty.
+  useEffect(() => {
+    if (!product) return;
+    const lang = (i18n.language as 'az' | 'ru' | 'en') || 'az';
+    const seo = product.seo || {};
+    const productName = product.name?.[lang] || product.name?.en || product.name?.az || '';
+    const productDesc =
+      product.description?.[lang] || product.description?.en || product.description?.az || '';
+
+    const title =
+      seo.title?.[lang] ||
+      seo.title?.en ||
+      seo.title?.az ||
+      `${product.brand ? product.brand + ' — ' : ''}${productName} | DE VALEUR`;
+
+    const description =
+      seo.description?.[lang] ||
+      seo.description?.en ||
+      seo.description?.az ||
+      productDesc.slice(0, 160);
+
+    const keywords =
+      seo.keywords?.[lang] ||
+      seo.keywords?.en ||
+      seo.keywords?.az ||
+      [product.brand, product.category, productName].filter(Boolean).join(', ');
+
+    const imageAlt =
+      seo.imageAlt?.[lang] ||
+      seo.imageAlt?.en ||
+      seo.imageAlt?.az ||
+      productName;
+
+    const image = product.images?.[0] || '';
+    const canonical = `${window.location.origin}/product/${product.id}`;
+
+    // 1) <title>
+    const prevTitle = document.title;
+    document.title = title;
+
+    // 2) Upsert helper for <meta> tags
+    const upsertMeta = (attr: 'name' | 'property', key: string, content: string) => {
+      if (!content) return () => undefined;
+      let el = document.head.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;
+      const created = !el;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      const prev = el.getAttribute('content') || '';
+      el.setAttribute('content', content);
+      return () => {
+        if (created) el?.remove();
+        else if (el) el.setAttribute('content', prev);
+      };
+    };
+
+    const upsertLink = (rel: string, href: string, hreflang?: string) => {
+      const selector = hreflang
+        ? `link[rel="${rel}"][hreflang="${hreflang}"]`
+        : `link[rel="${rel}"]`;
+      let el = document.head.querySelector(selector) as HTMLLinkElement | null;
+      const created = !el;
+      if (!el) {
+        el = document.createElement('link');
+        el.setAttribute('rel', rel);
+        if (hreflang) el.setAttribute('hreflang', hreflang);
+        document.head.appendChild(el);
+      }
+      const prev = el.getAttribute('href') || '';
+      el.setAttribute('href', href);
+      return () => {
+        if (created) el?.remove();
+        else if (el) el.setAttribute('href', prev);
+      };
+    };
+
+    const restorers: Array<() => void> = [];
+    restorers.push(upsertMeta('name', 'description', description));
+    restorers.push(upsertMeta('name', 'keywords', keywords));
+    restorers.push(upsertMeta('property', 'og:title', title));
+    restorers.push(upsertMeta('property', 'og:description', description));
+    restorers.push(upsertMeta('property', 'og:type', 'product'));
+    restorers.push(upsertMeta('property', 'og:url', canonical));
+    if (image) {
+      restorers.push(upsertMeta('property', 'og:image', image));
+      restorers.push(upsertMeta('property', 'og:image:alt', imageAlt));
+    }
+    restorers.push(upsertMeta('name', 'twitter:title', title));
+    restorers.push(upsertMeta('name', 'twitter:description', description));
+    if (image) restorers.push(upsertMeta('name', 'twitter:image', image));
+    restorers.push(upsertLink('canonical', canonical));
+
+    // JSON-LD Product schema for rich results
+    const priceForSchema = product.salePrice && product.salePrice < product.price
+      ? product.salePrice
+      : product.price;
+    const ldJson: any = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: productName,
+      description,
+      image: product.images || [],
+      brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+      category: product.category,
+      sku: (product as any).sku || product.id,
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'AZN',
+        price: priceForSchema,
+        availability:
+          (product.stock ?? 1) > 0 || product.stock === undefined
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+        url: canonical,
+      },
+    };
+    const ldScript = document.createElement('script');
+    ldScript.type = 'application/ld+json';
+    ldScript.setAttribute('data-seo-product', product.id);
+    ldScript.textContent = JSON.stringify(ldJson);
+    document.head.appendChild(ldScript);
+
+    return () => {
+      document.title = prevTitle;
+      restorers.forEach((r) => r());
+      ldScript.remove();
+    };
+  }, [product, i18n.language]);
+
   const loadProduct = async (productId: string) => {
     setLoading(true);
     try {
@@ -149,7 +282,7 @@ const ProductPage: React.FC = () => {
 
               <img
                 src={product.images?.[currentImageIndex]}
-                alt={productName}
+                alt={product.seo?.imageAlt?.[i18n.language as 'az' | 'ru' | 'en'] || product.seo?.imageAlt?.en || product.seo?.imageAlt?.az || productName}
                 className="w-full h-full object-contain p-8 sm:p-12"
               />
 

@@ -31,6 +31,16 @@ export interface Product {
   imageScale?: number;
   imageOffsetX?: number;
   imageOffsetY?: number;
+  /** AI-generated SEO metadata (per-language). Optional — only present after AI SEO run. */
+  seo?: {
+    title?: { az?: string; ru?: string; en?: string };
+    description?: { az?: string; ru?: string; en?: string };
+    keywords?: { az?: string; ru?: string; en?: string };
+    slug?: string;
+    imageAlt?: { az?: string; ru?: string; en?: string };
+    generatedAt?: Date | string;
+    generatedBy?: string;
+  };
   createdAt: Date;
 }
 

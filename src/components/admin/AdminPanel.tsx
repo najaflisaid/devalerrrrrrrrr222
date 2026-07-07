@@ -38,6 +38,7 @@ import HomeSectionsTab from './HomeSectionsTab';
 import WorkersTab from './WorkersTab';
 import GiftCardsTab from './GiftCardsTab';
 import CampaignsTab from './CampaignsTab';
+import AiSeoTab from './AiSeoTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
@@ -1729,6 +1730,7 @@ const AdminPanel: React.FC = () => {
       items: [
         { id: 'analytics', label: 'Analitika', icon: BarChart3 },
         { id: 'aiConsultant', label: 'AI Konsultant', icon: Sparkles },
+        { id: 'aiSeo', label: 'AI SEO', icon: Sparkles },
       ],
     },
     {
@@ -4076,6 +4078,15 @@ const AdminPanel: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <AiConsultantTab />
             </div>
+          </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'aiSeo' && (
+          <PasswordProtectedSection sectionName="aiSeo">
+            <AiSeoTab
+              products={products}
+              onProductsChanged={() => productService.getAll().then(setProducts).catch(() => undefined)}
+            />
           </PasswordProtectedSection>
         )}
 
