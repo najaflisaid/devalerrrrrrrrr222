@@ -33,6 +33,8 @@ const ProductPage: React.FC = () => {
     // Reset state on navigation between products
     setCurrentImageIndex(0);
     setQuantity(1);
+    // Note: POP navigation zamanı ScrollToTop bu çağırışı intercept edir
+    // və saxlanmış mövqeyə yönləndirir. PUSH zamanı isə normal olaraq yuxarıya scroll edir.
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [id]);
 
