@@ -12,7 +12,7 @@ import {
   subscribeSessionMessages,
 } from '../services/chatSessionService';
 import { uploadImageToR2 } from '../services/imageUploadService';
-import { playCustomerReceiveSound } from '../utils/chatSounds';
+import { playCustomerReceiveSound, unlockChatAudio } from '../utils/chatSounds';
 import { useCart } from '../context/CartContext';
 import type { Product } from '../types';
 
@@ -249,6 +249,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
   const sessionInitedRef = useRef<boolean>(false);
+  const firstMessagesLoadRef = useRef<boolean>(true);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -438,26 +439,29 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
       if (s) setSessionAiEnabled(s.aiEnabled !== false);
     });
     const unsubMsgs = subscribeSessionMessages(sessionIdRef.current, (msgs) => {
-      // Inject admin messages into UI (skip messages already seen or authored locally)
-      const adminMsgs = msgs.filter((m) => m.role === 'admin' && m.id && !seenMsgIdsRef.current.has(m.id));
-      if (adminMsgs.length === 0) return;
-      // Skip playing sound on first load (initial subscription pass with historical admin messages)
-      const isInitialLoad = seenMsgIdsRef.current.size === 0 && adminMsgs.length === msgs.filter(m => m.role === 'admin').length && msgs.length > adminMsgs.length;
-      adminMsgs.forEach((m) => seenMsgIdsRef.current.add(m.id!));
+      const adminMsgs = msgs.filter((m) => m.role === 'admin' && m.id);
+      if (firstMessagesLoadRef.current) {
+        // First subscription: mark all historical admin msgs as seen without sound/duplicate
+        adminMsgs.forEach((m) => seenMsgIdsRef.current.add(m.id!));
+        firstMessagesLoadRef.current = false;
+        return;
+      }
+      // Subsequent callbacks: only truly new admin messages
+      const fresh = adminMsgs.filter((m) => !seenMsgIdsRef.current.has(m.id!));
+      if (fresh.length === 0) return;
+      fresh.forEach((m) => seenMsgIdsRef.current.add(m.id!));
       setMessages((prev) => [
         ...prev,
-        ...adminMsgs.map<ChatMessage>((m) => ({
+        ...fresh.map<ChatMessage>((m) => ({
           role: 'admin',
           content: m.content || '',
           imageUrl: m.imageUrl || undefined,
           ts: (m.ts as any)?.seconds ? (m.ts as any).seconds * 1000 : Date.now(),
           byName: m.byName || 'Konsultant',
-          byRole: (m as any).byRole || 'Satış məsləhətçisi',
+          byRole: (m as any).byRole || '',
         })),
       ]);
-      if (!isInitialLoad) {
-        playCustomerReceiveSound();
-      }
+      playCustomerReceiveSound();
     });
     return () => { unsubSession(); unsubMsgs(); };
   }, [open, lang]);
@@ -532,6 +536,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    unlockChatAudio();
     const text = input.trim();
     if (!text && !pendingImage) return;
     const img = pendingImage;
@@ -607,7 +612,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
             </button>
           )}
           <button
-            onClick={() => { setOpen(true); setBubbleVisible(false); setBubbleDismissed(true); }}
+            onClick={() => { unlockChatAudio(); setOpen(true); setBubbleVisible(false); setBubbleDismissed(true); }}
             className="dv-ai-launcher-pill group relative inline-flex items-center gap-2.5 pl-2 pr-4 h-12 rounded-full bg-white border border-[#D4AF37]/60 hover:border-[#D4AF37] shadow-[0_8px_24px_-8px_rgba(212,175,55,0.45)] hover:shadow-[0_12px_28px_-8px_rgba(212,175,55,0.6)] transition-all duration-300 overflow-visible"
             title="De Valeur AI ilə danış"
             aria-label="De Valeur AI ilə danış"
@@ -729,12 +734,9 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
                       : 'bg-white border border-black/[0.08] text-black rounded-bl-sm shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]'
                   }`}>
                     {isAdmin && (
-                      <div className="mb-1.5 leading-tight">
+                      <div className="mb-1 leading-tight">
                         <div className="text-[12px] font-semibold text-black tracking-tight">
                           {m.byName || 'Konsultant'}
-                        </div>
-                        <div className="text-[9.5px] font-medium text-[#B8860B] uppercase tracking-wide mt-0.5">
-                          {m.byRole || 'Satış məsləhətçisi'}
                         </div>
                       </div>
                     )}
@@ -807,7 +809,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { unlockChatAudio(); fileInputRef.current?.click(); }}
               disabled={uploading || busy}
               className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border border-black/15 hover:border-[#D4AF37] hover:text-[#D4AF37] text-black/60 transition-colors disabled:opacity-40"
               title="Şəkil əlavə et"
@@ -818,6 +820,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onFocus={unlockChatAudio}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

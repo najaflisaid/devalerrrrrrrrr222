@@ -3,7 +3,7 @@ import {
   Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2,
   MessageCircle, Power, MessageSquare, Plus, Trash2, Send, Users, TrendingUp,
   Clock, Search, Bot, PowerOff, MessageSquareText, BarChart3,
-  Paperclip, Volume2, VolumeX, X, Copy, User, Briefcase,
+  Paperclip, Volume2, VolumeX, X, Copy, User,
 } from 'lucide-react';
 import {
   getAiKnowledge,
@@ -32,11 +32,10 @@ import {
 } from '../../services/adminChatProfileService';
 import { uploadImageToR2 } from '../../services/imageUploadService';
 import {
-  playNewSessionSound,
-  playAdminMessageSound,
   isAdminChatMuted,
   setAdminChatMuted,
 } from '../../utils/chatSounds';
+import { consumePendingChatSession, onOpenChatSession } from '../../utils/adminChatBridge';
 
 type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations';
 
@@ -112,6 +111,21 @@ const AiConsultantTab: React.FC = () => {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pendingSelect, setPendingSelect] = useState<string | null>(null);
 
+  // On mount: check if there's a pending session waiting (fired before mount)
+  useEffect(() => {
+    const sid = consumePendingChatSession();
+    if (sid) {
+      setSubTab('conversations');
+      setPendingSelect(sid);
+    }
+    // Subscribe for future events (fired while mounted)
+    const unsub = onOpenChatSession((sid2) => {
+      setSubTab('conversations');
+      setPendingSelect(sid2);
+    });
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     void (async () => {
       setLoading(true);
@@ -168,14 +182,6 @@ const AiConsultantTab: React.FC = () => {
 
   return (
     <div className="space-y-5" data-testid="ai-consultant-tab">
-      {/* New session toaster (renders regardless of tab) */}
-      <NewSessionToaster
-        onJump={(sid) => {
-          setSubTab('conversations');
-          setPendingSelect(sid);
-        }}
-      />
-
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -634,7 +640,6 @@ const ConversationsSection: React.FC<{
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const lastMsgCountRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const unsub = subscribeAllSessions(setSessions);
@@ -657,13 +662,6 @@ const ConversationsSection: React.FC<{
     if (!selectedId) { setMessages([]); return; }
     const unsub = subscribeSessionMessages(selectedId, (msgs) => {
       setMessages(msgs);
-      // Play sound if new user message came in AFTER first load
-      const prevCount = lastMsgCountRef.current[selectedId] || 0;
-      const userMsgs = msgs.filter((m) => m.role === 'user').length;
-      if (prevCount > 0 && userMsgs > prevCount) {
-        playAdminMessageSound();
-      }
-      lastMsgCountRef.current[selectedId] = userMsgs;
     });
     return () => unsub();
   }, [selectedId]);
@@ -735,7 +733,7 @@ const ConversationsSection: React.FC<{
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 truncate">{profile.displayName}</div>
-            <div className="text-[11px] text-gray-500 truncate">{profile.roleLabel} · Müştəriyə bu ad görünür</div>
+            <div className="text-[11px] text-gray-500 truncate">Müştəriyə bu ad görünür</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -890,7 +888,6 @@ const ConversationsSection: React.FC<{
                         {isAdmin && (
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-[10.5px] font-semibold text-emerald-700">{m.byName || profile.displayName}</span>
-                            <span className="text-[9px] text-gray-400">· {(m as any).byRole || profile.roleLabel}</span>
                           </div>
                         )}
                         {!isUser && !isAdmin && (
@@ -965,7 +962,7 @@ const ConversationsSection: React.FC<{
                   </button>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-1.5 pl-2">
-                  Müştəri sizin <strong className="text-gray-600">{profile.displayName}</strong> adı və <strong className="text-gray-600">{profile.roleLabel}</strong> rolunuzu görəcək.
+                  Müştəri sizin <strong className="text-gray-600">{profile.displayName}</strong> adınızı görəcək.
                 </p>
               </div>
             </>
@@ -983,13 +980,15 @@ const ProfileEditorModal: React.FC<{
   onSaved: (p: AdminChatProfile) => void;
 }> = ({ profile, onClose, onSaved }) => {
   const [displayName, setDisplayName] = useState(profile.displayName);
-  const [roleLabel, setRoleLabel] = useState(profile.roleLabel);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const next: AdminChatProfile = { displayName: displayName.trim() || 'Konsultant', roleLabel: roleLabel.trim() || 'Satış məsləhətçisi' };
+      const next: AdminChatProfile = {
+        displayName: displayName.trim() || 'Konsultant',
+        roleLabel: profile.roleLabel, // preserved but not shown to customer
+      };
       await saveAdminChatProfile(next);
       onSaved(next);
     } catch (e: any) { alert('Yadda saxlanmadı: ' + (e?.message || e)); }
@@ -1004,47 +1003,31 @@ const ProfileEditorModal: React.FC<{
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></button>
         </div>
         <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-          Müştəri sizin mesajlarınızda bu adı və rolu görəcək. Takma ad da yaza bilərsiniz.
+          Müştəri sizin mesajlarınızda bu adı görəcək. İstədiyiniz takma ad yaza bilərsiniz.
         </p>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <User className="h-3.5 w-3.5" /> Ad və soyad
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Aynur Məmmədova"
-              maxLength={40}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-              data-testid="profile-name-input"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <Briefcase className="h-3.5 w-3.5" /> Rol / vəzifə
-            </label>
-            <input
-              type="text"
-              value={roleLabel}
-              onChange={(e) => setRoleLabel(e.target.value)}
-              placeholder="Satış məsləhətçisi"
-              maxLength={40}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
-              data-testid="profile-role-input"
-            />
-          </div>
+        <div>
+          <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+            <User className="h-3.5 w-3.5" /> Ad və soyad
+          </label>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Aynur Məmmədova"
+            maxLength={40}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none"
+            data-testid="profile-name-input"
+            autoFocus
+          />
         </div>
 
         {/* Preview */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="text-[10px] uppercase font-semibold text-gray-400 mb-1.5">Öncədən görünüş</div>
+          <div className="text-[10px] uppercase font-semibold text-gray-400 mb-1.5">Öncədən görünüş (müştəri belə görəcək)</div>
           <div className="inline-block bg-[#D4AF37]/10 border border-[#D4AF37]/40 rounded-2xl rounded-bl-sm px-3.5 py-2.5">
             <div className="text-[12px] font-semibold text-black leading-tight">{displayName || 'Konsultant'}</div>
-            <div className="text-[9.5px] font-medium text-[#B8860B] uppercase tracking-wide mt-0.5">{roleLabel || 'Satış məsləhətçisi'}</div>
-            <div className="text-[13px] text-black mt-1.5">Salam! Necə kömək edə bilərəm?</div>
+            <div className="text-[13px] text-black mt-1">Salam! Necə kömək edə bilərəm?</div>
           </div>
         </div>
 
@@ -1065,65 +1048,6 @@ const ProfileEditorModal: React.FC<{
   );
 };
 
-// ═══════════════ New session toaster ═══════════════
-const NewSessionToaster: React.FC<{ onJump: (sid: string) => void }> = ({ onJump }) => {
-  const [newSessions, setNewSessions] = useState<ChatSessionMeta[]>([]);
-  const knownIdsRef = useRef<Set<string>>(new Set());
-  const isFirstLoadRef = useRef(true);
-
-  useEffect(() => {
-    const unsub = subscribeAllSessions((all) => {
-      if (isFirstLoadRef.current) {
-        // Populate known set on first load (no notification for existing sessions)
-        all.forEach((s) => knownIdsRef.current.add(s.id));
-        isFirstLoadRef.current = false;
-        return;
-      }
-      // Detect newly created sessions with at least 1 user message
-      const fresh = all.filter((s) => !knownIdsRef.current.has(s.id) && (s.userMessageCount || 0) > 0);
-      if (fresh.length > 0) {
-        fresh.forEach((s) => knownIdsRef.current.add(s.id));
-        setNewSessions((prev) => [...fresh, ...prev].slice(0, 4));
-        playNewSessionSound();
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  const dismiss = (id: string) => setNewSessions((prev) => prev.filter((s) => s.id !== id));
-
-  if (newSessions.length === 0) return null;
-
-  return (
-    <div className="fixed bottom-6 left-6 z-[9999] flex flex-col gap-2 max-w-xs" data-testid="new-session-toaster">
-      {newSessions.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => { onJump(s.id); dismiss(s.id); }}
-          className="group bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl shadow-2xl shadow-emerald-500/40 px-4 py-3 pr-10 flex items-center gap-3 text-left animate-[slideUp_0.4s_ease-out] hover:from-emerald-600 hover:to-emerald-700 transition-colors relative"
-          data-testid={`new-session-toast-${s.id}`}
-        >
-          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-            <MessageSquare className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-bold">Yeni söhbət başladı!</div>
-            <div className="text-[11px] text-white/85 truncate">
-              Müştəri {s.id.slice(0, 6)} · <span className="underline">Söhbətə qoşul →</span>
-            </div>
-          </div>
-          <span
-            onClick={(e) => { e.stopPropagation(); dismiss(s.id); }}
-            className="absolute top-1.5 right-1.5 p-1 rounded-full hover:bg-white/20"
-          >
-            <X className="h-3 w-3" />
-          </span>
-        </button>
-      ))}
-      <style>{`@keyframes slideUp {from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
-    </div>
-  );
-};
+// ═══════════════ (New session toaster moved to AdminChatNotifier — qlobal mount edilir) ═══════════════
 
 export default AiConsultantTab;

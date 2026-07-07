@@ -13,6 +13,8 @@ import DeliveryMethodsTab from './DeliveryMethodsTab';
 import AnalyticsTab from './AnalyticsTab';
 import ReviewsTab from './ReviewsTab';
 import AiConsultantTab from './AiConsultantTab';
+import AdminChatNotifier from './AdminChatNotifier';
+import { requestOpenChatSession } from '../../utils/adminChatBridge';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
 import AboutManagementTab from './AboutManagementTab';
@@ -1752,6 +1754,13 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Global chat notifier — bütün tab-larda görünür, kliklədikdə AI Konsultanta keçir */}
+      <AdminChatNotifier
+        onJumpToSession={(sid) => {
+          setActiveTab('aiConsultant');
+          requestOpenChatSession(sid);
+        }}
+      />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
