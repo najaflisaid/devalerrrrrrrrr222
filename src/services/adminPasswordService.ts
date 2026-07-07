@@ -94,6 +94,13 @@ export const passwordKeyForSection = (sectionName: string): keyof AdminPasswords
   return 'default';
 };
 
+// Bəzi bölmələr üçün built-in "boks" şifrə — admin `perSection`-də açıq şifrə
+// təyin etməyibsə, bu şifrə istifadə olunur. (AI SEO tabı üçün istifadəçinin
+// istəyi ilə default `2345` təyin olunub.)
+const DEFAULT_SECTION_PASSWORDS: Record<string, string> = {
+  aiSeo: '2345',
+};
+
 // Bu bölmələr xüsusi konfiqurasiya yoxdursa AÇIQ qalır (şifrə tələb etmir).
 // Admin lazım bilsə, "Şifrələr" bölməsindən hər birinə şifrə təyin edə bilər.
 const DEFAULT_OPEN_SECTIONS = new Set([
@@ -136,6 +143,9 @@ export const verifySectionPassword = async (
   if (cfg?.password && cfg.password.length > 0) {
     return cfg.password === candidate;
   }
+  // Built-in per-section default (e.g. aiSeo → '2345')
+  const builtIn = DEFAULT_SECTION_PASSWORDS[sectionName];
+  if (builtIn) return builtIn === candidate;
   // No explicit config: open-by-default sections allow access without password
   if (DEFAULT_OPEN_SECTIONS.has(sectionName)) return true;
   // Fallback to global key
@@ -154,6 +164,8 @@ export const isSectionOpen = async (sectionName: string): Promise<boolean> => {
   if (cfg?.noPassword) return true;
   // If admin explicitly set a password, section is locked
   if (cfg?.password && cfg.password.length > 0) return false;
+  // Sections with a built-in default password are always locked until entered
+  if (DEFAULT_SECTION_PASSWORDS[sectionName]) return false;
   // Otherwise: open if in default-open list
   return DEFAULT_OPEN_SECTIONS.has(sectionName);
 };

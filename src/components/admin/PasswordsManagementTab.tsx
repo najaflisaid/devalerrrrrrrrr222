@@ -32,6 +32,7 @@ const SECTIONS: { id: string; label: string; group: string }[] = [
   { id: 'categories', label: 'Kateqoriyalar', group: 'content' },
   { id: 'reviews', label: 'Müştəri Rəyləri', group: 'content' },
   { id: 'aiKnowledge', label: 'AI Bilik Bazası', group: 'content' },
+  { id: 'aiSeo', label: 'AI SEO', group: 'content' },
   { id: 'banners', label: 'Bannerlər', group: 'content' },
   { id: 'productBanners', label: 'Məhsul Bannerləri', group: 'content' },
   { id: 'homeSections', label: 'Ana Səhifə Bölmələri', group: 'content' },
