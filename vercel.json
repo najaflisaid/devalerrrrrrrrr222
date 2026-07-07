@@ -5,13 +5,17 @@
   "installCommand": "yarn install",
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
       "source": "/product/:id",
       "destination": "/api/og-product?id=:id",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|Google-InspectionTool|Storebot-Google|AdsBot-Google|Google-Extended|bingbot|BingPreview|YandexBot|YandexImages|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google|Baiduspider|SemrushBot|AhrefsBot).*"
         }
       ]
     },
@@ -22,7 +26,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|bingbot|YandexBot|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google).*"
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Applebot|Pinterest|redditbot|Googlebot|Google-InspectionTool|Storebot-Google|AdsBot-Google|Google-Extended|bingbot|BingPreview|YandexBot|YandexImages|DuckDuckBot|Embedly|vkShare|W3C_Validator|Iframely|skypeuripreview|nuzzel|Snapchat|Tumblr|Mediapartners-Google|Baiduspider|SemrushBot|AhrefsBot).*"
         }
       ]
     },
