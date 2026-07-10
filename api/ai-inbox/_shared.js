@@ -164,13 +164,13 @@ export function verifyMetaSignature(rawBodyBuf, signatureHeader, appSecret) {
 
 function resolveAiKey(cfg) {
   if (cfg.use_custom_key && (cfg.custom_api_key || '').trim()) return cfg.custom_api_key.trim();
-  // Fall back to shared NVIDIA key so provider works out of the box on Vercel
+  // Fall back to shared OpenRouter key so provider works out of the box on Vercel
   // without extra env setup (OpenAI-compatible endpoint).
   return (
-    process.env.NVIDIA_API_KEY ||
+    process.env.OPENROUTER_API_KEY ||
     process.env.OPENAI_API_KEY ||
     process.env.EMERGENT_LLM_KEY ||
-    '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'
+    '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'
   );
 }
 
@@ -197,13 +197,18 @@ export async function generateAiReply({ cfg, platform, inboundText, history }) {
   messages.push({ role: 'user', content: inboundText });
 
   if (provider === 'openai') {
-    // Use NVIDIA Integrate (OpenAI-compatible) endpoint by default so the
-    // shared NVIDIA key works out of the box. Override with env if needed.
-    const baseUrl = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
-    const useModel = model && model.startsWith('gpt-4') ? 'openai/gpt-oss-20b' : model;
+    // Use OpenRouter (OpenAI-compatible) endpoint by default so the
+    // shared OpenRouter key works out of the box. Override with env if needed.
+    const baseUrl = process.env.OPENAI_BASE_URL || 'https://openrouter.ai/api/v1';
+    const useModel = model && model.startsWith('gpt-4') ? 'openai/gpt-oss-20b:free' : model;
     const r = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.OPENROUTER_REFERER || 'https://devaleur.az',
+        'X-Title': process.env.OPENROUTER_TITLE || 'De Valeur AI Inbox',
+      },
       body: JSON.stringify({ model: useModel, messages, temperature: 0.5, max_tokens: 400 }),
     });
     if (!r.ok) {

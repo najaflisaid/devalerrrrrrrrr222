@@ -5,10 +5,12 @@
  * Bu sayədə deploy zamanı heç bir env variable lazım deyil — açar burada gizli qalır.
  */
 
-// NVIDIA Integrate API (OpenAI-compatible) — server-side only, frontend bundle-da görsənmir
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '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';
-const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'openai/gpt-oss-20b';
+// OpenRouter API (OpenAI-compatible) — server-side only, frontend bundle-da görsənmir
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-20b:free';
+const OPENROUTER_REFERER = process.env.OPENROUTER_REFERER || 'https://devaleur.az';
+const OPENROUTER_TITLE = process.env.OPENROUTER_TITLE || 'De Valeur AI';
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
@@ -190,7 +192,7 @@ export default async function handler(req, res) {
       formatProducts(products) +
       '\n\n📝 ƏVVƏLKİ SÖHBƏT:\n' +
       formatHistory(history) +
-      '\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver.';
+      '\n\n⚠️ SON XATIRLATMA: Yuxarıdakı ADMIN QAYDALARI (⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI bölməsi) və ŞİRKƏT BİLİK BAZASI hər zaman ƏSAS PRİORİTETDİR. Əgər personada göstərilən qayda ilə admin qaydası ziddiyyət təşkil edərsə, ADMIN QAYDASINA əməl et.\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver.';
 
     // Build user content
     // Note: openai/gpt-oss-20b is text-only. If images are attached, mention their URLs in text.
@@ -206,14 +208,16 @@ export default async function handler(req, res) {
       { role: 'user', content: userContent },
     ];
 
-    const aiRes = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
+    const aiRes = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${NVIDIA_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': OPENROUTER_REFERER,
+        'X-Title': OPENROUTER_TITLE,
       },
       body: JSON.stringify({
-        model: NVIDIA_MODEL,
+        model: OPENROUTER_MODEL,
         messages,
         temperature: 0.7,
         top_p: 1,
