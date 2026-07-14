@@ -1,20 +1,28 @@
 /**
  * De Valeur AI Chat — Vercel Serverless Function
- * 
- * Frontend (window.location.origin/api/chat) → bu function → OpenAI API
- * Bu sayədə deploy zamanı heç bir env variable lazım deyil — açar burada gizli qalır.
+ *
+ * Frontend (window.location.origin/api/chat) → bu function → Google Gemini API
+ * GEMINI_API_KEY env variable Vercel dashboardundan gətirilir.
  */
 
-// OpenRouter API (OpenAI-compatible) — server-side only, frontend bundle-da görsənmir
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
-const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-20b:free';
-const OPENROUTER_REFERER = process.env.OPENROUTER_REFERER || 'https://devaleur.az';
-const OPENROUTER_TITLE = process.env.OPENROUTER_TITLE || 'De Valeur AI';
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY ||
+  'AQ.Ab8RN6J6B4CZpyrSLtz6l0-M_c292ljC8pRPYb2hV1ffFjxGjA';
+const GEMINI_BASE_URL =
+  process.env.GEMINI_BASE_URL ||
+  'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
+const GEMINI_MODEL_FALLBACKS = (
+  process.env.GEMINI_MODEL_FALLBACKS ||
+  'gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-3.5-flash'
+)
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 const DEVALEUR_PERSONA = `Sən "De Valeur AI" adlı yüksək səviyyəli AI satış və konsultasiya köməkçisisən.
 Sən De Valeur saatlar və lüks aksesuarlar mağazasının rəsmi virtual konsultantısan.
-Sən ChatGPT, Claude, OpenAI, Anthropic deyilsən — sən sadəcə "De Valeur AI"-san.
+Sən ChatGPT, Claude, OpenAI, Anthropic, Gemini deyilsən — sən sadəcə "De Valeur AI"-san.
 Əgər səndən hansı modelə əsaslandığın və ya kimin tərəfindən yaradıldığın soruşulsa, sadəcə deyirsən:
 "Mən De Valeur-un öz AI satış konsultantıyam — sizə kömək etmək üçün buradayam."
 
@@ -101,19 +109,11 @@ const catalogSummary = (products) => {
   ].join('\n');
 };
 
-const formatHistory = (history, limit = 8) => {
-  if (!history || history.length === 0) return '(yeni söhbətdir)';
-  const recent = history.slice(-limit);
-  return recent
-    .map((h) => `${h.role === 'user' ? 'Müştəri' : 'De Valeur AI'}: ${(h.content || '').trim()}`)
-    .join('\n');
-};
-
 const formatKnowledge = (k) => {
   if (!k) return '';
   const sections = [];
   if (k.aiInstructions && k.aiInstructions.trim()) {
-    sections.push('⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI:\n' + k.aiInstructions.trim());
+    sections.push('⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI (hər şeydən üstündür, MÜTLƏQ ƏMƏL ET):\n' + k.aiInstructions.trim());
   }
   if (k.companyInfo && k.companyInfo.trim()) sections.push('🏢 ŞİRKƏT HAQQINDA:\n' + k.companyInfo.trim());
   if (k.brandsInfo && k.brandsInfo.trim()) sections.push('🏷️ BRENDLƏR HAQQINDA:\n' + k.brandsInfo.trim());
@@ -131,21 +131,46 @@ const formatKnowledge = (k) => {
   return '\n\n📚 ŞİRKƏT BİLİK BAZASI:\n' + sections.join('\n\n');
 };
 
-// Extract image URLs from a message ("[şəkil: URL] text") for vision support
-const extractImageUrls = (text) => {
-  const urls = [];
-  const re = /\[şəkil:\s*(https?:\/\/[^\]\s]+)\]/gi;
-  let m;
-  while ((m = re.exec(text)) !== null) urls.push(m[1]);
-  return urls;
-};
-
-const stripImageMarkers = (text) => text.replace(/\[şəkil:\s*https?:\/\/[^\]\s]+\]/gi, '').trim();
-
 const setCorsHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+};
+
+const callGemini = async (payload) => {
+  const models = [GEMINI_MODEL, ...GEMINI_MODEL_FALLBACKS].filter(
+    (m, i, arr) => m && arr.indexOf(m) === i,
+  );
+  let lastError = 'no models configured';
+  for (const model of models) {
+    const url = `${GEMINI_BASE_URL}/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+    let resp;
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      lastError = `network: ${err.message}`;
+      continue;
+    }
+    if (resp.status === 429 || resp.status === 503) {
+      lastError = `HTTP ${resp.status} on ${model}`;
+      continue;
+    }
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      return { data: null, error: `HTTP ${resp.status}: ${txt.slice(0, 200)}` };
+    }
+    try {
+      const data = await resp.json();
+      return { data, error: null };
+    } catch (e) {
+      return { data: null, error: 'non-JSON response' };
+    }
+  }
+  return { data: null, error: lastError };
 };
 
 export default async function handler(req, res) {
@@ -190,53 +215,45 @@ export default async function handler(req, res) {
       catalogSummary(products) +
       '\n\n📦 SAYTDAKI TAM MƏHSUL KATALOQU:\n' +
       formatProducts(products) +
-      '\n\n📝 ƏVVƏLKİ SÖHBƏT:\n' +
-      formatHistory(history) +
       '\n\n⚠️ SON XATIRLATMA: Yuxarıdakı ADMIN QAYDALARI (⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI bölməsi) və ŞİRKƏT BİLİK BAZASI hər zaman ƏSAS PRİORİTETDİR. Əgər personada göstərilən qayda ilə admin qaydası ziddiyyət təşkil edərsə, ADMIN QAYDASINA əməl et.\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına qısa, təbii, satış yönümlü cavab ver.';
 
-    // Build user content
-    // Note: openai/gpt-oss-20b is text-only. If images are attached, mention their URLs in text.
-    const imageUrls = extractImageUrls(message);
-    const cleanedMessage = stripImageMarkers(message) || (imageUrls.length ? 'Müştəri şəkil paylaşdı.' : message);
-    const userContent = imageUrls.length > 0
-      ? `${cleanedMessage}\n\n[Müştəri şəkil(lər) əlavə etdi: ${imageUrls.slice(0, 4).join(', ')}]`
-      : message;
+    // Build Gemini contents from history (map assistant->model)
+    const contents = [];
+    for (const h of history.slice(-10)) {
+      if (!(h.content || '').trim()) continue;
+      const role = h.role === 'user' ? 'user' : 'model';
+      contents.push({ role, parts: [{ text: h.content }] });
+    }
+    contents.push({ role: 'user', parts: [{ text: message }] });
 
-    const messages = [
-      { role: 'system', content: systemMessage },
-      ...history.slice(-8).map((h) => ({ role: h.role, content: h.content })),
-      { role: 'user', content: userContent },
-    ];
-
-    const aiRes = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': OPENROUTER_REFERER,
-        'X-Title': OPENROUTER_TITLE,
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages,
+    const payload = {
+      systemInstruction: { parts: [{ text: systemMessage }] },
+      contents,
+      generationConfig: {
         temperature: 0.7,
-        top_p: 1,
-        max_tokens: 4096,
-        stream: false,
-      }),
-    });
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
+    };
 
-    if (!aiRes.ok) {
-      const errText = await aiRes.text().catch(() => '');
-      res.status(502).json({ error: `AI provayder xətası: ${aiRes.status}`, detail: errText.slice(0, 300) });
+    const { data, error } = await callGemini(payload);
+    if (error || !data) {
+      res.status(502).json({ error: `AI provayder xətası: ${error || 'boş cavab'}` });
       return;
     }
-
-    const data = await aiRes.json();
-    const msgObj = data?.choices?.[0]?.message || {};
-    let reply = (msgObj.content || '').trim();
-    if (!reply) reply = (msgObj.reasoning_content || msgObj.reasoning || '').trim();
-    reply = reply || 'Bağışlayın, cavab yarana bilmədi.';
+    const candidates = data.candidates || [];
+    let reply = '';
+    if (candidates.length > 0) {
+      const parts = ((candidates[0].content || {}).parts) || [];
+      reply = parts.map((p) => p.text || '').join('').trim();
+    }
+    if (!reply) reply = 'Bağışlayın, cavab yarana bilmədi. Yenidən cəhd edin.';
     res.status(200).json({ reply });
   } catch (err) {
     console.error('[Chat API] Error:', err);

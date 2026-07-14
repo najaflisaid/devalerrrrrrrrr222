@@ -25,19 +25,66 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# NVIDIA Integrate API (OpenAI-compatible) for De Valeur AI chat
-NVIDIA_API_KEY = os.environ.get(
-    "NVIDIA_API_KEY",
-    "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",
+load_dotenv()
+
+# Google Gemini API for De Valeur AI chat
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
+GEMINI_MODEL_FALLBACKS = [
+    m.strip()
+    for m in os.environ.get(
+        "GEMINI_MODEL_FALLBACKS",
+        "gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-3.5-flash",
+    ).split(",")
+    if m.strip()
+]
+GEMINI_BASE_URL = os.environ.get(
+    "GEMINI_BASE_URL",
+    "https://generativelanguage.googleapis.com/v1beta",
 )
-NVIDIA_BASE_URL = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-NVIDIA_MODEL = os.environ.get("NVIDIA_MODEL", "openai/gpt-oss-20b")
+
+
+def _gemini_models_chain() -> List[str]:
+    """Primary model followed by fallbacks (deduped, order preserved)."""
+    seen: set = set()
+    out: List[str] = []
+    for m in [GEMINI_MODEL, *GEMINI_MODEL_FALLBACKS]:
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+async def _gemini_generate(payload: Dict[str, Any], timeout: float = 45.0) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Try primary model, then fallbacks on 429/503. Returns (json_body, error_str)."""
+    last_error = "no models configured"
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for model in _gemini_models_chain():
+            url = f"{GEMINI_BASE_URL}/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                r = await client.post(url, headers={"Content-Type": "application/json"}, json=payload)
+            except httpx.HTTPError as e:
+                last_error = f"network: {e}"
+                logger.warning("Gemini %s network error: %s", model, e)
+                continue
+            if r.status_code in (429, 503):
+                last_error = f"HTTP {r.status_code} on {model}"
+                logger.info("Gemini %s busy (HTTP %s), trying next fallback", model, r.status_code)
+                continue
+            if r.status_code >= 400:
+                last_error = f"HTTP {r.status_code}: {r.text[:200]}"
+                logger.warning("Gemini %s HTTP %s: %s", model, r.status_code, r.text[:400])
+                return None, last_error
+            try:
+                return r.json(), None
+            except Exception:
+                last_error = "non-JSON response"
+                return None, last_error
+    return None, last_error
 
 # Firebase Admin SDK (used for password reset operations)
 import firebase_admin
 from firebase_admin import credentials, auth as fb_auth, firestore as fb_firestore
-
-load_dotenv()
 
 logger = logging.getLogger("devaleur")
 logging.basicConfig(level=logging.INFO)
@@ -343,8 +390,8 @@ def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
-    if not NVIDIA_API_KEY:
-        raise HTTPException(status_code=500, detail="AI provayder açarı konfiqurasiya edilməyib.")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API açarı konfiqurasiya edilməyib.")
 
     lang_directive = {
         "az": "Cavab DİLİ: Azərbaycan dilində (sənin əsas dilin).",
@@ -361,45 +408,48 @@ async def chat_endpoint(req: ChatRequest):
         + _catalog_summary(req.products)
         + "\n\n📦 SAYTDAKI TAM MƏHSUL KATALOQU (real məlumat, hamısı stokdan asılı olmayaraq, ən aktual əvvəldə):\n"
         + _format_products(req.products)
-        + "\n\n📝 ƏVVƏLKİ SÖHBƏT:\n"
-        + _format_history(req.history)
-        + "\n\nİndi yuxarıdakı kontekstə əsasən müştərinin son mesajına: əvvəlcə zehnində nə istədiyini analiz et, sonra qısa, təbii, satış yönümlü cavab ver. Cinsi və büdcəni mütləq yoxla."
+        + "\n\n⚠️ SON XATIRLATMA: Yuxarıdakı ADMIN QAYDALARI (⚡️ ADMIN-İN ƏN PRİORİTET KOMANDALARI bölməsi) və ŞİRKƏT BİLİK BAZASI hər zaman ƏSAS PRİORİTETDİR. Əgər personada göstərilən qayda ilə admin qaydası ziddiyyət təşkil edərsə, ADMIN QAYDASINA əməl et."
     )
 
-    messages: List[Dict[str, str]] = [{"role": "system", "content": system_message}]
-    for h in (req.history or [])[-8:]:
-        if h.role in ("user", "assistant") and (h.content or "").strip():
-            messages.append({"role": h.role, "content": h.content})
-    messages.append({"role": "user", "content": req.message.strip()})
+    # Build Gemini contents from history (map assistant->model)
+    contents: List[Dict[str, Any]] = []
+    for h in (req.history or [])[-10:]:
+        if not (h.content or "").strip():
+            continue
+        role = "user" if h.role == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": h.content}]})
+    contents.append({"role": "user", "parts": [{"text": req.message.strip()}]})
 
+    payload = {
+        "systemInstruction": {"parts": [{"text": system_message}]},
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.7,
+            "topP": 0.95,
+            "maxOutputTokens": 2048,
+        },
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
+        ],
+    }
+
+    url = f"{GEMINI_BASE_URL}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            r = await client.post(
-                f"{NVIDIA_BASE_URL}/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                },
-                json={
-                    "model": NVIDIA_MODEL,
-                    "messages": messages,
-                    "temperature": 0.7,
-                    "top_p": 1,
-                    "max_tokens": 4096,
-                    "stream": False,
-                },
-            )
-        if r.status_code >= 400:
-            logger.warning("NVIDIA chat HTTP %s: %s", r.status_code, r.text[:400])
-            raise HTTPException(status_code=502, detail=f"AI provayder xətası: HTTP {r.status_code}")
-        data = r.json()
-        msg_obj = ((data.get("choices") or [{}])[0].get("message") or {})
-        reply = (msg_obj.get("content") or "").strip()
-        # gpt-oss models sometimes put final answer in `reasoning_content` when
-        # `content` comes back empty — fall back so users still get a reply.
+        data, err = await _gemini_generate(payload, timeout=45.0)
+        if err or not data:
+            raise HTTPException(status_code=502, detail=f"AI provayder xətası: {err or 'boş cavab'}")
+        candidates = data.get("candidates") or []
+        reply = ""
+        if candidates:
+            parts = ((candidates[0].get("content") or {}).get("parts")) or []
+            reply = "".join(p.get("text", "") for p in parts).strip()
         if not reply:
-            reply = (msg_obj.get("reasoning_content") or msg_obj.get("reasoning") or "").strip()
-        reply = reply or "Bağışlayın, cavab yarana bilmədi."
+            finish_reason = (candidates[0] or {}).get("finishReason") if candidates else "UNKNOWN"
+            logger.warning("Gemini empty reply, finishReason=%s, raw=%s", finish_reason, str(data)[:400])
+            reply = "Bağışlayın, cavab yarana bilmədi. Yenidən cəhd edin."
         return ChatResponse(reply=reply)
     except HTTPException:
         raise
@@ -534,8 +584,8 @@ def _extract_json_block(text: str) -> Optional[dict]:
 
 @app.post("/api/seo/generate", response_model=SeoGenerateResponse)
 async def seo_generate(req: SeoGenerateRequest):
-    if not NVIDIA_API_KEY:
-        raise HTTPException(status_code=500, detail="NVIDIA API açarı konfiqurasiya edilməyib.")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API açarı konfiqurasiya edilməyib.")
 
     p = req.product
     # Build a rich, structured user prompt so the model has all context
@@ -563,46 +613,26 @@ Site: {req.site_name} ({req.site_url})
 
 Return the JSON as specified in the system prompt. Do not include any text outside the JSON."""
 
-    messages = [
-        {"role": "system", "content": SEO_SYSTEM_PROMPT},
-        {"role": "user", "content": user_prompt},
-    ]
+    payload = {
+        "systemInstruction": {"parts": [{"text": SEO_SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+        "generationConfig": {
+            "temperature": 0.4,
+            "topP": 1,
+            "maxOutputTokens": 2048,
+            "responseMimeType": "application/json",
+        },
+    }
+    url = f"{GEMINI_BASE_URL}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    data, err = await _gemini_generate(payload, timeout=60.0)
+    if err or not data:
+        return SeoGenerateResponse(success=False, error=f"AI provayder xətası: {err or 'boş cavab'}")
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                f"{NVIDIA_BASE_URL}/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                },
-                json={
-                    "model": NVIDIA_MODEL,
-                    "messages": messages,
-                    "temperature": 0.4,
-                    "top_p": 1,
-                    "max_tokens": 4096,
-                    "stream": False,
-                    "reasoning_effort": "low",
-                },
-            )
-    except httpx.HTTPError as e:
-        logger.exception("NVIDIA SEO network error: %s", e)
-        raise HTTPException(status_code=502, detail=f"AI ilə əlaqə qurulmadı: {e}")
-
-    if r.status_code >= 400:
-        logger.warning("NVIDIA SEO HTTP %s: %s", r.status_code, r.text[:400])
-        return SeoGenerateResponse(success=False, error=f"AI provayder xətası: HTTP {r.status_code}", raw=r.text[:600])
-
-    try:
-        data = r.json()
-    except Exception:
-        return SeoGenerateResponse(success=False, error="AI cavabı JSON deyil", raw=r.text[:600])
-
-    msg_obj = ((data.get("choices") or [{}])[0].get("message") or {})
-    content = (msg_obj.get("content") or "").strip()
-    if not content:
-        content = (msg_obj.get("reasoning_content") or msg_obj.get("reasoning") or "").strip()
+    candidates = data.get("candidates") or []
+    content = ""
+    if candidates:
+        parts = ((candidates[0].get("content") or {}).get("parts")) or []
+        content = "".join(p.get("text", "") for p in parts).strip()
 
     parsed = _extract_json_block(content)
     if not parsed:
