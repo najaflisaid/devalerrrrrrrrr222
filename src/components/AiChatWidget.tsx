@@ -19,7 +19,7 @@ import type { Product } from '../types';
 const SESSION_KEY = 'devaleur_ai_session';
 const HISTORY_KEY = 'devaleur_ai_history';
 const MAX_HISTORY = 24;
-const DEVALEUR_LOGO = 'https://i.hizliresim.com/tmu65g6.png';
+const DEVALEUR_LOGO = 'https://customer-assets-m6fa6gv7.emergentagent.net/job_44f0704f-1da0-4748-83a9-feaea0a882af/artifacts/t6799w4k_IMG_1279.JPG.jpeg';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'admin';

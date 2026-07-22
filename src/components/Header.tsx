@@ -822,7 +822,7 @@ const Header: React.FC = () => {
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <Link to="/">
                 <img
-                  src="https://i.hizliresim.com/tmu65g6.png"
+                  src="https://customer-assets-m6fa6gv7.emergentagent.net/job_44f0704f-1da0-4748-83a9-feaea0a882af/artifacts/60f44qqe_IMG_1279.JPG-removebg-preview.png"
                   alt="De Valeur"
                   className="h-8 sm:h-9 md:h-10"
                 />
@@ -1363,7 +1363,7 @@ const Header: React.FC = () => {
                 >
                   <X className="h-5 w-5" strokeWidth={1.25} />
                 </button>
-                <img src="https://i.hizliresim.com/tmu65g6.png" alt="De Valeur" className="h-9 absolute left-1/2 -translate-x-1/2" />
+                <img src="https://customer-assets-m6fa6gv7.emergentagent.net/job_44f0704f-1da0-4748-83a9-feaea0a882af/artifacts/60f44qqe_IMG_1279.JPG-removebg-preview.png" alt="De Valeur" className="h-9 absolute left-1/2 -translate-x-1/2" />
                 <div className="w-7" aria-hidden="true" />
               </div>
 
@@ -1736,7 +1736,7 @@ const Header: React.FC = () => {
           {/* Top bar: logo center + close right */}
           <div className="relative flex items-center justify-center px-4 sm:px-8 py-5 border-b border-black/[0.05]">
             <img
-              src="https://i.hizliresim.com/tmu65g6.png"
+              src="https://customer-assets-m6fa6gv7.emergentagent.net/job_44f0704f-1da0-4748-83a9-feaea0a882af/artifacts/60f44qqe_IMG_1279.JPG-removebg-preview.png"
               alt="De Valeur"
               className="h-9 sm:h-10"
             />
