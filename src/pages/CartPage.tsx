@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { setDoc, doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
 import { auth, db as fsDb } from '../lib/firebase';
 import { createB2BOrder, sendB2BOrderEmail } from '../services/b2bOrderService';
-import { createCustomerOrder, reserveCustomerOrderId } from '../services/customerOrderService';
+import { createCustomerOrder } from '../services/customerOrderService';
 import { startEpointPayment, getEpointRedirectUrl, preloadEpointSettings } from '../services/epointPaymentService';
 import { getDeliveryMethods, type DeliveryMethod } from '../services/deliveryMethodService';
 import SuccessNotification from '../components/SuccessNotification';
@@ -594,13 +594,11 @@ const CartPage: React.FC = () => {
       const itemsTotal = getItemsAfterAllDiscounts();
       const total = itemsTotal + deliveryFee;
 
-      // Pre-generate the Firestore order ID so we can fire the Epoint URL
-      // fetch IN PARALLEL with the order write (otherwise the iframe waits
-      // for the Firestore write to finish before even contacting Epoint).
-      const orderId = reserveCustomerOrderId();
-      sessionStorage.setItem('pending_epoint_order_id', orderId);
-
-      const orderWritePromise = createCustomerOrder(
+      // KRİTİK: Sifariş Firestore-a TAMAMİLƏ yazılana qədər gözləyirik.
+      // Əks halda müştəri Epoint-də ödəyir, amma sifariş bazada olmur
+      // (setDoc-un işi bitməmiş redirect baş verir). Bunu awaite etmək
+      // əvvəllər işləyən davranışdır — geri qaytarıldı.
+      const { id: orderId } = await createCustomerOrder(
         {
           userId,
           customerName: userName,
@@ -631,16 +629,8 @@ const CartPage: React.FC = () => {
             promoApplied?.type === 'percent' ? promoApplied.discount : 0,
           promoDiscountAmount: promoDiscountAmt,
         } as any,
-        orderId,
       );
-
-      // Don't block the iframe on the order write — let it run in the
-      // background. We still surface order-write failures (the iframe will
-      // already be open by then; on success the order doc was written
-      // already because the customer reached the payment screen).
-      orderWritePromise.catch((err) => {
-        console.warn('Order write failed (payment can still be retried):', err);
-      });
+      sessionStorage.setItem('pending_epoint_order_id', orderId);
 
       if (promoApplied) {
         // Gift card üçün qismən istifadə: yalnız faktiki tutulmuş AZN
@@ -668,25 +658,22 @@ const CartPage: React.FC = () => {
         promoApplied.type === 'amount' &&
         promoApplied.isGiftCard
       ) {
-        // sessionStorage-da order_id-ni saxlayırıq ki, PaymentSuccessPage
-        // bunu finalize edə bilsin (gift card kodları paylaşma linkləri,
-        // sifariş statusu, vs.).
-        // QEYD: removeItem etmirik — PaymentSuccessPage özü təmizləyəcək.
-        // Sifariş statusunu da background-da `paid` qoyuruq (idempotent —
-        // PaymentSuccess yenidən qoysa da problem yoxdur).
-        orderWritePromise
-          .then(async () => {
-            const { doc: fsDoc, updateDoc: fsUpdate, Timestamp: FsTs } = await import('firebase/firestore');
-            const { db: fsDb } = await import('../lib/firebase');
-            await fsUpdate(fsDoc(fsDb, 'customer_orders', orderId), {
-              paymentStatus: 'paid',
-              paymentMethod: 'gift_card',
-              giftCardCode: promoApplied.code,
-              giftCardAmountUsed: promoDiscountAmt,
-              paidAt: FsTs.now(),
-            }).catch((e) => console.warn('mark paid failed:', e));
-          })
-          .catch(() => undefined);
+        // Sifariş artıq Firestore-a yazılıb (yuxarıda await ilə). İndi onu
+        // "paid" statusuna yeniləyirik (idempotent — PaymentSuccessPage yenidən
+        // yeniləsə də problem yoxdur).
+        try {
+          const { doc: fsDoc, updateDoc: fsUpdate, Timestamp: FsTs } = await import('firebase/firestore');
+          const { db: fsDb } = await import('../lib/firebase');
+          await fsUpdate(fsDoc(fsDb, 'customer_orders', orderId), {
+            paymentStatus: 'paid',
+            paymentMethod: 'gift_card',
+            giftCardCode: promoApplied.code,
+            giftCardAmountUsed: promoDiscountAmt,
+            paidAt: FsTs.now(),
+          });
+        } catch (e) {
+          console.warn('mark paid failed:', e);
+        }
         clearCart();
         // PaymentSuccessPage özü qalan iş axınını idarə edir
         navigate(`/payment/success?order_id=${encodeURIComponent(orderId)}&giftcard=1`);

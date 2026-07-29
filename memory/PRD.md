@@ -37,3 +37,9 @@ The `AiKnowledge.aiInstructions` field (Firestore `ai_knowledge/main`) is inject
 - Move Gemini API key to Vercel dashboard env var and remove the hard-coded fallback in `api/chat.js`.
 - Free-tier quota on some Gemini models is 0 — consider enabling a paid tier for gemini-3.5-flash if premium quality is needed.
 - Add token/cost logging per chat session so admin can monitor usage.
+
+## Fix: Epoint Payment Order Not Saved (Jan 2026)
+- **Problem**: Customer completed Epoint payment successfully, but order did not appear in admin "customer_orders" section nor in customer's "Sifarişlərim" page.
+- **Root cause**: `CartPage.tsx` fired `createCustomerOrder(...)` as a fire-and-forget background write (`orderWritePromise.catch(...)`) then immediately proceeded to open the Epoint iframe. On some connections/paths, the Firestore `setDoc` request was still in-flight when the browser navigated on Epoint's redirect — the write never reached Firestore.
+- **Fix**: Reverted the checkout flow to `await createCustomerOrder(...)` before initiating Epoint payment (restores previously-working behaviour). Also updated the gift-card-fully-covers branch and removed the now-unused `reserveCustomerOrderId` import.
+- Files changed: `src/pages/CartPage.tsx`.
