@@ -56,3 +56,21 @@ The `AiKnowledge.aiInstructions` field (Firestore `ai_knowledge/main`) is inject
   4. `PaymentErrorPage` clears both sessionStorage keys.
 - Files changed: `src/pages/MyOrdersPage.tsx`, `src/pages/PaymentSuccessPage.tsx`, `src/pages/PaymentErrorPage.tsx`.
 - Verified by testing_agent iteration_12 — real epoint.az payment page rendered successfully inside the retry iframe.
+
+## Feature: AI-Powered Product Add (via Barcode/SKU) — Admin Panel (Jan 2026)
+- **Kim üçün**: Admin. `Məhsullar → Məhsul əlavə et` bölməsində məhsulu əl ilə doldurmaq əvəzinə barkod və ya SKU daxil edərək AI-nin internet axtarışı ilə avtomatik doldurma.
+- **İşləmə axını**:
+  1. Admin `Məhsul əlavə et` düyməsinə basır → 'Yeni Məhsul' forması açılır. Formanın yuxarısında AI toggle görünür.
+  2. Toggle-i ON edir → barkod/SKU input + Skan et (kamera) + AI Axtar düymələri açılır.
+  3. Xüsusi saytlar (istəyə görə) daxil edir (məs: `casio.com, seiko.com`).
+  4. AI Axtar → backend `/api/ai/product-lookup` → Gemini + `google_search` tool → struktura salınmış JSON qaytarır (AZ/EN/RU tərcümələri daxil).
+  5. Nəticə paneli: ad + təsvir (3 dil tab), brend/model/kateqoriya rozetkaları, xüsusiyyətlər, texniki məlumat, şəkil grid (checkbox seç + ⭐ ilə əsas şəkil təyin et).
+  6. `Formaya köçür` düyməsi ilə seçilmiş məlumatlar əsas 'Yeni Məhsul' formasına aktarılır (kateqoriya Firestore-dan ən uyğun olanla eşlənir, yeni yaradılmır).
+  7. Admin qiyməti əl ilə yazır (AI qiymət qaytarmır — spec) və `Məhsul əlavə et` düyməsi ilə Firestore-a yazır.
+- **Fayllar**:
+  - Backend: `/app/api/ai/product-lookup.js` (Vercel serverless, mövcud Gemini API açarını istifadə edir, `google_search` tool ilə web axtarışı, groundinq metadata-dan şəkil URL-ləri, kvota xətası üçün AZ dilli graceful mesaj).
+  - Frontend: `/app/src/components/admin/AiProductLookup.tsx` (toggle, barkod input, html5-qrcode kamera skan, AI axtar, nəticə paneli, şəkil grid, apply).
+  - İnteqrasiya: `/app/src/components/admin/AdminPanel.tsx` (lazy-import + handleAiApply + `showAddProduct` bloku içində Suspense render).
+- **Testing**: iteration_13 UI 100% pass. AI end-to-end axtarış test edilə bilmədi çünki Gemini API açarı kvotası bitib (429 quota exceeded — Google AI Studio-da billing yoxlanmalıdır).
+- **Yeni asılılıq**: `html5-qrcode` (kamera barkod skan üçün).
+- **Yeni testid-lər**: ai-product-lookup-panel, ai-lookup-toggle, ai-lookup-query, ai-lookup-scan-btn, ai-lookup-search-btn, ai-lookup-loading, ai-lookup-error, ai-lookup-lang-{az|en|ru}, ai-lookup-image-{i}, ai-lookup-image-select-{i}, ai-lookup-image-cover-{i}, ai-lookup-apply-btn, ai-lookup-scanner-modal, ai-lookup-scanner-close.

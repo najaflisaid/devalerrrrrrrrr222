@@ -111,9 +111,13 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode: q, sites }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || `HTTP ${res.status}`);
+        const msg = data?.error ||
+          (res.status === 404
+            ? 'AI xidməti hələ tətbiq deploy olunmayıb (localhost-da mövcud deyil, Vercel-də işləyəcək)'
+            : `HTTP ${res.status}`);
+        throw new Error(msg);
       }
       setResult(data as AiLookupResult);
       // Default seçim: ilk 4 şəkli avtomatik seç, birincisi cover
