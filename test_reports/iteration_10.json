@@ -1,0 +1,51 @@
+{
+  "summary": "Regression bug fix VERIFIED. CartPage.tsx correctly awaits createCustomerOrder(...) before initiating the Epoint payment. Network-level monitoring during E2E checkout confirmed: Firestore POST with 'customer_orders' in body fired at t+10.404s from pay-click; /api/epoint/create-payment POST fired at t+10.491s (87ms LATER). The 87ms gap confirms an await-blocking roundtrip. Fire-and-forget code would have produced ~0ms gap. Epoint iframe rendered successfully; no 'Order write failed' warnings.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_details": {
+    "code_sanity": {
+      "await_createCustomerOrder_present": true,
+      "line": 601,
+      "file": "/app/src/pages/CartPage.tsx",
+      "no_orderWritePromise_pattern": true,
+      "no_reserveCustomerOrderId_import": true
+    },
+    "network_timing_test": {
+      "pay_click_t0": 0,
+      "firestore_customer_orders_POST_req": "+10.404s (POST body contained 'customer_orders')",
+      "epoint_create_payment_POST_req": "+10.491s",
+      "epoint_create_payment_POST_resp": "+11.292s (200)",
+      "gap_ms": 87,
+      "interpretation": "The 87ms gap between the customer_orders Firestore write and the epoint POST is consistent with awaiting a Firestore server ack. A fire-and-forget code path would produce ~0ms gap. The await IS blocking.",
+      "epoint_iframe_rendered": true,
+      "order_write_failed_warnings": 0
+    },
+    "test_flow": [
+      "Navigated to /products",
+      "Clicked first product card (46775 Rivet Flame Design)",
+      "Clicked [data-testid=product-add-to-cart]",
+      "Navigated to /cart?checkout=1 to open inline checkout panel",
+      "Filled register form: name, surname, random 9-digit phone (501XXXXXX), password, confirm, address",
+      "Cleared network buffer and clicked [data-testid=checkout-pay-btn] at t=0",
+      "Monitored all firestore.googleapis.com POSTs (including request bodies) and /api/epoint/create-payment",
+      "Confirmed customer_orders write POST fired BEFORE epoint POST",
+      "Confirmed inline-epoint-iframe rendered"
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CartPage.tsx is 1834 lines — recommend splitting handleEpointCheckout + inline checkout panel into their own modules for maintainability, but not blocking."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100%"},
+  "seed_data_creation": "No persistent seed; used random 9-digit phones per run to avoid Firebase Auth conflicts.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The inline checkout panel is only rendered when URL has ?checkout=1 (set by CartDrawer on click). Navigating directly to /cart?checkout=1 with an item in cart opens it. Register form testids: checkout-first-name, checkout-last-name, checkout-phone-input, checkout-password, checkout-password2, checkout-address-input. Pay button testid: checkout-pay-btn. To verify ordering of Firestore write vs Epoint POST, filter network POSTs where request post_data contains 'customer_orders'. Epoint endpoint /api/epoint/create-payment IS available on the preview URL (Vercel serverless works) — returns 200 with epoint.az iframe URL.",
+  "rca of the issue": "Prior commit 3e90df4 changed 'await createCustomerOrder(...)' to fire-and-forget 'orderWritePromise = createCustomerOrder(...); orderWritePromise.catch(...)'. Since Epoint URL fetch and iframe render happened immediately after, users who paid successfully sometimes lost their order because the Firestore setDoc HTTP request was cancelled/incomplete when the browser started loading the Epoint iframe. Fix: revert to awaiting createCustomerOrder before proceeding — verified at line 601 of CartPage.tsx. Network-level check confirms the 87ms gap between the writes."
+}
