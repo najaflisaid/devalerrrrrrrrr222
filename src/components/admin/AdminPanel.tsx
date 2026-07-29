@@ -44,6 +44,8 @@ import CourierManagementTab from './CourierManagementTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 const ProductMigrationLog = React.lazy(() => import('./ProductMigrationLog'));
+const AiProductLookup = React.lazy(() => import('./AiProductLookup'));
+import type { AiApplyPayload } from './AiProductLookup';
 import type { Product, User, B2BRequest, Brand } from '../../types';
 
 interface BlogPost {
@@ -715,6 +717,47 @@ const AdminPanel: React.FC = () => {
       console.error('Error loading admin data:', error);
     } finally {
       if (!opts?.silent) setLoading(false);
+    }
+  };
+
+  // ────── AI Product Lookup — apply results to newProduct form state ──────
+  // Şəkillər URL formatında Firestore-a birbaşa yazıla bilər (mövcud
+  // Cloudflare R2 sadəcə localdan yüklənmə üçün istifadə olunur). AI-nin
+  // gətirdiyi CDN URL-ləri məhsul obyektinə köçürülür.
+  const [aiApplying, setAiApplying] = useState(false);
+  const handleAiApply = async (data: AiApplyPayload) => {
+    setAiApplying(true);
+    try {
+      // AI-nin təklif etdiyi kateqoriyaya ən yaxın Firestore kateqoriyasını tap
+      let matchedCategory = newProduct.category;
+      if (data.categoryHint) {
+        const hint = data.categoryHint.toLowerCase();
+        const found = categories.find((c: any) => {
+          const az = (c.nameAz || c.name?.az || '').toLowerCase();
+          const en = (c.nameEn || c.name?.en || '').toLowerCase();
+          return az.includes(hint) || en.includes(hint) || hint.includes(az) || hint.includes(en);
+        });
+        if (found) matchedCategory = (found as any).nameAz || (found as any).name?.az || (found as any).name || '';
+      }
+      const specsText = data.specsText ? `\n\n📋 Texniki məlumat:\n${data.specsText}` : '';
+      const featuresText = data.featuresText ? `\n\n✨ Xüsusiyyətlər:\n${data.featuresText}` : '';
+      setNewProduct((prev) => ({
+        ...prev,
+        nameAz: data.nameAz || prev.nameAz,
+        nameRu: data.nameRu || prev.nameRu,
+        nameEn: data.nameEn || prev.nameEn,
+        descAz: (data.descAz || '') + featuresText + specsText,
+        descRu: data.descRu || prev.descRu,
+        descEn: data.descEn || prev.descEn,
+        brand: data.brand || prev.brand,
+        category: matchedCategory,
+        gender: (data.gender as any) || prev.gender,
+        barcode: data.barcode || prev.barcode,
+        sku: data.sku || prev.sku,
+        images: data.images.length > 0 ? data.images : prev.images,
+      }));
+    } finally {
+      setAiApplying(false);
     }
   };
 
@@ -1997,6 +2040,21 @@ const AdminPanel: React.FC = () => {
                     <X className="h-6 w-6" />
                   </button>
                 </div>
+
+                {/* AI ilə avtomatik doldurma — barkod/SKU internet axtarışı */}
+                <React.Suspense fallback={<div className="h-12 mb-4" />}>
+                  <AiProductLookup
+                    onApply={handleAiApply}
+                    categories={categories as any}
+                    brands={brands as any}
+                    initialBarcode={(newProduct as any).barcode || ''}
+                  />
+                </React.Suspense>
+                {aiApplying && (
+                  <div className="mb-3 text-xs text-gray-500 flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> AI məlumatlarını formaya köçürür...
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2 grid grid-cols-3 gap-3">
