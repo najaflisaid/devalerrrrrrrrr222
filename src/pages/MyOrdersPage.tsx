@@ -307,9 +307,18 @@ const MyOrdersPage: React.FC = () => {
     try {
       setPayingOrderId(order.id);
       setRetryIframeReady(false);
+      // Epoint enforces uniqueness on order_id per-merchant. If we send the
+      // same Firestore doc id twice (initial attempt + retry) Epoint answers
+      // {status:'error', message:'Duplicate order_id value'}. Solution: send
+      // a unique suffixed id per attempt and keep sessionStorage mapping the
+      // RAW Firestore doc id (used for updateDoc) separately from the Epoint
+      // transaction id (used for get-status).
+      const attemptSuffix = `r${Date.now().toString(36)}`;
+      const epointOrderId = `${order.id}-${attemptSuffix}`;
       sessionStorage.setItem('pending_epoint_order_id', order.id);
+      sessionStorage.setItem('pending_epoint_transaction_id', epointOrderId);
       const url = await getEpointRedirectUrl({
-        orderId: order.id,
+        orderId: epointOrderId,
         amount: order.totalAmount,
         description: `DE VALEUR sifariş #${order.id.slice(0, 10)}`,
       });
@@ -317,6 +326,7 @@ const MyOrdersPage: React.FC = () => {
     } catch (err: any) {
       console.error('Retry payment error:', err);
       sessionStorage.removeItem('pending_epoint_order_id');
+      sessionStorage.removeItem('pending_epoint_transaction_id');
       alert('Ödəniş başladıla bilmədi: ' + (err?.message || 'Naməlum xəta'));
       setPayingOrderId(null);
     }

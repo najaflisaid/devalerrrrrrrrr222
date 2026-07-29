@@ -20,6 +20,7 @@ const PaymentErrorPage: React.FC = () => {
     }
     // Pending sessiya açarı təmizlənir ki, səbət axını yenilənsin.
     sessionStorage.removeItem('pending_epoint_order_id');
+    sessionStorage.removeItem('pending_epoint_transaction_id');
     toast('Ödəniş uğursuz oldu. Sifarişiniz "ödəniş gözləyir" statusunda saxlanıldı.', 'error');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

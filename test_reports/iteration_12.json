@@ -1,0 +1,24 @@
+{
+  "summary": "RETEST of Yenidən Ödə (retry payment) flow after iteration_11's root cause fix (unique per-attempt order_id). All success criteria PASSED. Logged in as existing user 5aC46xfnJ0OtpvrZ38BVVvwR6GC3 (phone +994553062775 / test1234) via direct Firebase signInWithEmailAndPassword against synthetic email phone994553062775@devaleur.az, navigated to /my-orders, expanded the pending_payment order zrgROExuDyfzzCAsCq7y (232 AZN, Sifariş #38454329), clicked retry-payment-btn-zrgROExuDyfzzCAsCq7y. Observed: POST /api/epoint/create-payment fired with order_id='zrgROExuDyfzzCAsCq7y-rms68qqb7' (i.e. `${orderId}-r${base36 timestamp}` — matches the /-r[a-z0-9]+$/i regex). Epoint responded {status:'success', transaction:'te021219032', redirect_url:'https://epoint.az/az/payment/aOf8abFl21219032'} — NO 'Duplicate order_id value' anymore. Fullscreen iframe overlay [data-testid=retry-epoint-widget] rendered with inner iframe [data-testid=retry-epoint-iframe] whose src == the returned epoint.az redirect_url. The real Epoint payment page (232 AZN, DE VALEUR MMC, Ödəniş/Taksitlə ödəniş buttons) was visible inside the iframe. sessionStorage after click: pending_epoint_order_id='zrgROExuDyfzzCAsCq7y' (RAW Firestore id, no suffix), pending_epoint_transaction_id='zrgROExuDyfzzCAsCq7y-rms68qqb7' (suffixed) — matches spec. [data-testid=retry-epoint-close] click correctly unmounted the overlay. Epoint payment intentionally NOT completed (per instructions).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "handleRetryPayment now correctly generates a per-attempt suffix (`r${Date.now().toString(36)}`) and stores BOTH raw+suffixed order ids in sessionStorage — matches PaymentSuccessPage.stripEpointSuffix regex.",
+    "Verified there is no leftover startEpointPayment usage in MyOrdersPage.tsx — only getEpointRedirectUrl is used (line 311 area).",
+    "Minor (already flagged in iter_11, still present): error path still uses native alert() instead of the app's toast/NotificationProvider. Low priority — does not block this fix."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (create-payment returns success with valid redirect_url)", "frontend": "100% (iframe overlay renders with epoint.az URL, sessionStorage keys set correctly, close button works)"},
+  "test_credentials": "phone +994553062775 / password test1234 / uid 5aC46xfnJ0OtpvrZ38BVVvwR6GC3. Login via synthetic Firebase email phone994553062775@devaleur.az.",
+  "seed_data_creation": "Reused existing pending_payment order zrgROExuDyfzzCAsCq7y (Sifariş #38454329, 232 AZN) from iteration_11. Order still in pending_payment state (retry Epoint iframe was closed, not completed).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Retry-payment bug is verified FIXED end-to-end at the presentation + integration layer. If further payment-completion testing is desired, note that (a) sessionStorage now correctly holds RAW order id in pending_epoint_order_id and SUFFIXED id in pending_epoint_transaction_id, and (b) PaymentSuccessPage stripEpointSuffix should be exercised with a real completed retry to confirm Firestore updateDoc uses the raw id. Existing pending_payment order zrgROExuDyfzzCAsCq7y is still available for such tests until it's paid.",
+  "rca of the issue": "Fix verified: MyOrdersPage.tsx handleRetryPayment (~line 316-321) builds attemptSuffix=`r${Date.now().toString(36)}` and epointOrderId=`${order.id}-${attemptSuffix}`, then calls getEpointRedirectUrl with the suffixed id. Epoint no longer sees a duplicate order_id and returns a valid redirect_url. sessionStorage carries both ids so PaymentSuccessPage can resolve the original Firestore doc via stripEpointSuffix regex."
+}

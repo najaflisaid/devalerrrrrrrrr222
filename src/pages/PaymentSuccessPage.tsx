@@ -44,6 +44,16 @@ const PaymentSuccessPage: React.FC = () => {
     const data = params.get('data');
     const signature = params.get('signature');
     const pendingId = sessionStorage.getItem('pending_epoint_order_id');
+    // Retry payments send a suffixed order_id to Epoint (e.g. `${docId}-rXXX`)
+    // to avoid Epoint's "Duplicate order_id value" error. We need the suffixed
+    // id for the /get-status verification call, but the RAW Firestore doc id
+    // for updateDoc/getDoc calls against the customer_orders collection.
+    const pendingTxnId = sessionStorage.getItem('pending_epoint_transaction_id');
+    const stripEpointSuffix = (id: string | undefined | null): string => {
+      if (!id) return '';
+      // Strip retry-attempt marker: matches `-r<base36>` at end.
+      return id.replace(/-r[a-z0-9]+$/i, '');
+    };
 
     const issueGiftCardsForOrder = async (resolvedOrderId: string) => {
       try {
@@ -127,7 +137,18 @@ const PaymentSuccessPage: React.FC = () => {
     };
 
     const finalize = async (resolvedOrderId?: string) => {
-      const targetId = resolvedOrderId || pendingId;
+      // resolvedOrderId typically comes from Epoint's decoded callback and MAY
+      // include the retry suffix. Firestore doc id must be un-suffixed.
+      const firestoreOrderId =
+        pendingId ||
+        stripEpointSuffix(resolvedOrderId) ||
+        stripEpointSuffix(pendingTxnId) ||
+        '';
+      // For Epoint /get-status we must use the exact transaction/order_id that
+      // was sent to Epoint (with suffix if retry).
+      const epointOrderId =
+        pendingTxnId || resolvedOrderId || firestoreOrderId;
+      const targetId = firestoreOrderId;
       if (targetId) {
         // Server-side verification via Epoint /api/1/get-status
         // (matches the official OpenCart plugin's callback flow)
@@ -140,7 +161,7 @@ const PaymentSuccessPage: React.FC = () => {
               body: JSON.stringify({
                 public_key: settings.publicKey,
                 private_key: settings.privateKey,
-                order_id: targetId,
+                order_id: epointOrderId,
               }),
             });
             if (r.ok) {
@@ -156,6 +177,7 @@ const PaymentSuccessPage: React.FC = () => {
                   });
                 } catch { /* ignore */ }
                 sessionStorage.removeItem('pending_epoint_order_id');
+                sessionStorage.removeItem('pending_epoint_transaction_id');
                 setState('error');
                 return;
               }
@@ -179,6 +201,7 @@ const PaymentSuccessPage: React.FC = () => {
       }
       clearCart();
       sessionStorage.removeItem('pending_epoint_order_id');
+      sessionStorage.removeItem('pending_epoint_transaction_id');
       setState('success');
     };
 
@@ -196,7 +219,7 @@ const PaymentSuccessPage: React.FC = () => {
         .catch(() => {
           void finalize();
         });
-    } else if (pendingId) {
+    } else if (pendingId || pendingTxnId) {
       void finalize();
     } else {
       setState('error');
