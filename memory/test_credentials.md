@@ -1,24 +1,13 @@
-# Test credentials
+# Test Credentials (De Valeur)
 
-## Admin API secret (X-Admin-Secret header)
-Default: `devaleur-admin-2026`
-Override via env `ADMIN_API_SECRET` in `/app/backend/.env`.
-Frontend admin panel reads from `localStorage.adminApiSecret` (set via WhatsApp Settings tab).
+## Test Customer (created during iteration_11 retry-payment test)
+- **Phone**: +994 55 306 27 75 (raw: 553062775)
+- **Password**: test1234
+- **Name**: TestRetry User
+- **Firestore userId**: 5aC46xfnJ0OtpvrZ38BVVvwR6GC3
+- **Firebase login email (synthetic)**: phone994553062775@devaleur.az
+- **Pending order**: zrgROExuDyfzzCAsCq7y (Sifariş #38454329, 232 AZN, "Rivet Flame Design")
 
-## WhatsApp Cloud API
-NOT YET CONFIGURED — owner will provide:
-- WHATSAPP_PHONE_ID
-- WHATSAPP_ACCESS_TOKEN
-- WHATSAPP_BUSINESS_ACCOUNT_ID
-- Display sender number: +994777577277 (changeable via admin panel)
-
-## Firebase Service Account
-NOT YET CONFIGURED — owner needs to download from Firebase Console
-(Project Settings → Service Accounts → Generate new private key)
-and save as `/app/backend/firebase-service-account.json`.
-
-## Customer test accounts
-- None pre-seeded; create via the registration flow (phone + name + surname + password + accept terms).
-- Testing agent (iteration_6, 2026-01) created: phone **559867215** / password **test123456**
-  (Firebase Auth synthetic email: `phone994559867215@devaleur.az`).
-  This phone now triggers duplicate-detection auto-switch in checkout.
+## Login flow
+1. Cart page → checkout → "Hesabım var" (I have account) tab → phone + password
+2. OR direct Firebase signInWithEmailAndPassword with synthetic email above

@@ -43,3 +43,16 @@ The `AiKnowledge.aiInstructions` field (Firestore `ai_knowledge/main`) is inject
 - **Root cause**: `CartPage.tsx` fired `createCustomerOrder(...)` as a fire-and-forget background write (`orderWritePromise.catch(...)`) then immediately proceeded to open the Epoint iframe. On some connections/paths, the Firestore `setDoc` request was still in-flight when the browser navigated on Epoint's redirect — the write never reached Firestore.
 - **Fix**: Reverted the checkout flow to `await createCustomerOrder(...)` before initiating Epoint payment (restores previously-working behaviour). Also updated the gift-card-fully-covers branch and removed the now-unused `reserveCustomerOrderId` import.
 - Files changed: `src/pages/CartPage.tsx`.
+
+## Fix: Retry Payment ("Yenidən Ödə") Not Opening Epoint (Jan 2026)
+- **Reported**: When customer's initial order payment failed, pressing "Yenidən Ödə" in Sifarişlərim page did nothing.
+- **Root cause (2 layers)**:
+  1. `MyOrdersPage.handleRetryPayment` used `startEpointPayment` (full-page `window.location.href=` redirect). In embedded/sandbox iframe contexts this can be silently blocked.
+  2. Epoint enforces uniqueness on `order_id`. Retrying with the same Firestore doc id caused Epoint to reject with `{status:'error', message:'Duplicate order_id value'}`.
+- **Fix**:
+  1. Switched retry flow to inline iframe overlay (same pattern as CartPage) using `getEpointRedirectUrl`. Added state, postMessage listener, body-scroll lock, and full-screen overlay with testids `retry-epoint-widget`, `retry-epoint-iframe`, `retry-epoint-close`, `retry-epoint-skeleton`.
+  2. Retry now sends a unique per-attempt id: `${firestoreOrderId}-r${Date.now().toString(36)}`. sessionStorage now stores TWO keys: `pending_epoint_order_id` (raw, for Firestore updateDoc) and `pending_epoint_transaction_id` (suffixed, for Epoint /get-status).
+  3. `PaymentSuccessPage.finalize` refactored: uses `firestoreOrderId` (raw) for `updateDoc`/`getDoc` and `epointOrderId` (suffixed) for `/get-status`. Regex fallback `/-r[a-z0-9]+$/i` strips suffix from callback data if sessionStorage was cleared.
+  4. `PaymentErrorPage` clears both sessionStorage keys.
+- Files changed: `src/pages/MyOrdersPage.tsx`, `src/pages/PaymentSuccessPage.tsx`, `src/pages/PaymentErrorPage.tsx`.
+- Verified by testing_agent iteration_12 — real epoint.az payment page rendered successfully inside the retry iframe.
