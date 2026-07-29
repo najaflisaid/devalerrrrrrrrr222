@@ -19,6 +19,8 @@ import {
   Ticket,
   MessageCircle,
   Headphones,
+  ShieldCheck,
+  ArrowLeft,
 } from 'lucide-react';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -30,6 +32,7 @@ import {
   type CustomerOrderStatus,
 } from '../services/customerOrderService';
 import { getUserAssignedCodes, type PromoCode } from '../services/promoCodeService';
+import { getEpointRedirectUrl } from '../services/epointPaymentService';
 
 const statusBadge = (status: CustomerOrderStatus) => {
   const map: Record<CustomerOrderStatus, string> = {
@@ -231,6 +234,11 @@ const MyOrdersPage: React.FC = () => {
   const [assignedCodes, setAssignedCodes] = useState<PromoCode[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [supportPhone, setSupportPhone] = useState<string>('+994777577277');
+  // Inline Epoint retry widget — same iframe flow as CartPage. Rendered as
+  // full-screen overlay so it works reliably both in standalone deploys and
+  // inside embedded/sandbox iframes where top-level redirects can be blocked.
+  const [retryWidgetUrl, setRetryWidgetUrl] = useState<string | null>(null);
+  const [retryIframeReady, setRetryIframeReady] = useState(false);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -256,6 +264,63 @@ const MyOrdersPage: React.FC = () => {
       .then(setAssignedCodes)
       .catch(() => setAssignedCodes([]));
   }, [navigate]);
+
+  // Listen for Epoint iframe postMessage results during retry payment flow
+  useEffect(() => {
+    if (!retryWidgetUrl) return;
+    const handler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (typeof data.status !== 'string') return;
+      const status = String(data.status).toLowerCase();
+      const orderId = sessionStorage.getItem('pending_epoint_order_id') || '';
+      if (status === 'success') {
+        setRetryWidgetUrl(null);
+        setRetryIframeReady(false);
+        navigate(`/payment/success${orderId ? `?orderId=${orderId}` : ''}`);
+      } else if (status === 'error' || status === 'failed' || status === 'declined') {
+        setRetryWidgetUrl(null);
+        setRetryIframeReady(false);
+        setPayingOrderId(null);
+        alert('Ödəniş tamamlanmadı. Yenidən cəhd edin.');
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [retryWidgetUrl, navigate]);
+
+  // Lock body scroll while retry widget open (fullscreen overlay)
+  useEffect(() => {
+    if (!retryWidgetUrl) return;
+    const prevHtml = document.documentElement.style.overflow;
+    const prevBody = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+    };
+  }, [retryWidgetUrl]);
+
+  const handleRetryPayment = async (order: CustomerOrder) => {
+    if (!order.id) return;
+    try {
+      setPayingOrderId(order.id);
+      setRetryIframeReady(false);
+      sessionStorage.setItem('pending_epoint_order_id', order.id);
+      const url = await getEpointRedirectUrl({
+        orderId: order.id,
+        amount: order.totalAmount,
+        description: `DE VALEUR sifariş #${order.id.slice(0, 10)}`,
+      });
+      setRetryWidgetUrl(url);
+    } catch (err: any) {
+      console.error('Retry payment error:', err);
+      sessionStorage.removeItem('pending_epoint_order_id');
+      alert('Ödəniş başladıla bilmədi: ' + (err?.message || 'Naməlum xəta'));
+      setPayingOrderId(null);
+    }
+  };
 
   const handleCopyCode = async (code: string) => {
     try {
@@ -662,23 +727,7 @@ const MyOrdersPage: React.FC = () => {
                               </p>
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  try {
-                                    setPayingOrderId(order.id!);
-                                    const { startEpointPayment } = await import('../services/epointPaymentService');
-                                    sessionStorage.setItem('pending_epoint_order_id', order.id!);
-                                    await startEpointPayment({
-                                      orderId: order.id!,
-                                      amount: order.totalAmount,
-                                      description: `DE VALEUR sifariş #${(order.id || '').slice(0, 10)}`,
-                                    });
-                                  } catch (err: any) {
-                                    console.error('Retry payment error:', err);
-                                    sessionStorage.removeItem('pending_epoint_order_id');
-                                    alert('Ödəniş başladıla bilmədi: ' + (err?.message || 'Naməlum xəta'));
-                                    setPayingOrderId(null);
-                                  }
-                                }}
+                                onClick={() => handleRetryPayment(order)}
                                 disabled={payingOrderId === order.id}
                                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 data-testid={`retry-payment-btn-${order.id}`}
@@ -911,6 +960,86 @@ const MyOrdersPage: React.FC = () => {
           onClose={() => setSignOrderId(null)}
           onConfirm={handleConfirmWithSignature}
         />
+      )}
+
+      {/* Inline Epoint retry widget — full-screen overlay iframe (works in
+          embedded/sandbox contexts where top-level redirects are blocked). */}
+      {retryWidgetUrl && (
+        <div
+          className="fixed inset-0 z-[70] bg-white flex flex-col"
+          data-testid="retry-epoint-widget"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 bg-black/[0.02] flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" strokeWidth={1.6} />
+              <span className="text-[11px] uppercase tracking-[0.18em] text-black/70 truncate">
+                Təhlükəsiz ödəniş — Epoint
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setRetryWidgetUrl(null);
+                setRetryIframeReady(false);
+                setPayingOrderId(null);
+                sessionStorage.removeItem('pending_epoint_order_id');
+              }}
+              aria-label="Ödənişi bağla"
+              className="text-[11px] uppercase tracking-[0.16em] text-black/55 hover:text-black transition-colors flex items-center gap-1 py-1 px-2"
+              data-testid="retry-epoint-close"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Geri
+            </button>
+          </div>
+          <div className="relative flex-1 w-full bg-white">
+            <iframe
+              src={retryWidgetUrl}
+              title="Epoint Payment Retry"
+              className="absolute inset-0 w-full h-full bg-white border-0 block"
+              allow="payment *; publickey-credentials-get *; clipboard-write"
+              loading="eager"
+              data-testid="retry-epoint-iframe"
+              onLoad={(e) => {
+                setRetryIframeReady(true);
+                // After Epoint completes payment it redirects the iframe to
+                // our success/error URL (same origin). Break out and navigate
+                // the parent window so the customer lands on the proper page.
+                try {
+                  const ifr = e.currentTarget as HTMLIFrameElement;
+                  const href = ifr.contentWindow?.location?.href || '';
+                  if (!href) return;
+                  if (
+                    href.includes('/payment/success') ||
+                    href.includes('/payment/error') ||
+                    href.includes('/payment/result')
+                  ) {
+                    window.location.href = href;
+                  }
+                } catch {
+                  // Cross-origin while still on epoint.az — ignore.
+                }
+              }}
+            />
+            {!retryIframeReady && (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center bg-white"
+                data-testid="retry-epoint-skeleton"
+              >
+                <Loader2 className="w-7 h-7 text-black/30 animate-spin mb-3" strokeWidth={1.5} />
+                <p className="text-[12px] text-black/55">Ödəniş açılır...</p>
+                <p className="text-[10px] text-black/35 mt-1 uppercase tracking-[0.18em]">
+                  Bir neçə saniyə
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-2.5 border-t border-black/10 text-center bg-black/[0.02] flex-shrink-0">
+            <p className="text-[10px] text-black/45 uppercase tracking-[0.18em]">
+              Apple Pay · Google Pay · Visa · Mastercard
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

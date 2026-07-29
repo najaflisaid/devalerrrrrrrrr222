@@ -1,0 +1,58 @@
+{
+  "summary": "Tested the retry-payment flow on /my-orders (Sifarişlərim). Registered a new customer via inline checkout (phone 553062775), closed the initial Epoint iframe to leave the order in 'pending_payment' status, then navigated to /my-orders, expanded the order, and clicked 'Yenidən Ödə'. The frontend fires POST /api/epoint/create-payment as expected (no more window.location.href full-page redirect via startEpointPayment — sanity check: startEpointPayment is not referenced anywhere in MyOrdersPage.tsx anymore). HOWEVER, the retry ALWAYS fails end-to-end because Epoint returns status=error with message 'Duplicate order_id value' since the same order_id (Firestore doc id) was already used in the initial create-payment call. Because getEpointRedirectUrl throws on non-success, setRetryWidgetUrl(url) is never called, the iframe overlay (retry-epoint-widget / retry-epoint-iframe / retry-epoint-close / retry-epoint-skeleton) NEVER renders, and the user just sees an alert('Ödəniş başladıla bilmədi: Duplicate order_id value'). Net result from the user's perspective: pressing 'Yenidən Ödə' still does NOT open Epoint — same user-visible bug as before, just with a different failure mode.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/epoint/create-payment",
+        "issue": "Epoint returns {status:'error', redirect_url:null, message:'Duplicate order_id value'} when the same Firestore order.id is submitted a second time (which is exactly what retry does). This makes the retry flow impossible to complete.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MyOrdersPage handleRetryPayment",
+        "issue": "Sends the same order.id to Epoint on retry. Must generate a unique per-attempt order_id (e.g. `${order.id}-r${retryCount}` or `${order.id}-${Date.now()}`) while persisting the mapping back to the original Firestore order so the webhook/return handler can still find the right order. Without this change, the iframe overlay (retry-epoint-widget) is unreachable in practice, even though the JSX is correctly wired up.",
+        "selector": "[data-testid^='retry-payment-btn-']",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "MyOrdersPage handleRetryPayment error handling",
+        "issue": "Uses native alert() to show the Epoint error. Consider using the existing NotificationProvider/toast for consistency with the rest of the app.",
+        "selector": "-",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Yenidən Ödə (retry payment) on /my-orders",
+        "issue": "POST /api/epoint/create-payment is fired (verified via network monitoring), but response is {status:'error', message:'Duplicate order_id value'}. Because getEpointRedirectUrl throws, setRetryWidgetUrl never runs, so retry-epoint-widget / retry-epoint-iframe / retry-epoint-close / retry-epoint-skeleton are never mounted. The user cannot complete the retry.",
+        "affected_selectors": ["retry-epoint-widget", "retry-epoint-iframe", "retry-epoint-close", "retry-epoint-skeleton"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "CRITICAL: Fix handleRetryPayment in /app/src/pages/MyOrdersPage.tsx to send a UNIQUE order_id to Epoint on each retry (e.g. `${order.id}-r${(order.retryCount||0)+1}` or append Date.now()). Keep a mapping (retryOrderId -> original order.id) either as a Firestore field on the order (paymentAttemptIds: string[]) or via prefix parsing so the Epoint webhook / /payment/success handler still resolves the correct order document.",
+    "Verify the Epoint result_url / redirect handler correctly resolves the original order.id when it receives the suffixed order_id back.",
+    "Consider also updating CartPage's initial submit code path to use the same unique-per-attempt id, so that a user who closes the iframe and then retries via /my-orders is consistent.",
+    "Replace alert() with the app's toast/notification component for the error path."
+  ],
+  "critical_code_review_comments": [
+    "The iframe overlay JSX in MyOrdersPage.tsx (lines ~967-1030) is correctly mirroring the CartPage pattern with all four testids (retry-epoint-widget, retry-epoint-iframe, retry-epoint-close, retry-epoint-skeleton) — the presentation-layer fix itself is correct.",
+    "SANITY CHECK PASSED: `startEpointPayment` is NOT referenced anywhere in MyOrdersPage.tsx. Only `getEpointRedirectUrl` is imported (line 35) and used (line 311). ✓",
+    "The real bug is one layer deeper — Epoint's server enforces uniqueness on order_id, but the app reuses the same Firestore doc id on every attempt. This iteration's fix addressed the wrong layer (embedded-iframe blockability) while the actual failure mode in this environment is a business-level rejection from Epoint.",
+    "sessionStorage.setItem('pending_epoint_order_id', order.id) is set BEFORE the fetch — good for correlation on return, but the retry-order-id mapping (see action item) needs the same care."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "0% (retry create-payment returns error)", "frontend": "50% (JSX + testids + no startEpointPayment ✓, but overlay never opens due to backend error)"},
+  "test_credentials": "Registered fresh customer: phone +994 553062775, password test1234, name 'TestRetry User', userId=5aC46xfnJ0OtpvrZ38BVVvwR6GC3. Has one pending_payment order #38454329 (232 AZN, 46775 Rivet Flame Design).",
+  "seed_data_creation": "Created 1 test customer + 1 pending_payment order via the register-through-checkout flow described in the review request.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "A pending_payment order already exists for user phone 553062775 (pw test1234) — no need to re-register. Login via checkout 'Hesabım var' tab, then go to /my-orders. Click 'Yenidən Ödə' and observe /api/epoint/create-payment response. Currently returns Duplicate order_id error. Once main agent adds unique per-attempt order_id, the iframe overlay (retry-epoint-widget) should render and iframe src should contain epoint.az URL.",
+  "rca of the issue": "ROOT CAUSE: Epoint uniquely tracks the order_id field. The initial checkout call already registered orderId=<firestoreDocId> with Epoint. When the retry endpoint is called with the same order_id, Epoint rejects with 'Duplicate order_id value'. REPRO: (1) register via checkout, (2) close inline-epoint-close without paying, (3) navigate to /my-orders, (4) expand the pending order, (5) click retry-payment-btn — observe POST /api/epoint/create-payment returns {status:'error', message:'Duplicate order_id value'} and console error 'Retry payment error: Error: Duplicate order_id value'. MITIGATION: send a unique suffixed order_id per attempt (e.g. `${orderId}-r${attemptNo}` or append Date.now()); store attempt count on the Firestore order; strip suffix on webhook return to resolve the original doc."
+}
