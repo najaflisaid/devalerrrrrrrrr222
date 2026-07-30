@@ -20,30 +20,11 @@ import {
   Globe2,
   ChevronDown,
 } from 'lucide-react';
+import { lookupProductByBarcode, type AiLookupResult } from '../../services/aiProductLookupService';
 
 type LangObj = { az: string | null; en: string | null; ru: string | null };
 
-export interface AiLookupResult {
-  found: boolean;
-  query: string;
-  name: LangObj;
-  description: LangObj;
-  brand: string | null;
-  model: string | null;
-  barcode: string | null;
-  sku: string | null;
-  category_hint: string | null;
-  gender: 'men' | 'women' | 'unisex' | null;
-  country_of_origin: string | null;
-  color: string | null;
-  size: string | null;
-  features: string[];
-  specs: Record<string, string>;
-  seo: { title_az: string | null; description_az: string | null; tags: string[] };
-  image_urls: string[];
-  source_urls: string[];
-  model_used?: string;
-}
+export type { AiLookupResult };
 
 export interface AiApplyPayload {
   nameAz: string;
@@ -89,8 +70,8 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBarcode]);
 
-  const runLookup = async () => {
-    const q = query.trim();
+  const runLookup = async (barcodeOverride?: string) => {
+    const q = (barcodeOverride ?? query).trim();
     if (!q) {
       setError('Barkod və ya SKU daxil edin');
       return;
@@ -106,20 +87,8 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
         .map((s) => s.trim())
         .filter(Boolean)
         .slice(0, 10);
-      const res = await fetch('/api/ai/product-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode: q, sites }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = data?.error ||
-          (res.status === 404
-            ? 'AI xidməti hələ tətbiq deploy olunmayıb (localhost-da mövcud deyil, Vercel-də işləyəcək)'
-            : `HTTP ${res.status}`);
-        throw new Error(msg);
-      }
-      setResult(data as AiLookupResult);
+      const data = await lookupProductByBarcode(q, sites);
+      setResult(data);
       // Default seçim: ilk 4 şəkli avtomatik seç, birincisi cover
       if (Array.isArray(data.image_urls) && data.image_urls.length > 0) {
         const firstFour = data.image_urls.slice(0, 4);
@@ -272,7 +241,7 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
             </button>
             <button
               type="button"
-              onClick={runLookup}
+              onClick={() => { void runLookup(); }}
               disabled={loading || !query.trim()}
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-lg hover:from-purple-700 hover:to-fuchsia-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="ai-lookup-search-btn"
@@ -536,7 +505,7 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
                 </button>
                 <button
                   type="button"
-                  onClick={runLookup}
+                  onClick={() => { void runLookup(); }}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -570,37 +539,7 @@ const AiProductLookup: React.FC<Props> = ({ onApply, categories = [], brands = [
             setQuery(code);
             setShowScanner(false);
             // Kiçik gecikmə ilə avtomatik axtar
-            setTimeout(() => {
-              // useState close → dəyəri lokal saxlayırıq
-              const q = code.trim();
-              if (!q) return;
-              (async () => {
-                setError(null);
-                setLoading(true);
-                setResult(null);
-                setSelectedImages([]);
-                setCoverImage('');
-                try {
-                  const res = await fetch('/api/ai/product-lookup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ barcode: q }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-                  setResult(data as AiLookupResult);
-                  if (Array.isArray(data.image_urls) && data.image_urls.length > 0) {
-                    const firstFour = data.image_urls.slice(0, 4);
-                    setSelectedImages(firstFour);
-                    setCoverImage(firstFour[0]);
-                  }
-                } catch (err: any) {
-                  setError(err?.message || 'AI axtarışı uğursuz oldu');
-                } finally {
-                  setLoading(false);
-                }
-              })();
-            }, 200);
+            setTimeout(() => { void runLookup(code); }, 200);
           }}
           onClose={() => setShowScanner(false)}
         />

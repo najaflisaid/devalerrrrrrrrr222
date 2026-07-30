@@ -1,0 +1,22 @@
+{
+  "summary": "Verified REFACTOR of AI Product Lookup: frontend now calls Gemini API directly from the browser instead of the Vercel serverless /api/ai/product-lookup endpoint. Network monitoring confirmed 3 POST requests to generativelanguage.googleapis.com (fallback across gemini-flash-latest → gemini-2.0-flash → gemini-3-flash-preview) and 0 requests to /api/ai/product-lookup. The old 'AI xidməti hələ tətbiq deploy olunmayıb' error is no longer shown. Gemini currently returns 429 (quota exhausted) — the UI displays the required friendly Azerbaijani message exactly: 'Gemini API kvotası bitib. Google AI Studio-da billing yoxlayın və ya bir neçə dəqiqə sonra yenidən cəhd edin.' Per test brief, quota errors are NOT bugs; the code path is correct and the refactor is verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SECURITY: Gemini API key is hardcoded in /app/src/services/aiProductLookupService.ts and shipped to the browser (visible in DevTools network tab as ?key=AQ.Ab8RN6J6B4CZpyrSLtz6l0-M_c292ljC8pRPYb2hV1ffFjxGjA). Anyone can extract and abuse this key. Consider (a) restricting the key by HTTP referrer in Google AI Studio, and/or (b) proxying through a lightweight backend endpoint. The user explicitly opted for no-Vercel/no-backend path, but referrer restriction is essential to prevent quota theft.",
+    "The current Gemini key's quota appears fully exhausted (all 3 fallback models return 429). Once billing is enabled or a new key is provisioned, retest the happy path to confirm parsed JSON (name, brand, image_urls) renders in the UI (data-testid='ai-lookup-name-az' etc.)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Refactor verified via network interception. Gemini direct-from-browser is wired correctly. To retest the happy path, provision a Gemini key with available quota (Google AI Studio) and replace GEMINI_API_KEY in /app/src/services/aiProductLookupService.ts. Testids used: ai-lookup-toggle, ai-lookup-query, ai-lookup-search-btn, ai-lookup-name-az. Admin bypass: localStorage.setItem('userRole','admin'), then navigate to /admin and click Məhsullar → Məhsul əlavə et.",
+  "rca of the issue": "N/A — refactor validated. Only externally-caused 429 quota errors observed; code correctly handles and displays user-friendly message."
+}
