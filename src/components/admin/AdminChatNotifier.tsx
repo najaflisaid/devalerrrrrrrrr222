@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, X } from 'lucide-react';
+import { MessageSquare, X, Phone } from 'lucide-react';
 import { subscribeAllSessions, type ChatSessionMeta } from '../../services/chatSessionService';
-import { playNewSessionSound, playAdminMessageSound } from '../../utils/chatSounds';
+import { playNewSessionSound, playAdminMessageSound, playContactCapturedSound } from '../../utils/chatSounds';
 
 interface NotificationItem {
   sessionId: string;
-  kind: 'new' | 'reply';
+  kind: 'new' | 'reply' | 'contact';
   message: string;
   ts: number;
+  contactName?: string;
+  contactPhone?: string;
 }
 
 interface Props {
@@ -26,12 +28,16 @@ const AUTO_DISMISS_MS = 15000;
 const AdminChatNotifier: React.FC<Props> = ({ onJumpToSession }) => {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const knownRef = useRef<Map<string, number>>(new Map()); // sessionId → userMessageCount
+  const contactSeenRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
 
   useEffect(() => {
     const unsub = subscribeAllSessions((all) => {
       if (isFirstLoadRef.current) {
-        all.forEach((s) => knownRef.current.set(s.id, s.userMessageCount || 0));
+        all.forEach((s) => {
+          knownRef.current.set(s.id, s.userMessageCount || 0);
+          if (s.contactCaptured) contactSeenRef.current.add(s.id);
+        });
         isFirstLoadRef.current = false;
         return;
       }
@@ -60,18 +66,33 @@ const AdminChatNotifier: React.FC<Props> = ({ onJumpToSession }) => {
           });
           knownRef.current.set(s.id, currentCount);
         }
+
+        // Contact captured — highest priority toast
+        if (s.contactCaptured && !contactSeenRef.current.has(s.id)) {
+          contactSeenRef.current.add(s.id);
+          fresh.push({
+            sessionId: s.id,
+            kind: 'contact',
+            message: 'Real müştəri — əlaqə məlumatları paylaşdı',
+            ts: Date.now(),
+            contactName: s.contactName || '',
+            contactPhone: s.contactPhone || '',
+          });
+        }
       });
       if (fresh.length > 0) {
-        // Play appropriate sound (new session priority)
-        if (fresh.some((f) => f.kind === 'new')) {
+        // Play appropriate sound (contact > new session > reply)
+        if (fresh.some((f) => f.kind === 'contact')) {
+          playContactCapturedSound();
+        } else if (fresh.some((f) => f.kind === 'new')) {
           playNewSessionSound();
         } else {
           playAdminMessageSound();
         }
         setItems((prev) => {
-          // Dedupe by sessionId — replace older item with newer one
+          // Dedupe by sessionId + kind — replace older item with newer one
           const map = new Map<string, NotificationItem>();
-          [...prev, ...fresh].forEach((n) => map.set(n.sessionId, n));
+          [...prev, ...fresh].forEach((n) => map.set(n.sessionId + ':' + n.kind, n));
           return Array.from(map.values()).slice(-MAX_VISIBLE);
         });
       }
@@ -79,55 +100,73 @@ const AdminChatNotifier: React.FC<Props> = ({ onJumpToSession }) => {
     return () => unsub();
   }, []);
 
-  // Auto-dismiss oldest items after timeout
+  // Auto-dismiss oldest items after timeout (contact notifications stay longer)
   useEffect(() => {
     if (items.length === 0) return;
     const t = setTimeout(() => {
       const now = Date.now();
-      setItems((prev) => prev.filter((n) => now - n.ts < AUTO_DISMISS_MS));
+      setItems((prev) => prev.filter((n) => {
+        const ttl = n.kind === 'contact' ? 45000 : AUTO_DISMISS_MS;
+        return now - n.ts < ttl;
+      }));
     }, 2000);
     return () => clearTimeout(t);
   }, [items]);
 
-  const dismiss = (sid: string) => setItems((prev) => prev.filter((n) => n.sessionId !== sid));
+  const dismiss = (key: string) => setItems((prev) => prev.filter((n) => n.sessionId + ':' + n.kind !== key));
 
   const handleClick = (n: NotificationItem) => {
     onJumpToSession(n.sessionId);
-    dismiss(n.sessionId);
+    dismiss(n.sessionId + ':' + n.kind);
   };
 
   if (items.length === 0) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none" data-testid="admin-chat-notifier">
-      {items.map((n) => (
+      {items.map((n) => {
+        const gradient =
+          n.kind === 'contact'
+            ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 shadow-amber-500/40 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600'
+            : n.kind === 'new'
+            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-700'
+            : 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700';
+        return (
         <button
-          key={n.sessionId + '-' + n.ts}
+          key={n.sessionId + ':' + n.kind + '-' + n.ts}
           type="button"
           onClick={() => handleClick(n)}
-          className={`pointer-events-auto group text-white rounded-2xl shadow-2xl px-4 py-3.5 pr-11 flex items-center gap-3 text-left transition-all relative overflow-hidden dv-notif-slide ${
-            n.kind === 'new'
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-700'
-              : 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-blue-500/30 hover:from-blue-600 hover:to-indigo-700'
-          }`}
-          data-testid={`admin-notif-${n.sessionId}`}
+          className={`pointer-events-auto group text-white rounded-2xl shadow-2xl px-4 py-3.5 pr-11 flex items-center gap-3 text-left transition-all relative overflow-hidden dv-notif-slide ${gradient}`}
+          data-testid={`admin-notif-${n.sessionId}-${n.kind}`}
         >
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-            <MessageSquare className="h-5 w-5" />
+            {n.kind === 'contact' ? <Phone className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-bold leading-tight">
-              {n.kind === 'new' ? 'Yeni söhbət başladı!' : 'Yeni müştəri mesajı'}
+              {n.kind === 'contact'
+                ? '📞 Əlaqə məlumatları alındı!'
+                : n.kind === 'new'
+                ? 'Yeni söhbət başladı!'
+                : 'Yeni müştəri mesajı'}
             </div>
-            <div className="text-[11px] text-white/85 truncate mt-0.5">
-              Müştəri {n.sessionId.slice(0, 6)} · {n.message}
-            </div>
+            {n.kind === 'contact' ? (
+              <div className="text-[11px] text-white/95 mt-0.5 leading-snug">
+                {n.contactName && <span className="font-semibold">{n.contactName}</span>}
+                {n.contactName && n.contactPhone && <span className="mx-1">·</span>}
+                {n.contactPhone && <span className="font-mono">{n.contactPhone}</span>}
+              </div>
+            ) : (
+              <div className="text-[11px] text-white/85 truncate mt-0.5">
+                Müştəri {n.sessionId.slice(0, 6)} · {n.message}
+              </div>
+            )}
             <div className="text-[10px] text-white/75 mt-1 font-semibold underline underline-offset-2">
-              Söhbətə qoşul →
+              {n.kind === 'contact' ? 'Söhbətə keç və təsdiqlə →' : 'Söhbətə qoşul →'}
             </div>
           </div>
           <span
-            onClick={(e) => { e.stopPropagation(); dismiss(n.sessionId); }}
+            onClick={(e) => { e.stopPropagation(); dismiss(n.sessionId + ':' + n.kind); }}
             className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/25 cursor-pointer"
             aria-label="Bağla"
           >
@@ -136,7 +175,8 @@ const AdminChatNotifier: React.FC<Props> = ({ onJumpToSession }) => {
           {/* Pulse indicator */}
           <span aria-hidden="true" className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full animate-ping opacity-70" />
         </button>
-      ))}
+        );
+      })}
       <style>{`
         @keyframes dvNotifSlide {
           from { transform: translateX(24px); opacity: 0 }

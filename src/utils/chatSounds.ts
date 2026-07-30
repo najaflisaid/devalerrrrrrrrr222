@@ -106,6 +106,23 @@ export const playNewSessionSound = (): void => {
 };
 
 /**
+ * Admin tərəfi: müştəri əlaqə məlumatlarını paylaşdı (real müştəri siqnalı).
+ * 5-notalı yüksəlişli akkord — diqqətçəkici lakin bezdirici deyil.
+ */
+export const playContactCapturedSound = (): void => {
+  playSequence(
+    [
+      [523, 0.12, 0.4, 'triangle', 0],      // C5
+      [659, 0.12, 0.4, 'triangle', 0.13],   // E5
+      [784, 0.12, 0.4, 'triangle', 0.26],   // G5
+      [1046, 0.14, 0.44, 'triangle', 0.4],  // C6
+      [1319, 0.24, 0.42, 'triangle', 0.56], // E6
+    ],
+    ADMIN_CHAT_MUTE_KEY
+  );
+};
+
+/**
  * User gesture-dən sonra çağırılmalıdır — AudioContext-i "unlock" edir.
  * Çağrıldıqdan sonra bütün gələcək səslər autoplay problemi olmadan çalır.
  */

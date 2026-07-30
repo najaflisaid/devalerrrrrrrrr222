@@ -10,6 +10,9 @@ import {
   logMessage,
   subscribeSession,
   subscribeSessionMessages,
+  markSessionRead,
+  detectContactInfo,
+  captureSessionContact,
 } from '../services/chatSessionService';
 import { uploadImageToR2 } from '../services/imageUploadService';
 import { playCustomerReceiveSound, unlockChatAudio } from '../utils/chatSounds';
@@ -367,6 +370,13 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, open, busy]);
 
+  // Mark session as read whenever chat is open and messages arrive/change.
+  // This drives the WhatsApp-style blue double-check on the admin side.
+  useEffect(() => {
+    if (!open || !sessionIdRef.current) return;
+    void markSessionRead(sessionIdRef.current);
+  }, [open, messages.length]);
+
   // Lazy load products + knowledge on first open
   useEffect(() => {
     if (open && !productsLoaded) {
@@ -486,6 +496,12 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
         content: trimmed,
         imageUrl: options.imageUrl,
       });
+      // Detect contact info (phone + optional name) — notifies admin panel
+      // via session field so the AdminChatNotifier can raise a special toast.
+      const contact = detectContactInfo(trimmed);
+      if (contact.phone) {
+        void captureSessionContact(sessionIdRef.current, contact);
+      }
     } else {
       pendingHistory = [...messages];
     }

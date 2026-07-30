@@ -3,7 +3,7 @@ import {
   Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2,
   MessageCircle, Power, MessageSquare, Plus, Trash2, Send, Users, TrendingUp,
   Clock, Search, Bot, PowerOff, MessageSquareText, BarChart3,
-  Paperclip, Volume2, VolumeX, X, Copy, User,
+  Paperclip, Volume2, VolumeX, X, Copy, User, Phone, CheckCheck, Play,
 } from 'lucide-react';
 import {
   getAiKnowledge,
@@ -35,6 +35,7 @@ import {
   isAdminChatMuted,
   setAdminChatMuted,
 } from '../../utils/chatSounds';
+import { playNewSessionSound } from '../../utils/chatSounds';
 import { consumePendingChatSession, onOpenChatSession } from '../../utils/adminChatBridge';
 
 type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations';
@@ -750,6 +751,21 @@ const ConversationsSection: React.FC<{
             {muted ? 'Səs off' : 'Səs açıq'}
           </button>
           <button
+            onClick={() => {
+              // Play sound even when muted so admin can preview it.
+              const wasMuted = isAdminChatMuted();
+              if (wasMuted) setAdminChatMuted(false);
+              playNewSessionSound();
+              if (wasMuted) setTimeout(() => setAdminChatMuted(true), 1500);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 transition-colors"
+            title="Bildiriş səsini sınaqla dinlə"
+            data-testid="admin-sound-test"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Sınaq
+          </button>
+          <button
             onClick={() => setShowProfileEditor(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-900 text-white hover:bg-gray-800"
             data-testid="edit-admin-profile"
@@ -795,21 +811,41 @@ const ConversationsSection: React.FC<{
               <div
                 key={s.id}
                 className={`w-full text-left px-3 py-2.5 border-b border-gray-50 flex gap-2.5 hover:bg-gray-50 transition-colors cursor-pointer ${
-                  selectedId === s.id ? 'bg-amber-50/70 border-l-2 border-l-amber-500' : 'border-l-2 border-l-transparent'
+                  selectedId === s.id
+                    ? 'bg-amber-50/70 border-l-2 border-l-amber-500'
+                    : s.contactCaptured
+                    ? 'border-l-2 border-l-orange-400 bg-orange-50/30'
+                    : 'border-l-2 border-l-transparent'
                 }`}
                 onClick={() => setSelectedId(s.id)}
                 data-testid={`session-item-${s.id}`}
               >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center flex-shrink-0 text-amber-800 font-bold text-xs">
-                  {s.id.slice(0, 2).toUpperCase()}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${
+                  s.contactCaptured
+                    ? 'bg-gradient-to-br from-orange-200 to-rose-200 text-rose-800'
+                    : 'bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800'
+                }`}>
+                  {s.contactCaptured && s.contactName
+                    ? s.contactName.trim().slice(0, 2).toUpperCase()
+                    : s.id.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-medium text-gray-900 truncate">
-                      Müştəri {s.id.slice(0, 6)}
+                    <span className="text-[13px] font-medium text-gray-900 truncate flex items-center gap-1">
+                      {s.contactCaptured && s.contactName
+                        ? s.contactName
+                        : `Müştəri ${s.id.slice(0, 6)}`}
+                      {s.contactCaptured && (
+                        <Phone className="h-3 w-3 text-orange-500 flex-shrink-0" strokeWidth={2.5} />
+                      )}
                     </span>
                     <span className="text-[10px] text-gray-400 flex-shrink-0">{formatRelativeTime(s.lastActive)}</span>
                   </div>
+                  {s.contactCaptured && s.contactPhone && (
+                    <div className="text-[10.5px] text-orange-700 font-mono truncate mt-0.5">
+                      {s.contactPhone}
+                    </div>
+                  )}
                   <div className="text-[12px] text-gray-500 truncate mt-0.5">
                     {s.hasImage ? '🖼️ ' : ''}{s.lastMessage || '(boş)'}
                   </div>
@@ -818,6 +854,11 @@ const ConversationsSection: React.FC<{
                       {s.aiEnabled ? <Bot className="h-2 w-2" /> : <PowerOff className="h-2 w-2" />}
                       {s.aiEnabled ? 'AI' : 'Manual'}
                     </span>
+                    {s.contactCaptured && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded bg-orange-500 text-white">
+                        REAL
+                      </span>
+                    )}
                     <span className="text-[9px] text-gray-400">{s.messageCount || 0}</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); void handleDelete(s.id); }}
@@ -849,15 +890,47 @@ const ConversationsSection: React.FC<{
           ) : (
             <>
               {/* Header */}
-              <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-amber-50/40 flex items-center justify-between gap-3 flex-shrink-0">
+              <div className={`px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0 ${
+                current.contactCaptured
+                  ? 'bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 border-b-orange-200'
+                  : 'bg-gradient-to-r from-white to-amber-50/40'
+              }`}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 to-amber-300 flex items-center justify-center text-amber-900 font-bold text-sm flex-shrink-0">
-                    {current.id.slice(0, 2).toUpperCase()}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                    current.contactCaptured
+                      ? 'bg-gradient-to-br from-orange-300 to-rose-300 text-rose-900'
+                      : 'bg-gradient-to-br from-amber-200 to-amber-300 text-amber-900'
+                  }`}>
+                    {current.contactCaptured && current.contactName
+                      ? current.contactName.trim().slice(0, 2).toUpperCase()
+                      : current.id.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">Müştəri {current.id.slice(0, 6)}</div>
-                    <div className="text-[11px] text-gray-500 truncate">
-                      {(current.language || 'az').toUpperCase()} · {current.messageCount || 0} mesaj · {formatRelativeTime(current.lastActive)}
+                    <div className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
+                      {current.contactCaptured && current.contactName
+                        ? current.contactName
+                        : `Müştəri ${current.id.slice(0, 6)}`}
+                      {current.contactCaptured && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500 text-white">
+                          <Phone className="h-2.5 w-2.5" strokeWidth={3} /> Real
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+                      {current.contactCaptured && current.contactPhone && (
+                        <>
+                          <a
+                            href={`tel:${current.contactPhone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-mono text-orange-700 font-semibold hover:underline"
+                            data-testid="contact-phone-link"
+                          >
+                            {current.contactPhone}
+                          </a>
+                          <span className="text-gray-400">·</span>
+                        </>
+                      )}
+                      <span>{(current.language || 'az').toUpperCase()} · {current.messageCount || 0} mesaj · {formatRelativeTime(current.lastActive)}</span>
                     </div>
                   </div>
                 </div>
@@ -876,9 +949,19 @@ const ConversationsSection: React.FC<{
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2.5 bg-[#F5F0E5]/40">
-                {messages.map((m) => {
+                {(() => {
+                  const readTsMs = (() => {
+                    const v: any = (current as any)?.lastReadByCustomerTs;
+                    if (!v) return 0;
+                    if (typeof v.seconds === 'number') return v.seconds * 1000;
+                    if (typeof v.toMillis === 'function') return v.toMillis();
+                    return 0;
+                  })();
+                  return messages.map((m) => {
                   const isUser = m.role === 'user';
                   const isAdmin = m.role === 'admin';
+                  const msgMs = (m.ts as any)?.seconds ? (m.ts as any).seconds * 1000 : 0;
+                  const isRead = isAdmin && readTsMs > 0 && msgMs > 0 && readTsMs >= msgMs;
                   return (
                     <div key={m.id} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
                       <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
@@ -902,13 +985,19 @@ const ConversationsSection: React.FC<{
                           </a>
                         )}
                         {m.content && <div className="whitespace-pre-wrap break-words leading-relaxed">{m.content}</div>}
-                        <div className={`text-[10px] mt-1 text-right ${isUser ? 'text-gray-400' : isAdmin ? 'text-emerald-800/50' : 'text-white/60'}`}>
-                          {formatRelativeTime(m.ts)}
+                        <div className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1 ${isUser ? 'text-gray-400' : isAdmin ? 'text-emerald-800/60' : 'text-white/60'}`}>
+                          <span>{formatRelativeTime(m.ts)}</span>
+                          {isAdmin && (
+                            isRead
+                              ? <CheckCheck className="h-3.5 w-3.5 text-sky-500" strokeWidth={2.4} data-testid={`admin-msg-read-${m.id}`} />
+                              : <CheckCheck className="h-3.5 w-3.5 text-emerald-800/40" strokeWidth={2.2} data-testid={`admin-msg-sent-${m.id}`} />
+                          )}
                         </div>
                       </div>
                     </div>
                   );
-                })}
+                  });
+                })()}
                 {messages.length === 0 && (
                   <div className="text-center text-xs text-gray-400 py-8">Hələ mesaj yoxdur</div>
                 )}

@@ -82,3 +82,28 @@ The `AiKnowledge.aiInstructions` field (Firestore `ai_knowledge/main`) is inject
 Files touched:
 - `src/services/chatSessionService.ts` — computeStats parallelized + resilient
 - `src/components/admin/AiConsultantTab.tsx` — bounded heights + console.error on stats
+
+## 2026-01 · AI Konsultant — Contact capture / Read receipts / Sound test
+### Features added
+1. **Real customer detection (phone + name capture)**
+   - `detectContactInfo()` in `chatSessionService.ts` — regex-based phone extractor (AZ/RU/international) + Az/Ru/En name-pattern detection with stop-word filtering.
+   - Customer-side `AiChatWidget` calls `captureSessionContact()` after every user message; stores `contactCaptured`, `contactPhone`, `contactName`, `contactCapturedAt` on the session.
+   - Admin-side `AdminChatNotifier` shows a special orange "📞 Əlaqə məlumatları alındı!" toast (with contact name + phone) and plays a distinctive 5-note ascending chime (`playContactCapturedSound`).
+   - Contact toasts persist longer (45s vs 15s for regular toasts).
+   - `AiConsultantTab` conversation list now shows a "REAL" badge + orange left border + phone number + contact name as title for contacted sessions; the chat header displays the phone as a `tel:` link.
+
+2. **WhatsApp-style read receipts (blue double-check)**
+   - Session doc gains `lastReadByCustomerTs` (serverTimestamp).
+   - `markSessionRead()` called from `AiChatWidget` whenever the widget is open OR messages update.
+   - In `AiConsultantTab` conversations view each admin bubble now shows a `CheckCheck` icon — grey when only "sent", **sky-blue** when the customer's `lastReadByCustomerTs` ≥ the message's ts.
+
+3. **"Sınaq" sound test button**
+   - Added next to the mute toggle in Söhbətlər header.
+   - Plays `playNewSessionSound()` even when mute is on (temporarily unmutes, then restores state after 1.5s).
+
+Files:
+- `src/services/chatSessionService.ts` — new fields + helpers (`markSessionRead`, `detectContactInfo`, `captureSessionContact`)
+- `src/components/AiChatWidget.tsx` — call `captureSessionContact` on user send + `markSessionRead` on open/messages
+- `src/components/admin/AdminChatNotifier.tsx` — contact toast kind + distinct sound + sticky
+- `src/components/admin/AiConsultantTab.tsx` — read-receipt double-check, REAL badge, phone header, Sınaq button
+- `src/utils/chatSounds.ts` — `playContactCapturedSound` (5-note ascending)

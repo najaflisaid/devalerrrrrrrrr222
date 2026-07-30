@@ -39,6 +39,13 @@ export interface ChatSessionMeta {
   topics?: string[];               // Auto-tagged topics (brand mentions etc.)
   hasImage?: boolean;
   closed?: boolean;                // Marked closed by admin
+  // Contact capture (customer shared phone / name)
+  contactCaptured?: boolean;
+  contactPhone?: string;
+  contactName?: string;
+  contactCapturedAt?: any;         // Timestamp of first capture
+  // WhatsApp-style read receipts
+  lastReadByCustomerTs?: any;      // Timestamp: last time customer viewed the chat
 }
 
 export interface ChatSessionMessage {
@@ -158,6 +165,134 @@ export const subscribeAllSessions = (
 
 export const toggleSessionAi = async (sessionId: string, enabled: boolean): Promise<void> => {
   await updateDoc(doc(db, SESSIONS, sessionId), { aiEnabled: enabled });
+};
+
+// ────────── Read receipts (WhatsApp-style) ──────────
+
+/**
+ * Customer tərəfindən çağırılır — chat açıq olduqda və mesajlar görünəndə
+ * session sənədinə "oxundu vaxtı" yazılır. Admin panelində iki mavi cek
+ * (blue double check) göstərmək üçün istifadə olunur.
+ */
+export const markSessionRead = async (sessionId: string): Promise<void> => {
+  try {
+    await updateDoc(doc(db, SESSIONS, sessionId), {
+      lastReadByCustomerTs: serverTimestamp(),
+    });
+  } catch {
+    /* ignore — session may not exist yet */
+  }
+};
+
+// ────────── Contact capture (phone + name) ──────────
+
+const PHONE_REGEX = /(?:\+?994|\+?7|\+?90)?[\s\-().]*(?:\d[\s\-().]*){9,13}/g;
+
+const normalizePhone = (raw: string): string => {
+  const digits = raw.replace(/[^\d+]/g, '');
+  if (digits.length < 9) return '';
+  // Ensure it has country code prefix (default AZ +994)
+  if (digits.startsWith('+')) return digits;
+  if (digits.startsWith('994') || digits.startsWith('7') || digits.startsWith('90')) return '+' + digits;
+  if (digits.startsWith('0') && digits.length >= 10) return '+994' + digits.slice(1);
+  if (digits.length === 9) return '+994' + digits;
+  return digits;
+};
+
+const NAME_STOP_WORDS = new Set([
+  'Salam', 'Nömrə', 'Nomre', 'Telefon', 'Tel', 'Mobil', 'Mobile', 'Whatsapp', 'Wp',
+  'Здравствуйте', 'Привет', 'Телефон', 'Номер', 'Мобильный',
+  'Hello', 'Hi', 'Phone', 'Number', 'Contact',
+  'Bakı', 'Baku', 'Şəhər', 'Ünvan',
+]);
+
+const isValidNameCandidate = (candidate: string): boolean => {
+  const parts = candidate.split(/\s+/);
+  return parts.every((p) => !NAME_STOP_WORDS.has(p));
+};
+
+const NAME_PATTERNS = [
+  /(?:adım|ismim|mənim\s+adım)\s+([\p{L}]{2,}(?:\s+[\p{L}]{2,}){0,2})/iu,
+  /(?:меня\s+зовут|моё\s+имя|моя\s+имя|я\s*[-—]?\s*)\s*([\p{L}]{2,}(?:\s+[\p{L}]{2,}){0,2})/iu,
+  /(?:my\s+name\s+is|i\s+am|i'm)\s+([\p{L}]{2,}(?:\s+[\p{L}]{2,}){0,2})/iu,
+];
+
+export interface DetectedContact {
+  phone?: string;
+  name?: string;
+}
+
+/**
+ * Müştəri mesajı içindən telefon nömrəsi və ad çıxarır. Yalnız telefon
+ * varsa "yakalandı" hesab olunur — ad opsionaldır.
+ */
+export const detectContactInfo = (text: string): DetectedContact => {
+  if (!text) return {};
+  const out: DetectedContact = {};
+
+  // 1) Phone — pick the LONGEST digit run so we don't confuse it with prices.
+  const matches = text.match(PHONE_REGEX);
+  if (matches) {
+    let best = '';
+    for (const m of matches) {
+      const digitsOnly = m.replace(/\D/g, '');
+      if (digitsOnly.length >= 9 && digitsOnly.length > best.replace(/\D/g, '').length) {
+        best = m;
+      }
+    }
+    if (best) {
+      const normalized = normalizePhone(best);
+      if (normalized) out.phone = normalized;
+    }
+  }
+
+  // 2) Name — explicit patterns first
+  for (const re of NAME_PATTERNS) {
+    const m = text.match(re);
+    if (m && m[1]) {
+      const candidate = m[1].trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (isValidNameCandidate(candidate)) {
+        out.name = candidate;
+        break;
+      }
+    }
+  }
+
+  // 3) Fallback: if a phone was detected AND the message is short, take
+  //    any capitalized word(s) not part of the phone as a name candidate.
+  if (out.phone && !out.name && text.length < 120) {
+    const cleaned = text.replace(PHONE_REGEX, ' ').trim();
+    // Try to find up to 3 candidates and pick the first valid one.
+    const iter = cleaned.matchAll(/\b(\p{Lu}\p{Ll}{1,}(?:\s+\p{Lu}\p{Ll}{1,}){0,2})\b/gu);
+    for (const m of iter) {
+      const candidate = m[1].trim().slice(0, 60);
+      if (isValidNameCandidate(candidate)) {
+        out.name = candidate;
+        break;
+      }
+    }
+  }
+
+  return out;
+};
+
+export const captureSessionContact = async (
+  sessionId: string,
+  info: DetectedContact
+): Promise<boolean> => {
+  if (!info.phone) return false;
+  try {
+    const patch: Record<string, any> = {
+      contactCaptured: true,
+      contactPhone: info.phone,
+      contactCapturedAt: serverTimestamp(),
+    };
+    if (info.name) patch.contactName = info.name;
+    await updateDoc(doc(db, SESSIONS, sessionId), patch);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const deleteSession = async (sessionId: string): Promise<void> => {
