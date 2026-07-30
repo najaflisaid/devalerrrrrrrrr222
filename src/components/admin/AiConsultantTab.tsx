@@ -489,7 +489,10 @@ const StatsSection: React.FC = () => {
     setLoading(true);
     setError(null);
     try { setStats(await computeStats()); }
-    catch (e: any) { setError(e?.message || 'Statistika yüklənmədi'); }
+    catch (e: any) {
+      console.error('[AI Konsultant] Statistika yüklənmədi:', e);
+      setError(e?.message || 'Statistika yüklənmədi');
+    }
     finally { setLoading(false); }
   };
 
@@ -765,10 +768,10 @@ const ConversationsSection: React.FC<{
       )}
 
       {/* WhatsApp-like split */}
-      <div className="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-3 min-h-[640px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-3 h-[calc(100vh-260px)] min-h-[520px] max-h-[820px]">
         {/* Left: sessions list (narrower) */}
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden h-full min-h-0">
+          <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -781,7 +784,7 @@ const ConversationsSection: React.FC<{
               />
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto max-h-[65vh]">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {filtered.length === 0 && (
               <div className="p-6 text-center text-sm text-gray-500">
                 <MessageSquare className="h-6 w-6 mx-auto mb-2 text-gray-300" />
@@ -832,7 +835,7 @@ const ConversationsSection: React.FC<{
         </div>
 
         {/* Right: WhatsApp-like chat area (wider) */}
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden min-h-[640px]" style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(212,175,55,0.03) 0%, transparent 40%)' }}>
+        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden h-full min-h-0" style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(212,175,55,0.03) 0%, transparent 40%)' }}>
           {!current ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm p-6">
               <div className="text-center">
@@ -872,7 +875,7 @@ const ConversationsSection: React.FC<{
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-[#F5F0E5]/40">
+              <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2.5 bg-[#F5F0E5]/40">
                 {messages.map((m) => {
                   const isUser = m.role === 'user';
                   const isAdmin = m.role === 'admin';

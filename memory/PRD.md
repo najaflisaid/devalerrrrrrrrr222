@@ -74,3 +74,11 @@ The `AiKnowledge.aiInstructions` field (Firestore `ai_knowledge/main`) is inject
 - **Testing**: iteration_13 UI 100% pass. AI end-to-end axtarış test edilə bilmədi çünki Gemini API açarı kvotası bitib (429 quota exceeded — Google AI Studio-da billing yoxlanmalıdır).
 - **Yeni asılılıq**: `html5-qrcode` (kamera barkod skan üçün).
 - **Yeni testid-lər**: ai-product-lookup-panel, ai-lookup-toggle, ai-lookup-query, ai-lookup-scan-btn, ai-lookup-search-btn, ai-lookup-loading, ai-lookup-error, ai-lookup-lang-{az|en|ru}, ai-lookup-image-{i}, ai-lookup-image-select-{i}, ai-lookup-image-cover-{i}, ai-lookup-apply-btn, ai-lookup-scanner-modal, ai-lookup-scanner-close.
+
+## 2026-01 · AI Konsultant fixes (session)
+- **Statistika (Stats) tab could hang/fail silently** — `computeStats()` executed up to 60 subcollection queries serially, which could time out on slow connections. Now runs them in parallel via `Promise.allSettled`, sample reduced to 40 sessions, added robust timestamp parsing (`seconds`, `toMillis`, `Date`), sorts client-side by lastActive desc, and logs errors to console for easier debugging.
+- **Söhbətlər (Conversations) chat pane grew downward without scrolling** — replaced `min-h-[640px]` with bounded `h-[calc(100vh-260px)] max-h-[820px]` on the grid, added `h-full min-h-0` to both panes and inner scroll containers so `overflow-y-auto` actually clips messages inside a fixed viewport.
+
+Files touched:
+- `src/services/chatSessionService.ts` — computeStats parallelized + resilient
+- `src/components/admin/AiConsultantTab.tsx` — bounded heights + console.error on stats

@@ -212,23 +212,32 @@ export const computeStats = async (): Promise<ChatStats> => {
   const langCounts: Record<string, number> = {};
   const wordCounts: Record<string, number> = {};
 
-  // Read only user messages via collectionGroup would need index; instead,
-  // walk each session's messages. For stat purposes limit to 300 sessions.
+  // Read all sessions once, sort client-side by lastActive desc so newest are prioritized.
   const sessions: ChatSessionMeta[] = [];
   sessionsSnap.forEach((d) => sessions.push({ ...(d.data() as any), id: d.id }));
 
+  const getMs = (v: any): number => {
+    if (!v) return 0;
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (v instanceof Date) return v.getTime();
+    return 0;
+  };
+
+  sessions.sort((a, b) => getMs((b as any).lastActive) - getMs((a as any).lastActive));
+
   const recent = sessions.slice(0, 300);
   for (const s of recent) {
-    totalMessages += s.messageCount || 0;
-    totalUserMessages += s.userMessageCount || 0;
+    totalMessages += Number(s.messageCount) || 0;
+    totalUserMessages += Number(s.userMessageCount) || 0;
     if (s.hasImage) totalWithImages++;
 
-    const lastMs = (s.lastActive as any)?.seconds ? (s.lastActive as any).seconds * 1000 : 0;
+    const lastMs = getMs((s as any).lastActive);
     if (lastMs) {
       if (now - lastMs < dayMs) activeToday++;
       if (now - lastMs < 7 * dayMs) activeThisWeek++;
     }
-    const startMs = (s.startedAt as any)?.seconds ? (s.startedAt as any).seconds * 1000 : 0;
+    const startMs = getMs((s as any).startedAt);
     if (lastMs && startMs && lastMs > startMs) {
       totalDurationMs += lastMs - startMs;
       durationCount++;
@@ -236,22 +245,22 @@ export const computeStats = async (): Promise<ChatStats> => {
     if (s.language) langCounts[s.language] = (langCounts[s.language] || 0) + 1;
   }
 
-  // Sample user messages for top keywords (limit to 60 latest sessions to save reads)
-  const sampled = recent.slice(0, 60);
-  for (const s of sampled) {
-    try {
-      const msgs = await getDocs(
-        query(collection(db, SESSIONS, s.id, 'messages'), where('role', '==', 'user'))
-      );
-      msgs.forEach((m) => {
-        const c = (m.data() as any).content || '';
-        for (const w of extractKeywords(c)) {
-          wordCounts[w] = (wordCounts[w] || 0) + 1;
-        }
-      });
-    } catch {
-      /* ignore */
-    }
+  // Sample user messages for top keywords — run in parallel (much faster than serial).
+  // Limit to 40 latest sessions to save reads and keep the panel snappy.
+  const sampled = recent.slice(0, 40);
+  const results = await Promise.allSettled(
+    sampled.map((s) =>
+      getDocs(query(collection(db, SESSIONS, s.id, 'messages'), where('role', '==', 'user')))
+    )
+  );
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    r.value.forEach((m) => {
+      const c = (m.data() as any).content || '';
+      for (const w of extractKeywords(c)) {
+        wordCounts[w] = (wordCounts[w] || 0) + 1;
+      }
+    });
   }
 
   const topKeywords = Object.entries(wordCounts)
