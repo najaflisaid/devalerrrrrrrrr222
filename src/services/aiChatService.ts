@@ -39,6 +39,7 @@ export interface ChatRequest {
   knowledge?: ChatKnowledgeLite | null;
   language?: 'az' | 'ru' | 'en';
   sessionId?: string;
+  contactCaptured?: boolean;
 }
 
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
@@ -55,6 +56,7 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
         products: req.products || [],
         knowledge: req.knowledge || null,
         language: req.language || 'az',
+        contactCaptured: !!req.contactCaptured,
       }),
       signal: ctrl.signal,
     });

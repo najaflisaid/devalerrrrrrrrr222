@@ -38,7 +38,7 @@ import {
 import { playNewSessionSound } from '../../utils/chatSounds';
 import { consumePendingChatSession, onOpenChatSession } from '../../utils/adminChatBridge';
 
-type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations';
+type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations' | 'contacts';
 
 // ─── Behavior fields config ─────────────────────────────────────────────
 interface FieldConfig {
@@ -179,6 +179,7 @@ const AiConsultantTab: React.FC = () => {
     { id: 'examples', label: 'Nümunələr', icon: <MessageSquareText className="h-4 w-4" />, count: (data.conversationExamples || []).length },
     { id: 'stats', label: 'Statistika', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'conversations', label: 'Söhbətlər', icon: <MessageSquare className="h-4 w-4" /> },
+    { id: 'contacts', label: 'Kontaktlar', icon: <Phone className="h-4 w-4" /> },
   ];
 
   return (
@@ -308,6 +309,9 @@ const AiConsultantTab: React.FC = () => {
           pendingSelect={pendingSelect}
           onSelectionHandled={() => setPendingSelect(null)}
         />
+      )}
+      {subTab === 'contacts' && (
+        <ContactsSection onOpenConversation={(sid) => { setPendingSelect(sid); setSubTab('conversations'); }} />
       )}
     </div>
   );
@@ -626,6 +630,221 @@ const ProgressRow: React.FC<{ label: string; value: number; suffix?: string; gra
   </div>
 );
 
+
+// ═══════════════ Contacts CRM (real customers with phone) ═══════════════
+const ContactsSection: React.FC<{ onOpenConversation: (sessionId: string) => void }> = ({ onOpenConversation }) => {
+  const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
+  const [search, setSearch] = useState('');
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeAllSessions(setSessions);
+    return () => unsub();
+  }, []);
+
+  const contacts = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sessions
+      .filter((s) => s.contactCaptured && s.contactPhone)
+      .filter((s) => {
+        if (!q) return true;
+        return (
+          (s.contactName || '').toLowerCase().includes(q) ||
+          (s.contactPhone || '').toLowerCase().includes(q) ||
+          (s.lastMessage || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        const av = (a.contactCapturedAt as any)?.seconds || (a.lastActive as any)?.seconds || 0;
+        const bv = (b.contactCapturedAt as any)?.seconds || (b.lastActive as any)?.seconds || 0;
+        return bv - av;
+      });
+  }, [sessions, search]);
+
+  const copyText = async (text: string, key: string) => {
+    try { await navigator.clipboard.writeText(text); }
+    catch { /* ignore */ }
+    setCopied(key);
+    setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+  };
+
+  const exportCsv = () => {
+    const rows = [['Ad', 'Telefon', 'İlk əlaqə', 'Son aktivlik', 'Son mesaj', 'Session ID']];
+    contacts.forEach((c) => {
+      const capturedAt = (c.contactCapturedAt as any)?.seconds
+        ? new Date((c.contactCapturedAt as any).seconds * 1000).toISOString()
+        : '';
+      const lastAt = (c.lastActive as any)?.seconds
+        ? new Date((c.lastActive as any).seconds * 1000).toISOString()
+        : '';
+      rows.push([
+        c.contactName || '',
+        c.contactPhone || '',
+        capturedAt,
+        lastAt,
+        (c.lastMessage || '').replace(/[\r\n]+/g, ' ').slice(0, 200),
+        c.id,
+      ]);
+    });
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `devaleur-kontaktlar-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const waLink = (phone: string, name?: string) => {
+    const digits = phone.replace(/[^\d]/g, '');
+    const msg = encodeURIComponent(
+      `Salam${name ? ' ' + name : ''}, De Valeur-dan yazırıq. Saytdakı chat üzərindən bizə mesaj yazmışdınız — sizə necə kömək edə bilərik? 💫`
+    );
+    return `https://wa.me/${digits}?text=${msg}`;
+  };
+
+  return (
+    <div className="space-y-4" data-testid="contacts-section">
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+        <div>
+          <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <Phone className="h-4 w-4 text-orange-500" />
+            Real müştəri kontaktları
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+              {contacts.length}
+            </span>
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Chat-də telefon nömrəsini paylaşan ziyarətçilər — CRM üçün hazır.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Ad və ya nömrə axtar…"
+              className="pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-300 min-w-[220px]"
+              data-testid="contacts-search"
+            />
+          </div>
+          <button
+            onClick={exportCsv}
+            disabled={contacts.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40"
+            data-testid="contacts-export-btn"
+          >
+            <FileText className="h-3.5 w-3.5" /> Excel/CSV export
+          </button>
+        </div>
+      </div>
+
+      {contacts.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
+          <div className="w-14 h-14 mx-auto rounded-full bg-orange-50 flex items-center justify-center mb-3">
+            <Phone className="h-6 w-6 text-orange-400" />
+          </div>
+          <div className="text-sm font-semibold text-gray-800">Hələ real kontakt yoxdur</div>
+          <div className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+            Müştəri chat-də telefon nömrəsi yazan kimi burada avtomatik görünəcək. AI 2-3 mesajdan sonra
+            nəzakətlə nömrə soruşur — panelə real bildiriş də gəlir.
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50/70 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2.5">Müştəri</th>
+                  <th className="text-left px-4 py-2.5">Telefon</th>
+                  <th className="text-left px-4 py-2.5 hidden md:table-cell">İlk əlaqə</th>
+                  <th className="text-left px-4 py-2.5 hidden lg:table-cell">Son mesaj</th>
+                  <th className="text-right px-4 py-2.5">Əməliyyat</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {contacts.map((c) => (
+                  <tr key={c.id} className="hover:bg-orange-50/40 transition-colors" data-testid={`contact-row-${c.id}`}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-200 to-rose-200 flex items-center justify-center text-rose-800 font-bold text-xs flex-shrink-0">
+                          {c.contactName ? c.contactName.trim().slice(0, 2).toUpperCase() : c.id.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 truncate">
+                            {c.contactName || <span className="text-gray-400 font-normal italic">Ad yoxdur</span>}
+                          </div>
+                          <div className="text-[10.5px] text-gray-500">
+                            {(c.language || 'az').toUpperCase()} · {c.messageCount || 0} mesaj
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => copyText(c.contactPhone!, c.id + ':phone')}
+                        className="font-mono text-[13px] text-orange-700 font-semibold hover:underline flex items-center gap-1.5 group"
+                        data-testid={`contact-phone-${c.id}`}
+                      >
+                        <span>{c.contactPhone}</span>
+                        {copied === c.id + ':phone'
+                          ? <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          : <Copy className="h-3 w-3 text-gray-300 group-hover:text-gray-500" />}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 hidden md:table-cell">
+                      {formatRelativeTime(c.contactCapturedAt || c.lastActive)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 max-w-xs hidden lg:table-cell">
+                      <div className="truncate">{c.lastMessage || <span className="italic text-gray-400">(boş)</span>}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <a
+                          href={waLink(c.contactPhone!, c.contactName)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                          title="WhatsApp-da yaz"
+                          data-testid={`contact-wa-${c.id}`}
+                        >
+                          <MessageCircle className="h-3 w-3" /> WA
+                        </a>
+                        <a
+                          href={`tel:${c.contactPhone}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                          title="Zəng et"
+                          data-testid={`contact-call-${c.id}`}
+                        >
+                          <Phone className="h-3 w-3" /> Zəng
+                        </a>
+                        <button
+                          onClick={() => onOpenConversation(c.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                          title="Söhbətə keç"
+                          data-testid={`contact-open-${c.id}`}
+                        >
+                          <MessageSquare className="h-3 w-3" /> Chat
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 // ═══════════════ Conversations (WhatsApp-like) ═══════════════
 const ConversationsSection: React.FC<{
   pendingSelect: string | null;
@@ -642,8 +861,18 @@ const ConversationsSection: React.FC<{
   const [profile, setProfile] = useState<AdminChatProfile>(DEFAULT_ADMIN_PROFILE);
   const [muted, setMuted] = useState(isAdminChatMuted());
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [typingTick, setTypingTick] = useState(0);
+  void typingTick; // used only to trigger re-render for stale typing indicator
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Force re-render every 2s while a session is selected — needed to hide
+  // stale typing indicators (customerTyping might not be reset if browser closed).
+  useEffect(() => {
+    if (!selectedId) return;
+    const t = setInterval(() => setTypingTick((x) => x + 1), 2000);
+    return () => clearInterval(t);
+  }, [selectedId]);
 
   useEffect(() => {
     const unsub = subscribeAllSessions(setSessions);
@@ -1001,6 +1230,33 @@ const ConversationsSection: React.FC<{
                 {messages.length === 0 && (
                   <div className="text-center text-xs text-gray-400 py-8">Hələ mesaj yoxdur</div>
                 )}
+                {(() => {
+                  const typingAtMs = (() => {
+                    const v: any = (current as any)?.customerTypingAt;
+                    if (!v) return 0;
+                    if (typeof v.seconds === 'number') return v.seconds * 1000;
+                    if (typeof v.toMillis === 'function') return v.toMillis();
+                    return 0;
+                  })();
+                  // Only show typing if flag is on AND signal is recent (< 8s)
+                  const isTyping =
+                    !!(current as any)?.customerTyping &&
+                    typingAtMs > 0 &&
+                    Date.now() - typingAtMs < 8000;
+                  if (!isTyping) return null;
+                  return (
+                    <div className="flex justify-start dv-typing-appear" data-testid="customer-typing-indicator">
+                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm flex items-center gap-2">
+                        <span className="text-[11px] font-medium text-gray-500">yazır</span>
+                        <span className="flex items-end gap-0.5 h-3">
+                          <span className="dv-dot" />
+                          <span className="dv-dot" style={{ animationDelay: '0.15s' }} />
+                          <span className="dv-dot" style={{ animationDelay: '0.3s' }} />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div ref={chatEndRef} />
               </div>
 

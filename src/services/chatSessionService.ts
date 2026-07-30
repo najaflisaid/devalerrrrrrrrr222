@@ -46,6 +46,9 @@ export interface ChatSessionMeta {
   contactCapturedAt?: any;         // Timestamp of first capture
   // WhatsApp-style read receipts
   lastReadByCustomerTs?: any;      // Timestamp: last time customer viewed the chat
+  // WhatsApp-style typing indicator
+  customerTyping?: boolean;
+  customerTypingAt?: any;          // Timestamp: last time customer input changed
 }
 
 export interface ChatSessionMessage {
@@ -181,6 +184,24 @@ export const markSessionRead = async (sessionId: string): Promise<void> => {
     });
   } catch {
     /* ignore — session may not exist yet */
+  }
+};
+
+// ────────── Typing indicator (WhatsApp-style "yazır…") ──────────
+
+/**
+ * Müştəri input yazdıqda çağırılır (throttled). Session sənədinə
+ * `customerTyping=true` və `customerTypingAt=serverTimestamp()` yazır.
+ * Admin panel bunu subscribeSession vasitəsi ilə real-time görür.
+ */
+export const setCustomerTyping = async (sessionId: string, typing: boolean): Promise<void> => {
+  try {
+    await updateDoc(doc(db, SESSIONS, sessionId), {
+      customerTyping: typing,
+      customerTypingAt: typing ? serverTimestamp() : null,
+    });
+  } catch {
+    /* ignore */
   }
 };
 

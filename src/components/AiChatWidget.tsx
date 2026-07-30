@@ -13,6 +13,7 @@ import {
   markSessionRead,
   detectContactInfo,
   captureSessionContact,
+  setCustomerTyping,
 } from '../services/chatSessionService';
 import { uploadImageToR2 } from '../services/imageUploadService';
 import { playCustomerReceiveSound, unlockChatAudio } from '../utils/chatSounds';
@@ -248,6 +249,33 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
   const [uploading, setUploading] = useState(false);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [sessionAiEnabled, setSessionAiEnabled] = useState(true);
+  const [sessionContactCaptured, setSessionContactCaptured] = useState(false);
+  const typingSentRef = useRef<number>(0);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInputTyping = React.useCallback((value: string) => {
+    setInput(value);
+    if (!sessionIdRef.current) return;
+    // Only signal typing if there's actual content being typed
+    if (value.trim().length === 0) {
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+      void setCustomerTyping(sessionIdRef.current, false);
+      typingSentRef.current = 0;
+      return;
+    }
+    const now = Date.now();
+    // Throttle: send "typing=true" at most once every 3 seconds
+    if (now - typingSentRef.current > 3000) {
+      typingSentRef.current = now;
+      void setCustomerTyping(sessionIdRef.current, true);
+    }
+    // Debounce clear: reset "typing" 4s after last keystroke
+    if (typingClearRef.current) clearTimeout(typingClearRef.current);
+    typingClearRef.current = setTimeout(() => {
+      if (sessionIdRef.current) void setCustomerTyping(sessionIdRef.current, false);
+      typingSentRef.current = 0;
+    }, 4000);
+  }, []);
   const productsRef = useRef<Product[]>([]);
   const knowledgeRef = useRef<AiKnowledge | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -446,7 +474,10 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
     void initSession(sessionIdRef.current, { language: lang });
 
     const unsubSession = subscribeSession(sessionIdRef.current, (s) => {
-      if (s) setSessionAiEnabled(s.aiEnabled !== false);
+      if (s) {
+        setSessionAiEnabled(s.aiEnabled !== false);
+        setSessionContactCaptured(!!s.contactCaptured);
+      }
     });
     const unsubMsgs = subscribeSessionMessages(sessionIdRef.current, (msgs) => {
       const adminMsgs = msgs.filter((m) => m.role === 'admin' && m.id);
@@ -534,6 +565,7 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
         knowledge: knowledgeRef.current || undefined,
         language: lang,
         sessionId: sessionIdRef.current,
+        contactCaptured: sessionContactCaptured,
       });
       setMessages((prev) => [...prev, { role: 'assistant', content: reply, ts: Date.now() }]);
       void logMessage(sessionIdRef.current, { role: 'assistant', content: reply });
@@ -558,6 +590,10 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
     const img = pendingImage;
     setInput('');
     setPendingImage(null);
+    // Clear typing indicator immediately on send
+    if (sessionIdRef.current) void setCustomerTyping(sessionIdRef.current, false);
+    if (typingClearRef.current) clearTimeout(typingClearRef.current);
+    typingSentRef.current = 0;
     void sendToServer(text, { imageUrl: img || undefined });
   };
 
@@ -835,7 +871,12 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
             </button>
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => handleInputTyping(e.target.value)}
+              onBlur={() => {
+                if (sessionIdRef.current) void setCustomerTyping(sessionIdRef.current, false);
+                if (typingClearRef.current) clearTimeout(typingClearRef.current);
+                typingSentRef.current = 0;
+              }}
               onFocus={unlockChatAudio}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

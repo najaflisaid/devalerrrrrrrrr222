@@ -107,3 +107,32 @@ Files:
 - `src/components/admin/AdminChatNotifier.tsx` — contact toast kind + distinct sound + sticky
 - `src/components/admin/AiConsultantTab.tsx` — read-receipt double-check, REAL badge, phone header, Sınaq button
 - `src/utils/chatSounds.ts` — `playContactCapturedSound` (5-note ascending)
+
+## 2026-01 · AI Konsultant — Typing indicator / Contacts CRM / AI prompt update
+1. **"Yazır…" indikatoru** (`customerTyping`, `customerTypingAt` fields):
+   - Customer widget: throttled write to Firestore on textarea change (max once/3s), auto-clear after 4s of inactivity, immediate clear on send/blur.
+   - Admin panel: subscribeSession already delivers the field; ConversationsSection re-renders every 2s via `typingTick` interval to hide stale indicators (>8s old). Animated 3-dot bubble via new CSS classes `dv-dot` / `dv-typing-appear` in `src/index.css`.
+
+2. **Kontaktlar CRM (yeni sub-tab)** — `ContactsSection` in `AiConsultantTab.tsx`:
+   - Real-time list of sessions with `contactCaptured=true`, sorted by `contactCapturedAt` desc.
+   - Search by name / phone / last message.
+   - Per-row actions: click-to-copy phone, WhatsApp deep link (`wa.me/…` with pre-filled greeting), `tel:` link, and jump-to-conversation (pre-selects session in Söhbətlər tab via `pendingSelect`).
+   - CSV export with UTF-8 BOM, opens in Excel with Azerbaijani characters intact.
+   - Empty state guides the admin about how contacts are captured.
+
+3. **AI system prompt update** (`api/chat.js`):
+   - Added a "📞 ƏLAQƏ MƏLUMATLARINI TOPLAMA" block to `DEVALEUR_PERSONA`.
+   - New `contactCaptured` flag in `POST /api/chat` request. Client (`aiChatService.ts` + `AiChatWidget.tsx`) sends it based on the live session state (`sessionContactCaptured`).
+   - Server computes `userTurnCount` from history and injects a contextual instruction:
+     - turn 1-2: "don't ask yet"
+     - turn 3-4: "now politely ask for name + WhatsApp — once, tied to sales advice"
+     - turn 5+: "if already asked and no answer, don't repeat"
+     - contactCaptured=true: "customer already shared; do NOT ask again"
+
+Files:
+- `src/services/chatSessionService.ts` — `setCustomerTyping` helper + `customerTyping/customerTypingAt` fields.
+- `src/components/AiChatWidget.tsx` — throttled typing signal on input, auto-clear on send/blur.
+- `src/components/admin/AiConsultantTab.tsx` — ContactsSection component + typing-bubble render + Kontaktlar sub-tab.
+- `src/index.css` — `dv-dot` / `dv-typing-appear` keyframes.
+- `src/services/aiChatService.ts` — pass `contactCaptured` to backend.
+- `api/chat.js` — extended persona + turn-aware `contactHint`.

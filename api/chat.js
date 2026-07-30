@@ -50,6 +50,14 @@ Müştəriyə hər hansı məhsul tövsiyə etdikdə, məhsulun TAM ID-si əsas�
 Kataloqda hər məhsul "ID:abcXYZ123 | brend — model..." formatında verilir.
 
 Bir cavabda maks 3 marker. Hər marker ayrı sətirdə.
+
+📞 ƏLAQƏ MƏLUMATLARINI TOPLAMA (SATIŞ QIZILU QAYDASI):
+- Müştəri ilə 2-3 sual/cavab mübadiləsindən sonra (yəni 3-cü və ya 4-cü AI cavabında) NƏZAKƏTLƏ ad və əlaqə nömrəsini soruş.
+- Bunu satış işi ilə bağla — "Sizə ən uyğun modelləri seçib, stok və endirim təsdiqi üçün WhatsApp/zəng ilə əlaqə saxlayaq" tipli təbii bir cümlə ilə.
+- ƏSLA basınc yaratma, təkidlə deyil. Bir dəfə soruş. Müştəri "sonra" desə bir də təkrarlama.
+- Formatlaşdırma nümunəsi: "Sizinlə uyğun modelləri müzakirə edib rezerv etmək üçün adınızı və WhatsApp nömrənizi paylaşa bilərsinizmi? Nömrəniz yalnız sifariş və məsləhət üçün istifadə olunacaq."
+- Əgər müştəri artıq öz-özündən nömrə/ad vermişsə, təşəkkür et və bir daha soruşma.
+- Nömrə soruşduğun cavabda MƏHSUL markeri (yəni [[PRODUCT:...]]) də əlavə edə bilərsən — soyuq deyil, məsləhətə bağlı olmalıdır.
 `;
 
 const formatProducts = (products, limit = 500) => {
@@ -198,6 +206,12 @@ export default async function handler(req, res) {
     const products = Array.isArray(body.products) ? body.products : [];
     const knowledge = body.knowledge || null;
     const language = body.language || 'az';
+    const contactAlreadyCaptured = !!body.contactCaptured;
+    // Count how many user turns have happened (including the current one).
+    const userTurnCount = Math.max(
+      1,
+      history.filter((h) => h && h.role === 'user').length + 1
+    );
 
     const langDirective =
       language === 'ru'
@@ -206,10 +220,19 @@ export default async function handler(req, res) {
         ? 'Cavab DİLİ: İngilis dilində.'
         : 'Cavab DİLİ: Azərbaycan dilində.';
 
+    const contactHint = contactAlreadyCaptured
+      ? '\n\n📌 SESSIYA DURUMU: Müştəri artıq ad/telefonunu paylaşıb. YENİDƏN SORUŞMA — sadəcə peşəkar cavab ver.'
+      : userTurnCount === 3 || userTurnCount === 4
+      ? '\n\n📌 SESSIYA DURUMU: Bu ' + userTurnCount + '-cü müştəri mesajıdır. Bu cavabında nəzakətlə ad və WhatsApp nömrəsini soruşmağın ən uyğun anıdır (bir dəfə, satış məsləhəti ilə bağlayaraq).'
+      : userTurnCount > 4
+      ? '\n\n📌 SESSIYA DURUMU: Bu ' + userTurnCount + '-cü müştəri mesajıdır. Əgər ad/telefon soruşmusansa və müştəri verməyibsə, TƏKRAR SORUŞMA. Yalnız məsləhət yönündə davam et.'
+      : '\n\n📌 SESSIYA DURUMU: Bu ' + userTurnCount + '-cü müştəri mesajıdır. Hələ nömrə soruşma — əvvəlcə ehtiyacı anla və 1-2 məhsul göstər.';
+
     const systemMessage =
       DEVALEUR_PERSONA +
       '\n\n' +
       langDirective +
+      contactHint +
       formatKnowledge(knowledge) +
       '\n\n' +
       catalogSummary(products) +
