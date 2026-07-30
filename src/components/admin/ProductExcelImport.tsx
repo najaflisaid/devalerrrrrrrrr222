@@ -588,11 +588,27 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
       });
 
       // ── 5) Faylda olmayan məhsulların stokunu 0-a endir (yalnız replace modunda)
+      //     ⚠️ YALNIZ faylda mövcud olan brendlərin məhsulları hədəflənir.
+      //     Məsələn, faylda yalnız "U.S. POLO ASSN." varsa, digər brendlərin
+      //     (Casio, Seiko və s.) məhsullarına toxunulmur — yalnız U.S. POLO
+      //     ASSN.-in fayla düşməyən məhsullarının stoku 0-a düşür.
       const zeroedOut: ImportResult['zeroedOut'] = [];
       if (zeroOutUnlisted && stockMode === 'replace') {
         const matchedIds = new Set<string>(updated.map((u) => u.product.id));
+        // Faylda görünən brendlər (normalize edilmiş)
+        const brandsInFile = new Set<string>();
+        rows.forEach((r) => {
+          if (r.brand) brandsInFile.add(norm(r.brand));
+        });
+        // Faylın həmçinin fayl-vasitəsilə yaradılan yeni məhsulların brendlərini də əhatə et
+        // (updated.product-lar üçün brend artıq matched Firestore məhsulundadır)
+        updated.forEach((u) => {
+          if (u.product?.brand) brandsInFile.add(norm(u.product.brand));
+        });
         for (const p of products) {
           if (matchedIds.has(p.id)) continue;
+          // Brend fayldakı brendlər siyahısında deyilsə — bu məhsula toxunma
+          if (!p.brand || !brandsInFile.has(norm(p.brand))) continue;
           const oldStock = typeof p.stock === 'number' ? p.stock : 0;
           if (oldStock === 0) continue; // dəyişiklik lazım deyil
           zeroedOut.push({ product: p, oldStock });
@@ -1004,10 +1020,11 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
             </span>
             <span className="block text-[11px] text-gray-600 mt-0.5">
               Yalnız <strong>Stoku yenilə (əvəz et)</strong> rejimində işləyir. Açıqdırsa,
-              fayl sizin <strong>tam inventarınızın</strong> əksi sayılır — Excel-də olmayan bütün
-              məhsulların stoku sıfırlanır. <span className="text-red-600 font-medium">Diqqətli olun</span>:
-              səhv fayl yükləsəniz, bütün qalan stoklar silinə bilər. Geri qaytarma jurnaldan
-              mümkündür.
+              yalnız <strong>fayldakı brendlərin</strong> məhsulları hədəflənir — faylda
+              olmayan həmin brend məhsullarının stoku 0-a düşür. Məsələn, faylda yalnız
+              <em> U.S. POLO ASSN.</em> varsa, digər brendlərə (Casio, Seiko və s.) toxunulmur.
+              <span className="text-red-600 font-medium"> Diqqətli olun</span>: səhv fayl yükləsəniz
+              həmin brendlərin stoku silinə bilər. Geri qaytarma jurnaldan mümkündür.
             </span>
           </span>
         </label>
@@ -1241,7 +1258,7 @@ const ProductExcelImport: React.FC<Props> = ({ products, onDone }) => {
                 <AlertTriangle className="h-4 w-4 text-red-600" />
                 Stoku 0-a endiriləcək ({result.zeroedOut.length})
                 <span className="text-[11px] text-gray-500 font-normal">
-                  — faylda olmayan məhsullar, tam sinxronizasiya
+                  — yalnız fayldakı brendlərin məhsulları
                 </span>
               </p>
               <div className="max-h-60 overflow-y-auto border border-red-100 rounded-lg divide-y divide-gray-100 bg-white">

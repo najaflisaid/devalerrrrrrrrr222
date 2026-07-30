@@ -1,0 +1,27 @@
+{
+  "summary": "Code-level verification of brand-scoped zero-out logic in ProductExcelImport.tsx. Admin UI credentials not available, so per the review request, static code review was performed on the specific logic block (lines 590-616) plus UI labels/testids. Logic correctly filters zeroedOut to only include products whose brand appears in the uploaded Excel file, using normalized (lowercased/trimmed/space-collapsed) brand comparison. Simulation trace with the provided 3-product scenario produces the expected result (only p2 zeroed out; Casio product p3 untouched).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Logic at lines 590-616 is correct: brandsInFile Set is built from rows (Excel) + matched updated products, then the zero-out loop skips any product whose normalized brand is NOT in that Set. This correctly satisfies the requirement.",
+    "norm() at line 153 provides case-insensitive/whitespace-insensitive brand matching — good.",
+    "UI label at lines 1019-1028 clearly communicates the new brand-scoped behavior in Azerbaijani with a U.S. POLO ASSN. example. Preview subtitle at line 1261 also reflects this. Good UX.",
+    "Edge case (informational, not a bug): if a product in the DB has empty/undefined brand, it is intentionally skipped (line 611) — correct given the requirement.",
+    "Edge case (informational): brands are also added from matched updated products (lines 605-607). This is a safety net so that if the Excel matched a product via SKU/name but the brand column was blank in that row, the brand is still considered 'in file'. Reasonable defensive behavior."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100% (code review)" },
+  "test_credentials": "No admin credentials available in /app/memory/test_credentials.md for the admin panel; UI-level test skipped as permitted by the review request.",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Change is a small logic tweak in /app/src/components/admin/ProductExcelImport.tsx lines 590-616 (brandsInFile Set filter). Simulation trace: products [p1 U.S.POLO stock5, p2 U.S.POLO stock10, p3 Casio stock3] + Excel row matching p1 with brand 'U.S. POLO ASSN.' produces zeroedOut=[p2] only. p3 (Casio) correctly excluded. UI shows brand scope in labels and preview subtitle. All required data-testids present.",
+  "rca of the issue": "Not applicable — this was a feature enhancement verification, not a bug RCA."
+}
