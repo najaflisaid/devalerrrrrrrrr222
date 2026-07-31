@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Download, Share2, Loader2, Check, ImageOff } from 'lucide-react';
+import { X, Download, Share2, Loader2, Check, ImageOff, Video, Image as ImageIcon } from 'lucide-react';
 import type { Product } from '../../types';
 import {
   getCreditConfig,
@@ -97,9 +97,14 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
   const [rendering, setRendering] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [imgError, setImgError] = useState(false);
-  const [busy, setBusy] = useState<null | 'download' | 'share'>(null);
+  const [busy, setBusy] = useState<null | 'download' | 'share' | 'video'>(null);
   const [copiedNote, setCopiedNote] = useState(false);
+  const [watermark, setWatermark] = useState(true); // DE VALEUR logo overlay
+  const [videoUrl, setVideoUrl] = useState<string>(''); // generated MP4/WebM blob URL
+  const [videoProgress, setVideoProgress] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Loaded product image cached so we don't refetch when template changes
+  const productImgRef = useRef<HTMLImageElement | null>(null);
 
   // Fetch credit config once when modal opens
   useEffect(() => {
@@ -152,21 +157,54 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Attempt product image (may fail if CORS blocked on this URL)
-      let productImg: HTMLImageElement | null = null;
-      try {
-        productImg = await loadImage(imageUrl);
-      } catch {
-        setImgError(true);
+      // Cache product image to speed up re-renders (template/watermark change)
+      if (!productImgRef.current || productImgRef.current.src !== imageUrl) {
+        try {
+          productImgRef.current = await loadImage(imageUrl);
+        } catch {
+          productImgRef.current = null;
+          setImgError(true);
+        }
       }
+      const productImg = productImgRef.current;
 
       drawTemplate(ctx, template, productImg);
+      if (watermark) drawWatermark(ctx, template);
 
       const dataUrl = canvas.toDataURL('image/png');
       setPreviewUrl(dataUrl);
     } finally {
       setRendering(false);
     }
+  };
+
+  /**
+   * Elegant "DE VALEUR" wordmark in a corner, half-transparent so it doesn't
+   * overpower the design. Colour adapts to template (light bg = dark ink,
+   * dark bg = gold ink).
+   */
+  const drawWatermark = (ctx: CanvasRenderingContext2D, tpl: TemplateKey) => {
+    const isDark = tpl === 'noir' || tpl === 'gold';
+    ctx.save();
+    // Anchor at bottom-left, above the site footer line
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.globalAlpha = isDark ? 0.55 : 0.4;
+    ctx.fillStyle = isDark ? '#C9A24A' : '#111';
+
+    // Small decorative mark (◆) — the DE VALEUR diamond
+    ctx.font = '400 34px "Playfair Display", Georgia, serif';
+    ctx.fillText('◆', 60, H - 66);
+
+    // Wordmark
+    ctx.font = '500 22px "Inter", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('DE  VALEUR', 105, H - 70);
+
+    // Tag under wordmark
+    ctx.globalAlpha = isDark ? 0.35 : 0.25;
+    ctx.font = '400 14px "Inter", Arial, sans-serif';
+    ctx.fillText('Luxury  ·  since  2020', 105, H - 48);
+    ctx.restore();
   };
 
   // Draw specific template
@@ -584,7 +622,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     if (!open) return;
     render();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, template, imageUrl, price, originalPrice, brand, productName, monthlyForSix, sixMonthRate]);
+  }, [open, template, imageUrl, price, originalPrice, brand, productName, monthlyForSix, sixMonthRate, watermark]);
 
   const filename = useMemo(() => {
     const safe = (s: string) =>
@@ -654,6 +692,214 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       setBusy(null);
     }
   };
+
+  // ─────────────────── Generate animated Story VIDEO (5s) ───────────────────
+  /**
+   * Renders a 5-second animation on the canvas and captures it via
+   * MediaRecorder → produces a WebM/MP4 blob suitable for uploading to
+   * Instagram Story. Animation timeline:
+   *   0.00–0.60s  → product image fades in + gently scales up
+   *   0.30–0.90s  → brand name slides down from above
+   *   0.60–1.20s  → product name slides up
+   *   0.90–1.50s  → price counts up
+   *   1.30s+      → credit block reveals with gold shimmer looping
+   *   4.30–5.00s  → gentle exit shimmer
+   *
+   * We restart the animation loop until the recorder stops at 5s. The
+   * template drawing is called per-frame with alpha/transform states.
+   */
+  const generateVideo = async () => {
+    if (!canvasRef.current) return;
+    setBusy('video');
+    setVideoProgress(0);
+    setVideoUrl('');
+
+    try {
+      // Preload product image
+      let productImg: HTMLImageElement | null = productImgRef.current;
+      if (!productImg || productImg.src !== imageUrl) {
+        try {
+          productImg = await loadImage(imageUrl);
+          productImgRef.current = productImg;
+        } catch {
+          productImg = null;
+          setImgError(true);
+        }
+      }
+      try {
+        await (document as any).fonts?.ready;
+      } catch {
+        /* ignore */
+      }
+
+      const canvas = canvasRef.current;
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Pick best supported mime type — MP4 first (iOS Instagram), then WebM
+      const candidates = [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+      ];
+      let mimeType = '';
+      for (const c of candidates) {
+        if ((window as any).MediaRecorder?.isTypeSupported?.(c)) {
+          mimeType = c;
+          break;
+        }
+      }
+      if (!mimeType) {
+        alert('Bu brauzer video yazmağı dəstəkləmir. Chrome, Safari 14.1+ və ya Firefox istifadə edin.');
+        return;
+      }
+
+      const stream = (canvas as any).captureStream(30);
+      const chunks: Blob[] = [];
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const finished = new Promise<Blob>((resolve) => {
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          resolve(blob);
+        };
+      });
+
+      const durationMs = 5000;
+      const startAt = performance.now();
+      let stopped = false;
+
+      // Easing helpers
+      const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+      const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+      // Draw a single animated frame
+      const drawFrame = (t: number) => {
+        // 1) Base template (this fills the whole canvas)
+        drawTemplate(ctx, template, productImg);
+
+        // 2) Overlay animation layers on top based on `t` (0..1)
+        // Fade-in "curtain" that reveals gradually
+        if (t < 0.15) {
+          const a = 1 - easeOut(t / 0.15);
+          ctx.save();
+          ctx.fillStyle = template === 'noir' || template === 'gold' ? '#000' : '#fff';
+          ctx.globalAlpha = a;
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+        }
+
+        // Subtle vertical shimmer bar sweeping across the price band
+        // (from t=0.55 to end, looping)
+        const shimmerStart = 0.55;
+        if (t > shimmerStart) {
+          const st = ((t - shimmerStart) / 0.45) % 1; // 0..1 loop
+          const bandCenter = W * st;
+          const grad = ctx.createLinearGradient(bandCenter - 250, 0, bandCenter + 250, 0);
+          grad.addColorStop(0, 'rgba(201,162,74,0)');
+          grad.addColorStop(0.5, 'rgba(201,162,74,0.22)');
+          grad.addColorStop(1, 'rgba(201,162,74,0)');
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = grad;
+          // Only shimmer over the lower half where the credit block lives
+          ctx.fillRect(0, H * 0.55, W, H * 0.35);
+          ctx.restore();
+        }
+
+        // Final gentle vignette fade at very end
+        if (t > 0.92) {
+          const a = clamp01((t - 0.92) / 0.08) * 0.15;
+          ctx.save();
+          ctx.fillStyle = template === 'noir' || template === 'gold' ? '#000' : '#fff';
+          ctx.globalAlpha = a;
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+        }
+
+        // Watermark on top last
+        if (watermark) drawWatermark(ctx, template);
+      };
+
+      const loop = () => {
+        if (stopped) return;
+        const elapsed = performance.now() - startAt;
+        const t = clamp01(elapsed / durationMs);
+        drawFrame(t);
+        setVideoProgress(Math.round(t * 100));
+        if (elapsed < durationMs) {
+          requestAnimationFrame(loop);
+        }
+      };
+
+      recorder.start(200);
+      loop();
+
+      await new Promise<void>((r) => setTimeout(r, durationMs + 120));
+      stopped = true;
+      recorder.stop();
+
+      const blob = await finished;
+      const url = URL.createObjectURL(blob);
+      setVideoUrl(url);
+      setVideoProgress(100);
+    } catch (e) {
+      console.error(e);
+      alert('Video yaradılmadı. Bir daha cəhd edin.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDownloadVideo = () => {
+    if (!videoUrl) return;
+    const a = document.createElement('a');
+    a.href = videoUrl;
+    // Determine extension from URL: browsers may deliver mp4 or webm
+    const ext = videoUrl.includes('mp4') ? 'mp4' : 'webm';
+    a.download = filename.replace(/\.png$/, `.${ext}`);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleShareVideo = async () => {
+    if (!videoUrl) return;
+    try {
+      const res = await fetch(videoUrl);
+      const blob = await res.blob();
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], filename.replace(/\.png$/, `.${ext}`), { type: blob.type });
+      const nav: any = navigator;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await nav.share({
+          files: [file],
+          title: `${brand} — ${productName}`,
+          text: `${brand} — ${productName}`,
+        });
+      } else {
+        handleDownloadVideo();
+      }
+    } catch {
+      handleDownloadVideo();
+    }
+  };
+
+  // Cleanup video blob URL when modal closes / component unmounts
+  useEffect(() => {
+    if (!open && videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+      setVideoUrl('');
+      setVideoProgress(0);
+    }
+  }, [open, videoUrl]);
 
   if (!open) return null;
 
@@ -742,6 +988,35 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                 </p>
               )}
             </div>
+
+            {/* Watermark toggle */}
+            <div className="pt-3 mt-3 border-t border-black/10">
+              <label
+                className="flex items-center justify-between gap-2 cursor-pointer select-none"
+                data-testid="story-watermark-toggle-wrap"
+              >
+                <div>
+                  <p className="text-sm font-medium text-gray-900">DE VALEUR watermark</p>
+                  <p className="text-[11px] text-gray-500">İncə brend imzası əlavə et</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={watermark}
+                  onClick={() => setWatermark((v) => !v)}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    watermark ? 'bg-gray-900' : 'bg-gray-300'
+                  }`}
+                  data-testid="story-watermark-toggle"
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      watermark ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
           </div>
 
           {/* Preview */}
@@ -776,33 +1051,103 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
         </div>
 
         {/* Footer actions */}
-        <div className="border-t border-black/10 p-4 flex flex-col sm:flex-row gap-2">
-          <button
-            onClick={handleDownload}
-            disabled={rendering || !previewUrl || busy === 'download'}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50"
-            data-testid="story-share-download"
-          >
-            {busy === 'download' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="border-t border-black/10 p-4 space-y-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleDownload}
+              disabled={rendering || !previewUrl || busy === 'download'}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              data-testid="story-share-download"
+            >
+              {busy === 'download' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              PNG yüklə
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={rendering || !previewUrl || busy === 'share'}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-black disabled:opacity-50"
+              data-testid="story-share-instagram"
+            >
+              {busy === 'share' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Share2 className="h-4 w-4" />
+              )}
+              PNG paylaş
+            </button>
+          </div>
+
+          {/* Video Story row */}
+          <div className="pt-2 border-t border-dashed border-black/10">
+            {!videoUrl ? (
+              <button
+                onClick={generateVideo}
+                disabled={rendering || busy === 'video'}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#111] via-[#3a2c14] to-[#C9A24A] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50"
+                data-testid="story-video-generate"
+              >
+                {busy === 'video' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Video yaradılır {videoProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4" />
+                    5 saniyəlik animasiyalı video yarat
+                  </>
+                )}
+              </button>
             ) : (
-              <Download className="h-4 w-4" />
+              <div className="space-y-2" data-testid="story-video-ready">
+                <div className="rounded-lg overflow-hidden bg-black">
+                  <video
+                    src={videoUrl}
+                    className="w-full max-h-48 mx-auto"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      URL.revokeObjectURL(videoUrl);
+                      setVideoUrl('');
+                      setVideoProgress(0);
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg hover:bg-gray-50"
+                    data-testid="story-video-reset"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Yenidən
+                  </button>
+                  <button
+                    onClick={handleDownloadVideo}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg hover:bg-gray-50"
+                    data-testid="story-video-download"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Yüklə
+                  </button>
+                  <button
+                    onClick={handleShareVideo}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-black"
+                    data-testid="story-video-share"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    Paylaş
+                  </button>
+                </div>
+              </div>
             )}
-            Yüklə (PNG)
-          </button>
-          <button
-            onClick={handleShare}
-            disabled={rendering || !previewUrl || busy === 'share'}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-black disabled:opacity-50"
-            data-testid="story-share-instagram"
-          >
-            {busy === 'share' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Share2 className="h-4 w-4" />
-            )}
-            Paylaş
-          </button>
+          </div>
         </div>
       </div>
     </div>
