@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   History,
   AlertCircle,
+  Store,
+  MapPin,
+  Package,
 } from 'lucide-react';
 import {
   listCouriers,
@@ -26,6 +29,13 @@ import {
 } from '../../services/courierService';
 import { getRecentlySignedB2BOrders } from '../../services/b2bOrderService';
 import { getRecentlySignedRetailOrders } from '../../services/customerOrderService';
+import {
+  createManualDelivery,
+  listAllManualDeliveries,
+  deleteManualDelivery,
+  ManualDelivery,
+  ManualDeliveryItem,
+} from '../../services/manualDeliveryService';
 
 const CourierManagementTab: React.FC = () => {
   const [couriers, setCouriers] = useState<Courier[]>([]);
@@ -50,18 +60,33 @@ const CourierManagementTab: React.FC = () => {
   const [b2bSigned, setB2bSigned] = useState<any[]>([]);
   const [retailSigned, setRetailSigned] = useState<any[]>([]);
 
+  // ─── Manual store deliveries ───
+  const [manuals, setManuals] = useState<ManualDelivery[]>([]);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [mCustomerName, setMCustomerName] = useState('');
+  const [mCustomerPhone, setMCustomerPhone] = useState('');
+  const [mCustomerAddress, setMCustomerAddress] = useState('');
+  const [mNotes, setMNotes] = useState('');
+  const [mAssignedEmail, setMAssignedEmail] = useState('');
+  const [mItems, setMItems] = useState<ManualDeliveryItem[]>([
+    { productName: '', quantity: 1, note: '' },
+  ]);
+  const [mSaving, setMSaving] = useState(false);
+
   const reload = async () => {
     setLoading(true);
     setError('');
     try {
-      const [c, b, r] = await Promise.all([
+      const [c, b, r, m] = await Promise.all([
         listCouriers(),
         getRecentlySignedB2BOrders(30),
         getRecentlySignedRetailOrders(30),
+        listAllManualDeliveries(),
       ]);
       setCouriers(c);
       setB2bSigned(b);
       setRetailSigned(r);
+      setManuals(m);
     } catch (e: any) {
       setError(e?.message || 'Yüklənmədi');
     } finally {
@@ -141,6 +166,59 @@ const CourierManagementTab: React.FC = () => {
       else next.add(id);
       return next;
     });
+  };
+
+  // ─── Manual delivery handlers ───
+  const updateManualItem = (i: number, patch: Partial<ManualDeliveryItem>) => {
+    setMItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  };
+  const addManualItem = () =>
+    setMItems((arr) => [...arr, { productName: '', quantity: 1, note: '' }]);
+  const removeManualItem = (i: number) =>
+    setMItems((arr) => (arr.length > 1 ? arr.filter((_, idx) => idx !== i) : arr));
+
+  const resetManualForm = () => {
+    setMCustomerName('');
+    setMCustomerPhone('');
+    setMCustomerAddress('');
+    setMNotes('');
+    setMAssignedEmail('');
+    setMItems([{ productName: '', quantity: 1, note: '' }]);
+  };
+
+  const handleCreateManual = async () => {
+    setError('');
+    setMSaving(true);
+    try {
+      const assigned = couriers.find((c) => c.email === mAssignedEmail);
+      await createManualDelivery({
+        customerName: mCustomerName,
+        customerPhone: mCustomerPhone,
+        customerAddress: mCustomerAddress,
+        notes: mNotes,
+        items: mItems,
+        assignedCourierEmail: assigned?.email,
+        assignedCourierName: assigned?.name,
+      });
+      resetManualForm();
+      setShowManualForm(false);
+      await reload();
+    } catch (e: any) {
+      setError(e?.message || 'Yaradılmadı');
+    } finally {
+      setMSaving(false);
+    }
+  };
+
+  const handleDeleteManual = async (id: string, name: string) => {
+    if (!confirm(`"${name}" çatdırılmasını silmək istədiyinizə əminsiniz?`)) return;
+    setError('');
+    try {
+      await deleteManualDelivery(id);
+      await reload();
+    } catch (e: any) {
+      setError(e?.message || 'Silinmədi');
+    }
   };
 
   const allSigned = [
@@ -391,6 +469,296 @@ const CourierManagementTab: React.FC = () => {
         )}
       </div>
 
+      {/* Manual store deliveries — items NOT on site but delivered from the shop */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-600 text-white flex items-center justify-center">
+              <Store className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Mağazadan çatdırılmalar</h2>
+              <p className="text-xs text-gray-500">
+                Saytda olmayan malı kuryerə tapşır — imzalanır və qeydə alınır
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowManualForm((v) => !v)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700"
+            data-testid="manual-delivery-toggle"
+          >
+            <Plus className="h-4 w-4" />
+            {showManualForm ? 'Bağla' : 'Yeni çatdırılma'}
+          </button>
+        </div>
+
+        {showManualForm && (
+          <div
+            className="mb-5 p-4 border border-dashed border-amber-300 rounded-xl bg-amber-50/40 space-y-3"
+            data-testid="manual-delivery-form"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FieldInput
+                icon={<UserIcon className="h-4 w-4 text-gray-400" />}
+                placeholder="Müştəri adı"
+                value={mCustomerName}
+                onChange={setMCustomerName}
+                testId="manual-customer-name"
+              />
+              <FieldInput
+                icon={<Phone className="h-4 w-4 text-gray-400" />}
+                placeholder="Telefon"
+                value={mCustomerPhone}
+                onChange={setMCustomerPhone}
+                testId="manual-customer-phone"
+              />
+              <div className="md:col-span-2 relative">
+                <span className="absolute left-3 top-3">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                </span>
+                <textarea
+                  value={mCustomerAddress}
+                  onChange={(e) => setMCustomerAddress(e.target.value)}
+                  placeholder="Çatdırılma ünvanı"
+                  rows={2}
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white resize-none"
+                  data-testid="manual-customer-address"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Kuryerə tapşır (opsional)
+                </label>
+                <select
+                  value={mAssignedEmail}
+                  onChange={(e) => setMAssignedEmail(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                  data-testid="manual-assigned-courier"
+                >
+                  <option value="">— Hər aktiv kuryer görsün —</option>
+                  {couriers
+                    .filter((c) => c.isActive)
+                    .map((c) => (
+                      <option key={c.id} value={c.email}>
+                        {c.name} — {c.email}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="border-t border-amber-200 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" />
+                  Məhsullar
+                </label>
+                <button
+                  type="button"
+                  onClick={addManualItem}
+                  className="text-xs font-semibold text-amber-700 hover:text-amber-900 inline-flex items-center gap-1"
+                  data-testid="manual-item-add"
+                >
+                  <Plus className="h-3 w-3" /> Sətir əlavə et
+                </button>
+              </div>
+              <div className="space-y-2">
+                {mItems.map((it, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-start" data-testid={`manual-item-row-${i}`}>
+                    <input
+                      value={it.productName}
+                      onChange={(e) => updateManualItem(i, { productName: e.target.value })}
+                      placeholder="Məhsulun adı"
+                      className="col-span-6 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                      data-testid={`manual-item-name-${i}`}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={it.quantity}
+                      onChange={(e) => updateManualItem(i, { quantity: Number(e.target.value) })}
+                      placeholder="Say"
+                      className="col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                      data-testid={`manual-item-qty-${i}`}
+                    />
+                    <input
+                      value={it.note || ''}
+                      onChange={(e) => updateManualItem(i, { note: e.target.value })}
+                      placeholder="Qeyd (opsional)"
+                      className="col-span-3 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                      data-testid={`manual-item-note-${i}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeManualItem(i)}
+                      className="col-span-1 p-2 text-red-500 hover:text-red-700 disabled:opacity-30"
+                      disabled={mItems.length <= 1}
+                      data-testid={`manual-item-remove-${i}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <textarea
+                value={mNotes}
+                onChange={(e) => setMNotes(e.target.value)}
+                placeholder="Əlavə qeyd (məs: təhvil vaxtı, açar sözlər...)"
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white resize-none"
+                data-testid="manual-notes"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => {
+                  resetManualForm();
+                  setShowManualForm(false);
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                Ləğv et
+              </button>
+              <button
+                onClick={handleCreateManual}
+                disabled={mSaving || !mCustomerName || !mCustomerAddress}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 disabled:bg-gray-300"
+                data-testid="manual-delivery-save"
+              >
+                {mSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Kuryerə tapşır
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Manual deliveries list */}
+        {manuals.length === 0 ? (
+          <div
+            className="text-center py-8 text-gray-500 text-sm"
+            data-testid="manual-deliveries-empty"
+          >
+            Hələ mağazadan çatdırılma əlavə edilməyib.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {manuals.map((m) => {
+              const isDelivered = m.status === 'delivered';
+              return (
+                <div
+                  key={m.id}
+                  className={`border rounded-xl p-3 ${
+                    isDelivered
+                      ? 'border-emerald-200 bg-emerald-50/40'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                  data-testid={`manual-row-${m.id}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-gray-900 text-white">
+                          #{m.orderNumber}
+                        </span>
+                        {isDelivered ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" /> Təhvil verildi
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-amber-700">
+                            Gözləyir
+                          </span>
+                        )}
+                        {m.assignedCourierName && (
+                          <span className="text-[11px] text-gray-500">
+                            → {m.assignedCourierName}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">{m.customerName}</p>
+                      <div className="text-xs text-gray-600 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                        {m.customerPhone && (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {m.customerPhone}
+                          </span>
+                        )}
+                        {m.customerAddress && (
+                          <span className="inline-flex items-start gap-1">
+                            <MapPin className="h-3 w-3 mt-0.5" />
+                            <span>{m.customerAddress}</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        {m.items.length} məhsul ·{' '}
+                        {m.items
+                          .slice(0, 3)
+                          .map((i) => `${i.productName} ×${i.quantity}`)
+                          .join(', ')}
+                        {m.items.length > 3 ? '...' : ''}
+                      </p>
+                      {isDelivered && m.receiverName && (
+                        <div className="mt-2 pt-2 border-t border-emerald-200 text-[11px] text-gray-700 space-y-1">
+                          <p>
+                            Təhvil aldı:{' '}
+                            <span className="font-semibold">
+                              {m.receiverName} {m.receiverSurname}
+                            </span>
+                            {m.receiverPosition ? ` — ${m.receiverPosition}` : ''}
+                          </p>
+                          <div className="flex gap-3">
+                            {m.receiverSignature && (
+                              <div>
+                                <p className="text-[10px] text-gray-500 mb-0.5">Müştəri</p>
+                                <img
+                                  src={m.receiverSignature}
+                                  alt="receiver signature"
+                                  className="h-12 bg-white border border-gray-200 rounded p-0.5"
+                                />
+                              </div>
+                            )}
+                            {m.courierSignature && (
+                              <div>
+                                <p className="text-[10px] text-gray-500 mb-0.5">
+                                  Kuryer{m.courierName ? ` (${m.courierName})` : ''}
+                                </p>
+                                <img
+                                  src={m.courierSignature}
+                                  alt="courier signature"
+                                  className="h-12 bg-white border border-gray-200 rounded p-0.5"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteManual(m.id, m.customerName)}
+                      className="p-1.5 bg-red-50 text-red-700 rounded-md hover:bg-red-100 flex-shrink-0"
+                      data-testid={`manual-delete-${m.id}`}
+                      title="Sil"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Recent signatures */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -441,12 +809,31 @@ const CourierManagementTab: React.FC = () => {
                       <span className="text-gray-500"> — {o.receiverPosition}</span>
                     )}
                   </p>
-                  {o.receiverSignature && (
-                    <img
-                      src={o.receiverSignature}
-                      alt="signature"
-                      className="mt-2 h-16 bg-white border border-gray-200 rounded p-1"
-                    />
+                  {(o.receiverSignature || o.courierSignature) && (
+                    <div className="mt-2 flex gap-3">
+                      {o.receiverSignature && (
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-0.5">Müştəri</p>
+                          <img
+                            src={o.receiverSignature}
+                            alt="receiver signature"
+                            className="h-14 bg-white border border-gray-200 rounded p-1"
+                          />
+                        </div>
+                      )}
+                      {o.courierSignature && (
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-0.5">
+                            Kuryer{o.courierName ? ` (${o.courierName})` : ''}
+                          </p>
+                          <img
+                            src={o.courierSignature}
+                            alt="courier signature"
+                            className="h-14 bg-white border border-gray-200 rounded p-1"
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               );

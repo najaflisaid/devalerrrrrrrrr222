@@ -14,6 +14,9 @@ import {
   History,
   ShoppingBag,
   Building2,
+  Store,
+  MapPin,
+  Phone,
 } from 'lucide-react';
 import {
   getCustomersWithPendingDeliveries,
@@ -28,13 +31,19 @@ import {
   saveCustomerReceiverSignature,
 } from '../services/customerOrderService';
 import {
+  listPendingManualDeliveriesForCourier,
+  getRecentlySignedManualDeliveries,
+  signManualDelivery,
+  ManualDelivery,
+} from '../services/manualDeliveryService';
+import {
   loginCourier,
   logoutCourier,
   getCurrentCourierSession,
   CourierSession,
 } from '../services/courierService';
 
-type SectionKey = 'b2b' | 'retail';
+type SectionKey = 'b2b' | 'retail' | 'manual';
 
 interface PendingCustomer {
   email: string;
@@ -63,6 +72,10 @@ const DeliveryPage: React.FC = () => {
   const [retailCustomers, setRetailCustomers] = useState<PendingCustomer[]>([]);
   const [b2bRecent, setB2bRecent] = useState<any[]>([]);
   const [retailRecent, setRetailRecent] = useState<any[]>([]);
+  // Manual store deliveries (added by admin; NOT tied to a website product)
+  const [manualPending, setManualPending] = useState<ManualDelivery[]>([]);
+  const [manualRecent, setManualRecent] = useState<ManualDelivery[]>([]);
+  const [selectedManual, setSelectedManual] = useState<ManualDelivery | null>(null);
 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -77,9 +90,14 @@ const DeliveryPage: React.FC = () => {
   const [receiverPosition, setReceiverPosition] = useState('');
   const [receiverPhone, setReceiverPhone] = useState('');
 
+  // Receiver (customer) signature pad
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
   const [hasInk, setHasInk] = useState(false);
+  // Courier's own signature pad (captured together with the receiver's)
+  const courierCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isCourierDrawingRef = useRef(false);
+  const [hasCourierInk, setHasCourierInk] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -91,16 +109,20 @@ const DeliveryPage: React.FC = () => {
     setLoading(true);
     (async () => {
       try {
-        const [b2bList, retailList, b2bHist, retailHist] = await Promise.all([
+        const [b2bList, retailList, b2bHist, retailHist, manualList, manualHist] = await Promise.all([
           getCustomersWithPendingDeliveries(),
           getRetailCustomersWithPendingDeliveries(),
           getRecentlySignedB2BOrders(3),
           getRecentlySignedRetailOrders(3),
+          listPendingManualDeliveriesForCourier(session.email),
+          getRecentlySignedManualDeliveries(3),
         ]);
         setB2bCustomers(b2bList as any);
         setRetailCustomers(retailList as any);
         setB2bRecent(b2bHist);
         setRetailRecent(retailHist);
+        setManualPending(manualList);
+        setManualRecent(manualHist);
       } catch (e: any) {
         setError(e?.message || 'Məlumatlar yüklənmədi');
       } finally {
@@ -110,7 +132,8 @@ const DeliveryPage: React.FC = () => {
   }, [session, reloadTick]);
 
   const customers = section === 'b2b' ? b2bCustomers : retailCustomers;
-  const recentSigned = section === 'b2b' ? b2bRecent : retailRecent;
+  const recentSigned =
+    section === 'b2b' ? b2bRecent : section === 'retail' ? retailRecent : manualRecent;
 
   const filteredCustomers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -144,10 +167,20 @@ const DeliveryPage: React.FC = () => {
     }
   };
 
+  // ───────────────────── Manual delivery selected ─────────────────────
+  const onSelectManual = (m: ManualDelivery) => {
+    setSelectedManual(m);
+    setSelectedCustomer(null);
+    setSelectedOrder(null);
+    setAllOrdersForCustomer([]);
+    setError('');
+  };
+
   // ───────────────────── Canvas drawing ─────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !selectedOrder) return;
+    if (!canvas) return;
+    if (!selectedOrder && !selectedManual) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -206,7 +239,72 @@ const DeliveryPage: React.FC = () => {
       canvas.removeEventListener('touchmove', move);
       canvas.removeEventListener('touchend', stop);
     };
-  }, [selectedOrder]);
+  }, [selectedOrder, selectedManual]);
+
+  // Courier signature canvas — same drawing behaviour, separate refs
+  useEffect(() => {
+    const canvas = courierCanvasRef.current;
+    if (!canvas) return;
+    if (!selectedOrder && !selectedManual) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#111';
+
+    const getPos = (e: MouseEvent | TouchEvent) => {
+      const r = canvas.getBoundingClientRect();
+      const evt: any =
+        (e as TouchEvent).touches?.[0] ||
+        (e as TouchEvent).changedTouches?.[0] ||
+        e;
+      return { x: evt.clientX - r.left, y: evt.clientY - r.top };
+    };
+
+    const start = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      isCourierDrawingRef.current = true;
+      setHasCourierInk(true);
+      const { x, y } = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    };
+    const move = (e: MouseEvent | TouchEvent) => {
+      if (!isCourierDrawingRef.current) return;
+      e.preventDefault();
+      const { x, y } = getPos(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    };
+    const stop = () => {
+      isCourierDrawingRef.current = false;
+    };
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', stop);
+    canvas.addEventListener('mouseleave', stop);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', stop);
+
+    return () => {
+      canvas.removeEventListener('mousedown', start);
+      canvas.removeEventListener('mousemove', move);
+      canvas.removeEventListener('mouseup', stop);
+      canvas.removeEventListener('mouseleave', stop);
+      canvas.removeEventListener('touchstart', start);
+      canvas.removeEventListener('touchmove', move);
+      canvas.removeEventListener('touchend', stop);
+    };
+  }, [selectedOrder, selectedManual]);
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -217,44 +315,69 @@ const DeliveryPage: React.FC = () => {
     setHasInk(false);
   };
 
+  const clearCourierCanvas = () => {
+    const canvas = courierCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasCourierInk(false);
+  };
+
   const handleSubmit = async () => {
     setError('');
-    if (!selectedOrder || !canvasRef.current) return;
+    if (!canvasRef.current || !courierCanvasRef.current) return;
+    if (!selectedOrder && !selectedManual) return;
     if (!receiverName.trim() || !receiverSurname.trim() || !receiverPosition.trim()) {
       setError('Ad, soyad və vəzifə sahələri məcburidir.');
       return;
     }
     if (!hasInk) {
-      setError('Zəhmət olmasa imzanı çəkin.');
+      setError('Zəhmət olmasa müştəri imzasını çəkdirin.');
+      return;
+    }
+    if (!hasCourierInk) {
+      setError('Kuryer olaraq siz də imzalamalısınız.');
       return;
     }
 
     setSubmitting(true);
     try {
       const dataUrl = canvasRef.current.toDataURL('image/png');
+      const courierDataUrl = courierCanvasRef.current.toDataURL('image/png');
+      const courierInfo = {
+        courierSignature: courierDataUrl,
+        courierEmail: session?.email || '',
+        courierName: session?.name || '',
+      };
       const payload = {
         receiverName,
         receiverSurname,
         receiverPosition,
         receiverPhone,
         receiverSignature: dataUrl,
+        ...courierInfo,
       };
-      if (section === 'b2b') {
-        await saveReceiverSignature(selectedOrder.id, payload);
+      if (selectedManual) {
+        await signManualDelivery(selectedManual.id, payload as any);
+      } else if (section === 'b2b') {
+        await saveReceiverSignature(selectedOrder!.id, payload);
       } else {
-        await saveCustomerReceiverSignature(selectedOrder.id, payload);
+        await saveCustomerReceiverSignature(selectedOrder!.id, payload);
       }
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
         setSelectedOrder(null);
         setSelectedCustomer(null);
+        setSelectedManual(null);
         setAllOrdersForCustomer([]);
         setReceiverName('');
         setReceiverSurname('');
         setReceiverPosition('');
         setReceiverPhone('');
         setHasInk(false);
+        setHasCourierInk(false);
         setReloadTick((n) => n + 1);
       }, 2000);
     } catch (e: any) {
@@ -340,16 +463,44 @@ const DeliveryPage: React.FC = () => {
     );
   }
 
-  // ═════════════════════ ORDER → SIGNATURE FORM ═════════════════════
-  if (selectedOrder && selectedCustomer) {
-    const totalItems = (selectedOrder.items || []).reduce(
-      (s: number, it: any) => s + (it.quantity || 0),
-      0
-    );
-    const headerTitle =
-      section === 'b2b'
-        ? selectedCustomer.company || '—'
-        : selectedCustomer.name || selectedCustomer.email;
+  // ═════════════════════ ORDER / MANUAL → SIGNATURE FORM ═════════════════════
+  if ((selectedOrder && selectedCustomer) || selectedManual) {
+    const isManual = !!selectedManual;
+    const totalItems = isManual
+      ? (selectedManual!.items || []).reduce((s, it) => s + Number(it.quantity || 0), 0)
+      : (selectedOrder!.items || []).reduce((s: number, it: any) => s + (it.quantity || 0), 0);
+
+    const headerTitle = isManual
+      ? selectedManual!.customerName
+      : section === 'b2b'
+      ? selectedCustomer!.company || '—'
+      : selectedCustomer!.name || selectedCustomer!.email;
+
+    const headerLabel = isManual
+      ? `Mağaza — #${selectedManual!.orderNumber || selectedManual!.id.slice(0, 6)}`
+      : `${section === 'b2b' ? 'B2B' : 'Müştəri'} — sifariş #${
+          selectedOrder!.orderNumber || selectedOrder!.id.slice(0, 6)
+        }`;
+
+    // Delivery contact info (always visible to courier so they know WHERE
+    // and TO WHOM they are delivering).
+    const contactAddress = isManual
+      ? selectedManual!.customerAddress
+      : section === 'retail'
+      ? selectedOrder!.customerAddress || ''
+      : '';
+    const contactPhone = isManual
+      ? selectedManual!.customerPhone
+      : section === 'b2b'
+      ? selectedCustomer!.phone || selectedOrder!.customerPhone || ''
+      : selectedOrder!.customerPhone || selectedCustomer!.phone || '';
+    const contactName = isManual
+      ? selectedManual!.customerName
+      : section === 'b2b'
+      ? `${selectedCustomer!.name || ''} ${selectedCustomer!.lastname || ''}`.trim() ||
+        selectedCustomer!.company ||
+        ''
+      : selectedCustomer!.name || selectedOrder!.customerName || '';
 
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -358,6 +509,7 @@ const DeliveryPage: React.FC = () => {
             onClick={() => {
               setSelectedOrder(null);
               setSelectedCustomer(null);
+              setSelectedManual(null);
             }}
             className="p-2 hover:bg-gray-100 rounded-lg"
             data-testid="delivery-back-btn"
@@ -365,10 +517,7 @@ const DeliveryPage: React.FC = () => {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500">
-              {section === 'b2b' ? 'B2B' : 'Müştəri'} — sifariş #
-              {selectedOrder.orderNumber || selectedOrder.id.slice(0, 6)}
-            </p>
+            <p className="text-xs text-gray-500">{headerLabel}</p>
             <p className="text-sm font-semibold text-gray-900 truncate">{headerTitle}</p>
           </div>
         </header>
@@ -391,57 +540,114 @@ const DeliveryPage: React.FC = () => {
             </div>
           )}
 
+          {/* Delivery contact — courier needs address & phone */}
+          {(contactAddress || contactPhone || contactName) && (
+            <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-xl p-4 space-y-2">
+              <h2 className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider">
+                Çatdırılma məlumatı
+              </h2>
+              {contactName && (
+                <div className="flex items-start gap-2 text-sm">
+                  <ShoppingBag className="h-4 w-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <span className="font-semibold text-gray-900">{contactName}</span>
+                </div>
+              )}
+              {contactPhone && (
+                <div className="flex items-start gap-2 text-sm">
+                  <Phone className="h-4 w-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <a
+                    href={`tel:${contactPhone}`}
+                    className="text-gray-900 underline decoration-dotted"
+                    data-testid="delivery-contact-phone"
+                  >
+                    {contactPhone}
+                  </a>
+                </div>
+              )}
+              {contactAddress && (
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-800 leading-snug" data-testid="delivery-contact-address">
+                    {contactAddress}
+                  </span>
+                </div>
+              )}
+              {isManual && selectedManual!.notes && (
+                <p className="text-xs text-gray-600 border-t border-amber-200 pt-2 mt-1">
+                  Qeyd: {selectedManual!.notes}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Order details */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Package className="h-4 w-4 text-gray-500" />
-              <h2 className="text-sm font-semibold text-gray-900">Sifariş təfərrüatları</h2>
+              <h2 className="text-sm font-semibold text-gray-900">
+                {isManual ? 'Mağaza çatdırılması' : 'Sifariş təfərrüatları'}
+              </h2>
             </div>
             <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-xs">
-              <span className="text-gray-500">Sifariş №:</span>
+              <span className="text-gray-500">{isManual ? '№' : 'Sifariş №'}:</span>
               <span className="font-mono text-gray-900 text-right">
-                {selectedOrder.orderNumber || '—'}
+                {isManual
+                  ? selectedManual!.orderNumber || '—'
+                  : selectedOrder!.orderNumber || '—'}
               </span>
               <span className="text-gray-500">Məhsul sayı:</span>
               <span className="font-semibold text-gray-900 text-right">{totalItems}</span>
-              {/* Məbləğ B2B-də göstərilmir (konfidensiallıq) */}
-              {section !== 'b2b' && (
+              {/* Məbləğ B2B və manual-da göstərilmir (konfidensiallıq) */}
+              {!isManual && section !== 'b2b' && (
                 <>
                   <span className="text-gray-500">Məbləğ:</span>
                   <span className="font-semibold text-gray-900 text-right">
-                    {Number(selectedOrder.totalAmount || 0).toFixed(2)} AZN
+                    {Number(selectedOrder!.totalAmount || 0).toFixed(2)} AZN
                   </span>
                 </>
               )}
               <span className="text-gray-500">Tarix:</span>
               <span className="text-gray-700 text-right">
-                {selectedOrder.createdAt?.toDate?.().toLocaleDateString('az-AZ') || '—'}
+                {isManual
+                  ? selectedManual!.createdAt?.toDate?.().toLocaleDateString('az-AZ') || '—'
+                  : selectedOrder!.createdAt?.toDate?.().toLocaleDateString('az-AZ') || '—'}
               </span>
             </div>
 
-            <details className="mt-3 group">
+            <details className="mt-3 group" open={isManual}>
               <summary className="text-xs text-gray-600 cursor-pointer select-none">
-                Məhsulların siyahısı ({(selectedOrder.items || []).length})
+                Məhsulların siyahısı (
+                {isManual ? selectedManual!.items.length : (selectedOrder!.items || []).length})
               </summary>
               <ul className="mt-2 space-y-1.5 text-xs">
-                {(selectedOrder.items || []).map((it: any, i: number) => (
-                  <li key={i} className="flex justify-between gap-2 text-gray-700">
-                    <span className="truncate">
-                      {it.productName?.az || it.productName?.ru || it.productName || it.productId}
-                    </span>
-                    <span className="text-gray-500">×{it.quantity}</span>
-                  </li>
-                ))}
+                {isManual
+                  ? selectedManual!.items.map((it, i) => (
+                      <li key={i} className="flex justify-between gap-2 text-gray-700">
+                        <span className="truncate">
+                          {it.productName}
+                          {it.note ? <span className="text-gray-400"> — {it.note}</span> : null}
+                        </span>
+                        <span className="text-gray-500">×{it.quantity}</span>
+                      </li>
+                    ))
+                  : (selectedOrder!.items || []).map((it: any, i: number) => (
+                      <li key={i} className="flex justify-between gap-2 text-gray-700">
+                        <span className="truncate">
+                          {it.productName?.az || it.productName?.ru || it.productName || it.productId}
+                        </span>
+                        <span className="text-gray-500">×{it.quantity}</span>
+                      </li>
+                    ))}
               </ul>
             </details>
 
-            {allOrdersForCustomer.length > 1 && (
+            {!isManual && allOrdersForCustomer.length > 1 && (
               <div className="mt-3 pt-3 border-t border-gray-100">
                 <label className="text-[11px] text-gray-500 uppercase tracking-wider">
                   Başqa sifariş seç
                 </label>
                 <select
-                  value={selectedOrder.id}
+                  value={selectedOrder!.id}
                   onChange={(e) => {
                     const found = allOrdersForCustomer.find((o) => o.id === e.target.value);
                     if (found) setSelectedOrder(found);
@@ -501,7 +707,9 @@ const DeliveryPage: React.FC = () => {
                 onChange={(e) => setReceiverPosition(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
                 placeholder={
-                  section === 'b2b'
+                  isManual
+                    ? 'Məs: Müştəri özü, Qohum, Qonşu...'
+                    : section === 'b2b'
                     ? 'Məs: Anbardar, Menecer, Mağaza müdiri...'
                     : 'Məs: Qohum, Qonşu, Resepşn...'
                 }
@@ -521,10 +729,10 @@ const DeliveryPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Signature canvas */}
+          {/* Receiver (customer) signature */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-gray-900">İmza</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Müştəri imzası</h2>
               <button
                 type="button"
                 onClick={clearCanvas}
@@ -534,13 +742,46 @@ const DeliveryPage: React.FC = () => {
                 <Eraser className="h-3 w-3" /> Sil
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-2">Aşağıdakı sahəyə imzanı çəkdirin.</p>
+            <p className="text-xs text-gray-500 mb-2">
+              Təhvil alan şəxs (müştəri) aşağıda imzalasın.
+            </p>
             <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50">
               <canvas
                 ref={canvasRef}
                 className="block w-full touch-none"
-                style={{ height: 200 }}
+                style={{ height: 180 }}
                 data-testid="delivery-signature-canvas"
+              />
+            </div>
+          </div>
+
+          {/* Courier's own signature */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-gray-700" />
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Kuryer imzası ({session.name})
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={clearCourierCanvas}
+                className="text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1"
+                data-testid="delivery-courier-signature-clear"
+              >
+                <Eraser className="h-3 w-3" /> Sil
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-2">
+              Malın təhvil verildiyini təsdiqləmək üçün siz də imzalayın.
+            </p>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+              <canvas
+                ref={courierCanvasRef}
+                className="block w-full touch-none"
+                style={{ height: 180 }}
+                data-testid="delivery-courier-signature-canvas"
               />
             </div>
           </div>
@@ -551,7 +792,11 @@ const DeliveryPage: React.FC = () => {
             className="w-full bg-gray-900 text-white py-3.5 rounded-lg font-semibold hover:bg-gray-800 disabled:bg-gray-400"
             data-testid="delivery-signature-submit"
           >
-            {submitting ? 'Qeydə alınır...' : success ? '✓ Qeyd olundu' : 'İmzanı təsdiqlə və yadda saxla'}
+            {submitting
+              ? 'Qeydə alınır...'
+              : success
+              ? '✓ Qeyd olundu'
+              : 'İmzaları təsdiqlə və yadda saxla'}
           </button>
         </div>
       </div>
@@ -588,13 +833,13 @@ const DeliveryPage: React.FC = () => {
 
       <div className="max-w-2xl mx-auto px-4 py-5">
         {/* Section tabs */}
-        <div className="grid grid-cols-2 gap-2 mb-4 bg-white border border-gray-200 p-1.5 rounded-xl">
+        <div className="grid grid-cols-3 gap-2 mb-4 bg-white border border-gray-200 p-1.5 rounded-xl">
           <button
             onClick={() => {
               setSection('b2b');
               setSearch('');
             }}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
               section === 'b2b'
                 ? 'bg-gray-900 text-white shadow'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -609,7 +854,7 @@ const DeliveryPage: React.FC = () => {
               setSection('retail');
               setSearch('');
             }}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
               section === 'retail'
                 ? 'bg-gray-900 text-white shadow'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -618,6 +863,21 @@ const DeliveryPage: React.FC = () => {
           >
             <ShoppingBag className="h-4 w-4" />
             Müştəri ({retailCustomers.length})
+          </button>
+          <button
+            onClick={() => {
+              setSection('manual');
+              setSearch('');
+            }}
+            className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+              section === 'manual'
+                ? 'bg-gray-900 text-white shadow'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+            data-testid="delivery-section-manual"
+          >
+            <Store className="h-4 w-4" />
+            Mağaza ({manualPending.length})
           </button>
         </div>
 
@@ -630,7 +890,9 @@ const DeliveryPage: React.FC = () => {
             placeholder={
               section === 'b2b'
                 ? 'Şirkət adı ilə axtar...'
-                : 'Müştəri adı, email, telefon ilə axtar...'
+                : section === 'retail'
+                ? 'Müştəri adı, email, telefon ilə axtar...'
+                : 'Ad, telefon, ünvan ilə axtar...'
             }
             className="w-full pl-9 pr-9 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none"
             data-testid="delivery-search-input"
@@ -645,7 +907,72 @@ const DeliveryPage: React.FC = () => {
           )}
         </div>
 
-        {loading ? (
+        {section === 'manual' ? (
+          // ─────────── MANUAL DELIVERIES LIST ───────────
+          loading ? (
+            <div className="text-center py-12 text-gray-500 text-sm">Yüklənir...</div>
+          ) : (() => {
+              const term = search.trim().toLowerCase();
+              const filtered = term
+                ? manualPending.filter((m) =>
+                    [m.customerName, m.customerPhone, m.customerAddress]
+                      .filter(Boolean)
+                      .some((v) => String(v).toLowerCase().includes(term))
+                  )
+                : manualPending;
+              if (filtered.length === 0) {
+                return (
+                  <div
+                    className="text-center py-12 text-gray-400 text-sm"
+                    data-testid="delivery-empty-state"
+                  >
+                    {manualPending.length === 0
+                      ? 'Hazırda mağazadan gedəcək çatdırılma yoxdur.'
+                      : 'Axtarışa uyğun nəticə tapılmadı.'}
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-2">
+                  {filtered.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => onSelectManual(m)}
+                      className="w-full text-left bg-white border border-gray-200 hover:border-gray-900 rounded-xl p-4 transition-all group"
+                      data-testid={`delivery-manual-${m.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-gray-900 group-hover:text-white flex items-center justify-center transition-all">
+                          <Store className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {m.customerName}
+                            </p>
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-semibold rounded-full whitespace-nowrap">
+                              {m.items.length} məhsul
+                            </span>
+                          </div>
+                          {m.customerPhone && (
+                            <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {m.customerPhone}
+                            </p>
+                          )}
+                          {m.customerAddress && (
+                            <p className="text-xs text-gray-500 mt-0.5 flex items-start gap-1">
+                              <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-2">{m.customerAddress}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()
+        ) : loading ? (
           <div className="text-center py-12 text-gray-500 text-sm">Yüklənir...</div>
         ) : filteredCustomers.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm" data-testid="delivery-empty-state">
@@ -669,26 +996,37 @@ const DeliveryPage: React.FC = () => {
                 <button
                   key={c.email}
                   onClick={() => onSelectCustomer(c)}
-                  className="w-full text-left bg-white border border-gray-200 hover:border-gray-900 rounded-xl p-4 transition-all flex items-center gap-3 group"
+                  className="w-full text-left bg-white border border-gray-200 hover:border-gray-900 rounded-xl p-4 transition-all flex items-start gap-3 group"
                   data-testid={`delivery-customer-${c.email}`}
                 >
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 group-hover:bg-gray-900 group-hover:text-white flex items-center justify-center text-xs font-semibold transition-all">
                     {initial}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{titleLine}</p>
-                    {/* B2B-də əlavə müştəri məlumatı (ad/telefon/email) gizlədilir;
-                        yalnız şirkət adı və əlçatımlı sifariş sayı görünür. */}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{titleLine}</p>
+                      <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full whitespace-nowrap">
+                        {c.pendingCount} sifariş
+                      </span>
+                    </div>
                     {!isB2B && (
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
                         {c.email}
                         {c.phone ? ` · ${c.phone}` : ''}
                       </p>
                     )}
+                    {!isB2B && c.address && (
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-start gap-1">
+                        <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{c.address}</span>
+                      </p>
+                    )}
+                    {isB2B && c.phone && (
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {c.phone}
+                      </p>
+                    )}
                   </div>
-                  <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full whitespace-nowrap">
-                    {c.pendingCount} sifariş
-                  </span>
                 </button>
               );
             })}
@@ -717,6 +1055,8 @@ const DeliveryPage: React.FC = () => {
                 const title =
                   section === 'b2b'
                     ? o.companyName || '—'
+                    : section === 'manual'
+                    ? o.customerName || '—'
                     : o.customerName || o.customerEmail;
                 return (
                   <div

@@ -206,6 +206,10 @@ export interface CustomerReceiverSignaturePayload {
   receiverPosition: string;
   receiverSignature: string; // base64 dataURL
   receiverPhone?: string;
+  // Courier's own signature + identity captured together with the receiver
+  courierSignature?: string;
+  courierEmail?: string;
+  courierName?: string;
 }
 
 export const saveCustomerReceiverSignature = async (
@@ -213,7 +217,7 @@ export const saveCustomerReceiverSignature = async (
   payload: CustomerReceiverSignaturePayload
 ): Promise<void> => {
   const ref = doc(db, COLLECTION, orderId);
-  await updateDoc(ref, {
+  const patch: any = {
     receiverName: payload.receiverName.trim(),
     receiverSurname: payload.receiverSurname.trim(),
     receiverPosition: payload.receiverPosition.trim(),
@@ -222,7 +226,11 @@ export const saveCustomerReceiverSignature = async (
     receiverSignedAt: Timestamp.now(),
     status: 'delivered',
     deliveredAt: Timestamp.now(),
-  });
+  };
+  if (payload.courierSignature) patch.courierSignature = payload.courierSignature;
+  if (payload.courierEmail) patch.courierEmail = payload.courierEmail.trim().toLowerCase();
+  if (payload.courierName) patch.courierName = payload.courierName.trim();
+  await updateDoc(ref, patch);
 };
 
 /** All retail orders for a given customer (by email) that are currently

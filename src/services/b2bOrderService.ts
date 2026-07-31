@@ -367,6 +367,10 @@ export interface ReceiverSignaturePayload {
   receiverPosition: string;
   receiverSignature: string; // base64 dataURL
   receiverPhone?: string;
+  // Courier's own signature + identity (captured on the same delivery form)
+  courierSignature?: string;
+  courierEmail?: string;
+  courierName?: string;
 }
 
 export const saveReceiverSignature = async (
@@ -374,7 +378,7 @@ export const saveReceiverSignature = async (
   payload: ReceiverSignaturePayload
 ) => {
   const orderRef = doc(db, 'b2bOrders', orderId);
-  await updateDoc(orderRef, {
+  const patch: any = {
     receiverName: payload.receiverName.trim(),
     receiverSurname: payload.receiverSurname.trim(),
     receiverPosition: payload.receiverPosition.trim(),
@@ -385,7 +389,11 @@ export const saveReceiverSignature = async (
     // The company account holder can still add their own signature later via B2BOrdersPage.
     status: 'delivered',
     deliveredAt: Timestamp.now(),
-  });
+  };
+  if (payload.courierSignature) patch.courierSignature = payload.courierSignature;
+  if (payload.courierEmail) patch.courierEmail = payload.courierEmail.trim().toLowerCase();
+  if (payload.courierName) patch.courierName = payload.courierName.trim();
+  await updateDoc(orderRef, patch);
   return { id: orderId };
 };
 
