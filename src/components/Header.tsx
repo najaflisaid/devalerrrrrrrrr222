@@ -1452,7 +1452,7 @@ const Header: React.FC = () => {
                           const hasContent = hasChildren || catBrands.length > 0;
 
                           return (
-                            <li key={cat.key} className="border-b border-black/[0.08]">
+                            <li key={cat.key}>
                               <button
                                 onClick={() => {
                                   if (!hasContent) {
