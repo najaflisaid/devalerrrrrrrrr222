@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DE VALEUR — Story Şablonları (Demo)</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 20px;
+    background: #0f0f0f;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    color: #f5f2ea;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    font-size: 34px;
+    text-align: center;
+    letter-spacing: 0.08em;
+    margin: 0 0 8px;
+  }
+  .sub {
+    text-align: center;
+    color: #C9A24A;
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+  }
+  .card {
+    background: #171717;
+    border: 1px solid rgba(201,162,74,0.15);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .card canvas { display: block; width: 100%; height: auto; background: #000; }
+  .card h3 {
+    margin: 0;
+    padding: 14px 16px 4px;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #f5f2ea;
+  }
+  .card p { margin: 0; padding: 0 16px 16px; font-size: 11px; color: rgba(245,242,234,0.55); }
+  .note {
+    max-width: 780px;
+    margin: 40px auto 0;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(245,242,234,0.6);
+    border-top: 1px solid rgba(201,162,74,0.2);
+    padding-top: 24px;
+  }
+  .note b { color: #C9A24A; font-weight: 500; }
+  .toolbar {
+    max-width: 780px;
+    margin: 24px auto 0;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(245,242,234,0.75);
+    background: rgba(255,255,255,0.04);
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(201,162,74,0.2);
+    cursor: pointer;
+    user-select: none;
+  }
+  input[type="checkbox"] { accent-color: #C9A24A; }
+</style>
+</head>
+<body>
+
+<h1>Instagram Story şablonları</h1>
+<div class="sub">DE VALEUR · avtomatik məzmun ilə</div>
+
+<div class="toolbar">
+  <label><input type="checkbox" id="wm" checked /> DE VALEUR watermark</label>
+</div>
+
+<div class="grid" id="grid">
+  <div class="card"><h3>Minimal</h3><p>Açıq, editorial · playfair başlıqlar</p><canvas data-tpl="minimal"></canvas></div>
+  <div class="card"><h3>Noir</h3><p>Tünd luxury · qızılı radiallı işıq</p><canvas data-tpl="noir"></canvas></div>
+  <div class="card"><h3>Gold</h3><p>Qızılı diaqonal başlıq + qızılı ribbon</p><canvas data-tpl="gold"></canvas></div>
+  <div class="card"><h3>Editorial</h3><p>Split — üstdə məhsul, altda qara info</p><canvas data-tpl="editorial"></canvas></div>
+</div>
+
+<p class="note">
+  Bu səhifə <b>demo</b>-dur — real məhsul səhifəsində istənilən məhsul üçün admin bu şablonları görəcək,
+  <b>watermark switch</b>-i açıb-söndürə biləcək və <b>5 saniyəlik animasiyalı video</b> də yarada biləcək.
+  Real şəkil: 1080 × 1920 (Instagram Story).
+</p>
+
+<script>
+const W = 1080, H = 1920;
+const brand = 'DE VALEUR';
+const productName = 'ROCHE MONTRE Automatic 42mm';
+const price = 890;
+const original = 1200;
+const monthly = 148.33;
+const monthCount = 6;
+
+function fmt(n, f = 2){
+  return n.toLocaleString('az-AZ', {minimumFractionDigits:f, maximumFractionDigits:f});
+}
+
+function wrap(ctx, text, max){
+  const words = text.split(/\s+/);
+  const lines = []; let cur = '';
+  for(const w of words){
+    const t = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(t).width > max && cur){ lines.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function fakeImage(ctx, x, y, w, h, dark){
+  // stylised placeholder — a rectangle with a subtle watch silhouette
+  ctx.save();
+  const g = ctx.createLinearGradient(x, y, x, y+h);
+  g.addColorStop(0, dark ? '#1a1a1a' : '#eeeae2');
+  g.addColorStop(1, dark ? '#0f0f0f' : '#d9d3c6');
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  // Watch case (circle)
+  const cx = x + w/2, cy = y + h/2, r = Math.min(w,h)/3.2;
+  ctx.strokeStyle = dark ? '#C9A24A' : '#111';
+  ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r - 22, 0, Math.PI*2); ctx.stroke();
+  // Hands
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - r*0.55); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r*0.4, cy); ctx.stroke();
+  // Straps
+  ctx.fillStyle = dark ? '#111' : '#5c4a2b';
+  ctx.fillRect(cx - r*0.35, y + 40, r*0.7, cy - r - 40);
+  ctx.fillRect(cx - r*0.35, cy + r, r*0.7, y + h - (cy + r) - 40);
+  ctx.restore();
+}
+
+function drawWatermark(ctx, dark){
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.globalAlpha = dark ? 0.55 : 0.4;
+  ctx.fillStyle = dark ? '#C9A24A' : '#111';
+  ctx.font = '400 34px "Playfair Display", Georgia, serif';
+  ctx.fillText('◆', 60, H - 66);
+  ctx.font = '500 22px Inter, Arial, sans-serif';
+  ctx.fillText('DE  VALEUR', 105, H - 70);
+  ctx.globalAlpha = dark ? 0.35 : 0.25;
+  ctx.font = '400 14px Inter, Arial, sans-serif';
+  ctx.fillText('Luxury  ·  since  2020', 105, H - 48);
+  ctx.restore();
+}
+
+function drawFooter(ctx, color){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.font = '400 26px Inter, Arial, sans-serif';
+  ctx.fillText('DEVALEUR.AZ', W/2, H - 70);
+  ctx.restore();
+}
+
+function drawMinimal(ctx){
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#faf8f4'); g.addColorStop(1,'#eeeae2');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.font='500 34px Inter, Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), W/2, 180);
+  ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(W/2-60,220); ctx.lineTo(W/2+60,220); ctx.stroke();
+
+  ctx.fillStyle='#fff'; ctx.fillRect(90,300,W-180,900);
+  ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.strokeRect(90,300,W-180,900);
+  fakeImage(ctx, 130, 340, W-260, 820, false);
+
+  ctx.fillStyle='#111';
+  ctx.font='400 54px "Playfair Display", Georgia, serif';
+  const lines = wrap(ctx, productName, W-200);
+  let ny = 1290;
+  lines.forEach(l => { ctx.fillText(l, W/2, ny); ny += 66; });
+
+  // Old price
+  ctx.font='400 30px Inter, Arial, sans-serif';
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+40);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W/2-m.width/2-8,ny+32); ctx.lineTo(W/2+m.width/2+8,ny+32); ctx.stroke();
+  ny+=60;
+
+  ctx.fillStyle='#111';
+  ctx.font='600 96px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(price,0)+' AZN', W/2, ny+130);
+
+  const boxY = ny+200;
+  ctx.fillStyle='#111'; ctx.fillRect((W-640)/2, boxY, 640, 150);
+  ctx.strokeStyle='#C9A24A'; ctx.lineWidth=2;
+  ctx.strokeRect((W-640)/2+6, boxY+6, 628, 138);
+  ctx.fillStyle='#C9A24A'; ctx.font='500 22px Inter, Arial, sans-serif';
+  ctx.fillText('KREDİTLƏ '+monthCount+' AY · 0%', W/2, boxY+55);
+  ctx.fillStyle='#fff'; ctx.font='600 58px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+115);
+
+  drawFooter(ctx, 'rgba(0,0,0,0.55)');
+}
+
+function drawNoir(ctx){
+  ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,W,H);
+  const glow = ctx.createRadialGradient(W/2,700,50,W/2,700,900);
+  glow.addColorStop(0,'rgba(201,162,74,0.18)');
+  glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#C9A24A'; ctx.textAlign='center';
+  ctx.font='500 32px Inter, Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), W/2, 180);
+  ctx.strokeStyle='#C9A24A'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(W/2-55,210); ctx.lineTo(W/2+55,210); ctx.stroke();
+
+  fakeImage(ctx, 100, 290, W-200, 900, true);
+
+  ctx.fillStyle='#f5f2ea';
+  ctx.font='400 56px "Playfair Display", Georgia, serif';
+  const lines = wrap(ctx, productName, W-200);
+  let ny=1280;
+  lines.forEach(l => { ctx.fillText(l, W/2, ny); ny+=66; });
+
+  ctx.font='400 30px Inter, Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+40);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W/2-m.width/2-8,ny+32); ctx.lineTo(W/2+m.width/2+8,ny+32); ctx.stroke();
+  ny+=60;
+
+  ctx.fillStyle='#fff';
+  ctx.font='600 100px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(price,0)+' AZN', W/2, ny+130);
+
+  const boxY = ny+200;
+  ctx.strokeStyle='#C9A24A'; ctx.lineWidth=2;
+  ctx.strokeRect((W-720)/2, boxY, 720, 170);
+  ctx.fillStyle='#C9A24A'; ctx.font='500 24px Inter, Arial, sans-serif';
+  ctx.fillText(monthCount + ' AY KREDİT · FAİZSİZ', W/2, boxY+58);
+  ctx.fillStyle='#f5f2ea'; ctx.font='600 62px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+130);
+
+  drawFooter(ctx, 'rgba(255,255,255,0.55)');
+}
+
+function drawGold(ctx){
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#151105'); g.addColorStop(1,'#3a2c14');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#C9A24A';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.lineTo(W,120); ctx.lineTo(0,200); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.font='700 42px Inter, Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), W/2, 100);
+
+  ctx.fillStyle='#faf7f0'; ctx.fillRect(80,280,W-160,900);
+  fakeImage(ctx, 110, 310, W-220, 840, false);
+
+  ctx.fillStyle='#f5e7c1';
+  ctx.font='400 52px "Playfair Display", Georgia, serif';
+  const lines = wrap(ctx, productName, W-200);
+  let ny=1260;
+  lines.forEach(l => { ctx.fillText(l, W/2, ny); ny+=64; });
+
+  ctx.font='400 28px Inter, Arial, sans-serif';
+  ctx.fillStyle='rgba(245,231,193,0.55)';
+  const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+34);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(245,231,193,0.6)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W/2-m.width/2-8,ny+28); ctx.lineTo(W/2+m.width/2+8,ny+28); ctx.stroke();
+  ny+=52;
+
+  ctx.fillStyle='#fff';
+  ctx.font='700 108px "Playfair Display", Georgia, serif';
+  const pt = fmt(price,0)+' AZN'; ctx.fillText(pt, W/2, ny+140);
+  const pm = ctx.measureText(pt);
+  ctx.strokeStyle='#C9A24A'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(W/2-pm.width/2, ny+168); ctx.lineTo(W/2+pm.width/2, ny+168); ctx.stroke();
+
+  const boxY = ny+230;
+  ctx.fillStyle='#C9A24A'; ctx.fillRect(0, boxY, W, 160);
+  ctx.fillStyle='#111'; ctx.font='600 26px Inter, Arial, sans-serif';
+  ctx.fillText(monthCount + ' AY KREDİT · 0% FAİZ', W/2, boxY+55);
+  ctx.font='700 62px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+125);
+
+  drawFooter(ctx, 'rgba(245,231,193,0.65)');
+}
+
+function drawEditorial(ctx){
+  ctx.fillStyle='#ece7df'; ctx.fillRect(0,0,W,1050);
+  ctx.fillStyle='#0d0d0d'; ctx.fillRect(0,1050,W,H-1050);
+
+  ctx.fillStyle='#111'; ctx.textAlign='center';
+  ctx.font='500 30px Inter, Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), W/2, 130);
+  ctx.beginPath(); ctx.arc(W/2,160,3,0,Math.PI*2); ctx.fill();
+
+  fakeImage(ctx, 90, 200, W-180, 820, false);
+
+  ctx.fillStyle='#f5f2ea'; ctx.textAlign='left';
+  ctx.font='400 50px "Playfair Display", Georgia, serif';
+  const lines = wrap(ctx, productName, W-180);
+  let ny=1170;
+  lines.forEach(l => { ctx.fillText(l, 90, ny); ny+=60; });
+
+  ctx.strokeStyle='rgba(201,162,74,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(90,ny+30); ctx.lineTo(W-90,ny+30); ctx.stroke();
+
+  const colY = ny+100;
+  ctx.fillStyle='rgba(245,242,234,0.55)';
+  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.fillText('QİYMƏT', 90, colY);
+  ctx.fillStyle='#fff';
+  ctx.font='600 78px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(price,0)+' AZN', 90, colY+80);
+  ctx.font='400 24px Inter, Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  const ot = fmt(original,0)+' AZN'; ctx.fillText(ot, 90, colY+120);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(90,colY+112); ctx.lineTo(90+m.width,colY+112); ctx.stroke();
+
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(201,162,74,0.85)';
+  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.fillText(monthCount + ' AY · 0%', W-90, colY);
+  ctx.fillStyle='#C9A24A';
+  ctx.font='600 60px "Playfair Display", Georgia, serif';
+  ctx.fillText(fmt(monthly)+' AZN', W-90, colY+80);
+  ctx.fillStyle='rgba(245,242,234,0.75)';
+  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.fillText('aylıq ödəniş', W-90, colY+118);
+
+  drawFooter(ctx, 'rgba(245,242,234,0.55)');
+}
+
+function render(){
+  const wm = document.getElementById('wm').checked;
+  const canvases = document.querySelectorAll('canvas[data-tpl]');
+  canvases.forEach(c => {
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    const tpl = c.dataset.tpl;
+    if (tpl==='minimal') drawMinimal(ctx);
+    else if (tpl==='noir') drawNoir(ctx);
+    else if (tpl==='gold') drawGold(ctx);
+    else drawEditorial(ctx);
+    if (wm) drawWatermark(ctx, tpl==='noir' || tpl==='gold');
+  });
+}
+
+document.fonts && document.fonts.ready.then(render).catch(render);
+setTimeout(render, 200);
+document.getElementById('wm').addEventListener('change', render);
+</script>
+</body>
+</html>
