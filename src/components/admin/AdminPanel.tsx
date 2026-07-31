@@ -14,6 +14,7 @@ import AnalyticsTab from './AnalyticsTab';
 import ReviewsTab from './ReviewsTab';
 import AiConsultantTab from './AiConsultantTab';
 import AdminChatNotifier from './AdminChatNotifier';
+import SlowReplyBar from './SlowReplyBar';
 import { requestOpenChatSession } from '../../utils/adminChatBridge';
 import B2BNotificationsTab from './B2BNotificationsTab';
 import BannerManagementTab from './BannerManagementTab';
@@ -1801,6 +1802,13 @@ const AdminPanel: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Global chat notifier — bütün tab-larda görünür, kliklədikdə AI Konsultanta keçir */}
       <AdminChatNotifier
+        onJumpToSession={(sid) => {
+          setActiveTab('aiConsultant');
+          requestOpenChatSession(sid);
+        }}
+      />
+      {/* Yavaş cavab xəbərdarlığı — 60 s-dən artıq gözləyən müştəri olduqda üstdə qırmızı zolaq */}
+      <SlowReplyBar
         onJumpToSession={(sid) => {
           setActiveTab('aiConsultant');
           requestOpenChatSession(sid);

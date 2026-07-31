@@ -3,8 +3,7 @@ import {
   Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2,
   MessageCircle, Power, MessageSquare, Plus, Trash2, Send, Users, TrendingUp,
   Clock, Search, Bot, PowerOff, MessageSquareText, BarChart3,
-  Paperclip, Volume2, VolumeX, X, Copy, User, Phone, CheckCheck, Play,
-} from 'lucide-react';
+  Paperclip, Volume2, VolumeX, X, Copy, User, Phone, CheckCheck, Play, Film,} from 'lucide-react';
 import {
   getAiKnowledge,
   saveAiKnowledge,
@@ -39,6 +38,7 @@ import {
 } from '../../utils/chatSounds';
 import { playNewSessionSound } from '../../utils/chatSounds';
 import { consumePendingChatSession, onOpenChatSession } from '../../utils/adminChatBridge';
+import SessionPlayback from './SessionPlayback';
 
 type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations' | 'contacts';
 
@@ -880,6 +880,7 @@ const ConversationsSection: React.FC<{
   const [muted, setMuted] = useState(isAdminChatMuted());
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [typingTick, setTypingTick] = useState(0);
+  const [playbackOpen, setPlaybackOpen] = useState(false);
   void typingTick; // used only to trigger re-render for stale typing indicator
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1026,6 +1027,15 @@ const ConversationsSection: React.FC<{
           profile={profile}
           onClose={() => setShowProfileEditor(false)}
           onSaved={(p) => { setProfile(p); setShowProfileEditor(false); }}
+        />
+      )}
+
+      {playbackOpen && current && (
+        <SessionPlayback
+          sessionId={current.id}
+          sessionName={current.contactName}
+          messages={messages}
+          onClose={() => setPlaybackOpen(false)}
         />
       )}
 
@@ -1225,17 +1235,28 @@ const ConversationsSection: React.FC<{
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleToggleAi}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex-shrink-0 ${
-                    current.aiEnabled
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
-                      : 'bg-gray-900 text-white hover:bg-gray-800'
-                  }`}
-                  data-testid="toggle-conv-ai-btn"
-                >
-                  {current.aiEnabled ? <><Bot className="h-3.5 w-3.5" /> AI aktiv</> : <><User className="h-3.5 w-3.5" /> Manual</>}
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => setPlaybackOpen(true)}
+                    disabled={messages.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Söhbəti replay et — mesajlar bir-bir zaman keçidləri ilə göstərilsin"
+                    data-testid="playback-open-btn"
+                  >
+                    <Film className="h-3.5 w-3.5" /> Replay
+                  </button>
+                  <button
+                    onClick={handleToggleAi}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                      current.aiEnabled
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                    data-testid="toggle-conv-ai-btn"
+                  >
+                    {current.aiEnabled ? <><Bot className="h-3.5 w-3.5" /> AI aktiv</> : <><User className="h-3.5 w-3.5" /> Manual</>}
+                  </button>
+                </div>
               </div>
 
               {/* Messages */}

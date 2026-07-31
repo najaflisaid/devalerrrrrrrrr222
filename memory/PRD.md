@@ -175,3 +175,31 @@ Files touched:
 Notes:
 - `sitePresence` collection is written by every visitor — Firestore free-tier friendly for a boutique storefront (≈ 4 writes/min per open tab).
 - Presence docs are shallow (path/UA/lastSeen). Consider a scheduled cloud function later to prune docs older than 24h if the collection grows.
+
+## 2026-01 · Slow-reply guard / Session playback / Smart search
+1. **SlowReplyBar** — `src/components/admin/SlowReplyBar.tsx`
+   - Fixed red banner at the top of the admin panel when any active session's `lastRole='user'` and last customer message is > 60 s old with no admin/AI reply.
+   - Shows the oldest waiting customer (short code or name) + total pending count, jumps to the session on click, dismissable per-session (returns on next message).
+   - Real-time via `subscribeAllSessions` + 5 s tick to keep the countdown fresh.
+   - Mounted globally alongside `AdminChatNotifier` in `AdminPanel.tsx`.
+
+2. **SessionPlayback** — `src/components/admin/SessionPlayback.tsx`
+   - Modal that replays a session message-by-message with timing compressed from real gaps (real 1 s → playback 200 ms, clamped to 0.4-2.5 s).
+   - Controls: Play/Pause, Restart, Skip-to-end, speed selector (0.5×/1×/2×/4×).
+   - Live "typing…" bubble between messages, WhatsApp-style styling.
+   - Triggered by a new "Replay" button in the ConversationsSection chat header (data-testid `playback-open-btn`).
+
+3. **Smart search overhaul** — `src/components/Header.tsx` + new `src/utils/searchSynonyms.ts`
+   - **Synonym engine**: Cross-language + typo dictionary (Az/Ru/En/Tr) — e.g. `pulqabı ↔ кошелёк ↔ cüzdan ↔ wallet` and common misspellings (`pulbagi`, `pulbaqi`, `kaselok`). Bidirectional, normalized keys.
+   - **Bigger fuzzy tolerance**: Levenshtein window now scales with token length (1 for 4-5 chars, 2 for 6+ chars) plus prefix match — "pulba" matches "pulqabı", "kasel" matches nothing product-wise but still returns synonym-linked results.
+   - **Pages in search results**: new `SEARCHABLE_PAGES` catalog (About, Contact, Blog, Delivery, Returns, Privacy, Careers, Partners, Gift Cards, Wishlist, B2B) rendered as gold-gradient chips above categories/brands. Typing "haqqinda" / "blog" / "delivery" now surfaces the actual site page.
+   - **Random discovery grid**: default suggestions grid (before user types) is now a Fisher-Yates shuffle across all categories — 3 per category + remainder, capped at 24. A `searchRandomSeed` state re-generates the mix each time the modal opens so users see fresh products on every visit.
+   - **No-results guard**: "Nəticə tapılmadı" only shows when neither brand, category, page, nor synonym matches — pages alone are enough to keep the panel useful.
+
+Files touched/created:
+- `src/components/admin/SlowReplyBar.tsx` — NEW
+- `src/components/admin/SessionPlayback.tsx` — NEW
+- `src/utils/searchSynonyms.ts` — NEW (bidirectional synonym index)
+- `src/components/admin/AdminPanel.tsx` — mounts SlowReplyBar
+- `src/components/admin/AiConsultantTab.tsx` — Replay button + modal wiring
+- `src/components/Header.tsx` — synonyms, bigger fuzzy, pages catalogue, random default grid, "Kəşf edin" title

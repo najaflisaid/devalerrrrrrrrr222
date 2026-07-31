@@ -10,6 +10,7 @@ import { useWishlist } from '../context/WishlistContext';
 import CustomerLogin from './auth/CustomerLogin';
 import CartDrawer from './CartDrawer';
 import { productService } from '../services/productService';
+import { expandTokenSynonyms } from '../utils/searchSynonyms';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
 import { getActiveB2BNotifications, B2BNotification } from '../services/b2bNotificationService';
 import { toBrandSlug } from '../utils/brandSlug';
@@ -28,6 +29,12 @@ const Header: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [searchRandomSeed, setSearchRandomSeed] = useState(0);
+  useEffect(() => {
+    // Hər dəfə axtarış modalı açıldıqda "default grid" üçün random seed yenilənsin
+    // ki, göstərilən məhsullar hər dəfə fərqli olsun (əvvəlki eyni siyahı deyil).
+    if (showSearch) setSearchRandomSeed(Date.now());
+  }, [showSearch]);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -582,6 +589,26 @@ const Header: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ═══ Search-able pages ═══
+  // Ana səhifə + bütün "content" səhifələr — brend/kateqoriya ilə eyni səviyyədə
+  // axtarış nəticəsi kimi göstərilir. Sinonimlər searchSynonyms.ts-də təyin edilir.
+  interface SearchPage { key: string; path: string; title: { az: string; ru: string; en: string }; keywords: string[]; }
+  const SEARCHABLE_PAGES: SearchPage[] = [
+    { key: 'about',    path: '/about',         title: { az: 'Haqqımızda',            ru: 'О нас',                en: 'About Us' },        keywords: ['about', 'haqqinda', 'haqqımızda', 'kim', 'story', 'hekaye', 'о нас'] },
+    { key: 'contact',  path: '/contact',       title: { az: 'Əlaqə',                 ru: 'Контакты',             en: 'Contact' },         keywords: ['contact', 'elaqe', 'əlaqə', 'kontakt', 'telefon', 'ünvan', 'ünvanımız', 'контакт'] },
+    { key: 'blog',     path: '/blog',          title: { az: 'Bloq',                  ru: 'Блог',                 en: 'Blog' },            keywords: ['blog', 'bloq', 'yazi', 'yazılar', 'article', 'news', 'блог', 'статьи'] },
+    { key: 'delivery', path: '/delivery',      title: { az: 'Çatdırılma',            ru: 'Доставка',             en: 'Delivery' },        keywords: ['delivery', 'catdirilma', 'catdirma', 'çatdırılma', 'shipping', 'доставка'] },
+    { key: 'return',   path: '/return-policy', title: { az: 'Qaytarma qaydaları',    ru: 'Возврат',              en: 'Return Policy' },   keywords: ['return', 'qaytarma', 'refund', 'geri', 'возврат'] },
+    { key: 'privacy',  path: '/privacy-policy',title: { az: 'Məxfilik siyasəti',     ru: 'Конфиденциальность',   en: 'Privacy Policy' },  keywords: ['privacy', 'mexfilik', 'məxfilik', 'siyaset', 'siyasət', 'конфиденциальность'] },
+    { key: 'careers',  path: '/careers',       title: { az: 'Karyera',               ru: 'Карьера',              en: 'Careers' },         keywords: ['careers', 'karyera', 'is', 'iş', 'vakans', 'work', 'карьера', 'работа'] },
+    { key: 'partners', path: '/partners',      title: { az: 'Partnyorlar',           ru: 'Партнёры',             en: 'Partners' },        keywords: ['partners', 'partnyor', 'brand', 'brendler', 'partnership', 'партнёры'] },
+    { key: 'giftcards',path: '/gift-cards',    title: { az: 'Hədiyyə kartları',      ru: 'Подарочные карты',     en: 'Gift Cards' },      keywords: ['giftcard', 'gift card', 'hediyye', 'hədiyyə', 'kart', 'подарочная', 'подарок'] },
+    { key: 'wishlist', path: '/wishlist',      title: { az: 'Sevimlilər',            ru: 'Избранное',            en: 'Wishlist' },        keywords: ['wishlist', 'sevimli', 'istek', 'istək', 'favorite', 'избранное'] },
+    { key: 'b2b',      path: '/b2b',           title: { az: 'B2B / Topdan',          ru: 'B2B / Опт',            en: 'B2B / Wholesale' }, keywords: ['b2b', 'toptan', 'topdan', 'wholesale', 'корпоративный', 'опт'] },
+  ];
+
+
+
   // Azərbaycan diakritiklərini normallaşdır — istifadəçi "eynek" yazsa
   // belə "EYNƏK" və ya "Eynəklər" tapılsın. Eyni ilə ş→s, ç→c, ı→i, ö→o, ü→u, ğ→g.
   const normalizeAz = (s: string): string => {
@@ -623,17 +650,23 @@ const Header: React.FC = () => {
     return dp[b.length];
   };
 
-  // Fuzzy uyğunluq — söz uzunluğu ≥ 4 olduqda 1 hərf səhvə icazə verir.
-  // "seat" → "saat", "kasio" → "casio" kimi hallar.
+  // Fuzzy uyğunluq — yazı səhvləri üçün.
+  // • 4-5 hərfli söz: 1 hərf toleransı
+  // • 6+ hərfli söz: 2 hərf toleransı ("pulqabi" ↔ "pulbagi", "kaselok")
+  // Ayrıca prefix-only uyğunluğu da yoxlayır ki, tam yazılmamış kök də tutulsun.
   const fuzzyIncludes = (haystack: string, needle: string): boolean => {
     if (!needle || !haystack) return false;
     if (haystack.includes(needle)) return true;
     if (needle.length < 4) return false;
-    // Sözləri ayrı-ayrı yoxla
+    const tolerance = needle.length >= 6 ? 2 : 1;
     const words = haystack.split(/[\s\-_.,/]+/).filter(Boolean);
     return words.some((w) => {
-      if (w.length < needle.length - 1 || w.length > needle.length + 2) return false;
-      return levenshtein(w, needle) <= 1;
+      // Prefix uyğunluğu — "pulq" istifadəçinin yarım yazılmış sözünə uyğun gəlir
+      if (needle.length >= 4 && w.startsWith(needle.slice(0, Math.min(needle.length, 4)))) {
+        if (Math.abs(w.length - needle.length) <= tolerance + 1) return true;
+      }
+      if (w.length < needle.length - tolerance || w.length > needle.length + tolerance + 1) return false;
+      return levenshtein(w, needle) <= tolerance;
     });
   };
 
@@ -682,6 +715,17 @@ const Header: React.FC = () => {
           : (token === 'qadın' || token === 'qadin' || token === 'женский' || token === 'жен' || token === 'women' || token === 'female')
           ? gender === 'women' || gender === 'unisex'
           : false;
+      // Sinonim genişlənməsi — "pulbagi" → "pulqabi", "wallet", "cuzdan", "кошелёк" və s.
+      // Hər sinonimə görə də field-ları yoxla (təkcə fuzzy-yə güvənmirik).
+      const synonyms = expandTokenSynonyms(tokenNorm);
+      const synonymMatch = synonyms.length > 1 && synonyms.some((s) => {
+        if (s === tokenNorm) return false; // əslində istifadəçinin yazdığı — aşağıda ayrıca yoxlanır
+        return (
+          nameAzN.includes(s) || nameRuN.includes(s) || nameEnN.includes(s) ||
+          brandN.includes(s) || categoryN.includes(s) ||
+          catVariants.some((c) => normalizeAz(c.toLowerCase()).includes(s))
+        );
+      });
       return (
         nameAz.includes(token) || nameAzN.includes(tokenNorm) ||
         nameRu.includes(token) || nameRuN.includes(tokenNorm) ||
@@ -692,7 +736,8 @@ const Header: React.FC = () => {
         (sku && sku.includes(token)) ||
         (barcode && barcode.includes(token)) ||
         genderHints ||
-        // Fuzzy — 1 hərf fərqinə icazə (yazı səhvləri üçün)
+        synonymMatch ||
+        // Fuzzy — 1-2 hərf fərqinə icazə (yazı səhvləri üçün)
         fuzzyIncludes(nameAzN, tokenNorm) ||
         fuzzyIncludes(nameRuN, tokenNorm) ||
         fuzzyIncludes(nameEnN, tokenNorm) ||
@@ -1858,10 +1903,50 @@ const Header: React.FC = () => {
               });
               const matchedBrands = Array.from(brandSet).sort((a, b) => a.localeCompare(b, 'az')).slice(0, 10);
 
-              if (matchedCategories.length === 0 && matchedBrands.length === 0) return null;
+              // ═══ Uyğun səhifələr (Haqqımızda, Bloq, Əlaqə, Çatdırılma və s.) ═══
+              const currentLang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
+              const matchesPage = (p: SearchPage): boolean => {
+                const haystack = [
+                  p.title.az, p.title.ru, p.title.en,
+                  ...p.keywords,
+                ].map((s) => normalizeAz(s.toLowerCase()));
+                if (haystack.some((h) => h.includes(qNorm) || fuzzyIncludes(h, qNorm))) return true;
+                // Sinonim uyğunluğu: istifadəçinin sözü hər hansı bir kateqoriyada varsa
+                const synonyms = expandTokenSynonyms(qNorm);
+                if (synonyms.length > 1 && haystack.some((h) => synonyms.some((s) => h.includes(s)))) return true;
+                return false;
+              };
+              const matchedPages = SEARCHABLE_PAGES.filter(matchesPage).slice(0, 6);
+
+              if (matchedCategories.length === 0 && matchedBrands.length === 0 && matchedPages.length === 0) return null;
 
               return (
                 <div className="mb-8 space-y-4" data-testid="header-search-suggestions">
+                  {matchedPages.length > 0 && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
+                        {t('header.pages', { defaultValue: 'Səhifələr' })}
+                      </p>
+                      <div className="flex flex-wrap gap-2.5">
+                        {matchedPages.map((p) => (
+                          <button
+                            key={`pg-${p.key}`}
+                            type="button"
+                            onClick={() => {
+                              navigate(p.path);
+                              closeSearchModal();
+                              window.scrollTo({ top: 0, behavior: 'auto' });
+                            }}
+                            className="dv-shine-chip group relative overflow-hidden inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-black text-[12.5px] font-semibold rounded-full shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 border border-amber-500/70"
+                            data-testid={`header-search-suggest-page-${p.key}`}
+                          >
+                            <span className="relative z-10">{p.title[currentLang] || p.title.az}</span>
+                            <span className="relative z-10 inline-flex items-center justify-center w-4 h-4 rounded-full bg-black/10 text-[10px] transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {matchedCategories.length > 0 && (
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.18em] text-black/50 mb-2.5 font-medium">
@@ -1919,16 +2004,41 @@ const Header: React.FC = () => {
               const lang = (i18n.language || 'az') as 'az' | 'ru' | 'en';
               const isQuery = !!searchQuery.trim();
 
-              // Default grid — top bestsellers + newest (visible only). Capped at 12.
-              const defaultGrid = !isQuery
-                ? allProducts
-                    .filter((p) => p.isEnabled !== false && !p.comingSoon)
-                    .sort((a, b) => {
-                      const aScore = (a.isBestseller ? 2 : 0) + ((a.stock ?? 0) > 0 ? 1 : 0);
-                      const bScore = (b.isBestseller ? 2 : 0) + ((b.stock ?? 0) > 0 ? 1 : 0);
-                      return bScore - aScore;
-                    })
-                    .slice(0, 12)
+              // Default grid (istifadəçi hələ heç nə yazmayıb) — RANDOM qarışıq.
+              // Ana səhifə seksiyalarındakı kimi hər kateqoriyadan balanslı nümunə
+              // götürüb qarışdırırıq ki, saat + eynək + pulqabı + hədiyyə hamısı görsənsin.
+              // `searchRandomSeed` dəyişəndə (yeni modal açılışı) bütün siyahı yenilənir.
+              const defaultGrid: Product[] = !isQuery
+                ? (() => {
+                    // Faktiki dəyişən: `searchRandomSeed` (silinməsin — dependency yerinə keçir)
+                    void searchRandomSeed;
+                    const pool = allProducts.filter((p) => p.isEnabled !== false && !p.comingSoon);
+                    if (pool.length === 0) return [];
+                    // Kateqoriya üzrə qruplaşdır
+                    const byCat: Record<string, Product[]> = {};
+                    for (const p of pool) {
+                      const key = (p.category || '_none').toLowerCase();
+                      (byCat[key] ??= []).push(p);
+                    }
+                    // Fisher-Yates
+                    const shuffle = <T,>(arr: T[]): T[] => {
+                      const a = arr.slice();
+                      for (let i = a.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [a[i], a[j]] = [a[j], a[i]];
+                      }
+                      return a;
+                    };
+                    // Hər kateqoriyadan 3-ə qədər random məhsul + qalanı poolun random qarışığından
+                    const bucketPicks: Product[] = [];
+                    for (const cat of Object.keys(byCat)) {
+                      const shuffled = shuffle(byCat[cat]);
+                      bucketPicks.push(...shuffled.slice(0, 3));
+                    }
+                    const remaining = shuffle(pool.filter((p) => !bucketPicks.includes(p)));
+                    const mixed = shuffle([...bucketPicks, ...remaining]);
+                    return mixed.slice(0, 24);
+                  })()
                 : [];
 
               if (isQuery && searchResults.length === 0) {
@@ -1954,7 +2064,15 @@ const Header: React.FC = () => {
                   const bn = normalizeAz(b);
                   return b && (b.includes(q2) || bn.includes(q2Norm) || fuzzyIncludes(bn, q2Norm));
                 });
-                if (anyCatMatch || anyBrandMatch) return null;
+                // Səhifə uyğunluğu var — heç bir məhsul yoxdursa da səhifə linkləri işə yarayır
+                const anyPageMatch = SEARCHABLE_PAGES.some((p) => {
+                  const hs = [p.title.az, p.title.ru, p.title.en, ...p.keywords]
+                    .map((s) => normalizeAz(s.toLowerCase()));
+                  if (hs.some((h) => h.includes(q2Norm) || fuzzyIncludes(h, q2Norm))) return true;
+                  const syns = expandTokenSynonyms(q2Norm);
+                  return syns.length > 1 && hs.some((h) => syns.some((s) => h.includes(s)));
+                });
+                if (anyCatMatch || anyBrandMatch || anyPageMatch) return null;
                 return (
                   <div className="text-center py-20" data-testid="header-search-no-results">
                     <p className="text-[14px] text-black/55">
@@ -1972,7 +2090,7 @@ const Header: React.FC = () => {
                   <h3 className="text-[15px] sm:text-[16px] text-black mb-6 font-medium" data-testid="header-search-section-title">
                     {isQuery
                       ? t('header.searchResults', { defaultValue: 'Nəticələr' })
-                      : t('header.featuredProducts', { defaultValue: 'Seçilmiş məhsullar' })}
+                      : t('header.discover', { defaultValue: 'Kəşf edin' })}
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-3 sm:gap-x-5 gap-y-8" data-testid="header-search-results">
                     {productsToShow.map((p) => {
