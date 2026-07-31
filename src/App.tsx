@@ -312,6 +312,22 @@ function App() {
     }
   }, []);
 
+  // Canlı ziyarətçi presence heartbeat — 25 s-də bir Firestore-a yazır.
+  React.useEffect(() => {
+    let stop: (() => void) | null = null;
+    const start = async () => {
+      const mod = await import('./services/presenceService');
+      stop = mod.startPresenceHeartbeat();
+    };
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+    if (typeof ric === 'function') {
+      ric(() => { void start(); }, { timeout: 4000 });
+    } else {
+      window.setTimeout(() => { void start(); }, 2000);
+    }
+    return () => { if (stop) stop(); };
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

@@ -27,6 +27,7 @@ export interface ChatSessionMeta {
   id: string;
   startedAt?: any;
   lastActive?: any;
+  lastUserMessageAt?: any;         // Timestamp of the last message sent BY the customer
   messageCount: number;
   userMessageCount: number;
   aiEnabled: boolean;              // Admin can turn off AI for this session (live takeover)
@@ -110,7 +111,10 @@ export const logMessage = async (
     lastRole: msg.role,
     messageCount: increment(1),
   };
-  if (msg.role === 'user') updates.userMessageCount = increment(1);
+  if (msg.role === 'user') {
+    updates.userMessageCount = increment(1);
+    updates.lastUserMessageAt = serverTimestamp();
+  }
   if (msg.imageUrl) updates.hasImage = true;
   await updateDoc(sessRef, updates).catch(async () => {
     // Session doc doesn't exist — create it lazily
@@ -154,16 +158,67 @@ export const subscribeSessionMessages = (
 export const subscribeAllSessions = (
   cb: (sessions: ChatSessionMeta[]) => void
 ): (() => void) => {
+  // Firestore orderBy is used purely to get an initial reasonable ordering;
+  // final sort happens client-side by `lastUserMessageAt` (last CUSTOMER msg)
+  // so that whoever wrote last always appears on top.
   const q = query(collection(db, SESSIONS), orderBy('lastActive', 'desc'));
+  const getMs = (v: any): number => {
+    if (!v) return 0;
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    return 0;
+  };
   return onSnapshot(
     q,
     (snap) => {
       const list: ChatSessionMeta[] = [];
       snap.forEach((d) => list.push({ ...(d.data() as any), id: d.id }));
+      list.sort((a, b) => {
+        const av = getMs((a as any).lastUserMessageAt) || getMs((a as any).lastActive);
+        const bv = getMs((b as any).lastUserMessageAt) || getMs((b as any).lastActive);
+        return bv - av;
+      });
       cb(list);
     },
     () => cb([])
   );
+};
+
+// ────────── Anonymized 5-digit customer code ──────────
+
+/**
+ * Deterministic 5-digit code (10000-99999) derived from a session id — used
+ * as the "display name" for anonymous chat visitors so admins see stable
+ * short numbers instead of raw session UUIDs.
+ */
+export const sessionShortCode = (sessionId: string): string => {
+  if (!sessionId) return '00000';
+  let hash = 5381;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = ((hash << 5) + hash + sessionId.charCodeAt(i)) | 0;
+  }
+  const num = Math.abs(hash) % 90000 + 10000;
+  return String(num);
+};
+
+/**
+ * Formats a Firestore Timestamp/Date to `DD.MM.YY HH:MM` (Baku-friendly)
+ * — used for showing when the customer started a chat session.
+ */
+export const formatSessionStart = (ts: any): string => {
+  let ms = 0;
+  if (!ts) return '';
+  if (typeof ts.seconds === 'number') ms = ts.seconds * 1000;
+  else if (typeof ts.toMillis === 'function') ms = ts.toMillis();
+  else if (ts instanceof Date) ms = ts.getTime();
+  if (!ms) return '';
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}.${mm}.${yy} ${hh}:${mi}`;
 };
 
 export const toggleSessionAi = async (sessionId: string, enabled: boolean): Promise<void> => {

@@ -20,6 +20,8 @@ import {
   logMessage,
   computeStats,
   formatRelativeTime,
+  sessionShortCode,
+  formatSessionStart,
   type ChatSessionMeta,
   type ChatSessionMessage,
   type ChatStats,
@@ -39,6 +41,22 @@ import { playNewSessionSound } from '../../utils/chatSounds';
 import { consumePendingChatSession, onOpenChatSession } from '../../utils/adminChatBridge';
 
 type SubTab = 'behavior' | 'examples' | 'stats' | 'conversations' | 'contacts';
+
+// A customer is considered "active in the chat right now" if either their
+// typing indicator is on OR their last activity is within the past 3 minutes.
+const ACTIVE_WINDOW_MS = 3 * 60 * 1000;
+const isSessionActive = (s: ChatSessionMeta): boolean => {
+  const now = Date.now();
+  const typingAt = (s as any)?.customerTypingAt;
+  const typingMs = typingAt?.seconds ? typingAt.seconds * 1000
+    : typeof typingAt?.toMillis === 'function' ? typingAt.toMillis() : 0;
+  if ((s as any)?.customerTyping && typingMs && now - typingMs < 8000) return true;
+  const lastAt = (s as any)?.lastActive;
+  const lastMs = lastAt?.seconds ? lastAt.seconds * 1000
+    : typeof lastAt?.toMillis === 'function' ? lastAt.toMillis() : 0;
+  return lastMs > 0 && now - lastMs < ACTIVE_WINDOW_MS;
+};
+
 
 // ─── Behavior fields config ─────────────────────────────────────────────
 interface FieldConfig {
@@ -866,13 +884,12 @@ const ConversationsSection: React.FC<{
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Force re-render every 2s while a session is selected — needed to hide
-  // stale typing indicators (customerTyping might not be reset if browser closed).
+  // Force periodic re-render (every 2s) so stale typing / active indicators
+  // fade even without an underlying Firestore change.
   useEffect(() => {
-    if (!selectedId) return;
     const t = setInterval(() => setTypingTick((x) => x + 1), 2000);
     return () => clearInterval(t);
-  }, [selectedId]);
+  }, []);
 
   useEffect(() => {
     const unsub = subscribeAllSessions(setSessions);
@@ -1049,26 +1066,48 @@ const ConversationsSection: React.FC<{
                 onClick={() => setSelectedId(s.id)}
                 data-testid={`session-item-${s.id}`}
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${
+                <div className={`relative w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${
                   s.contactCaptured
                     ? 'bg-gradient-to-br from-orange-200 to-rose-200 text-rose-800'
                     : 'bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800'
                 }`}>
                   {s.contactCaptured && s.contactName
                     ? s.contactName.trim().slice(0, 2).toUpperCase()
-                    : s.id.slice(0, 2).toUpperCase()}
+                    : sessionShortCode(s.id).slice(0, 2)}
+                  {(() => {
+                    const active = isSessionActive(s);
+                    return active ? (
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white"
+                        title="Hazırda aktivdir"
+                        data-testid={`session-active-dot-${s.id}`}
+                      >
+                        <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[13px] font-medium text-gray-900 truncate flex items-center gap-1">
                       {s.contactCaptured && s.contactName
                         ? s.contactName
-                        : `Müştəri ${s.id.slice(0, 6)}`}
+                        : <span className="font-mono">#{sessionShortCode(s.id)}</span>}
+                      {isSessionActive(s) && (
+                        <span
+                          className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-700 uppercase tracking-wide"
+                          title="Aktiv"
+                        >
+                          · aktiv
+                        </span>
+                      )}
                       {s.contactCaptured && (
                         <Phone className="h-3 w-3 text-orange-500 flex-shrink-0" strokeWidth={2.5} />
                       )}
                     </span>
-                    <span className="text-[10px] text-gray-400 flex-shrink-0">{formatRelativeTime(s.lastActive)}</span>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0" title={`Son mesaj: ${formatRelativeTime(s.lastActive)}`}>
+                      {formatSessionStart(s.startedAt) || formatRelativeTime(s.lastActive)}
+                    </span>
                   </div>
                   {s.contactCaptured && s.contactPhone && (
                     <div className="text-[10.5px] text-orange-700 font-mono truncate mt-0.5">
@@ -1125,27 +1164,42 @@ const ConversationsSection: React.FC<{
                   : 'bg-gradient-to-r from-white to-amber-50/40'
               }`}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                  <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
                     current.contactCaptured
                       ? 'bg-gradient-to-br from-orange-300 to-rose-300 text-rose-900'
                       : 'bg-gradient-to-br from-amber-200 to-amber-300 text-amber-900'
                   }`}>
                     {current.contactCaptured && current.contactName
                       ? current.contactName.trim().slice(0, 2).toUpperCase()
-                      : current.id.slice(0, 2).toUpperCase()}
+                      : sessionShortCode(current.id).slice(0, 2)}
+                    {isSessionActive(current) && (
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white"
+                        title="Hazırda aktivdir"
+                        data-testid="current-active-dot"
+                      >
+                        <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
+                      </span>
+                    )}
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1.5">
                       {current.contactCaptured && current.contactName
                         ? current.contactName
-                        : `Müştəri ${current.id.slice(0, 6)}`}
+                        : <span className="font-mono">#{sessionShortCode(current.id)}</span>}
+                      {isSessionActive(current) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          onlayn
+                        </span>
+                      )}
                       {current.contactCaptured && (
                         <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500 text-white">
                           <Phone className="h-2.5 w-2.5" strokeWidth={3} /> Real
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+                    <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5 flex-wrap">
                       {current.contactCaptured && current.contactPhone && (
                         <>
                           <a
@@ -1159,7 +1213,15 @@ const ConversationsSection: React.FC<{
                           <span className="text-gray-400">·</span>
                         </>
                       )}
-                      <span>{(current.language || 'az').toUpperCase()} · {current.messageCount || 0} mesaj · {formatRelativeTime(current.lastActive)}</span>
+                      <span>{(current.language || 'az').toUpperCase()} · {current.messageCount || 0} mesaj</span>
+                      {formatSessionStart(current.startedAt) && (
+                        <>
+                          <span className="text-gray-400">·</span>
+                          <span title="Söhbətin başladığı vaxt" className="font-mono">
+                            başladı {formatSessionStart(current.startedAt)}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

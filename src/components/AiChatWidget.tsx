@@ -232,6 +232,10 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [open, setOpen] = useState(embedded);
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
+  const [unreadAdminCount, setUnreadAdminCount] = useState(0);
+  useEffect(() => { if (open) setUnreadAdminCount(0); }, [open]);
   const [busy, setBusy] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [input, setInput] = useState('');
@@ -467,19 +471,22 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Init Firestore session on first open + subscribe to session ai_enabled + admin messages
+  // Init Firestore session on first open — subscriptions stay alive after that
+  // so incoming admin messages are received (and sound plays) even when the
+  // widget is minimised.
+  const subscriptionsRef = useRef<{ session?: () => void; msgs?: () => void }>({});
   useEffect(() => {
     if (!open || sessionInitedRef.current) return;
     sessionInitedRef.current = true;
     void initSession(sessionIdRef.current, { language: lang });
 
-    const unsubSession = subscribeSession(sessionIdRef.current, (s) => {
+    subscriptionsRef.current.session = subscribeSession(sessionIdRef.current, (s) => {
       if (s) {
         setSessionAiEnabled(s.aiEnabled !== false);
         setSessionContactCaptured(!!s.contactCaptured);
       }
     });
-    const unsubMsgs = subscribeSessionMessages(sessionIdRef.current, (msgs) => {
+    subscriptionsRef.current.msgs = subscribeSessionMessages(sessionIdRef.current, (msgs) => {
       const adminMsgs = msgs.filter((m) => m.role === 'admin' && m.id);
       if (firstMessagesLoadRef.current) {
         // First subscription: mark all historical admin msgs as seen without sound/duplicate
@@ -502,10 +509,21 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
           byRole: (m as any).byRole || '',
         })),
       ]);
+      // Play sound (always) + bump unread counter if the widget is currently minimised
       playCustomerReceiveSound();
+      if (!openRef.current) {
+        setUnreadAdminCount((c) => c + fresh.length);
+      }
     });
-    return () => { unsubSession(); unsubMsgs(); };
   }, [open, lang]);
+
+  // Detach subscriptions only when the widget itself unmounts.
+  useEffect(() => {
+    return () => {
+      subscriptionsRef.current.session?.();
+      subscriptionsRef.current.msgs?.();
+    };
+  }, []);
 
   const sendToServer = async (
     text: string,
@@ -681,6 +699,14 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
             <span className="text-[11px] font-medium text-black/90 whitespace-nowrap tracking-wide uppercase">
               {lang === 'en' ? 'Chat with us' : lang === 'ru' ? 'Напишите нам' : 'Bizə yaz'}
             </span>
+            {unreadAdminCount > 0 && (
+              <span
+                className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg ring-2 ring-white animate-pulse"
+                data-testid="unread-admin-badge"
+              >
+                {unreadAdminCount > 9 ? '9+' : unreadAdminCount}
+              </span>
+            )}
             <svg className="h-3.5 w-3.5 text-black/55 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
             </svg>

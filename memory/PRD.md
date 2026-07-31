@@ -136,3 +136,42 @@ Files:
 - `src/index.css` — `dv-dot` / `dv-typing-appear` keyframes.
 - `src/services/aiChatService.ts` — pass `contactCaptured` to backend.
 - `api/chat.js` — extended persona + turn-aware `contactHint`.
+
+## 2026-01 · AI Konsultant + Analytics — Codes / Sort / Active / Live visitors
+1. **5-digit deterministic customer code** (`sessionShortCode`):
+   - djb2 hash → 5-digit number (10000-99999) derived from session id.
+   - Session list, conversation header and avatar now show `#12345` instead of `Müştəri abcdef` / first 2 UUID chars. Contacts with a captured name keep the real name.
+
+2. **Session start timestamp** (`formatSessionStart` → `DD.MM.YY HH:MM`):
+   - Session list right column now shows the session start time (e.g. `01.01.26 11:50`) instead of relative "5 dəq" of last active. Chat header adds "başladı 01.01.26 11:50" next to language/msg count.
+
+3. **Sort by last customer message**:
+   - New `lastUserMessageAt` field written by `logMessage` when role=`user`.
+   - `subscribeAllSessions` now sorts client-side by `lastUserMessageAt` desc (fallback `lastActive`). Whoever wrote last floats to the top.
+
+4. **Customer sound + unread badge when widget is minimised**:
+   - `AiChatWidget` no longer tears down its Firestore subscriptions when the panel closes — subscription lives for the component lifetime. `playCustomerReceiveSound()` keeps firing on new admin messages.
+   - New `unreadAdminCount` counter renders a pulsing red badge (with `9+` cap) on the launcher pill when admin messages arrive while the panel is closed. Cleared on next open.
+
+5. **Green online dot for active customers**:
+   - `isSessionActive(s)` = `customerTyping` still-fresh OR `lastActive` within last 3 min.
+   - Session list avatar gets a pulsing emerald dot + inline `· aktiv` tag; chat header shows an "onlayn" chip too.
+   - ConversationsSection tick timer (`setTypingTick`) runs every 2 s regardless of selection so stale "active" states fade automatically.
+
+6. **Live visitor count in Analitika**:
+   - New `services/presenceService.ts` — Page-Visibility-aware heartbeat every 25 s writes `sitePresence/{tabId}` doc (lastSeen/path/referrer/UA). SessionStorage-scoped tab id avoids inflating counts on refresh; best-effort delete on `pagehide`.
+   - `subscribeLiveVisitors` filters to docs with `lastSeen < 60s` and re-emits every 15 s so stale visitors drop off cleanly.
+   - `AnalyticsTab` renders a full-width emerald "Canlı ziyarətçilər" hero banner above the KPI cards: pulsing count + top 4 pages by visitor count with page names ("Ana səhifə", `/products/…`, etc.).
+   - Hooked into `App.tsx` — idle-callback deferred so it doesn't slow first paint.
+
+Files touched:
+- `src/services/chatSessionService.ts` — `sessionShortCode`, `formatSessionStart`, `lastUserMessageAt`, client-side sort
+- `src/services/presenceService.ts` — NEW (heartbeat + subscribe helpers)
+- `src/App.tsx` — mounts the presence heartbeat lazily
+- `src/components/AiChatWidget.tsx` — long-lived subscription + unread badge
+- `src/components/admin/AiConsultantTab.tsx` — codes, start times, active dot, ticker
+- `src/components/admin/AnalyticsTab.tsx` — LiveVisitorsBanner + subscribeLiveVisitors wiring
+
+Notes:
+- `sitePresence` collection is written by every visitor — Firestore free-tier friendly for a boutique storefront (≈ 4 writes/min per open tab).
+- Presence docs are shallow (path/UA/lastSeen). Consider a scheduled cloud function later to prune docs older than 24h if the collection grows.

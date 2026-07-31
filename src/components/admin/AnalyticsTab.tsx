@@ -11,6 +11,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Radio,
+  Globe,
 } from 'lucide-react';
 import {
   collection,
@@ -34,6 +36,7 @@ import {
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { useTranslation } from 'react-i18next';
+import { subscribeLiveVisitors, type LiveVisitor } from '../../services/presenceService';
 
 interface CustomerCart {
   id: string;
@@ -92,6 +95,12 @@ const AnalyticsTab: React.FC = () => {
   const [openWishlist, setOpenWishlist] = useState<CustomerWishlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Live visitor presence — real-time count of people on the site right now
+  const [liveVisitors, setLiveVisitors] = useState<LiveVisitor[]>([]);
+  useEffect(() => {
+    const unsub = subscribeLiveVisitors(setLiveVisitors);
+    return () => unsub();
+  }, []);
   // "Daha çox" toggles per list to avoid endlessly stretching pages
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggle = (key: string) =>
@@ -277,6 +286,8 @@ const AnalyticsTab: React.FC = () => {
           Yenilə
         </button>
       </div>
+
+      <LiveVisitorsBanner visitors={liveVisitors} />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -862,6 +873,75 @@ const AnalyticsTab: React.FC = () => {
     </div>
   );
 };
+
+const LiveVisitorsBanner: React.FC<{ visitors: LiveVisitor[] }> = ({ visitors }) => {
+  const count = visitors.length;
+  // Group by simplified path so we can show the busiest 3 pages
+  const pageBuckets: Record<string, number> = {};
+  visitors.forEach((v) => {
+    const p = (v.path || '/').split('?')[0].replace(/\/+$/, '') || '/';
+    pageBuckets[p] = (pageBuckets[p] || 0) + 1;
+  });
+  const topPages = Object.entries(pageBuckets)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20"
+      data-testid="live-visitors-banner"
+    >
+      {/* Ambient dots */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.55) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.35) 0%, transparent 40%)',
+      }} />
+      <div className="relative flex flex-col md:flex-row md:items-center gap-4 md:gap-6 p-5">
+        <div className="flex items-center gap-4">
+          <div className="relative w-14 h-14 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center backdrop-blur-sm">
+            <Radio className="h-6 w-6" strokeWidth={2.2} />
+            <span aria-hidden="true" className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-white">
+              <span className="absolute inset-0 rounded-full bg-emerald-300 animate-ping" />
+              <span className="absolute inset-[3px] rounded-full bg-emerald-500" />
+            </span>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase font-bold tracking-[0.14em] text-white/80">Canlı ziyarətçilər</div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-black tabular-nums" data-testid="live-visitors-count">{count}</span>
+              <span className="text-sm text-white/85">{count === 1 ? 'nəfər saytdadır' : 'nəfər hazırda saytdadır'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          {topPages.length > 0 ? (
+            <div>
+              <div className="text-[11px] uppercase font-semibold tracking-wider text-white/70 mb-1.5 flex items-center gap-1.5">
+                <Globe className="h-3 w-3" /> Ən çox baxılan səhifələr
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {topPages.map(([path, n]) => (
+                  <span
+                    key={path}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm text-[11px] font-medium border border-white/20"
+                    title={path}
+                  >
+                    <span className="font-bold tabular-nums">{n}</span>
+                    <span className="opacity-90 truncate max-w-[180px]">{path === '/' ? 'Ana səhifə' : path}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-white/80 italic">
+              Hazırda heç kim yoxdur — real-time olaraq yenilənəcək.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number; unit: string }> = ({
   icon,
