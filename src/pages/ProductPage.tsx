@@ -8,6 +8,7 @@ import CreditApplicationForm from '../components/CreditApplicationForm';
 import CreditCalculator from '../components/CreditCalculator';
 import ProductReviews from '../components/ProductReviews';
 import SimilarProducts from '../components/SimilarProducts';
+import StoryShareModal from '../components/admin/StoryShareModal';
 import { trackProductView } from '../services/analyticsService';
 import type { Product } from '../types';
 
@@ -21,14 +22,17 @@ const ProductPage: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isB2BUser, setIsB2BUser] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [showCreditForm, setShowCreditForm] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('description');
   const [copied, setCopied] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
 
   useEffect(() => {
     const userRole = localStorage.getItem('userRole');
     setIsB2BUser(userRole === 'b2b');
+    setIsAdminUser(userRole === 'admin');
     if (id) loadProduct(id);
     // Reset state on navigation between products
     setCurrentImageIndex(0);
@@ -324,6 +328,22 @@ const ProductPage: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Admin-only: Instagram Story share */}
+            {isAdminUser && (
+              <button
+                onClick={() => setShowStoryModal(true)}
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#111] to-[#2a2a2a] hover:from-black hover:to-black text-[#f5e7c1] border border-[#C9A24A]/40 hover:border-[#C9A24A] text-[12px] uppercase tracking-[0.24em] font-medium transition-all group"
+                data-testid="admin-story-share-btn"
+                title="Admin: Instagram Story şəkli yarat"
+              >
+                <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+                <span>Story-də paylaş</span>
+                <span className="text-[9px] text-[#C9A24A]/70 tracking-normal normal-case ml-1">
+                  admin
+                </span>
+              </button>
+            )}
           </div>
 
           {/* RIGHT — Info */}
@@ -564,6 +584,19 @@ const ProductPage: React.FC = () => {
           productName={productName}
           productPrice={product.salePrice || product.price}
           onClose={() => setShowCreditForm(false)}
+        />
+      )}
+
+      {isAdminUser && showStoryModal && (
+        <StoryShareModal
+          open={showStoryModal}
+          onClose={() => setShowStoryModal(false)}
+          product={product}
+          brand={product.brand || ''}
+          productName={productName}
+          price={product.salePrice && product.salePrice < product.price ? product.salePrice : product.price}
+          originalPrice={product.salePrice && product.salePrice < product.price ? product.price : undefined}
+          imageUrl={product.images?.[currentImageIndex] || product.images?.[0] || ''}
         />
       )}
     </div>
