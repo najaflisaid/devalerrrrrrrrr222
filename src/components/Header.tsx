@@ -1452,7 +1452,7 @@ const Header: React.FC = () => {
                           const hasContent = hasChildren || catBrands.length > 0;
 
                           return (
-                            <li key={cat.key}>
+                            <li key={cat.key} className={`relative dv-mobile-cat ${isOpen ? 'is-open' : ''}`}>
                               <button
                                 onClick={() => {
                                   if (!hasContent) {
@@ -1464,7 +1464,7 @@ const Header: React.FC = () => {
                                   setMobileCategoryOpen(isOpen ? null : cat.key);
                                   setMobileSubCategoryOpen(null);
                                 }}
-                                className="w-full flex items-center justify-between gap-3 py-5 text-left text-[15px] uppercase tracking-[0.08em] font-medium text-black hover:opacity-70 transition-opacity"
+                                className={`w-full flex items-center justify-between gap-3 py-3 pl-3 -ml-3 text-left text-[15px] uppercase tracking-[0.08em] font-medium transition-colors ${isOpen ? 'text-black' : 'text-black hover:opacity-70'}`}
                                 data-testid={`mobile-category-toggle-${cat.name}`}
                                 aria-expanded={isOpen}
                               >
@@ -1477,7 +1477,7 @@ const Header: React.FC = () => {
                               </button>
 
                               {isOpen && hasContent && (
-                                <div className="pb-4 pl-2">
+                                <div className="dv-accordion-open pb-3 pl-4 ml-1 border-l border-black/[0.08]">
                                   {/* Hamısına bax */}
                                   <button
                                     onClick={() => {
