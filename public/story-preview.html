@@ -4,22 +4,26 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>DE VALEUR — Story Şablonları (Demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Pinyon+Script&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   body {
     margin: 0;
     padding: 40px 20px;
     background: #0f0f0f;
-    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
     color: #f5f2ea;
     -webkit-font-smoothing: antialiased;
   }
   h1 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 500;
-    font-size: 34px;
+    font-size: 30px;
     text-align: center;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
     margin: 0 0 8px;
   }
   .sub {
@@ -163,15 +167,15 @@ function drawWatermark(ctx, dark){
   ctx.save();
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.globalAlpha = dark ? 0.55 : 0.4;
+  ctx.globalAlpha = dark ? 0.6 : 0.5;
   ctx.fillStyle = dark ? '#C9A24A' : '#111';
-  ctx.font = '400 34px "Playfair Display", Georgia, serif';
-  ctx.fillText('◆', 60, H - 66);
-  ctx.font = '500 22px Inter, Arial, sans-serif';
-  ctx.fillText('DE  VALEUR', 105, H - 70);
-  ctx.globalAlpha = dark ? 0.35 : 0.25;
-  ctx.font = '400 14px Inter, Arial, sans-serif';
-  ctx.fillText('Luxury  ·  since  2020', 105, H - 48);
+  ctx.font = '400 56px "Pinyon Script", cursive';
+  ctx.fillText('D', 60, H - 60);
+  ctx.font = '500 20px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText('DE  VALEUR', 115, H - 72);
+  ctx.globalAlpha = dark ? 0.4 : 0.32;
+  ctx.font = '300 13px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText('Luxury  ·  since  2020', 115, H - 50);
   ctx.restore();
 }
 
@@ -179,7 +183,7 @@ function drawFooter(ctx, color){
   ctx.save();
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
-  ctx.font = '400 26px Inter, Arial, sans-serif';
+  ctx.font = '400 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText('DEVALEUR.AZ', W/2, H - 70);
   ctx.restore();
 }
@@ -190,7 +194,7 @@ function drawMinimal(ctx){
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
 
   ctx.fillStyle='#111'; ctx.textAlign='center';
-  ctx.font='500 34px Inter, Arial, sans-serif';
+  ctx.font='500 34px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(brand.toUpperCase(), W/2, 180);
   ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(W/2-60,220); ctx.lineTo(W/2+60,220); ctx.stroke();
@@ -200,13 +204,13 @@ function drawMinimal(ctx){
   fakeImage(ctx, 130, 340, W-260, 820, false);
 
   ctx.fillStyle='#111';
-  ctx.font='400 54px "Playfair Display", Georgia, serif';
+  ctx.font='400 54px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   const lines = wrap(ctx, productName, W-200);
   let ny = 1290;
   lines.forEach(l => { ctx.fillText(l, W/2, ny); ny += 66; });
 
   // Old price
-  ctx.font='400 30px Inter, Arial, sans-serif';
+  ctx.font='400 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillStyle='rgba(0,0,0,0.45)';
   const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+40);
   const m = ctx.measureText(ot);
@@ -215,16 +219,16 @@ function drawMinimal(ctx){
   ny+=60;
 
   ctx.fillStyle='#111';
-  ctx.font='600 96px "Playfair Display", Georgia, serif';
+  ctx.font='600 96px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(price,0)+' AZN', W/2, ny+130);
 
   const boxY = ny+200;
   ctx.fillStyle='#111'; ctx.fillRect((W-640)/2, boxY, 640, 150);
   ctx.strokeStyle='#C9A24A'; ctx.lineWidth=2;
   ctx.strokeRect((W-640)/2+6, boxY+6, 628, 138);
-  ctx.fillStyle='#C9A24A'; ctx.font='500 22px Inter, Arial, sans-serif';
+  ctx.fillStyle='#C9A24A'; ctx.font='500 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText('KREDİTLƏ '+monthCount+' AY · 0%', W/2, boxY+55);
-  ctx.fillStyle='#fff'; ctx.font='600 58px "Playfair Display", Georgia, serif';
+  ctx.fillStyle='#fff'; ctx.font='600 58px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+115);
 
   drawFooter(ctx, 'rgba(0,0,0,0.55)');
@@ -238,7 +242,7 @@ function drawNoir(ctx){
   ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
 
   ctx.fillStyle='#C9A24A'; ctx.textAlign='center';
-  ctx.font='500 32px Inter, Arial, sans-serif';
+  ctx.font='500 32px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(brand.toUpperCase(), W/2, 180);
   ctx.strokeStyle='#C9A24A'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(W/2-55,210); ctx.lineTo(W/2+55,210); ctx.stroke();
@@ -246,12 +250,12 @@ function drawNoir(ctx){
   fakeImage(ctx, 100, 290, W-200, 900, true);
 
   ctx.fillStyle='#f5f2ea';
-  ctx.font='400 56px "Playfair Display", Georgia, serif';
+  ctx.font='400 56px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   const lines = wrap(ctx, productName, W-200);
   let ny=1280;
   lines.forEach(l => { ctx.fillText(l, W/2, ny); ny+=66; });
 
-  ctx.font='400 30px Inter, Arial, sans-serif';
+  ctx.font='400 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillStyle='rgba(255,255,255,0.5)';
   const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+40);
   const m = ctx.measureText(ot);
@@ -260,15 +264,15 @@ function drawNoir(ctx){
   ny+=60;
 
   ctx.fillStyle='#fff';
-  ctx.font='600 100px "Playfair Display", Georgia, serif';
+  ctx.font='600 100px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(price,0)+' AZN', W/2, ny+130);
 
   const boxY = ny+200;
   ctx.strokeStyle='#C9A24A'; ctx.lineWidth=2;
   ctx.strokeRect((W-720)/2, boxY, 720, 170);
-  ctx.fillStyle='#C9A24A'; ctx.font='500 24px Inter, Arial, sans-serif';
+  ctx.fillStyle='#C9A24A'; ctx.font='500 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(monthCount + ' AY KREDİT · FAİZSİZ', W/2, boxY+58);
-  ctx.fillStyle='#f5f2ea'; ctx.font='600 62px "Playfair Display", Georgia, serif';
+  ctx.fillStyle='#f5f2ea'; ctx.font='600 62px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+130);
 
   drawFooter(ctx, 'rgba(255,255,255,0.55)');
@@ -281,19 +285,19 @@ function drawGold(ctx){
   ctx.fillStyle='#C9A24A';
   ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.lineTo(W,120); ctx.lineTo(0,200); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#111'; ctx.textAlign='center';
-  ctx.font='700 42px Inter, Arial, sans-serif';
+  ctx.font='700 42px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(brand.toUpperCase(), W/2, 100);
 
   ctx.fillStyle='#faf7f0'; ctx.fillRect(80,280,W-160,900);
   fakeImage(ctx, 110, 310, W-220, 840, false);
 
   ctx.fillStyle='#f5e7c1';
-  ctx.font='400 52px "Playfair Display", Georgia, serif';
+  ctx.font='400 52px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   const lines = wrap(ctx, productName, W-200);
   let ny=1260;
   lines.forEach(l => { ctx.fillText(l, W/2, ny); ny+=64; });
 
-  ctx.font='400 28px Inter, Arial, sans-serif';
+  ctx.font='400 28px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillStyle='rgba(245,231,193,0.55)';
   const ot = fmt(original,0) + ' AZN'; ctx.fillText(ot, W/2, ny+34);
   const m = ctx.measureText(ot);
@@ -302,7 +306,7 @@ function drawGold(ctx){
   ny+=52;
 
   ctx.fillStyle='#fff';
-  ctx.font='700 108px "Playfair Display", Georgia, serif';
+  ctx.font='700 108px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   const pt = fmt(price,0)+' AZN'; ctx.fillText(pt, W/2, ny+140);
   const pm = ctx.measureText(pt);
   ctx.strokeStyle='#C9A24A'; ctx.lineWidth=4;
@@ -310,9 +314,9 @@ function drawGold(ctx){
 
   const boxY = ny+230;
   ctx.fillStyle='#C9A24A'; ctx.fillRect(0, boxY, W, 160);
-  ctx.fillStyle='#111'; ctx.font='600 26px Inter, Arial, sans-serif';
+  ctx.fillStyle='#111'; ctx.font='600 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(monthCount + ' AY KREDİT · 0% FAİZ', W/2, boxY+55);
-  ctx.font='700 62px "Playfair Display", Georgia, serif';
+  ctx.font='700 62px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(monthly)+' AZN / ay', W/2, boxY+125);
 
   drawFooter(ctx, 'rgba(245,231,193,0.65)');
@@ -323,14 +327,14 @@ function drawEditorial(ctx){
   ctx.fillStyle='#0d0d0d'; ctx.fillRect(0,1050,W,H-1050);
 
   ctx.fillStyle='#111'; ctx.textAlign='center';
-  ctx.font='500 30px Inter, Arial, sans-serif';
+  ctx.font='500 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(brand.toUpperCase(), W/2, 130);
   ctx.beginPath(); ctx.arc(W/2,160,3,0,Math.PI*2); ctx.fill();
 
   fakeImage(ctx, 90, 200, W-180, 820, false);
 
   ctx.fillStyle='#f5f2ea'; ctx.textAlign='left';
-  ctx.font='400 50px "Playfair Display", Georgia, serif';
+  ctx.font='400 50px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   const lines = wrap(ctx, productName, W-180);
   let ny=1170;
   lines.forEach(l => { ctx.fillText(l, 90, ny); ny+=60; });
@@ -340,12 +344,12 @@ function drawEditorial(ctx){
 
   const colY = ny+100;
   ctx.fillStyle='rgba(245,242,234,0.55)';
-  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.font='400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText('QİYMƏT', 90, colY);
   ctx.fillStyle='#fff';
-  ctx.font='600 78px "Playfair Display", Georgia, serif';
+  ctx.font='600 78px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(price,0)+' AZN', 90, colY+80);
-  ctx.font='400 24px Inter, Arial, sans-serif';
+  ctx.font='400 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillStyle='rgba(255,255,255,0.5)';
   const ot = fmt(original,0)+' AZN'; ctx.fillText(ot, 90, colY+120);
   const m = ctx.measureText(ot);
@@ -354,13 +358,13 @@ function drawEditorial(ctx){
 
   ctx.textAlign='right';
   ctx.fillStyle='rgba(201,162,74,0.85)';
-  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.font='400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(monthCount + ' AY · 0%', W-90, colY);
   ctx.fillStyle='#C9A24A';
-  ctx.font='600 60px "Playfair Display", Georgia, serif';
+  ctx.font='600 60px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText(fmt(monthly)+' AZN', W-90, colY+80);
   ctx.fillStyle='rgba(245,242,234,0.75)';
-  ctx.font='400 22px Inter, Arial, sans-serif';
+  ctx.font='400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
   ctx.fillText('aylıq ödəniş', W-90, colY+118);
 
   drawFooter(ctx, 'rgba(245,242,234,0.55)');

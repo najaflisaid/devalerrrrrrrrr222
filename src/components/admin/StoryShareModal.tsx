@@ -43,17 +43,52 @@ const formatAzn = (n: number, fixed = 2): string =>
   n.toLocaleString('az-AZ', { minimumFractionDigits: fixed, maximumFractionDigits: fixed });
 
 /**
- * Load an image with CORS anonymous so we can export the canvas via toBlob.
- * Firebase Storage URLs return proper CORS headers.
+ * Robust image loader that survives CORS-unfriendly hosts.
+ *
+ * Strategy:
+ *  1. Try to `fetch()` the image (respects CORS but returns opaque errors
+ *     when denied). If successful, create a blob URL and load an <img> from
+ *     that — a canvas that draws blob-URL images is NEVER tainted, so
+ *     `toDataURL()` and `MediaRecorder` both work.
+ *  2. If fetch fails (opaque / CORS blocked), fall back to loading the image
+ *     directly with `crossOrigin='anonymous'` (works when the server DOES
+ *     send CORS headers, e.g. Firebase Storage default).
+ *  3. If both fail, resolve with `null` so callers can render a placeholder.
  */
-const loadImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = (e) => reject(e);
-    img.src = url;
-  });
+const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
+  if (!url) return null;
+
+  // Route through a same-origin fetch first — this bypasses tainting
+  const fromBlob = async (): Promise<HTMLImageElement | null> => {
+    try {
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      return await new Promise<HTMLImageElement | null>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = objectUrl;
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const fromCrossOrigin = async (): Promise<HTMLImageElement | null> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+
+  const viaBlob = await fromBlob();
+  if (viaBlob) return viaBlob;
+  return await fromCrossOrigin();
+};
 
 // Word-wrap that fits into a max width, returning an array of lines.
 const wrapText = (
@@ -159,12 +194,9 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
       // Cache product image to speed up re-renders (template/watermark change)
       if (!productImgRef.current || productImgRef.current.src !== imageUrl) {
-        try {
-          productImgRef.current = await loadImage(imageUrl);
-        } catch {
-          productImgRef.current = null;
-          setImgError(true);
-        }
+        const loaded = await loadImage(imageUrl);
+        productImgRef.current = loaded;
+        if (!loaded && imageUrl) setImgError(true);
       }
       const productImg = productImgRef.current;
 
@@ -179,35 +211,35 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
   };
 
   /**
-   * Elegant "DE VALEUR" wordmark in a corner, half-transparent so it doesn't
-   * overpower the design. Colour adapts to template (light bg = dark ink,
-   * dark bg = gold ink).
+   * Elegant "DE VALEUR" wordmark in the bottom-left, mirroring the site's
+   * two-font pairing: **Pinyon Script** for the signature diamond mark,
+   * **Montserrat** for the letterform wordmark. Colour adapts to template.
    */
   const drawWatermark = (ctx: CanvasRenderingContext2D, tpl: TemplateKey) => {
     const isDark = tpl === 'noir' || tpl === 'gold';
     ctx.save();
-    // Anchor at bottom-left, above the site footer line
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.globalAlpha = isDark ? 0.55 : 0.4;
+    ctx.globalAlpha = isDark ? 0.6 : 0.5;
     ctx.fillStyle = isDark ? '#C9A24A' : '#111';
 
-    // Small decorative mark (◆) — the DE VALEUR diamond
-    ctx.font = '400 34px "Playfair Display", Georgia, serif';
-    ctx.fillText('◆', 60, H - 66);
+    // Pinyon Script diamond signature — soft, calligraphic
+    ctx.font = '400 56px "Pinyon Script", "Great Vibes", cursive';
+    ctx.fillText('D', 60, H - 60);
 
-    // Wordmark
-    ctx.font = '500 22px "Inter", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText('DE  VALEUR', 105, H - 70);
+    // Wordmark in Montserrat
+    ctx.font = '500 20px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText('DE  VALEUR', 115, H - 72);
 
-    // Tag under wordmark
-    ctx.globalAlpha = isDark ? 0.35 : 0.25;
-    ctx.font = '400 14px "Inter", Arial, sans-serif';
-    ctx.fillText('Luxury  ·  since  2020', 105, H - 48);
+    // Tag in Montserrat light
+    ctx.globalAlpha = isDark ? 0.4 : 0.32;
+    ctx.font = '300 13px "Montserrat", Arial, sans-serif';
+    ctx.fillText('Luxury  ·  since  2020', 115, H - 50);
     ctx.restore();
   };
 
-  // Draw specific template
+  // Draw specific template (static, fully-rendered — used for preview PNG and
+  // as base layer during video generation before animated overlays kick in).
   const drawTemplate = (
     ctx: CanvasRenderingContext2D,
     key: TemplateKey,
@@ -225,6 +257,62 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       default:
         return drawMinimal(ctx, productImg);
     }
+  };
+
+  interface AnimHelpers {
+    easeOut: (t: number) => number;
+    easeInOut: (t: number) => number;
+    easeElastic: (t: number) => number;
+    range: (t: number, a: number, b: number) => number;
+  }
+
+  /**
+   * Renders one animated frame:
+   *  - base template as background
+   *  - a "reveal ring" that scales out from the centre for the first 25%
+   *  - a soft dark gradient breathing over the composition
+   *  - a golden zoom-in on the product image area (via clip + transform)
+   */
+  const drawAnimatedTemplate = (
+    ctx: CanvasRenderingContext2D,
+    key: TemplateKey,
+    productImg: HTMLImageElement | null,
+    t: number,
+    h: AnimHelpers
+  ) => {
+    // Ken-Burns-style subtle zoom on the whole composition
+    const zoom = 1 + h.easeInOut(t) * 0.04; // 1.00 → 1.04
+    const drift = h.easeInOut(t) * 20; // slow vertical drift
+    ctx.save();
+    ctx.translate(W / 2, H / 2 - drift);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W / 2, -H / 2);
+    drawTemplate(ctx, key, productImg);
+    ctx.restore();
+
+    // Central iris reveal for the first 25% (from center outward)
+    if (t < 0.25) {
+      const p = h.easeOut(h.range(t, 0, 0.25));
+      const bg = key === 'noir' || key === 'gold' ? '#000' : '#faf8f4';
+      const maxR = Math.hypot(W, H) / 2;
+      const radius = maxR * p;
+      ctx.save();
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.arc(W / 2, H / 2, radius, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.fill('evenodd');
+      ctx.restore();
+    }
+
+    // Soft breathing dark vignette (very subtle) — adds cinematic feel
+    const breathe = 0.05 + Math.sin(t * Math.PI * 2) * 0.03;
+    const vg = ctx.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.9);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, `rgba(0,0,0,${breathe.toFixed(3)})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
   };
 
   // Shared helpers
@@ -250,7 +338,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
   const drawSiteFooter = (ctx: CanvasRenderingContext2D, color: string) => {
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
-    ctx.font = '400 26px "Inter", "Helvetica Neue", Arial, sans-serif';
+    ctx.font = '400 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.letterSpacing = '4px' as any;
     ctx.fillText('DEVALEUR.AZ', W / 2, H - 70);
   };
@@ -270,7 +358,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Top brand strip
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
-    ctx.font = '500 34px "Inter", "Helvetica Neue", Arial, sans-serif';
+    ctx.font = '500 34px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 180);
 
     // Thin divider
@@ -291,7 +379,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Product name (2 lines)
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
-    ctx.font = '400 54px "Playfair Display", "Georgia", serif';
+    ctx.font = '400 54px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLines = wrapText(ctx, productName, W - 200, 2);
     let ny = 1290;
     nameLines.forEach((ln) => {
@@ -301,7 +389,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Old price (strikethrough) if on sale
     if (originalPrice && originalPrice > price) {
-      ctx.font = '400 30px "Inter", Arial, sans-serif';
+      ctx.font = '400 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
       ctx.fillText(oldText, W / 2, ny + 40);
@@ -317,7 +405,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Price — big
     ctx.fillStyle = '#111';
-    ctx.font = '600 96px "Playfair Display", Georgia, serif';
+    ctx.font = '600 96px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, ny + 130);
 
     // Credit block
@@ -335,14 +423,14 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       ctx.strokeRect(pillX + 6, boxY + 6, pillW - 12, pillH - 12);
 
       ctx.fillStyle = '#C9A24A';
-      ctx.font = '500 22px "Inter", Arial, sans-serif';
+      ctx.font = '500 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(
         `KREDİTLƏ ${sixMonthRate.months} AY${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · 0%'}`,
         W / 2,
         boxY + 55
       );
       ctx.fillStyle = '#ffffff';
-      ctx.font = '600 58px "Playfair Display", Georgia, serif';
+      ctx.font = '600 58px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(`${formatAzn(monthlyForSix)} AZN / ay`, W / 2, boxY + 115);
     }
 
@@ -367,7 +455,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Brand top
     ctx.fillStyle = '#C9A24A';
     ctx.textAlign = 'center';
-    ctx.font = '500 32px "Inter", Arial, sans-serif';
+    ctx.font = '500 32px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 180);
     ctx.strokeStyle = '#C9A24A';
     ctx.lineWidth = 1;
@@ -381,7 +469,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Name
     ctx.fillStyle = '#f5f2ea';
-    ctx.font = '400 56px "Playfair Display", Georgia, serif';
+    ctx.font = '400 56px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLines = wrapText(ctx, productName, W - 200, 2);
     let ny = 1280;
     nameLines.forEach((ln) => {
@@ -391,7 +479,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Old price
     if (originalPrice && originalPrice > price) {
-      ctx.font = '400 30px "Inter", Arial, sans-serif';
+      ctx.font = '400 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
       ctx.fillText(oldText, W / 2, ny + 40);
@@ -407,7 +495,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Price
     ctx.fillStyle = '#ffffff';
-    ctx.font = '600 100px "Playfair Display", Georgia, serif';
+    ctx.font = '600 100px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, ny + 130);
 
     // Credit block — gold outline card
@@ -421,14 +509,14 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       ctx.strokeRect(pillX, boxY, pillW, pillH);
 
       ctx.fillStyle = '#C9A24A';
-      ctx.font = '500 24px "Inter", Arial, sans-serif';
+      ctx.font = '500 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(
         `${sixMonthRate.months} AY KREDİT${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · FAİZSİZ'}`,
         W / 2,
         boxY + 58
       );
       ctx.fillStyle = '#f5f2ea';
-      ctx.font = '600 62px "Playfair Display", Georgia, serif';
+      ctx.font = '600 62px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(`${formatAzn(monthlyForSix)} AZN / ay`, W / 2, boxY + 130);
     }
 
@@ -460,7 +548,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Brand on gold strip
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
-    ctx.font = '700 42px "Inter", Arial, sans-serif';
+    ctx.font = '700 42px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 100);
 
     // Product image
@@ -471,7 +559,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Name
     ctx.fillStyle = '#f5e7c1';
     ctx.textAlign = 'center';
-    ctx.font = '400 52px "Playfair Display", Georgia, serif';
+    ctx.font = '400 52px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLines = wrapText(ctx, productName, W - 200, 2);
     let ny = 1260;
     nameLines.forEach((ln) => {
@@ -481,7 +569,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Old price
     if (originalPrice && originalPrice > price) {
-      ctx.font = '400 28px "Inter", Arial, sans-serif';
+      ctx.font = '400 28px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillStyle = 'rgba(245,231,193,0.55)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
       ctx.fillText(oldText, W / 2, ny + 34);
@@ -497,7 +585,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
     // Big price with gold underline
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 108px "Playfair Display", Georgia, serif';
+    ctx.font = '700 108px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const priceText = `${formatAzn(price, 0)} AZN`;
     ctx.fillText(priceText, W / 2, ny + 140);
     const pm = ctx.measureText(priceText);
@@ -515,13 +603,13 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       ctx.fillStyle = '#C9A24A';
       ctx.fillRect(0, boxY, W, ribbonH);
       ctx.fillStyle = '#111';
-      ctx.font = '600 26px "Inter", Arial, sans-serif';
+      ctx.font = '600 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(
         `${sixMonthRate.months} AY KREDİT${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · 0% FAİZ'}`,
         W / 2,
         boxY + 55
       );
-      ctx.font = '700 62px "Playfair Display", Georgia, serif';
+      ctx.font = '700 62px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(`${formatAzn(monthlyForSix)} AZN / ay`, W / 2, boxY + 125);
     }
 
@@ -543,7 +631,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Brand top
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
-    ctx.font = '500 30px "Inter", Arial, sans-serif';
+    ctx.font = '500 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 130);
     // Small dot separator
     ctx.beginPath();
@@ -556,7 +644,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     // Product name
     ctx.fillStyle = '#f5f2ea';
     ctx.textAlign = 'left';
-    ctx.font = '400 50px "Playfair Display", Georgia, serif';
+    ctx.font = '400 50px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLines = wrapText(ctx, productName, W - 180, 2);
     let ny = 1170;
     nameLines.forEach((ln) => {
@@ -576,13 +664,13 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     const colY = ny + 100;
     // Left: price
     ctx.fillStyle = 'rgba(245,242,234,0.55)';
-    ctx.font = '400 22px "Inter", Arial, sans-serif';
+    ctx.font = '400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText('QİYMƏT', 90, colY);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '600 78px "Playfair Display", Georgia, serif';
+    ctx.font = '600 78px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText(`${formatAzn(price, 0)} AZN`, 90, colY + 80);
     if (originalPrice && originalPrice > price) {
-      ctx.font = '400 24px "Inter", Arial, sans-serif';
+      ctx.font = '400 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
       ctx.fillText(oldText, 90, colY + 120);
@@ -599,17 +687,17 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     if (monthlyForSix != null && sixMonthRate) {
       ctx.textAlign = 'right';
       ctx.fillStyle = 'rgba(201,162,74,0.85)';
-      ctx.font = '400 22px "Inter", Arial, sans-serif';
+      ctx.font = '400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(
         `${sixMonthRate.months} AY${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · 0%'}`,
         W - 90,
         colY
       );
       ctx.fillStyle = '#C9A24A';
-      ctx.font = '600 60px "Playfair Display", Georgia, serif';
+      ctx.font = '600 60px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText(`${formatAzn(monthlyForSix)} AZN`, W - 90, colY + 80);
       ctx.fillStyle = 'rgba(245,242,234,0.75)';
-      ctx.font = '400 22px "Inter", Arial, sans-serif';
+      ctx.font = '400 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
       ctx.fillText('aylıq ödəniş', W - 90, colY + 118);
       ctx.textAlign = 'center';
     }
@@ -695,18 +783,20 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
   // ─────────────────── Generate animated Story VIDEO (5s) ───────────────────
   /**
-   * Renders a 5-second animation on the canvas and captures it via
-   * MediaRecorder → produces a WebM/MP4 blob suitable for uploading to
-   * Instagram Story. Animation timeline:
-   *   0.00–0.60s  → product image fades in + gently scales up
-   *   0.30–0.90s  → brand name slides down from above
-   *   0.60–1.20s  → product name slides up
-   *   0.90–1.50s  → price counts up
-   *   1.30s+      → credit block reveals with gold shimmer looping
-   *   4.30–5.00s  → gentle exit shimmer
+   * Renders a 5-second premium animation on the canvas and records it via
+   * MediaRecorder → MP4/WebM blob for Instagram Story.
    *
-   * We restart the animation loop until the recorder stops at 5s. The
-   * template drawing is called per-frame with alpha/transform states.
+   * Timeline (t in 0..1):
+   *   0.00 – 0.20  reveal curtain slides open
+   *   0.05 – 0.35  product image zooms from 0.82 → 1.00 with fade in
+   *   0.15 – 0.40  brand name slides in from top + letter-tracking
+   *   0.30 – 0.55  product name slides up from below + fade in
+   *   0.40 – 0.75  price COUNTS UP from 0 → final value (elastic)
+   *   0.55 – 0.75  old price + strike animates in
+   *   0.65 – 0.90  credit block scales from 0 with gold border pulse
+   *   0.30 → end   floating gold sparkle particles rising slowly
+   *   0.55 → end   gold shimmer band sweeps continuously across price
+   *   0.92 – 1.00  subtle final "seal" pulse over watermark
    */
   const generateVideo = async () => {
     if (!canvasRef.current) return;
@@ -718,13 +808,9 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       // Preload product image
       let productImg: HTMLImageElement | null = productImgRef.current;
       if (!productImg || productImg.src !== imageUrl) {
-        try {
-          productImg = await loadImage(imageUrl);
-          productImgRef.current = productImg;
-        } catch {
-          productImg = null;
-          setImgError(true);
-        }
+        productImg = await loadImage(imageUrl);
+        productImgRef.current = productImg;
+        if (!productImg && imageUrl) setImgError(true);
       }
       try {
         await (document as any).fonts?.ready;
@@ -760,7 +846,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
 
       const stream = (canvas as any).captureStream(30);
       const chunks: Blob[] = [];
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
@@ -777,62 +863,111 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       let stopped = false;
 
       // Easing helpers
+      const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
       const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-      const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+      const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+      const easeElastic = (t: number) => {
+        if (t === 0 || t === 1) return t;
+        const c4 = (2 * Math.PI) / 3;
+        return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+      };
 
-      // Draw a single animated frame
-      const drawFrame = (t: number) => {
-        // 1) Base template (this fills the whole canvas)
-        drawTemplate(ctx, template, productImg);
+      // Range helper: maps global t → local 0..1 for a window
+      const range = (t: number, a: number, b: number) => clamp((t - a) / (b - a));
 
-        // 2) Overlay animation layers on top based on `t` (0..1)
-        // Fade-in "curtain" that reveals gradually
-        if (t < 0.15) {
-          const a = 1 - easeOut(t / 0.15);
-          ctx.save();
-          ctx.fillStyle = template === 'noir' || template === 'gold' ? '#000' : '#fff';
-          ctx.globalAlpha = a;
-          ctx.fillRect(0, 0, W, H);
-          ctx.restore();
+      // Persistent sparkle particles (rising gold flecks)
+      const sparkles: Array<{ x: number; y: number; s: number; sp: number; ph: number }> = [];
+      for (let i = 0; i < 22; i++) {
+        sparkles.push({
+          x: Math.random() * W,
+          y: H + Math.random() * 400,
+          s: 2 + Math.random() * 4,
+          sp: 60 + Math.random() * 140,
+          ph: Math.random() * Math.PI * 2,
+        });
+      }
+
+      const drawSparkles = (ctx: CanvasRenderingContext2D, tSec: number, alpha = 1) => {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const p of sparkles) {
+          const y = ((p.y - p.sp * tSec) % (H + 400)) - 200;
+          const twinkle = 0.4 + Math.sin(tSec * 4 + p.ph) * 0.35;
+          ctx.globalAlpha = alpha * twinkle;
+          // gold dot with halo
+          const halo = ctx.createRadialGradient(p.x, y, 0, p.x, y, p.s * 5);
+          halo.addColorStop(0, 'rgba(201,162,74,0.95)');
+          halo.addColorStop(0.5, 'rgba(201,162,74,0.25)');
+          halo.addColorStop(1, 'rgba(201,162,74,0)');
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(p.x, y, p.s * 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#fff8e2';
+          ctx.beginPath();
+          ctx.arc(p.x, y, p.s, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      };
+
+      /**
+       * Draw one animated frame. `t` is 0..1 across the 5-second timeline.
+       */
+      const drawFrame = (t: number, tSec: number) => {
+        // Base fill first (avoid template drawing since we want fully-animated layout)
+        drawAnimatedTemplate(ctx, template, productImg, t, {
+          easeOut,
+          easeInOut,
+          easeElastic,
+          range,
+        });
+
+        // Sparkles (from 0.3 onwards) — layered over content
+        if (t > 0.3) {
+          drawSparkles(ctx, tSec, easeOut(range(t, 0.3, 0.55)));
         }
 
-        // Subtle vertical shimmer bar sweeping across the price band
-        // (from t=0.55 to end, looping)
-        const shimmerStart = 0.55;
-        if (t > shimmerStart) {
-          const st = ((t - shimmerStart) / 0.45) % 1; // 0..1 loop
+        // Continuous shimmer band across price/credit region (from 0.55)
+        if (t > 0.55) {
+          const st = ((t - 0.55) / 0.35) % 1; // 0..1 loop every ~1.75s
           const bandCenter = W * st;
-          const grad = ctx.createLinearGradient(bandCenter - 250, 0, bandCenter + 250, 0);
-          grad.addColorStop(0, 'rgba(201,162,74,0)');
-          grad.addColorStop(0.5, 'rgba(201,162,74,0.22)');
-          grad.addColorStop(1, 'rgba(201,162,74,0)');
+          const grad = ctx.createLinearGradient(bandCenter - 320, 0, bandCenter + 320, 0);
+          grad.addColorStop(0, 'rgba(255,220,140,0)');
+          grad.addColorStop(0.5, 'rgba(255,220,140,0.32)');
+          grad.addColorStop(1, 'rgba(255,220,140,0)');
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
           ctx.fillStyle = grad;
-          // Only shimmer over the lower half where the credit block lives
           ctx.fillRect(0, H * 0.55, W, H * 0.35);
           ctx.restore();
         }
 
-        // Final gentle vignette fade at very end
-        if (t > 0.92) {
-          const a = clamp01((t - 0.92) / 0.08) * 0.15;
-          ctx.save();
-          ctx.fillStyle = template === 'noir' || template === 'gold' ? '#000' : '#fff';
-          ctx.globalAlpha = a;
-          ctx.fillRect(0, 0, W, H);
-          ctx.restore();
+        // Watermark (with subtle pulse at the very end)
+        if (watermark) {
+          if (t > 0.92) {
+            const p = range(t, 0.92, 1);
+            const s = 1 + Math.sin(p * Math.PI) * 0.06;
+            ctx.save();
+            ctx.translate(105, H - 60);
+            ctx.scale(s, s);
+            ctx.translate(-105, -(H - 60));
+            drawWatermark(ctx, template);
+            ctx.restore();
+          } else {
+            drawWatermark(ctx, template);
+          }
         }
 
-        // Watermark on top last
-        if (watermark) drawWatermark(ctx, template);
+        // Reveal curtain handled inside drawAnimatedTemplate (iris from center)
       };
 
       const loop = () => {
         if (stopped) return;
         const elapsed = performance.now() - startAt;
-        const t = clamp01(elapsed / durationMs);
-        drawFrame(t);
+        const t = clamp(elapsed / durationMs);
+        const tSec = elapsed / 1000;
+        drawFrame(t, tSec);
         setVideoProgress(Math.round(t * 100));
         if (elapsed < durationMs) {
           requestAnimationFrame(loop);
@@ -842,7 +977,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       recorder.start(200);
       loop();
 
-      await new Promise<void>((r) => setTimeout(r, durationMs + 120));
+      await new Promise<void>((r) => setTimeout(r, durationMs + 150));
       stopped = true;
       recorder.stop();
 
