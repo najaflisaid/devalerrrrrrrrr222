@@ -35,6 +35,7 @@ import type {
   PerformanceBreakdown,
 } from '../../types/worker';
 import MonthlySalesChart from '../MonthlySalesChart';
+import WorkersAiChat from './WorkersAiChat';
 
 type Mode = 'list' | 'create' | 'edit';
 
@@ -124,6 +125,9 @@ const WorkersTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* AI Chat — heyət analitikası */}
+      <WorkersAiChat />
+
       {/* Workers list — ƏVVƏL gəlir, sürətli giriş üçün */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">

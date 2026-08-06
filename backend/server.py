@@ -524,6 +524,249 @@ async def chat_endpoint(req: ChatRequest):
 
 
 # ---------------------------------------------------------------------------
+# /api/workers-chat — HR / team analytics AI assistant for the admin panel.
+#
+# Admin sends the current workers snapshot (plus recent fines/rewards/sales/
+# requests) alongside a natural-language question. The endpoint composes a
+# grounded system prompt from the data and asks Gemini for an analytical
+# answer in Azerbaijani (or user's chosen language).
+# ---------------------------------------------------------------------------
+
+class WorkerLite(BaseModel):
+    id: str = ""
+    name: str = ""
+    surname: str = ""
+    position: str = ""
+    branch: Optional[str] = None
+    hireDate: Optional[str] = None
+    isActive: Optional[bool] = True
+    rating: Optional[float] = None
+    monthlyTarget: Optional[float] = None
+    monthlyTotalSales: Optional[float] = None
+    monthlyTotalReturns: Optional[float] = None
+    salesHistory: Optional[Dict[str, float]] = None
+    returnsHistory: Optional[Dict[str, float]] = None
+    targetsHistory: Optional[Dict[str, float]] = None
+
+
+class FineLite(BaseModel):
+    workerId: str = ""
+    amount: float = 0
+    reason: str = ""
+    date: str = ""
+
+
+class RewardLite(BaseModel):
+    workerId: str = ""
+    type: str = "bonus"
+    amount: Optional[float] = None
+    reason: str = ""
+    date: str = ""
+
+
+class RequestLite(BaseModel):
+    workerId: str = ""
+    type: str = ""
+    status: str = ""
+    subject: str = ""
+    createdAt: str = ""
+
+
+class WorkersChatRequest(BaseModel):
+    message: str
+    history: Optional[List[ChatHistoryItem]] = []
+    language: Optional[str] = "az"
+    workers: Optional[List[WorkerLite]] = []
+    fines: Optional[List[FineLite]] = []
+    rewards: Optional[List[RewardLite]] = []
+    requests: Optional[List[RequestLite]] = []
+    # Admin can pass an extra note / constraint (e.g., current period focus)
+    context: Optional[str] = ""
+
+
+HR_PERSONA = """Sən De Valeur şirkətinin admini üçün işləyən HR/heyət analitikasısan.
+
+🎯 ƏSAS MƏQSƏD:
+Admin sizdən komanda haqqında suallar verəcək (kim yaxşı satır, kimin performansı zəifdir, cərimələr, mükafatlar, tələblər, filial müqayisələri və s.). Cavabları QISA, konkret və data-ya əsaslanmış şəkildə ver.
+
+🧭 DAVRANIŞ:
+- Adminlə peşəkar, məlumatlı, bir HR analitiki tonunda danış
+- Cavab dilində konkret rəqəm və adlar ver (məs. "Rəşad Əliyev — 4,200 AZN satış, 88% reytinq")
+- Ümumiləşdirməkdən çəkin — hansı işçini nəzərdə tutduğunu aydın göstər
+- Rəqəmləri AZN valyutasında və 0/2 onluqda ver
+- Zəruri hallarda TOP-3 və ya siyahı formatı istifadə et (- ilə)
+- Cavab uzunluğu: 3-8 cümlə (əgər sual siyahı istəyirsə, siyahını qısa saxla)
+- Heç vaxt uydurma — göstərilən data-dan kənara çıxmasan
+- Əgər sual data ilə əlaqəli deyilsə, mehriban şəkildə admini komanda mövzusuna qaytar
+
+📊 STATİSTİKA QAYDALARI:
+- "Bu ay" dedikdə cari ay salesHistory-də tapdığın son ay
+- Reytinq (%): işçinin ümumi performans göstəricisi
+- monthlyTotalSales / monthlyTarget → hədəf tamamlanma faizi
+- monthlyTotalReturns → qaytarılmalar (əskiltmə)
+- Cərimələr və mükafatlar tarixçəsini nəzərə al
+
+Əgər səndən hansı model olduğun soruşulsa: "Mən De Valeur-un daxili HR AI-yıyam."
+"""
+
+
+def _summarise_workers(workers: List[WorkerLite]) -> str:
+    if not workers:
+        return "Komandada işçi yoxdur."
+    active = [w for w in workers if w.isActive]
+    total_sales_month = sum((w.monthlyTotalSales or 0) for w in active)
+    total_target = sum((w.monthlyTarget or 0) for w in active)
+    avg_rating = 0.0
+    if active:
+        avg_rating = sum((w.rating or 0) for w in active) / len(active)
+    branches: Dict[str, int] = {}
+    positions: Dict[str, int] = {}
+    for w in active:
+        if w.branch:
+            branches[w.branch] = branches.get(w.branch, 0) + 1
+        if w.position:
+            positions[w.position] = positions.get(w.position, 0) + 1
+    return (
+        f"📊 KOMANDA ÜMUMİ:\n"
+        f"- Ümumi işçi: {len(workers)}, aktiv: {len(active)}\n"
+        f"- Cari ay ümumi satış: {total_sales_month:,.0f} AZN (hədəf: {total_target:,.0f} AZN)\n"
+        f"- Orta performans reytinqi: {avg_rating:.1f}%\n"
+        f"- Filiallar: {', '.join(f'{k} ({v})' for k, v in branches.items()) or '—'}\n"
+        f"- Vəzifələr: {', '.join(f'{k} ({v})' for k, v in positions.items()) or '—'}"
+    )
+
+
+def _format_workers(workers: List[WorkerLite], limit: int = 60) -> str:
+    if not workers:
+        return ""
+    rows: List[str] = []
+    for w in workers[:limit]:
+        sales = w.monthlyTotalSales or 0
+        target = w.monthlyTarget or 0
+        returns_ = w.monthlyTotalReturns or 0
+        net = max(0.0, sales - returns_)
+        pct = (net / target * 100) if target > 0 else 0
+        rating = f"{w.rating:.0f}%" if w.rating is not None else "—"
+        branch = f" · {w.branch}" if w.branch else ""
+        rows.append(
+            f"- {w.name} {w.surname} [{w.position}{branch}] "
+            f"| reytinq: {rating} | satış: {sales:,.0f} AZN "
+            f"| qaytarma: {returns_:,.0f} | net: {net:,.0f} "
+            f"| hədəf: {target:,.0f} ({pct:.0f}%) "
+            f"| {'aktiv' if w.isActive else 'passiv'} "
+            f"| id:{w.id}"
+        )
+    return "👥 İŞÇİLƏR (detallı siyahı):\n" + "\n".join(rows)
+
+
+def _format_fines(fines: List[FineLite], workers: List[WorkerLite]) -> str:
+    if not fines:
+        return ""
+    name_map = {w.id: f"{w.name} {w.surname}" for w in workers}
+    rows: List[str] = []
+    for f in fines[:40]:
+        rows.append(
+            f"- {name_map.get(f.workerId, f.workerId)}: -{f.amount:,.0f} AZN "
+            f"({f.reason or '—'}) · {f.date}"
+        )
+    return "⚠️ SON CƏRİMƏLƏR:\n" + "\n".join(rows)
+
+
+def _format_rewards(rewards: List[RewardLite], workers: List[WorkerLite]) -> str:
+    if not rewards:
+        return ""
+    name_map = {w.id: f"{w.name} {w.surname}" for w in workers}
+    rows: List[str] = []
+    for r in rewards[:40]:
+        amt = f" +{r.amount:,.0f}" if r.amount else ""
+        rows.append(
+            f"- {name_map.get(r.workerId, r.workerId)}: {r.type}{amt} "
+            f"({r.reason or '—'}) · {r.date}"
+        )
+    return "🏆 SON MÜKAFATLAR:\n" + "\n".join(rows)
+
+
+def _format_requests(requests: List[RequestLite], workers: List[WorkerLite]) -> str:
+    if not requests:
+        return ""
+    name_map = {w.id: f"{w.name} {w.surname}" for w in workers}
+    rows: List[str] = []
+    for r in requests[:30]:
+        rows.append(
+            f"- {name_map.get(r.workerId, r.workerId)}: {r.type} "
+            f"[{r.status}] — {r.subject or '—'} ({r.createdAt[:10] if r.createdAt else '—'})"
+        )
+    return "📨 İŞÇİ TƏLƏBLƏRİ:\n" + "\n".join(rows)
+
+
+@app.post("/api/workers-chat", response_model=ChatResponse)
+async def workers_chat_endpoint(req: WorkersChatRequest):
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API açarı konfiqurasiya edilməyib.")
+
+    lang_directive = {
+        "az": "Cavab DİLİ: Azərbaycan dilində.",
+        "ru": "Cavab DİLİ: Rus dilində.",
+        "en": "Cavab DİLİ: İngilis dilində.",
+    }.get(req.language or "az", "Cavab DİLİ: Azərbaycan dilində.")
+
+    system_parts = [
+        HR_PERSONA,
+        lang_directive,
+        _summarise_workers(req.workers or []),
+        _format_workers(req.workers or []),
+        _format_fines(req.fines or [], req.workers or []),
+        _format_rewards(req.rewards or [], req.workers or []),
+        _format_requests(req.requests or [], req.workers or []),
+    ]
+    if (req.context or "").strip():
+        system_parts.append("📝 ADMIN ƏLAVƏSİ:\n" + req.context.strip())
+    system_message = "\n\n".join(p for p in system_parts if p)
+
+    contents: List[Dict[str, Any]] = []
+    for h in (req.history or [])[-10:]:
+        if not (h.content or "").strip():
+            continue
+        role = "user" if h.role == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": h.content}]})
+    contents.append({"role": "user", "parts": [{"text": req.message.strip()}]})
+
+    payload = {
+        "systemInstruction": {"parts": [{"text": system_message}]},
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.4,
+            "topP": 0.9,
+            "maxOutputTokens": 1200,
+        },
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
+        ],
+    }
+
+    try:
+        data, err = await _gemini_generate(payload, timeout=45.0)
+        if err or not data:
+            raise HTTPException(status_code=502, detail=f"AI provayder xətası: {err or 'boş cavab'}")
+        candidates = data.get("candidates") or []
+        reply = ""
+        if candidates:
+            parts = ((candidates[0].get("content") or {}).get("parts")) or []
+            reply = "".join(p.get("text", "") for p in parts).strip()
+        if not reply:
+            reply = "Bağışlayın, cavab yarana bilmədi. Yenidən cəhd edin."
+        return ChatResponse(reply=reply)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Workers chat error: %s", e)
+        raise HTTPException(status_code=500, detail=f"AI cavab verə bilmədi: {e}")
+
+
+# ---------------------------------------------------------------------------
 # AI SEO — generate SEO metadata (title, meta description, keywords, slug, alt)
 # for a product in az / ru / en using the same NVIDIA gpt-oss-20b model.
 # Admin panel calls this per-product; frontend batches through all products.

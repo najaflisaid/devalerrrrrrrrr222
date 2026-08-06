@@ -281,6 +281,13 @@ export const listFines = async (workerId: string): Promise<Fine[]> => {
     .sort((a, b) => b.date.localeCompare(a.date));
 };
 
+/** Fetch ALL recent fines across every worker — used by the HR AI chat. */
+export const listAllRecentFines = async (limit = 100): Promise<Fine[]> => {
+  const snap = await getDocs(collection(db, FINES));
+  const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Fine, 'id'>) }));
+  return list.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, limit);
+};
+
 export const deleteFine = async (id: string) => deleteDoc(doc(db, FINES, id));
 
 export const addReward = async (data: Omit<Reward, 'id'>): Promise<Reward> => {
@@ -293,6 +300,13 @@ export const listRewards = async (workerId: string): Promise<Reward[]> => {
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Reward, 'id'>) }))
     .sort((a, b) => b.date.localeCompare(a.date));
+};
+
+/** Fetch ALL recent rewards across every worker — used by the HR AI chat. */
+export const listAllRecentRewards = async (limit = 100): Promise<Reward[]> => {
+  const snap = await getDocs(collection(db, REWARDS));
+  const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Reward, 'id'>) }));
+  return list.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, limit);
 };
 
 export const deleteReward = async (id: string) => deleteDoc(doc(db, REWARDS, id));
