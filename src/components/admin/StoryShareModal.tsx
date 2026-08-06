@@ -44,7 +44,7 @@ const H = 1920;
 const formatAzn = (n: number, fixed = 2): string =>
   n.toLocaleString('az-AZ', { minimumFractionDigits: fixed, maximumFractionDigits: fixed });
 
-// Cloudflare Worker URL — used to proxy product images so canvas stays untainted
+// Cloudflare Worker URL — fallback proxy path
 const IMG_PROXY_BASE =
   (import.meta as any).env?.VITE_R2_WORKER_URL ||
   'https://orange-cloud-4565.najaflisaid35.workers.dev';
@@ -53,15 +53,15 @@ const IMG_PROXY_BASE =
  * Robust image loader that survives CORS-unfriendly hosts.
  *
  * Strategy (tried in order — first non-null wins):
- *  1. Direct `fetch()` → blob URL → <img>. Works when the origin returns
- *     proper CORS headers (Firebase Storage default, some R2 setups).
- *  2. `<img crossOrigin="anonymous">` — works when server sends CORS but
- *     the direct fetch path was blocked by a browser preflight quirk.
- *  3. Cloudflare Worker `/proxy?url=...` — same-origin CORS proxy that
- *     re-streams the image with `Access-Control-Allow-Origin: *`. This is
- *     the fallback for R2 buckets whose custom-domain lacks CORS config.
+ *  1. Same-origin backend proxy `/api/img-proxy?url=...` — most reliable
+ *     because it is same-origin and always returns permissive CORS headers.
+ *  2. Direct `fetch()` → blob URL → <img>. Works when the origin returns
+ *     CORS headers (Firebase Storage default, some R2 setups).
+ *  3. `<img crossOrigin="anonymous">` fallback.
+ *  4. Cloudflare Worker `/proxy?url=...` — for setups where the backend is
+ *     not deployed yet.
  *
- * If ALL three fail we resolve with `null` so callers render a placeholder
+ * If ALL four fail we resolve with `null` so callers render a placeholder
  * instead of throwing.
  */
 const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
@@ -72,6 +72,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
       const res = await fetch(u, { mode: 'cors', credentials: 'omit' });
       if (!res.ok) return null;
       const blob = await res.blob();
+      if (!blob.type.startsWith('image/')) return null;
       const objectUrl = URL.createObjectURL(blob);
       return await new Promise<HTMLImageElement | null>((resolve) => {
         const img = new Image();
@@ -93,18 +94,23 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
       img.src = u;
     });
 
-  // 1) Try direct fetch on the original URL
+  // 1) Same-origin backend proxy (MOST RELIABLE — no CORS complications)
+  const backendProxy = `/api/img-proxy?url=${encodeURIComponent(url)}`;
+  const viaBackend = await fromFetch(backendProxy);
+  if (viaBackend) return viaBackend;
+
+  // 2) Direct fetch on the original URL
   const viaBlob = await fromFetch(url);
   if (viaBlob) return viaBlob;
 
-  // 2) Try classic Image with crossOrigin
+  // 3) Classic Image with crossOrigin
   const viaImg = await fromCrossOrigin(url);
   if (viaImg) return viaImg;
 
-  // 3) Route through the CORS proxy (last resort)
+  // 4) Cloudflare Worker proxy (fallback if backend not deployed)
   const proxyUrl = `${IMG_PROXY_BASE.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(url)}`;
-  const viaProxy = await fromFetch(proxyUrl);
-  if (viaProxy) return viaProxy;
+  const viaWorker = await fromFetch(proxyUrl);
+  if (viaWorker) return viaWorker;
   return await fromCrossOrigin(proxyUrl);
 };
 

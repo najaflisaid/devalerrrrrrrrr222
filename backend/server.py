@@ -139,6 +139,71 @@ async def health():
 
 
 # ---------------------------------------------------------------------------
+# CORS-safe image proxy — used by the admin "Story üçün paylaş" modal so
+# canvas.drawImage() does not taint the canvas when loading R2/Firebase URLs
+# that lack CORS response headers.
+#
+# Only whitelisted upstream hosts are accepted to prevent SSRF abuse.
+# Response is streamed back with `Access-Control-Allow-Origin: *`.
+# ---------------------------------------------------------------------------
+from fastapi.responses import Response as _FastAPIResponse  # noqa: E402
+
+_IMG_PROXY_ALLOWED = (
+    ".r2.dev",
+    ".r2.cloudflarestorage.com",
+    ".workers.dev",
+    ".firebasestorage.app",
+    "firebasestorage.googleapis.com",
+    "storage.googleapis.com",
+    "lh3.googleusercontent.com",
+    "images.unsplash.com",
+    "cdn.devaleur.az",
+    "media.devaleur.az",
+    "img.devaleur.az",
+)
+
+
+@app.get("/api/img-proxy")
+async def image_proxy(url: str):
+    """
+    Fetch a remote image and return it with CORS-permissive headers.
+    Only hosts in the whitelist are proxied.
+    """
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid url")
+
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="invalid scheme")
+
+    host = (parsed.hostname or "").lower()
+    if not any(host == h.lstrip(".") or host.endswith(h) for h in _IMG_PROXY_ALLOWED):
+        raise HTTPException(status_code=403, detail=f"host not allowed: {host}")
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            upstream = await client.get(url, headers={"User-Agent": "DeValeur-ImgProxy/1.0"})
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"upstream error: {e}")
+
+    if upstream.status_code >= 400:
+        raise HTTPException(status_code=upstream.status_code, detail="upstream failed")
+
+    content_type = upstream.headers.get("content-type", "image/jpeg")
+    return _FastAPIResponse(
+        content=upstream.content,
+        media_type=content_type,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=86400",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # De Valeur AI – sales assistant chat
 # ---------------------------------------------------------------------------
 
