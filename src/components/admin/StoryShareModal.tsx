@@ -69,15 +69,19 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
   const fromFetch = async (u: string): Promise<HTMLImageElement | null> => {
     try {
-      const res = await fetch(u, { mode: 'cors', credentials: 'omit' });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(u, { mode: 'cors', credentials: 'omit', signal: ctrl.signal });
+      clearTimeout(timer);
       if (!res.ok) return null;
       const blob = await res.blob();
       if (!blob.type.startsWith('image/')) return null;
       const objectUrl = URL.createObjectURL(blob);
       return await new Promise<HTMLImageElement | null>((resolve) => {
         const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
+        const t = setTimeout(() => resolve(null), 5000);
+        img.onload = () => { clearTimeout(t); resolve(img); };
+        img.onerror = () => { clearTimeout(t); resolve(null); };
         img.src = objectUrl;
       });
     } catch {
@@ -88,9 +92,10 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   const fromCrossOrigin = (u: string): Promise<HTMLImageElement | null> =>
     new Promise((resolve) => {
       const img = new Image();
+      const t = setTimeout(() => resolve(null), 5000);
       img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
+      img.onload = () => { clearTimeout(t); resolve(img); };
+      img.onerror = () => { clearTimeout(t); resolve(null); };
       img.src = u;
     });
 
@@ -164,6 +169,8 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Loaded product image cached so we don't refetch when template changes
   const productImgRef = useRef<HTMLImageElement | null>(null);
+  // Track blob URL of current preview so we can revoke it on re-render
+  const previewUrlRef = useRef<string>('');
 
   // Fetch credit config once when modal opens
   useEffect(() => {
@@ -227,8 +234,19 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       drawTemplate(ctx, template, productImg);
       if (watermark) drawWatermark(ctx, template);
 
-      const dataUrl = canvas.toDataURL('image/png');
-      setPreviewUrl(dataUrl);
+      // Convert to blob URL (much lighter than dataURL for large canvases on iOS)
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/png', 0.92);
+      });
+      if (blob) {
+        // Revoke previous URL to free memory (iOS Safari is aggressive here)
+        if (previewUrlRef.current && previewUrlRef.current.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrlRef.current);
+        }
+        const url = URL.createObjectURL(blob);
+        previewUrlRef.current = url;
+        setPreviewUrl(url);
+      }
     } finally {
       setRendering(false);
     }
@@ -1225,56 +1243,119 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     }
   };
 
-  // Cleanup video blob URL when modal closes / component unmounts
+  // Cleanup video + preview blob URLs when modal closes / component unmounts
   useEffect(() => {
-    if (!open && videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-      setVideoUrl('');
-      setVideoProgress(0);
+    if (!open) {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+        setVideoUrl('');
+        setVideoProgress(0);
+      }
+      if (previewUrlRef.current && previewUrlRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = '';
+      }
+      setPreviewUrl('');
     }
   }, [open, videoUrl]);
 
   if (!open) return null;
 
+  // Detect environments where Web Share w/ files is missing (mobile Safari
+  // ≤ 14 or Instagram in-app browser) so we can hide/adjust buttons if needed.
+  const canWebShareFiles = typeof navigator !== 'undefined' &&
+    (navigator as any).canShare &&
+    (() => {
+      try {
+        return (navigator as any).canShare({
+          files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })],
+        });
+      } catch {
+        return false;
+      }
+    })();
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-4"
       onClick={onClose}
       data-testid="story-share-modal"
     >
       <div
-        className="relative bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+        className="relative bg-white w-full max-w-3xl sm:rounded-2xl shadow-2xl overflow-hidden h-[100dvh] sm:h-auto sm:max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-black/10">
-          <div>
-            <h3 className="text-[15px] font-semibold text-gray-900">Instagram Story üçün paylaş</h3>
-            <p className="text-[11px] text-gray-500">
+        {/* Header — sticky at top */}
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-black/10 flex-shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-[14px] sm:text-[15px] font-semibold text-gray-900 truncate">
+              Instagram Story üçün paylaş
+            </h3>
+            <p className="text-[11px] text-gray-500 hidden sm:block">
               1080 × 1920 — şablon seç, yüklə və ya birbaşa paylaş
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-black/5 rounded-lg"
+            className="p-2 -mr-1 hover:bg-black/5 active:bg-black/10 rounded-lg flex-shrink-0"
             data-testid="story-share-close"
+            aria-label="Bağla"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-0 flex-1 min-h-0">
-          {/* Templates */}
-          <div className="border-b md:border-b-0 md:border-r border-black/10 p-4 space-y-2 overflow-y-auto">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+        {/* Body — mobile: stacked (preview → templates → info) / desktop: sidebar+preview */}
+        <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[280px_1fr] md:gap-0 overflow-y-auto md:overflow-hidden">
+          {/* Preview — ALWAYS FIRST on mobile so user sees the result immediately */}
+          <div className="order-1 md:order-2 md:col-start-2 p-3 sm:p-4 md:p-6 bg-gray-50 md:overflow-y-auto flex flex-col items-center justify-start md:justify-center flex-shrink-0">
+            <div className="relative w-[45vw] max-w-[220px] md:w-full md:max-w-[280px] aspect-[9/16] bg-white shadow-lg rounded-lg overflow-hidden">
+              {rendering && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-700" />
+                </div>
+              )}
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Story preview"
+                  className="w-full h-full object-cover"
+                  data-testid="story-preview-img"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                  Hazırlanır...
+                </div>
+              )}
+            </div>
+            <canvas ref={canvasRef} className="hidden" />
+
+            {copiedNote && (
+              <p className="mt-3 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-1.5 text-center">
+                ✓ Şəkil clipboard-a köçürüldü — Instagram-a yapışdır
+              </p>
+            )}
+            {imgError && (
+              <p className="mt-3 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 flex items-start gap-1.5 md:hidden">
+                <ImageOff className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                Şəkil yüklənmədi — şəkilsiz şablon istifadə olunur.
+              </p>
+            )}
+          </div>
+
+          {/* Templates + Info panel (sidebar on desktop, second block on mobile) */}
+          <div className="order-2 md:order-1 md:col-start-1 md:row-start-1 border-t md:border-t-0 md:border-r border-black/10 p-3 sm:p-4 space-y-3 md:overflow-y-auto">
+            {/* Templates — horizontal scroll on mobile, 2-col grid on desktop */}
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider hidden md:block">
               Şablon
             </p>
-            <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
+            <div className="flex md:grid md:grid-cols-2 gap-2 overflow-x-auto md:overflow-visible -mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0 snap-x scrollbar-thin">
               {TEMPLATES.map((t) => (
                 <button
                   key={t.key}
                   onClick={() => setTemplate(t.key)}
-                  className={`group relative rounded-lg overflow-hidden border-2 transition-all ${
+                  className={`group relative rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 w-[80px] md:w-auto snap-start ${
                     template === t.key
                       ? 'border-gray-900 shadow-md'
                       : 'border-transparent hover:border-black/20'
@@ -1285,19 +1366,20 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                     className="aspect-[9/16] w-full"
                     style={{ background: t.swatch }}
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-900 text-center">
+                  <div className="absolute inset-x-0 bottom-0 bg-white/90 px-1 py-0.5 md:px-2 md:py-1 text-[10px] md:text-[11px] font-medium text-gray-900 text-center">
                     {t.label}
                   </div>
                   {template === t.key && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center">
-                      <Check className="h-3 w-3" />
+                    <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 w-4 h-4 md:w-5 md:h-5 bg-gray-900 text-white rounded-full flex items-center justify-center">
+                      <Check className="h-2.5 w-2.5 md:h-3 md:w-3" />
                     </div>
                   )}
                 </button>
               ))}
             </div>
 
-            <div className="pt-4 mt-4 border-t border-black/10 space-y-1">
+            {/* Info — hidden on mobile to save room (preview shows all this visually) */}
+            <div className="pt-3 mt-1 border-t border-black/10 space-y-1 hidden md:block">
               <p className="text-[11px] text-gray-500">Brend</p>
               <p className="text-sm font-medium text-gray-900">{brand || '—'}</p>
               <p className="text-[11px] text-gray-500 mt-2">Məhsul</p>
@@ -1322,13 +1404,13 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
               )}
             </div>
 
-            {/* Watermark toggle */}
-            <div className="pt-3 mt-3 border-t border-black/10">
+            {/* Watermark toggle — visible on all screens */}
+            <div className="pt-3 border-t border-black/10">
               <label
                 className="flex items-center justify-between gap-2 cursor-pointer select-none"
                 data-testid="story-watermark-toggle-wrap"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900">DE VALEUR watermark</p>
                   <p className="text-[11px] text-gray-500">İncə brend imzası əlavə et</p>
                 </div>
@@ -1351,45 +1433,15 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
               </label>
             </div>
           </div>
-
-          {/* Preview */}
-          <div className="p-4 md:p-6 bg-gray-100 overflow-y-auto flex flex-col items-center justify-center min-h-[420px]">
-            <div className="relative w-full max-w-[280px] aspect-[9/16] bg-white shadow-lg rounded-lg overflow-hidden">
-              {rendering && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-700" />
-                </div>
-              )}
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Story preview"
-                  className="w-full h-full object-cover"
-                  data-testid="story-preview-img"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                  Hazırlanır...
-                </div>
-              )}
-            </div>
-            <canvas ref={canvasRef} className="hidden" />
-
-            {copiedNote && (
-              <p className="mt-4 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-1.5">
-                ✓ Şəkil clipboard-a köçürüldü — Instagram-a yapışdır
-              </p>
-            )}
-          </div>
         </div>
 
-        {/* Footer actions */}
-        <div className="border-t border-black/10 p-4 space-y-2">
-          <div className="flex flex-col sm:flex-row gap-2">
+        {/* Footer actions — sticky at bottom */}
+        <div className="border-t border-black/10 p-3 sm:p-4 space-y-2 flex-shrink-0 bg-white">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleDownload}
               disabled={rendering || !previewUrl || busy === 'download'}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-white border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 min-h-[44px]"
               data-testid="story-share-download"
             >
               {busy === 'download' ? (
@@ -1402,7 +1454,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
             <button
               onClick={handleShare}
               disabled={rendering || !previewUrl || busy === 'share'}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-black disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-3 py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-black active:bg-black disabled:opacity-50 min-h-[44px]"
               data-testid="story-share-instagram"
             >
               {busy === 'share' ? (
@@ -1410,7 +1462,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
               ) : (
                 <Share2 className="h-4 w-4" />
               )}
-              PNG paylaş
+              {canWebShareFiles ? 'PNG paylaş' : 'PNG kopyala'}
             </button>
           </div>
 
@@ -1420,7 +1472,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
               <button
                 onClick={generateVideo}
                 disabled={rendering || busy === 'video'}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#111] via-[#3a2c14] to-[#C9A24A] text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#111] via-[#3a2c14] to-[#C9A24A] text-white text-sm font-semibold rounded-lg hover:opacity-90 active:opacity-80 disabled:opacity-50 min-h-[44px]"
                 data-testid="story-video-generate"
               >
                 {busy === 'video' ? (
@@ -1431,7 +1483,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                 ) : (
                   <>
                     <Video className="h-4 w-4" />
-                    5 saniyəlik animasiyalı video yarat
+                    <span className="truncate">5 saniyəlik animasiyalı video</span>
                   </>
                 )}
               </button>
@@ -1448,14 +1500,14 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                     controls
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
                       URL.revokeObjectURL(videoUrl);
                       setVideoUrl('');
                       setVideoProgress(0);
                     }}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg hover:bg-gray-50"
+                    className="inline-flex items-center justify-center gap-1 px-2 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg active:bg-gray-100 min-h-[44px]"
                     data-testid="story-video-reset"
                   >
                     <ImageIcon className="h-3.5 w-3.5" />
@@ -1463,7 +1515,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                   </button>
                   <button
                     onClick={handleDownloadVideo}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg hover:bg-gray-50"
+                    className="inline-flex items-center justify-center gap-1 px-2 py-2.5 bg-white border border-gray-300 text-gray-900 text-xs font-semibold rounded-lg active:bg-gray-100 min-h-[44px]"
                     data-testid="story-video-download"
                   >
                     <Download className="h-3.5 w-3.5" />
@@ -1471,7 +1523,7 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
                   </button>
                   <button
                     onClick={handleShareVideo}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-black"
+                    className="inline-flex items-center justify-center gap-1 px-2 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-lg active:bg-black min-h-[44px]"
                     data-testid="story-video-share"
                   >
                     <Share2 className="h-3.5 w-3.5" />
