@@ -22,7 +22,36 @@ import {
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
+  ts: number;
 }
+
+const STORAGE_KEY = 'devaleur:workers-ai-chat:v1';
+
+const loadStored = (): Msg[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    // Keep only recent 200 to bound storage size
+    return arr.slice(-200).filter(
+      (m) =>
+        m &&
+        (m.role === 'user' || m.role === 'assistant') &&
+        typeof m.content === 'string'
+    );
+  } catch {
+    return [];
+  }
+};
+
+const persistStored = (msgs: Msg[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs.slice(-200)));
+  } catch {
+    /* quota exceeded — ignore */
+  }
+};
 
 /**
  * HR / team-analytics AI chat panel embedded inside the Workers admin tab.
@@ -31,6 +60,9 @@ interface Msg {
  * sends them along with every admin question to `/api/workers-chat`. The
  * backend composes a grounded system prompt from the data and lets Gemini
  * answer in natural language.
+ *
+ * Messages persist in localStorage — they survive page reloads and only
+ * disappear when the admin clicks "təmizlə" (trash icon).
  */
 const WorkersAiChat: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -40,10 +72,18 @@ const WorkersAiChat: React.FC = () => {
   const [requests, setRequests] = useState<WorkerRequest[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState('');
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>(() => loadStored());
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // If admin scrolls up manually we don't want to yank them back down on every
+  // new message. This flag tracks whether we should keep auto-following.
+  const stickToBottomRef = useRef(true);
+
+  // Persist to localStorage whenever messages change
+  useEffect(() => {
+    persistStored(messages);
+  }, [messages]);
 
   const activeCount = useMemo(() => workers.filter((w) => w.isActive).length, [workers]);
 
@@ -76,10 +116,28 @@ const WorkersAiChat: React.FC = () => {
   }, [open]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-    }
+    if (!scrollRef.current) return;
+    if (!stickToBottomRef.current) return;
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages, busy]);
+
+  // Auto-open if there is prior conversation, so admin sees history right away
+  useEffect(() => {
+    if (messages.length > 0) setOpen(true);
+    // Run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Consider "at bottom" if within 80px of the bottom
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stickToBottomRef.current = nearBottom;
+  };
 
   // ─── Compact worker payload (strip heavy fields, keep only what AI needs) ───
   const buildPayload = (userMsg: string) => ({
@@ -131,7 +189,9 @@ const WorkersAiChat: React.FC = () => {
     const raw = (customMsg ?? input).trim();
     if (!raw || busy) return;
     setInput('');
-    setMessages((m) => [...m, { role: 'user', content: raw }]);
+    // When user sends, snap to bottom
+    stickToBottomRef.current = true;
+    setMessages((m) => [...m, { role: 'user', content: raw, ts: Date.now() }]);
     setBusy(true);
     try {
       const res = await fetch('/api/workers-chat', {
@@ -144,14 +204,50 @@ const WorkersAiChat: React.FC = () => {
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Cavab yoxdur.' }]);
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', content: data.reply || 'Cavab yoxdur.', ts: Date.now() },
+      ]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: 'assistant', content: `⚠️ Xəta: ${e?.message || 'AI cavab verə bilmədi.'}` },
+        {
+          role: 'assistant',
+          content: `⚠️ Xəta: ${e?.message || 'AI cavab verə bilmədi.'}`,
+          ts: Date.now(),
+        },
       ]);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const formatTime = (ts: number): string => {
+    try {
+      const d = new Date(ts);
+      const today = new Date();
+      const isToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+      if (isToday) {
+        return d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+      }
+      return d.toLocaleDateString('az-AZ', {
+        day: '2-digit',
+        month: '2-digit',
+      }) + ' ' + d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
     }
   };
 
@@ -230,7 +326,11 @@ const WorkersAiChat: React.FC = () => {
           </button>
           {messages.length > 0 && (
             <button
-              onClick={() => setMessages([])}
+              onClick={() => {
+                if (window.confirm('Bütün söhbəti silmək istədiyinizə əminsiniz?')) {
+                  clearChat();
+                }
+              }}
               className="p-2 hover:bg-white/10 rounded-lg"
               title="Söhbəti təmizlə"
               data-testid="workers-ai-clear"
@@ -256,10 +356,11 @@ const WorkersAiChat: React.FC = () => {
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages — fixed height, internal scroll (won't push page down) */}
       <div
         ref={scrollRef}
-        className="max-h-[420px] min-h-[220px] overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-white to-[#faf8f2]"
+        onScroll={onScroll}
+        className="h-[420px] sm:h-[480px] overflow-y-auto px-4 py-4 space-y-2.5 bg-gradient-to-b from-white to-[#faf8f2]"
         data-testid="workers-ai-messages"
       >
         {messages.length === 0 && !busy && (
@@ -289,23 +390,34 @@ const WorkersAiChat: React.FC = () => {
           </div>
         )}
 
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            data-testid={`workers-ai-msg-${i}`}
-          >
+        {messages.map((m, i) => {
+          const showTime =
+            i === messages.length - 1 ||
+            messages[i + 1]?.role !== m.role ||
+            (messages[i + 1]?.ts || 0) - (m.ts || 0) > 60_000;
+          return (
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
-                m.role === 'user'
-                  ? 'bg-[#111] text-white rounded-br-sm'
-                  : 'bg-white border border-[#C9A24A]/25 text-gray-900 rounded-bl-sm'
-              }`}
+              key={i}
+              className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
+              data-testid={`workers-ai-msg-${i}`}
             >
-              {m.content}
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                  m.role === 'user'
+                    ? 'bg-[#111] text-white rounded-br-sm'
+                    : 'bg-white border border-[#C9A24A]/25 text-gray-900 rounded-bl-sm'
+                }`}
+              >
+                {m.content}
+              </div>
+              {showTime && m.ts > 0 && (
+                <span className="text-[10px] text-gray-400 mt-1 px-1">
+                  {formatTime(m.ts)}
+                </span>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {busy && (
           <div className="flex justify-start" data-testid="workers-ai-busy">
