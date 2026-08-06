@@ -102,7 +102,9 @@
 </div>
 
 <div class="grid" id="grid">
-  <div class="card"><h3>Minimal</h3><p>Açıq, editorial · playfair başlıqlar</p><canvas data-tpl="minimal"></canvas></div>
+  <div class="card"><h3>Pure</h3><p>Böyük şəkil · minimal alt zolaq</p><canvas data-tpl="pure"></canvas></div>
+  <div class="card"><h3>Silhouette</h3><p>Dominant şəkil · tək zərif sətir</p><canvas data-tpl="silhouette"></canvas></div>
+  <div class="card"><h3>Minimal</h3><p>Açıq, editorial · orta yüklük</p><canvas data-tpl="minimal"></canvas></div>
   <div class="card"><h3>Noir</h3><p>Tünd luxury · qızılı radiallı işıq</p><canvas data-tpl="noir"></canvas></div>
   <div class="card"><h3>Gold</h3><p>Qızılı diaqonal başlıq + qızılı ribbon</p><canvas data-tpl="gold"></canvas></div>
   <div class="card"><h3>Editorial</h3><p>Split — üstdə məhsul, altda qara info</p><canvas data-tpl="editorial"></canvas></div>
@@ -370,6 +372,93 @@ function drawEditorial(ctx){
   drawFooter(ctx, 'rgba(245,242,234,0.55)');
 }
 
+function drawPure(ctx){
+  ctx.fillStyle='#fafaf7'; ctx.fillRect(0,0,W,H);
+  fakeImage(ctx, 40, 90, W-80, 1330, false);
+  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(80,1470); ctx.lineTo(W-80,1470); ctx.stroke();
+
+  ctx.textAlign='center'; ctx.fillStyle='rgba(0,0,0,0.85)';
+  ctx.font='400 42px "Pinyon Script", cursive';
+  ctx.fillText('D', W/2 - 62, 1540);
+  ctx.font='500 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), W/2 + 10, 1535);
+
+  ctx.font='400 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillStyle='#111';
+  const lines = wrap(ctx, productName, W-200);
+  let ny=1610;
+  lines.forEach(l => { ctx.fillText(l, W/2, ny); ny+=34; });
+
+  ctx.beginPath(); ctx.arc(W/2, ny+20, 2.5, 0, Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fill(); ny+=60;
+
+  ctx.fillStyle='#111';
+  ctx.font='500 44px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(fmt(price,0)+' AZN', W/2, ny);
+
+  ctx.font='400 20px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  const ot = fmt(original,0)+' AZN';
+  ctx.fillText(ot, W/2, ny+32);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(W/2 - m.width/2 - 4, ny+25); ctx.lineTo(W/2 + m.width/2 + 4, ny+25); ctx.stroke();
+
+  ctx.fillStyle='rgba(0,0,0,0.62)';
+  ctx.font='400 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(monthCount + ' ay kreditlə  ·  ' + fmt(monthly) + ' AZN / ay', W/2, ny + 78);
+
+  drawFooter(ctx, 'rgba(0,0,0,0.4)');
+}
+
+function drawSilhouette(ctx){
+  const g = ctx.createLinearGradient(0,0,0,H*0.78);
+  g.addColorStop(0,'#f6f3ec'); g.addColorStop(1,'#efeae0');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H*0.78);
+  ctx.fillStyle='#0d0d0d'; ctx.fillRect(0, H*0.78, W, H - H*0.78);
+
+  fakeImage(ctx, 20, 60, W-40, 1400, false);
+
+  ctx.textAlign='left';
+  ctx.fillStyle='rgba(0,0,0,0.55)';
+  ctx.font='500 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(brand.toUpperCase(), 60, 90);
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.font='400 32px "Pinyon Script", cursive';
+  ctx.fillText('by DE Valeur', 60, 130);
+
+  const railTop = H*0.78;
+  const railCenterY = railTop + (H - railTop)/2;
+
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(245,242,234,0.92)';
+  ctx.font='500 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  const nameLine = productName.length > 34 ? productName.slice(0,33)+'…' : productName;
+  ctx.fillText(nameLine, W/2, railCenterY - 60);
+
+  ctx.strokeStyle='#C9A24A'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(W/2 - 40, railCenterY - 35); ctx.lineTo(W/2 + 40, railCenterY - 35); ctx.stroke();
+
+  ctx.fillStyle='#fff';
+  ctx.font='500 68px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(fmt(price,0)+' AZN', W/2, railCenterY + 30);
+
+  ctx.font='300 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.55)';
+  const ot = fmt(original,0)+' AZN';
+  ctx.fillText(ot, W/2, railCenterY + 62);
+  const m = ctx.measureText(ot);
+  ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(W/2 - m.width/2 - 4, railCenterY + 55); ctx.lineTo(W/2 + m.width/2 + 4, railCenterY + 55); ctx.stroke();
+
+  ctx.fillStyle='rgba(201,162,74,0.9)';
+  ctx.font='400 20px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillText(monthCount + ' ay  ·  faizsiz   ·   ' + fmt(monthly) + ' AZN / ay', W/2, railCenterY + 105);
+
+  drawFooter(ctx, 'rgba(245,242,234,0.4)');
+}
+
 function render(){
   const wm = document.getElementById('wm').checked;
   const canvases = document.querySelectorAll('canvas[data-tpl]');
@@ -377,11 +466,13 @@ function render(){
     c.width = W; c.height = H;
     const ctx = c.getContext('2d');
     const tpl = c.dataset.tpl;
-    if (tpl==='minimal') drawMinimal(ctx);
+    if (tpl==='pure') drawPure(ctx);
+    else if (tpl==='silhouette') drawSilhouette(ctx);
+    else if (tpl==='minimal') drawMinimal(ctx);
     else if (tpl==='noir') drawNoir(ctx);
     else if (tpl==='gold') drawGold(ctx);
     else drawEditorial(ctx);
-    if (wm) drawWatermark(ctx, tpl==='noir' || tpl==='gold');
+    if (wm) drawWatermark(ctx, tpl==='noir' || tpl==='gold' || tpl==='silhouette');
   });
 }
 

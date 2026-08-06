@@ -27,6 +27,39 @@ export default {
       return json({ ok: true, publicUrl: env.PUBLIC_URL || null });
     }
 
+    // ─── Image proxy — bypasses CORS on any HTTPS image URL ───
+    // GET /proxy?url=https://...   → streams the image back with CORS headers
+    // Used by the Story-share modal to load product images onto <canvas>
+    // without tainting it, so toDataURL() and MediaRecorder both keep working.
+    if (request.method === 'GET' && url.pathname === '/proxy') {
+      const target = url.searchParams.get('url');
+      if (!target) return json({ error: 'url query param required' }, 400);
+      try {
+        const parsed = new URL(target);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          return json({ error: 'invalid protocol' }, 400);
+        }
+      } catch {
+        return json({ error: 'invalid url' }, 400);
+      }
+      try {
+        const upstream = await fetch(target, {
+          headers: { 'User-Agent': 'DeValeur-Proxy/1.0' },
+          cf: { cacheEverything: true, cacheTtl: 3600 },
+        });
+        if (!upstream.ok) {
+          return json({ error: `upstream ${upstream.status}` }, upstream.status);
+        }
+        const headers = new Headers(corsHeaders());
+        const ct = upstream.headers.get('content-type') || 'image/jpeg';
+        headers.set('content-type', ct);
+        headers.set('cache-control', 'public, max-age=86400');
+        return new Response(upstream.body, { status: 200, headers });
+      } catch (e) {
+        return json({ error: String(e && e.message || e) }, 502);
+      }
+    }
+
     // Upload endpoint
     if (request.method === 'POST' && (url.pathname === '/upload' || url.pathname === '/')) {
       return handleUpload(request, env);

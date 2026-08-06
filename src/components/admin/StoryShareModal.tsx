@@ -20,7 +20,7 @@ interface StoryShareModalProps {
   imageUrl: string; // currently visible product image
 }
 
-type TemplateKey = 'minimal' | 'noir' | 'gold' | 'editorial';
+type TemplateKey = 'minimal' | 'noir' | 'gold' | 'editorial' | 'pure' | 'silhouette';
 
 interface TemplateDef {
   key: TemplateKey;
@@ -29,6 +29,8 @@ interface TemplateDef {
 }
 
 const TEMPLATES: TemplateDef[] = [
+  { key: 'pure', label: 'Pure', swatch: 'linear-gradient(180deg,#fafaf7 55%,#fafaf7 55%,#111 55%,#111 100%)' },
+  { key: 'silhouette', label: 'Silhouette', swatch: 'linear-gradient(180deg,#f4f2ee 75%,#f4f2ee 75%,#0a0a0a 75%,#0a0a0a 100%)' },
   { key: 'minimal', label: 'Minimal', swatch: 'linear-gradient(135deg,#f6f5f2,#ffffff)' },
   { key: 'noir', label: 'Noir', swatch: 'linear-gradient(135deg,#0a0a0a,#1f1f1f)' },
   { key: 'gold', label: 'Gold', swatch: 'linear-gradient(135deg,#111,#3a2c14 60%,#c9a24a)' },
@@ -42,26 +44,32 @@ const H = 1920;
 const formatAzn = (n: number, fixed = 2): string =>
   n.toLocaleString('az-AZ', { minimumFractionDigits: fixed, maximumFractionDigits: fixed });
 
+// Cloudflare Worker URL — used to proxy product images so canvas stays untainted
+const IMG_PROXY_BASE =
+  (import.meta as any).env?.VITE_R2_WORKER_URL ||
+  'https://orange-cloud-4565.najaflisaid35.workers.dev';
+
 /**
  * Robust image loader that survives CORS-unfriendly hosts.
  *
- * Strategy:
- *  1. Try to `fetch()` the image (respects CORS but returns opaque errors
- *     when denied). If successful, create a blob URL and load an <img> from
- *     that — a canvas that draws blob-URL images is NEVER tainted, so
- *     `toDataURL()` and `MediaRecorder` both work.
- *  2. If fetch fails (opaque / CORS blocked), fall back to loading the image
- *     directly with `crossOrigin='anonymous'` (works when the server DOES
- *     send CORS headers, e.g. Firebase Storage default).
- *  3. If both fail, resolve with `null` so callers can render a placeholder.
+ * Strategy (tried in order — first non-null wins):
+ *  1. Direct `fetch()` → blob URL → <img>. Works when the origin returns
+ *     proper CORS headers (Firebase Storage default, some R2 setups).
+ *  2. `<img crossOrigin="anonymous">` — works when server sends CORS but
+ *     the direct fetch path was blocked by a browser preflight quirk.
+ *  3. Cloudflare Worker `/proxy?url=...` — same-origin CORS proxy that
+ *     re-streams the image with `Access-Control-Allow-Origin: *`. This is
+ *     the fallback for R2 buckets whose custom-domain lacks CORS config.
+ *
+ * If ALL three fail we resolve with `null` so callers render a placeholder
+ * instead of throwing.
  */
 const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   if (!url) return null;
 
-  // Route through a same-origin fetch first — this bypasses tainting
-  const fromBlob = async (): Promise<HTMLImageElement | null> => {
+  const fromFetch = async (u: string): Promise<HTMLImageElement | null> => {
     try {
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      const res = await fetch(u, { mode: 'cors', credentials: 'omit' });
       if (!res.ok) return null;
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -76,18 +84,28 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
     }
   };
 
-  const fromCrossOrigin = async (): Promise<HTMLImageElement | null> =>
+  const fromCrossOrigin = (u: string): Promise<HTMLImageElement | null> =>
     new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
-      img.src = url;
+      img.src = u;
     });
 
-  const viaBlob = await fromBlob();
+  // 1) Try direct fetch on the original URL
+  const viaBlob = await fromFetch(url);
   if (viaBlob) return viaBlob;
-  return await fromCrossOrigin();
+
+  // 2) Try classic Image with crossOrigin
+  const viaImg = await fromCrossOrigin(url);
+  if (viaImg) return viaImg;
+
+  // 3) Route through the CORS proxy (last resort)
+  const proxyUrl = `${IMG_PROXY_BASE.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(url)}`;
+  const viaProxy = await fromFetch(proxyUrl);
+  if (viaProxy) return viaProxy;
+  return await fromCrossOrigin(proxyUrl);
 };
 
 // Word-wrap that fits into a max width, returning an array of lines.
@@ -253,6 +271,10 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
         return drawGold(ctx, productImg);
       case 'editorial':
         return drawEditorial(ctx, productImg);
+      case 'pure':
+        return drawPure(ctx, productImg);
+      case 'silhouette':
+        return drawSilhouette(ctx, productImg);
       case 'minimal':
       default:
         return drawMinimal(ctx, productImg);
@@ -703,6 +725,176 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     }
 
     drawSiteFooter(ctx, 'rgba(245,242,234,0.55)');
+  };
+
+  // ─── Template: Pure (huge image, minimal text strip at bottom) ───
+  // Product image dominates ~74% of the canvas. The bottom 26% carries a
+  // small dark info strip with brand + name + price + monthly, all in tiny,
+  // widely-spaced Montserrat. Zero decorative shapes — pure white space.
+  const drawPure = (
+    ctx: CanvasRenderingContext2D,
+    productImg: HTMLImageElement | null
+  ) => {
+    // Off-white paper
+    ctx.fillStyle = '#fafaf7';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── PRODUCT IMAGE — huge, near-full width ──
+    const imgBox = { x: 40, y: 90, w: W - 80, h: 1330 };
+    drawProductImage(ctx, productImg, imgBox);
+
+    // Thin bottom divider hairline
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, 1470);
+    ctx.lineTo(W - 80, 1470);
+    ctx.stroke();
+
+    // ── BOTTOM INFO STRIP (tiny, minimal) ──
+    // Brand mark (Pinyon Script D + Montserrat wordmark, centered)
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.font = '400 42px "Pinyon Script", cursive';
+    ctx.fillText('D', W / 2 - 62, 1540);
+    ctx.font = '500 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2 + 10, 1535);
+
+    // Product name — small serif-free line
+    ctx.font = '400 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillStyle = '#111';
+    const nameLines = wrapText(ctx, productName, W - 200, 2);
+    let ny = 1610;
+    nameLines.forEach((ln) => {
+      ctx.fillText(ln, W / 2, ny);
+      ny += 34;
+    });
+
+    // Divider dot
+    ctx.beginPath();
+    ctx.arc(W / 2, ny + 20, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fill();
+    ny += 60;
+
+    // Price — modest, not shouted
+    ctx.fillStyle = '#111';
+    ctx.font = '500 44px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, ny);
+
+    if (originalPrice && originalPrice > price) {
+      ctx.font = '400 20px "Montserrat", Arial, sans-serif';
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      const oldText = `${formatAzn(originalPrice, 0)} AZN`;
+      ctx.fillText(oldText, W / 2, ny + 32);
+      const m = ctx.measureText(oldText);
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(W / 2 - m.width / 2 - 4, ny + 25);
+      ctx.lineTo(W / 2 + m.width / 2 + 4, ny + 25);
+      ctx.stroke();
+    }
+
+    // Credit — tiny line under price
+    if (monthlyForSix != null && sixMonthRate) {
+      ctx.fillStyle = 'rgba(0,0,0,0.62)';
+      ctx.font = '400 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText(
+        `${sixMonthRate.months} ay kreditlə  ·  ${formatAzn(monthlyForSix)} AZN / ay`,
+        W / 2,
+        ny + (originalPrice && originalPrice > price ? 78 : 46)
+      );
+    }
+
+    drawSiteFooter(ctx, 'rgba(0,0,0,0.4)');
+  };
+
+  // ─── Template: Silhouette (dominant image, single-line bottom rail) ───
+  // Even more minimal than Pure. The image fills 78% of the canvas on a warm
+  // beige backdrop. Bottom 22% has a single centered rail: brand mark → name
+  // → price → aylıq, all in one horizontal composition with generous spacing.
+  const drawSilhouette = (
+    ctx: CanvasRenderingContext2D,
+    productImg: HTMLImageElement | null
+  ) => {
+    // Warm beige paper
+    const g = ctx.createLinearGradient(0, 0, 0, H * 0.78);
+    g.addColorStop(0, '#f6f3ec');
+    g.addColorStop(1, '#efeae0');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H * 0.78);
+
+    // Bottom near-black rail
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(0, H * 0.78, W, H - H * 0.78);
+
+    // ── PRODUCT IMAGE — dominant ──
+    const imgBox = { x: 20, y: 60, w: W - 40, h: 1400 };
+    drawProductImage(ctx, productImg, imgBox);
+
+    // Tiny top brand — offset in corner, whispers rather than shouts
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.font = '500 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText((brand || 'DE VALEUR').toUpperCase(), 60, 90);
+    // Subtle Pinyon Script signature accent below top brand
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.font = '400 32px "Pinyon Script", cursive';
+    ctx.fillText('by DE Valeur', 60, 130);
+
+    // ── BOTTOM RAIL — single elegant line block ──
+    const railTop = H * 0.78;
+    const railCenterY = railTop + (H - railTop) / 2;
+
+    // Product name — small caps, uppercase
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(245,242,234,0.92)';
+    ctx.font = '500 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    const nameLine = productName.length > 34 ? productName.slice(0, 33) + '…' : productName;
+    ctx.fillText(nameLine, W / 2, railCenterY - 60);
+
+    // Thin gold hairline (10% wide) — brand accent
+    ctx.strokeStyle = '#C9A24A';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 40, railCenterY - 35);
+    ctx.lineTo(W / 2 + 40, railCenterY - 35);
+    ctx.stroke();
+
+    // Big whispered price
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '500 68px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, railCenterY + 30);
+
+    if (originalPrice && originalPrice > price) {
+      ctx.font = '300 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      const oldText = `${formatAzn(originalPrice, 0)} AZN`;
+      ctx.fillText(oldText, W / 2, railCenterY + 62);
+      const m = ctx.measureText(oldText);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(W / 2 - m.width / 2 - 4, railCenterY + 55);
+      ctx.lineTo(W / 2 + m.width / 2 + 4, railCenterY + 55);
+      ctx.stroke();
+    }
+
+    if (monthlyForSix != null && sixMonthRate) {
+      ctx.fillStyle = 'rgba(201,162,74,0.9)';
+      ctx.font = '400 20px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      const suffix = sixMonthRate.percent > 0
+        ? ` · ${sixMonthRate.percent}%`
+        : '  ·  faizsiz';
+      ctx.fillText(
+        `${sixMonthRate.months} ay${suffix}   ·   ${formatAzn(monthlyForSix)} AZN / ay`,
+        W / 2,
+        railCenterY + 105
+      );
+    }
+
+    drawSiteFooter(ctx, 'rgba(245,242,234,0.4)');
   };
 
   // Re-render whenever template / data changes
