@@ -67,19 +67,25 @@ const IMG_PROXY_BASE =
 const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   if (!url) return null;
 
-  const fromFetch = async (u: string): Promise<HTMLImageElement | null> => {
+  const fromFetch = async (u: string, sameOrigin = false): Promise<HTMLImageElement | null> => {
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 5000);
-      const res = await fetch(u, { mode: 'cors', credentials: 'omit', signal: ctrl.signal });
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      // Same-origin fetches (backend proxy) don't need explicit CORS mode.
+      // iOS Safari occasionally 500s on `credentials: 'omit'` for same-origin.
+      const opts: RequestInit = sameOrigin
+        ? { cache: 'default', signal: ctrl.signal }
+        : { mode: 'cors', credentials: 'omit', signal: ctrl.signal };
+      const res = await fetch(u, opts);
       clearTimeout(timer);
       if (!res.ok) return null;
       const blob = await res.blob();
-      if (!blob.type.startsWith('image/')) return null;
+      // iOS may return empty blob.type; accept as long as we got bytes back
+      if (blob.size === 0) return null;
       const objectUrl = URL.createObjectURL(blob);
       return await new Promise<HTMLImageElement | null>((resolve) => {
         const img = new Image();
-        const t = setTimeout(() => resolve(null), 5000);
+        const t = setTimeout(() => resolve(null), 8000);
         img.onload = () => { clearTimeout(t); resolve(img); };
         img.onerror = () => { clearTimeout(t); resolve(null); };
         img.src = objectUrl;
@@ -92,7 +98,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
   const fromCrossOrigin = (u: string): Promise<HTMLImageElement | null> =>
     new Promise((resolve) => {
       const img = new Image();
-      const t = setTimeout(() => resolve(null), 5000);
+      const t = setTimeout(() => resolve(null), 8000);
       img.crossOrigin = 'anonymous';
       img.onload = () => { clearTimeout(t); resolve(img); };
       img.onerror = () => { clearTimeout(t); resolve(null); };
@@ -101,11 +107,11 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
   // 1) Same-origin backend proxy (MOST RELIABLE — no CORS complications)
   const backendProxy = `/api/img-proxy?url=${encodeURIComponent(url)}`;
-  const viaBackend = await fromFetch(backendProxy);
+  const viaBackend = await fromFetch(backendProxy, true);
   if (viaBackend) return viaBackend;
 
   // 2) Direct fetch on the original URL
-  const viaBlob = await fromFetch(url);
+  const viaBlob = await fromFetch(url, false);
   if (viaBlob) return viaBlob;
 
   // 3) Classic Image with crossOrigin
@@ -114,7 +120,7 @@ const loadImage = async (url: string): Promise<HTMLImageElement | null> => {
 
   // 4) Cloudflare Worker proxy (fallback if backend not deployed)
   const proxyUrl = `${IMG_PROXY_BASE.replace(/\/$/, '')}/proxy?url=${encodeURIComponent(url)}`;
-  const viaWorker = await fromFetch(proxyUrl);
+  const viaWorker = await fromFetch(proxyUrl, false);
   if (viaWorker) return viaWorker;
   return await fromCrossOrigin(proxyUrl);
 };
@@ -169,6 +175,8 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Loaded product image cached so we don't refetch when template changes
   const productImgRef = useRef<HTMLImageElement | null>(null);
+  // Original URL (not the blob: URL that img.src becomes) — key for cache lookup
+  const productImgSrcRef = useRef<string>('');
   // Track blob URL of current preview so we can revoke it on re-render
   const previewUrlRef = useRef<string>('');
 
@@ -224,10 +232,12 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
       if (!ctx) return;
 
       // Cache product image to speed up re-renders (template/watermark change)
-      if (!productImgRef.current || productImgRef.current.src !== imageUrl) {
+      if (productImgSrcRef.current !== imageUrl) {
         const loaded = await loadImage(imageUrl);
         productImgRef.current = loaded;
-        if (!loaded && imageUrl) setImgError(true);
+        productImgSrcRef.current = imageUrl;
+        // Clear or set error state based on actual load result
+        setImgError(!loaded && !!imageUrl);
       }
       const productImg = productImgRef.current;
 
@@ -1023,10 +1033,11 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     try {
       // Preload product image
       let productImg: HTMLImageElement | null = productImgRef.current;
-      if (!productImg || productImg.src !== imageUrl) {
+      if (productImgSrcRef.current !== imageUrl) {
         productImg = await loadImage(imageUrl);
         productImgRef.current = productImg;
-        if (!productImg && imageUrl) setImgError(true);
+        productImgSrcRef.current = imageUrl;
+        setImgError(!productImg && !!imageUrl);
       }
       try {
         await (document as any).fonts?.ready;
@@ -1256,6 +1267,10 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
         previewUrlRef.current = '';
       }
       setPreviewUrl('');
+      // Reset image cache so next open always fetches fresh (in case URL changed)
+      productImgSrcRef.current = '';
+      productImgRef.current = null;
+      setImgError(false);
     }
   }, [open, videoUrl]);
 
