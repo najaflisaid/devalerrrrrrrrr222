@@ -53,6 +53,7 @@ const WorkerLogin = React.lazy(() => import('./pages/workers/WorkerLogin'));
 const WorkerDashboard = React.lazy(() => import('./pages/workers/WorkerDashboard'));
 const WarehouseOrderPage = React.lazy(() => import('./pages/WarehouseOrderPage'));
 const CustomerReceivePage = React.lazy(() => import('./pages/CustomerReceivePage'));
+const WarrantyServicePage = React.lazy(() => import('./pages/WarrantyServicePage'));
 const AiChatWidget = React.lazy(() => import('./components/AiChatWidget'));
 const CampaignPopup = React.lazy(() => import('./components/CampaignPopup'));
 const AdminGlobalNotifications = React.lazy(() => import('./components/AdminGlobalNotifications'));
@@ -199,6 +200,7 @@ const AppContent: React.FC = () => {
                       <Route path="/brand/:brand" element={<BrandPage />} />
                       <Route path="/b2b/orders" element={<B2BOrdersPage />} />
                       <Route path="/my-orders" element={<MyOrdersPage />} />
+                      <Route path="/warranty" element={<WarrantyServicePage />} />
                       <Route path="/change-password" element={<ChangePasswordPage />} />
                       <Route path="/payment/success" element={<PaymentSuccessPage />} />
                       <Route path="/payment/error" element={<PaymentErrorPage />} />

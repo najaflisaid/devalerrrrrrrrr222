@@ -1119,6 +1119,11 @@ const Header: React.FC = () => {
                 </span>
               </Link>
 
+              {isLoggedIn && userRole === 'customer' && (
+                <Link to="/warranty" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[11px] tracking-wide whitespace-nowrap font-futura uppercase transition-colors" data-testid="header-warranty-link">
+                  {t('header.warranty', { defaultValue: 'Zəmanət Servisi' })}
+                </Link>
+              )}
               {isLoggedIn && userRole === 'b2b' && (
                 <div className="relative flex flex-col items-start leading-none">
                   <Link to="/b2b/orders" className="text-gray-900 hover:text-gray-600 font-normal text-[11px] tracking-wide whitespace-nowrap font-futura uppercase transition-colors">
@@ -1335,6 +1340,16 @@ const Header: React.FC = () => {
                       >
                         Sifarişlərim
                       </Link>
+                      {userRole === 'customer' && (
+                        <Link
+                          to="/warranty"
+                          onClick={() => setShowLoginDropdown(false)}
+                          className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
+                          data-testid="account-warranty"
+                        >
+                          Zəmanət Servisi
+                        </Link>
+                      )}
                       {userRole !== 'b2b' && (
                         <Link
                           to="/change-password"
@@ -1736,6 +1751,20 @@ const Header: React.FC = () => {
                       onClick={closeMobileMenu}
                     >
                       <span>Sifarişlərim</span>
+                      <span className="text-black/40 text-sm">→</span>
+                    </Link>
+                    </div>
+                  )}
+
+                  {isLoggedIn && userRole === 'customer' && (
+                    <div className="dv-menu-item" style={{ ['--dv-i' as any]: 8 }}>
+                    <Link
+                      to="/warranty"
+                      className="flex items-center justify-between px-4 py-4 text-[12px] uppercase tracking-[0.18em] text-black hover:bg-black/[0.03] transition-colors border-b border-black/[0.06]"
+                      onClick={closeMobileMenu}
+                      data-testid="mobile-warranty-link"
+                    >
+                      <span>Zəmanət Servisi</span>
                       <span className="text-black/40 text-sm">→</span>
                     </Link>
                     </div>

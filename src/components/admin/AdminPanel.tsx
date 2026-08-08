@@ -42,6 +42,7 @@ import CampaignsTab from './CampaignsTab';
 import AiSeoTab from './AiSeoTab';
 import WhatsAppSettingsTab from './WhatsAppSettingsTab';
 import CourierManagementTab from './CourierManagementTab';
+import WarrantyServiceTab from './WarrantyServiceTab';
 import CreditCalculatorTab from './CreditCalculatorTab';
 const ProductExcelImport = React.lazy(() => import('./ProductExcelImport'));
 const ProductMigrationLog = React.lazy(() => import('./ProductMigrationLog'));
@@ -1720,6 +1721,7 @@ const AdminPanel: React.FC = () => {
         { id: 'promoCodes', label: 'Promo Kodlar', icon: Ticket },
         { id: 'deliveryMethods', label: 'Çatdırılma Üsulları', icon: Briefcase },
         { id: 'courierManagement', label: 'Çatdırılma — Kuryerlər', icon: Truck },
+        { id: 'warrantyService', label: 'Zəmanət Servisi', icon: ShieldCheck },
       ],
     },
     {
@@ -4123,6 +4125,10 @@ const AdminPanel: React.FC = () => {
           <PasswordProtectedSection sectionName="deliveryMethods">
             <CourierManagementTab />
           </PasswordProtectedSection>
+        )}
+
+        {activeTab === 'warrantyService' && (
+          <WarrantyServiceTab />
         )}
 
         {activeTab === 'analytics' && (
