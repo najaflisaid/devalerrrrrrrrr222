@@ -123,7 +123,7 @@ const Header: React.FC = () => {
 
             // B2B istifadəçisi üçün bildirişləri yüklə
             if (newRole === 'b2b' || newRole === 'admin') {
-              loadB2BNotifications();
+              loadB2BNotifications(newRole);
             }
           } else {
             if (previousRole !== 'customer') {
@@ -375,7 +375,7 @@ const Header: React.FC = () => {
   };
 
   // B2B bildirişləri yüklə
-  const loadB2BNotifications = async () => {
+  const loadB2BNotifications = async (role?: string) => {
     try {
       const notifs = await getActiveB2BNotifications();
       setB2bNotifications(notifs);
@@ -386,8 +386,10 @@ const Header: React.FC = () => {
         setNotificationsRead(true);
       }
       
-      // Giriş edən kimi modal göstər
-      if (notifs.length > 0) {
+      // Giriş edən kimi modal göstər — YALNIZ B2B müştərilər üçün.
+      // Admin bu bildirişləri özü yaradır, ona görə hər dəfə admin daxil olanda
+      // avtomatik modal açılması lazımsızdır (zınqırov ikonundan baxa bilər).
+      if (role === 'b2b' && notifs.length > 0) {
         const shownKey = `b2b_notif_shown_${new Date().toDateString()}`;
         if (!sessionStorage.getItem(shownKey)) {
           setShowNotificationModal(true);

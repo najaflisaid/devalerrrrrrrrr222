@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Bell, ShoppingBag } from 'lucide-react';
+import { Bell, ShoppingBag, X } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { playNewOrderSound, unlockAudio } from '../utils/notificationSound';
 
@@ -205,30 +205,63 @@ const AdminGlobalNotifications: React.FC = () => {
     navigate('/admin');
   };
 
+  // X düyməsi — bildirişi bağla. Bütün cari sifarişləri "görüldü" kimi işarələ
+  // (last-seen = indi) ki, admin yenidən daxil olanda bu bildiriş TƏKRAR görünməsin.
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    try {
+      localStorage.setItem(CUSTOMER_ORDERS_ACK_KEY, String(now));
+      localStorage.setItem(B2B_ACK_KEY, String(now));
+    } catch {
+      /* ignore */
+    }
+    // AdminPanel badge-ləri və bu komponentin listener-ləri yenilənsin
+    window.dispatchEvent(new Event('adminOrdersAcknowledged'));
+    setCustomerCount(0);
+    setB2bCount(0);
+    prevCustomerRef.current = 0;
+    prevB2BRef.current = 0;
+  };
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="fixed top-20 right-5 z-[9998] flex items-center gap-2.5 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl shadow-red-500/40 ring-4 ring-red-500/20 transition-all animate-pulse hover:animate-none"
-      data-testid="admin-global-order-badge"
-      aria-label={`${total} yeni sifariş`}
-    >
-      <span className="relative">
-        <Bell className="h-5 w-5" />
-        <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-white text-red-600 text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-red-600">
-          {total > 99 ? '99+' : total}
-        </span>
-      </span>
-      <span className="text-sm font-semibold">
-        {customerCount > 0 && (
-          <span className="inline-flex items-center gap-1">
-            <ShoppingBag className="h-3.5 w-3.5" /> {customerCount} yeni sifariş
+    <div className="fixed top-20 right-5 z-[9998]" data-testid="admin-global-order-wrap">
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex items-center gap-2.5 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl shadow-red-500/40 ring-4 ring-red-500/20 transition-all animate-pulse hover:animate-none"
+        data-testid="admin-global-order-badge"
+        aria-label={`${total} yeni sifariş`}
+      >
+        <span className="relative">
+          <Bell className="h-5 w-5" />
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-white text-red-600 text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-red-600">
+            {total > 99 ? '99+' : total}
           </span>
-        )}
-        {customerCount > 0 && b2bCount > 0 && <span className="opacity-60 mx-1">·</span>}
-        {b2bCount > 0 && <span>B2B: {b2bCount}</span>}
-      </span>
-    </button>
+        </span>
+        <span className="text-sm font-semibold">
+          {customerCount > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <ShoppingBag className="h-3.5 w-3.5" /> {customerCount} yeni sifariş
+            </span>
+          )}
+          {customerCount > 0 && b2bCount > 0 && <span className="opacity-60 mx-1">·</span>}
+          {b2bCount > 0 && <span>B2B: {b2bCount}</span>}
+        </span>
+      </button>
+
+      {/* Bağla (X) düyməsi — sağ üst küncdə */}
+      <button
+        type="button"
+        onClick={handleDismiss}
+        className="absolute -top-2.5 -right-1 h-7 w-7 rounded-full bg-white text-red-600 shadow-md ring-2 ring-red-600 flex items-center justify-center hover:bg-red-50 transition-colors"
+        data-testid="admin-global-order-dismiss"
+        aria-label="Bildirişi bağla"
+        title="Bağla"
+      >
+        <X className="h-3.5 w-3.5" strokeWidth={3} />
+      </button>
+    </div>
   );
 };
 

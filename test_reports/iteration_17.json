@@ -1,0 +1,25 @@
+{
+  "summary": "Verified admin red order-notification badge X-dismiss + persistence bug fix on preview URL. All 4 requested scenarios PASSED: (A) badge + X button render for admin with last_seen=0; (B) initial localStorage values are '0'; (C) clicking dismiss X removes the wrapper from DOM; (D) localStorage 'admin_customer_orders_last_seen_ms' and 'admin_b2b_orders_last_seen_ms' updated to large ms timestamps (e.g. 1786357852234); (E) after page reload the badge does NOT reappear (persistence confirmed); (F) clicking the badge body (after resetting last_seen) still navigates to /admin — existing behavior preserved.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage - AdminGlobalNotifications", "issues": ["Minor: The dismiss X button uses absolute '-top-2 -right-2' positioning which pushes it partially outside its parent container's bounding box. Playwright's regular .click() timed out on it (dispatch_event('click') worked). Real users on desktop can still click it (bbox at x=1884, width=24 within 1920 viewport), but on narrow viewports the X could be clipped by the viewport edge or by parent overflow. Consider adding some padding/margin to the wrapper or using inset positioning inside the badge so the X sits within the visible/interactive area."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: reposition the X dismiss button so it is fully inside the red badge boundary (or add wrapper padding) to avoid hit-test edge cases on narrow viewports."
+  ],
+  "critical_code_review_comments": [
+    "Bug fix implementation is correct and works end-to-end. Firestore snapshot listeners return quickly enough (badge appears within ~5-7s after deferred 3s mount).",
+    "Persistence via localStorage keys 'admin_customer_orders_last_seen_ms' and 'admin_b2b_orders_last_seen_ms' correctly set to Date.now() on dismiss; on reload the count comparison keeps badge hidden."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100%"},
+  "seed_data_creation": "None — used existing customer_orders in Firestore (>=1 qualifying order was present).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The AdminGlobalNotifications component is mounted globally via App.tsx with DeferredMount delayMs=3000. To simulate an admin, set localStorage keys before reload: userRole=admin, userId=test-admin, and reset last_seen keys to '0'. Wait ~5-8s for Firestore snapshot to populate. Header B2B broadcast modal was NOT tested (requires real Firebase admin auth per request)."
+}
