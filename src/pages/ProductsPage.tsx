@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
-import { trackCategoryView } from '../services/analyticsService';
+import { trackCategoryView, trackBrandView } from '../services/analyticsService';
 import type { Product } from '../types';
 
 /** Collapsible filter section — header is always visible, body toggles open on click. */
@@ -321,6 +321,10 @@ const ProductsPage: React.FC = () => {
     // Read brand parameter
     const brand = searchParams.get('brand');
     setSelectedBrand(brand || 'all');
+    // Analitika — brendə baxış sayını artır (60s throttle daxildə)
+    if (brand && brand !== 'all') {
+      void trackBrandView(brand);
+    }
 
     // Read gender parameter
     const gender = searchParams.get('gender');

@@ -37,3 +37,8 @@ Goal: When a customer has a product problem, they hand the product to a store br
 - Tracks how many times each category listing is opened. analyticsService.trackCategoryView() → Firestore 'category_view_counts/{slug}' {category,count,lastViewed}, 60s per-category throttle. Hooked in ProductsPage when ?category= is active.
 - Admin → Analitika → Ümumi statistika: new 'Kateqoriya baxışları' card shows MOST viewed + LEAST viewed category with counts, plus a ranked list with bars and delete.
 - Verified: iteration_19 (100%).
+
+## Feature: Brand views + Category trend analytics (2026-06)
+- trackBrandView() → 'brand_view_counts/{slug}' (60s throttle), hooked in ProductsPage on ?brand=. Admin card 'Brend baxışları' = most/least viewed brands + counts + ranked list.
+- trackCategoryView() now also writes daily bucket 'category_view_daily/{slug}__{date}'. getCategoryTrends() aggregates last7 vs prev7 (+%/'yeni') and last30. Admin card 'Kateqoriya trendi'.
+- Verified: iteration_20 (100%). Trend uses data collected going forward (prev-7 empty at launch → shows 'yeni').

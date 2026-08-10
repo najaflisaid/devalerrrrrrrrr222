@@ -277,6 +277,7 @@ export const getAnonProductInterest = async (kind?: 'cart' | 'wishlist'): Promis
 // Collection: category_view_counts/{slug} → { category, count, lastViewed }
 // =================================================================
 const CATEGORY_VIEWS_COL = 'category_view_counts';
+const CATEGORY_DAILY_COL = 'category_view_daily';
 const CATEGORY_VIEW_TTL_MS = 60 * 1000; // eyni kateqoriya 60s ərzində bir dəfə sayılır
 
 export const trackCategoryView = async (category: string): Promise<void> => {
@@ -302,6 +303,17 @@ export const trackCategoryView = async (category: string): Promise<void> => {
       },
       { merge: true }
     );
+    // Günlük bucket — trend hesablaması üçün (son 7/30 gün)
+    await setDoc(
+      doc(db, CATEGORY_DAILY_COL, `${id}__${todayId()}`),
+      {
+        category: name,
+        date: todayId(),
+        count: increment(1),
+        lastViewed: Timestamp.now(),
+      },
+      { merge: true }
+    );
   } catch (err) {
     console.warn('trackCategoryView failed:', err);
   }
@@ -322,6 +334,113 @@ export const getCategoryViews = async (): Promise<CategoryViewStat[]> => {
       .sort((a, b) => (b.count || 0) - (a.count || 0));
   } catch (err) {
     console.warn('getCategoryViews failed:', err);
+    return [];
+  }
+};
+
+// =================================================================
+// Kateqoriya trendi — son 7 / 30 gün üzrə artım-azalma
+// =================================================================
+export interface CategoryTrend {
+  category: string;
+  last7: number;
+  prev7: number;
+  last30: number;
+  delta7: number; // last7 - prev7
+  pct7: number; // faiz dəyişikliyi
+}
+
+export const getCategoryTrends = async (): Promise<CategoryTrend[]> => {
+  try {
+    const snap = await getDocs(collection(db, CATEGORY_DAILY_COL));
+    const today = new Date();
+    const dayId = (offset: number) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - offset);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+    const last7 = new Set<string>();
+    const prev7 = new Set<string>();
+    const last30 = new Set<string>();
+    for (let i = 0; i < 7; i++) last7.add(dayId(i));
+    for (let i = 7; i < 14; i++) prev7.add(dayId(i));
+    for (let i = 0; i < 30; i++) last30.add(dayId(i));
+
+    const map: Record<string, CategoryTrend> = {};
+    snap.docs.forEach((dref) => {
+      const x = dref.data() as any;
+      const cat = x.category;
+      const date = x.date;
+      const cnt = x.count || 0;
+      if (!cat || !date) return;
+      if (!map[cat]) map[cat] = { category: cat, last7: 0, prev7: 0, last30: 0, delta7: 0, pct7: 0 };
+      if (last7.has(date)) map[cat].last7 += cnt;
+      if (prev7.has(date)) map[cat].prev7 += cnt;
+      if (last30.has(date)) map[cat].last30 += cnt;
+    });
+    return Object.values(map)
+      .map((m) => ({
+        ...m,
+        delta7: m.last7 - m.prev7,
+        pct7: m.prev7 > 0 ? Math.round(((m.last7 - m.prev7) / m.prev7) * 100) : m.last7 > 0 ? 100 : 0,
+      }))
+      .sort((a, b) => b.last7 - a.last7 || b.last30 - a.last30);
+  } catch (err) {
+    console.warn('getCategoryTrends failed:', err);
+    return [];
+  }
+};
+
+// =================================================================
+// Brend baxışları — hansı brendə neçə dəfə baxılıb (ən çox / ən az)
+// Collection: brand_view_counts/{slug} → { brand, count, lastViewed }
+// =================================================================
+const BRAND_VIEWS_COL = 'brand_view_counts';
+const BRAND_VIEW_TTL_MS = 60 * 1000;
+
+export const trackBrandView = async (brand: string): Promise<void> => {
+  const name = (brand || '').trim();
+  if (!name || name.toLowerCase() === 'all') return;
+  const id = slugify(name);
+  try {
+    const key = lsKey('view', `brand_${id}`);
+    const last = Number(localStorage.getItem(key) || '0');
+    if (Date.now() - last < BRAND_VIEW_TTL_MS) return;
+    localStorage.setItem(key, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+  try {
+    await setDoc(
+      doc(db, BRAND_VIEWS_COL, id),
+      {
+        brand: name,
+        count: increment(1),
+        lastViewed: Timestamp.now(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('trackBrandView failed:', err);
+  }
+};
+
+export interface BrandViewStat {
+  brand: string;
+  count: number;
+  lastViewed?: any;
+}
+
+export const getBrandViews = async (): Promise<BrandViewStat[]> => {
+  try {
+    const snap = await getDocs(collection(db, BRAND_VIEWS_COL));
+    return snap.docs
+      .map((d) => ({ ...(d.data() as any) } as BrandViewStat))
+      .filter((b) => b.brand)
+      .sort((a, b) => (b.count || 0) - (a.count || 0));
+  } catch (err) {
+    console.warn('getBrandViews failed:', err);
     return [];
   }
 };
