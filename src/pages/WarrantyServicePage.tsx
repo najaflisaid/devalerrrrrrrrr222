@@ -149,7 +149,7 @@ const WarrantyServicePage: React.FC = () => {
           <div className="mx-auto w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center mb-5">
             <ShieldCheck className="h-8 w-8" strokeWidth={1.4} />
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Zəmanət Servisi</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Zəmanət xidməti</h1>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
             Məhsulunuzu servisə təhvil vermək və vəziyyətini izləmək üçün əvvəlcə hesabınıza daxil olun.
           </p>
@@ -181,13 +181,12 @@ const WarrantyServicePage: React.FC = () => {
               <Wrench className="h-6 w-6" strokeWidth={1.4} />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">Zəmanət Servisi</h1>
-              <p className="text-white/60 text-xs sm:text-sm">Təhvil-təslim aktı və servis izləmə</p>
+              <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">Zəmanət xidməti</h1>
+              <p className="text-white/60 text-xs sm:text-sm">Təhvil-təslim aktı.</p>
             </div>
           </div>
           <p className="text-white/70 text-sm leading-relaxed max-w-xl">
-            Məhsulunuzla bağlı problem yaşadıqda buradan servisə təhvil verə, imza ilə təsdiqləyə və
-            hər mərhələni real vaxtda izləyə bilərsiniz.
+            Servisdə təmir müddəti 14 iş günü təşkil edir.
           </p>
         </div>
       </div>

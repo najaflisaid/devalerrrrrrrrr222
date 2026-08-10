@@ -1123,7 +1123,7 @@ const Header: React.FC = () => {
 
               {isLoggedIn && userRole === 'customer' && (
                 <Link to="/warranty" className="dv-navlink text-gray-900 hover:text-gray-600 font-normal text-[11px] tracking-wide whitespace-nowrap font-futura uppercase transition-colors" data-testid="header-warranty-link">
-                  {t('header.warranty', { defaultValue: 'Zəmanət Servisi' })}
+                  {t('header.warranty', { defaultValue: 'Zəmanət xidməti' })}
                 </Link>
               )}
               {isLoggedIn && userRole === 'b2b' && (
@@ -1349,7 +1349,7 @@ const Header: React.FC = () => {
                           className="block w-full text-left px-4 py-2.5 text-[13px] text-black/80 hover:bg-black/[0.04] hover:text-black transition-colors border-t border-black/[0.07]"
                           data-testid="account-warranty"
                         >
-                          Zəmanət Servisi
+                          Zəmanət xidməti
                         </Link>
                       )}
                       {userRole !== 'b2b' && (
@@ -1766,7 +1766,7 @@ const Header: React.FC = () => {
                       onClick={closeMobileMenu}
                       data-testid="mobile-warranty-link"
                     >
-                      <span>Zəmanət Servisi</span>
+                      <span>Zəmanət xidməti</span>
                       <span className="text-black/40 text-sm">→</span>
                     </Link>
                     </div>
