@@ -180,7 +180,15 @@ async def image_proxy(url: str):
         raise HTTPException(status_code=400, detail="invalid scheme")
 
     host = (parsed.hostname or "").lower()
-    if not any(host == h.lstrip(".") or host.endswith(h) for h in _IMG_PROXY_ALLOWED):
+    # SSRF guard — block internal/private hosts; allow any public image host so
+    # the Story generator can proxy product images regardless of CDN/host.
+    _blocked_prefixes = ("127.", "10.", "192.168.", "169.254.")
+    if (
+        not host
+        or host in ("localhost", "::1")
+        or host.endswith(".local")
+        or host.startswith(_blocked_prefixes)
+    ):
         raise HTTPException(status_code=403, detail=f"host not allowed: {host}")
 
     try:

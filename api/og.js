@@ -337,6 +337,42 @@ async function handleProduct(req, res) {
   }
 }
 
+// ?type=img-proxy&url=... — CORS-safe image proxy so <canvas> (Instagram Story
+// generator) can draw remote R2/Firebase product images without tainting.
+async function handleImgProxy(req, res) {
+  try {
+    const url = req.query?.url ? String(req.query.url) : '';
+    if (!url || !/^https?:\/\//i.test(url)) { res.status(400).send('bad url'); return; }
+    let host = '';
+    try { host = new URL(url).hostname.toLowerCase(); } catch { res.status(400).send('bad url'); return; }
+    // SSRF guard — block internal/private hosts, allow any public host
+    if (
+      !host ||
+      host === 'localhost' || host === '::1' || host.endsWith('.local') ||
+      host.startsWith('127.') || host.startsWith('10.') ||
+      host.startsWith('192.168.') || host.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    ) { res.status(403).send('host not allowed'); return; }
+
+    const upstream = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; DeValeurBot/1.0)',
+        'Accept': 'image/*,*/*',
+      },
+      redirect: 'follow',
+    });
+    if (!upstream.ok) { res.status(upstream.status).send('upstream error'); return; }
+    const ct = upstream.headers.get('content-type') || 'image/jpeg';
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', ct);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
+    res.status(200).send(buf);
+  } catch {
+    res.status(502).send('proxy failed');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -348,9 +384,11 @@ export default async function handler(req, res) {
   if (type === 'category-image') return handleCategoryImage(req, res);
   if (type === 'category') return handleCategory(req, res);
   if (type === 'product') return handleProduct(req, res);
+  if (type === 'img-proxy') return handleImgProxy(req, res);
 
   // Fallback: infer from URL path so /api/og-default etc. still work if any
   // callers hit the raw file name without rewrite.
+  if (req.url?.includes('img-proxy')) return handleImgProxy(req, res);
   if (req.url?.includes('og-default')) return handleDefault(req, res);
   if (req.url?.includes('og-category-image')) return handleCategoryImage(req, res);
   if (req.url?.includes('og-category')) return handleCategory(req, res);

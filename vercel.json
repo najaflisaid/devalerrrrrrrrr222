@@ -25,6 +25,10 @@
       "destination": "/api/og?type=category-image"
     },
     {
+      "source": "/api/img-proxy",
+      "destination": "/api/og?type=img-proxy"
+    },
+    {
       "source": "/product/:id",
       "destination": "/api/og?type=product&id=:id",
       "has": [

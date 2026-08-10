@@ -29,12 +29,12 @@ interface TemplateDef {
 }
 
 const TEMPLATES: TemplateDef[] = [
-  { key: 'pure', label: 'Pure', swatch: 'linear-gradient(180deg,#fafaf7 55%,#fafaf7 55%,#111 55%,#111 100%)' },
-  { key: 'silhouette', label: 'Silhouette', swatch: 'linear-gradient(180deg,#f4f2ee 75%,#f4f2ee 75%,#0a0a0a 75%,#0a0a0a 100%)' },
-  { key: 'minimal', label: 'Minimal', swatch: 'linear-gradient(135deg,#f6f5f2,#ffffff)' },
+  { key: 'minimal', label: 'Minimal', swatch: 'linear-gradient(180deg,#ffffff 0%,#fbf8f4 45%,#f3ede4 75%,#ece3d6 100%)' },
+  { key: 'pure', label: 'Pure', swatch: 'linear-gradient(180deg,#ffffff 0%,#faf7f1 60%,#f1ece2 100%)' },
+  { key: 'silhouette', label: 'Silhouette', swatch: 'linear-gradient(180deg,#ffffff 0%,#f6f3ec 70%,#efe7da 100%)' },
+  { key: 'editorial', label: 'Editorial', swatch: 'linear-gradient(180deg,#e9e5df 0%,#e9e5df 55%,#111 55%,#111 100%)' },
   { key: 'noir', label: 'Noir', swatch: 'linear-gradient(135deg,#0a0a0a,#1f1f1f)' },
   { key: 'gold', label: 'Gold', swatch: 'linear-gradient(135deg,#111,#3a2c14 60%,#c9a24a)' },
-  { key: 'editorial', label: 'Editorial', swatch: 'linear-gradient(180deg,#e9e5df 0%,#e9e5df 55%,#111 55%,#111 100%)' },
 ];
 
 // Instagram Story canonical size
@@ -399,98 +399,103 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     ctx.fillText('DEVALEUR.AZ', W / 2, H - 70);
   };
 
-  // ─── Template: Minimal (light, editorial) ───
+  // ─── Template: Minimal (clean, white → soft tint, editorial) ───
   const drawMinimal = (
     ctx: CanvasRenderingContext2D,
     productImg: HTMLImageElement | null
   ) => {
-    // Warm off-white background
+    // Smooth vertical gradient — pure white at top, gently melting into a soft
+    // warm tint towards the bottom. Extra stops keep the transition seamless
+    // (no visible banding / hard colour break).
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#faf8f4');
-    g.addColorStop(1, '#eeeae2');
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.45, '#fbf8f4');
+    g.addColorStop(0.75, '#f3ede4');
+    g.addColorStop(1, '#ece3d6');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    // Top brand strip
+    // Brand — top, widely tracked
     ctx.fillStyle = '#111';
     ctx.textAlign = 'center';
+    ctx.letterSpacing = '8px' as any;
     ctx.font = '500 34px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 180);
+    ctx.fillText((brand || 'DE VALEUR').toUpperCase(), W / 2, 175);
+    ctx.letterSpacing = '0px' as any;
 
-    // Thin divider
-    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    // Thin hairline divider
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(W / 2 - 60, 220);
-    ctx.lineTo(W / 2 + 60, 220);
+    ctx.moveTo(W / 2 - 44, 215);
+    ctx.lineTo(W / 2 + 44, 215);
     ctx.stroke();
 
-    // Product image — big centered card
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(90, 300, W - 180, 900);
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-    ctx.strokeRect(90, 300, W - 180, 900);
-    drawProductImage(ctx, productImg, { x: 130, y: 340, w: W - 260, h: 820 });
+    // Product image — large, floating with a soft natural shadow (no boxed card)
+    ctx.save();
+    ctx.shadowColor = 'rgba(60,45,25,0.18)';
+    ctx.shadowBlur = 60;
+    ctx.shadowOffsetY = 34;
+    drawProductImage(ctx, productImg, { x: 140, y: 300, w: W - 280, h: 900 });
+    ctx.restore();
 
-    // Product name (2 lines)
-    ctx.fillStyle = '#111';
+    // Product name (max 2 lines)
+    ctx.fillStyle = '#1a1a1a';
     ctx.textAlign = 'center';
-    ctx.font = '400 54px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.font = '400 52px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLines = wrapText(ctx, productName, W - 200, 2);
-    let ny = 1290;
+    let ny = 1300;
     nameLines.forEach((ln) => {
       ctx.fillText(ln, W / 2, ny);
-      ny += 66;
+      ny += 64;
     });
 
     // Old price (strikethrough) if on sale
     if (originalPrice && originalPrice > price) {
       ctx.font = '400 30px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
-      ctx.fillText(oldText, W / 2, ny + 40);
+      ctx.fillText(oldText, W / 2, ny + 38);
       const m = ctx.measureText(oldText);
-      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(W / 2 - m.width / 2 - 8, ny + 32);
-      ctx.lineTo(W / 2 + m.width / 2 + 8, ny + 32);
+      ctx.moveTo(W / 2 - m.width / 2 - 8, ny + 30);
+      ctx.lineTo(W / 2 + m.width / 2 + 8, ny + 30);
       ctx.stroke();
-      ny += 60;
+      ny += 56;
     }
 
-    // Price — big
-    ctx.fillStyle = '#111';
-    ctx.font = '600 96px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, ny + 130);
+    // Price — the hero number
+    ctx.fillStyle = '#0f0f0f';
+    ctx.font = '600 100px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, ny + 128);
 
-    // Credit block
+    // Credit — minimal single line with a subtle gold accent (no heavy pill)
     if (monthlyForSix != null && sixMonthRate) {
-      const boxY = ny + 200;
-      // Gold pill
-      ctx.fillStyle = '#111';
-      const pillW = 640;
-      const pillH = 150;
-      const pillX = (W - pillW) / 2;
-      ctx.fillRect(pillX, boxY, pillW, pillH);
-      // Inner border gold
-      ctx.strokeStyle = '#C9A24A';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(pillX + 6, boxY + 6, pillW - 12, pillH - 12);
-
-      ctx.fillStyle = '#C9A24A';
+      const cy = ny + 210;
+      ctx.fillStyle = '#9a7b32';
       ctx.font = '500 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText(
-        `KREDİTLƏ ${sixMonthRate.months} AY${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · 0%'}`,
-        W / 2,
-        boxY + 55
-      );
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '600 58px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-      ctx.fillText(`${formatAzn(monthlyForSix)} AZN / ay`, W / 2, boxY + 115);
+      ctx.letterSpacing = '2px' as any;
+      const label = `${sixMonthRate.months} AY KREDİT${sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : ' · FAİZSİZ'}`;
+      ctx.fillText(label, W / 2, cy);
+      ctx.letterSpacing = '0px' as any;
+
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = '500 46px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText(`${formatAzn(monthlyForSix)} AZN / ay`, W / 2, cy + 62);
+
+      // slim gold underline centred below
+      const uw = 120;
+      ctx.strokeStyle = 'rgba(201,162,74,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(W / 2 - uw / 2, cy + 92);
+      ctx.lineTo(W / 2 + uw / 2, cy + 92);
+      ctx.stroke();
     }
 
-    drawSiteFooter(ctx, 'rgba(0,0,0,0.55)');
+    drawSiteFooter(ctx, 'rgba(0,0,0,0.5)');
   };
 
   // ─── Template: Noir (dark luxury) ───
@@ -769,8 +774,12 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     ctx: CanvasRenderingContext2D,
     productImg: HTMLImageElement | null
   ) => {
-    // Off-white paper
-    ctx.fillStyle = '#fafaf7';
+    // Off-white paper — smooth white → soft tint (no hard colour break)
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#ffffff');
+    bg.addColorStop(0.6, '#faf7f1');
+    bg.addColorStop(1, '#f1ece2');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
     // ── PRODUCT IMAGE — huge, near-full width ──
@@ -852,83 +861,87 @@ const StoryShareModal: React.FC<StoryShareModalProps> = ({
     ctx: CanvasRenderingContext2D,
     productImg: HTMLImageElement | null
   ) => {
-    // Warm beige paper
-    const g = ctx.createLinearGradient(0, 0, 0, H * 0.78);
-    g.addColorStop(0, '#f6f3ec');
-    g.addColorStop(1, '#efeae0');
+    // Full-height smooth gradient — white melting into a soft warm beige.
+    // No hard split; the transition is imperceptible.
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.55, '#faf7f0');
+    g.addColorStop(0.8, '#f3ece0');
+    g.addColorStop(1, '#e9dfce');
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H * 0.78);
+    ctx.fillRect(0, 0, W, H);
 
-    // Bottom near-black rail
-    ctx.fillStyle = '#0d0d0d';
-    ctx.fillRect(0, H * 0.78, W, H - H * 0.78);
-
-    // ── PRODUCT IMAGE — dominant ──
-    const imgBox = { x: 20, y: 60, w: W - 40, h: 1400 };
+    // ── PRODUCT IMAGE — dominant, with a soft natural shadow ──
+    ctx.save();
+    ctx.shadowColor = 'rgba(60,45,25,0.16)';
+    ctx.shadowBlur = 55;
+    ctx.shadowOffsetY = 30;
+    const imgBox = { x: 40, y: 70, w: W - 80, h: 1360 };
     drawProductImage(ctx, productImg, imgBox);
+    ctx.restore();
 
-    // Tiny top brand — offset in corner, whispers rather than shouts
+    // Tiny top brand — whispered in the corner
     ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.letterSpacing = '3px' as any;
     ctx.font = '500 18px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     ctx.fillText((brand || 'DE VALEUR').toUpperCase(), 60, 90);
-    // Subtle Pinyon Script signature accent below top brand
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.letterSpacing = '0px' as any;
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
     ctx.font = '400 32px "Pinyon Script", cursive';
-    ctx.fillText('by DE Valeur', 60, 130);
+    ctx.fillText('by DE Valeur', 60, 132);
 
-    // ── BOTTOM RAIL — single elegant line block ──
-    const railTop = H * 0.78;
-    const railCenterY = railTop + (H - railTop) / 2;
+    // ── BOTTOM RAIL — elegant centred block on the soft tint (dark text) ──
+    const railCenterY = 1620;
 
-    // Product name — small caps, uppercase
+    // Product name — small caps
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(245,242,234,0.92)';
-    ctx.font = '500 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillStyle = 'rgba(20,20,20,0.92)';
+    ctx.letterSpacing = '1px' as any;
+    ctx.font = '500 26px "Montserrat", "Helvetica Neue", Arial, sans-serif';
     const nameLine = productName.length > 34 ? productName.slice(0, 33) + '…' : productName;
-    ctx.fillText(nameLine, W / 2, railCenterY - 60);
+    ctx.fillText(nameLine, W / 2, railCenterY - 55);
+    ctx.letterSpacing = '0px' as any;
 
-    // Thin gold hairline (10% wide) — brand accent
-    ctx.strokeStyle = '#C9A24A';
-    ctx.lineWidth = 1;
+    // Thin gold hairline
+    ctx.strokeStyle = 'rgba(201,162,74,0.85)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W / 2 - 40, railCenterY - 35);
-    ctx.lineTo(W / 2 + 40, railCenterY - 35);
+    ctx.moveTo(W / 2 - 40, railCenterY - 28);
+    ctx.lineTo(W / 2 + 40, railCenterY - 28);
     ctx.stroke();
 
-    // Big whispered price
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '500 68px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, railCenterY + 30);
+    // Whispered price
+    ctx.fillStyle = '#0f0f0f';
+    ctx.font = '600 74px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText(`${formatAzn(price, 0)} AZN`, W / 2, railCenterY + 40);
 
     if (originalPrice && originalPrice > price) {
-      ctx.font = '300 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '400 24px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
       const oldText = `${formatAzn(originalPrice, 0)} AZN`;
-      ctx.fillText(oldText, W / 2, railCenterY + 62);
+      ctx.fillText(oldText, W / 2, railCenterY + 78);
       const m = ctx.measureText(oldText);
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(W / 2 - m.width / 2 - 4, railCenterY + 55);
-      ctx.lineTo(W / 2 + m.width / 2 + 4, railCenterY + 55);
+      ctx.moveTo(W / 2 - m.width / 2 - 4, railCenterY + 70);
+      ctx.lineTo(W / 2 + m.width / 2 + 4, railCenterY + 70);
       ctx.stroke();
     }
 
     if (monthlyForSix != null && sixMonthRate) {
-      ctx.fillStyle = 'rgba(201,162,74,0.9)';
-      ctx.font = '400 20px "Montserrat", "Helvetica Neue", Arial, sans-serif';
-      const suffix = sixMonthRate.percent > 0
-        ? ` · ${sixMonthRate.percent}%`
-        : '  ·  faizsiz';
+      ctx.fillStyle = 'rgba(154,123,50,0.95)';
+      ctx.font = '500 22px "Montserrat", "Helvetica Neue", Arial, sans-serif';
+      const suffix = sixMonthRate.percent > 0 ? ` · ${sixMonthRate.percent}%` : '  ·  faizsiz';
       ctx.fillText(
         `${sixMonthRate.months} ay${suffix}   ·   ${formatAzn(monthlyForSix)} AZN / ay`,
         W / 2,
-        railCenterY + 105
+        railCenterY + (originalPrice && originalPrice > price ? 118 : 92)
       );
     }
 
-    drawSiteFooter(ctx, 'rgba(245,242,234,0.4)');
+    drawSiteFooter(ctx, 'rgba(0,0,0,0.4)');
   };
 
   // Re-render whenever template / data changes
