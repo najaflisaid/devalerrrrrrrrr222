@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only verification of the new 'Kateqoriya baxışları' analytics card. Simulated an anonymous visitor navigating to 3 distinct category filter URLs (/products?category=SAAT, ?category=EYNƏK, ?category=ÜZÜK). trackCategoryView() incremented Firestore 'category_view_counts' docs (verified via localStorage throttle keys __dv_track_view_cat_saat, _eynək, _üzük). Then set localStorage.userRole=admin + userId, opened /admin, clicked 'Analitika' sidebar (password-protected, cleared using per-section password '2345' fetched via adminPasswordService.getAdminPasswords). On the Analytics overview tab, clicked 'Yenilə' to reload, then asserted the new card. All 5 acceptance-criteria data-testids resolve and display correctly.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Firestore project 'devaleur-11742' returns 429 RESOURCE_EXHAUSTED on the REST endpoint — the app still works via the SDK WebChannel, but this quota pressure is worth monitoring (unrelated to this feature).",
+    "trackCategoryView() writes with the raw category name as the doc field 'category' but slugifies for the doc id. This is fine, but note that per-category throttle keys use the lowercased slug (e.g. 'üzük'), so switching casing/spelling of the same category chip would create duplicate counters — not a bug for the current requirement but worth documenting.",
+    "The category-views card total displays 'Cəmi X baxış · N kateqoriya' — good info density; consider adding a 'lastViewed' timestamp per row for admin insight (already stored in Firestore)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100%" },
+  "test_credentials": "Analytics section per-section password = '2345' (fetched from Firestore site_content/admin_passwords.perSection.analytics.password). Admin gate via localStorage: userRole=admin, userId=test-admin.",
+  "seed_data_creation": "Incremented Firestore 'category_view_counts' docs for slugs: saat, eynək, üzük (2 views each after the two test runs).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Analytics tab is password-protected. To open programmatically: click 'Analitika' sidebar entry, then fill input[type=password] with '2345' and click 'Daxil ol' (button). To fetch/verify admin passwords in-browser: `await (await import('/src/services/adminPasswordService.ts')).getAdminPasswords()`. Category chip data-testids on /products are `filter-category-<UPPERCASE_NAME>` (e.g. filter-category-SAAT). URL param based navigation `/products?category=<name>` triggers trackCategoryView() via the searchParams effect in ProductsPage.tsx (~line 314). The 60s throttle is a per-slug localStorage key `__dv_track_view_cat_<slug>` — clear these before re-testing counter increments.",
+  "test_evidence": {
+    "category-views-card": "present",
+    "category-most-viewed": "EYNƏK — 2 dəfə baxılıb",
+    "category-least-viewed": "ÜZÜK — 2 dəfə baxılıb",
+    "rows": ["1 EYNƏK 2 dəfə", "2 SAAT 2 dəfə", "3 ÜZÜK 2 dəfə"],
+    "toggle-category-views": "not rendered (only 3 categories, <=5 threshold — matches spec: 'appears if more than 5')",
+    "screenshot": "/app/.screenshots/cat_views_card.png"
+  }
+}

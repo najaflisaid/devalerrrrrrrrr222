@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
 import { getCategoryTree, type CategoryNode } from '../services/categoryService';
+import { trackCategoryView } from '../services/analyticsService';
 import type { Product } from '../types';
 
 /** Collapsible filter section — header is always visible, body toggles open on click. */
@@ -312,6 +313,10 @@ const ProductsPage: React.FC = () => {
     // Read category parameter
     const category = searchParams.get('category');
     setSelectedCategory(category || 'all');
+    // Analitika — kateqoriyaya baxış sayını artır (60s throttle daxildə)
+    if (category && category !== 'all') {
+      void trackCategoryView(category);
+    }
 
     // Read brand parameter
     const brand = searchParams.get('brand');

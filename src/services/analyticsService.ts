@@ -272,3 +272,57 @@ export const getAnonProductInterest = async (kind?: 'cart' | 'wishlist'): Promis
   }
 };
 
+// =================================================================
+// Kateqoriya baxışları — hansı kateqoriyaya neçə dəfə baxılıb
+// Collection: category_view_counts/{slug} → { category, count, lastViewed }
+// =================================================================
+const CATEGORY_VIEWS_COL = 'category_view_counts';
+const CATEGORY_VIEW_TTL_MS = 60 * 1000; // eyni kateqoriya 60s ərzində bir dəfə sayılır
+
+export const trackCategoryView = async (category: string): Promise<void> => {
+  const name = (category || '').trim();
+  if (!name || name.toLowerCase() === 'all') return;
+  const id = slugify(name);
+  // Throttle by localStorage (per category, per browser)
+  try {
+    const key = lsKey('view', `cat_${id}`);
+    const last = Number(localStorage.getItem(key) || '0');
+    if (Date.now() - last < CATEGORY_VIEW_TTL_MS) return;
+    localStorage.setItem(key, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+  try {
+    await setDoc(
+      doc(db, CATEGORY_VIEWS_COL, id),
+      {
+        category: name,
+        count: increment(1),
+        lastViewed: Timestamp.now(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('trackCategoryView failed:', err);
+  }
+};
+
+export interface CategoryViewStat {
+  category: string;
+  count: number;
+  lastViewed?: any;
+}
+
+export const getCategoryViews = async (): Promise<CategoryViewStat[]> => {
+  try {
+    const snap = await getDocs(collection(db, CATEGORY_VIEWS_COL));
+    return snap.docs
+      .map((d) => ({ ...(d.data() as any) } as CategoryViewStat))
+      .filter((c) => c.category)
+      .sort((a, b) => (b.count || 0) - (a.count || 0));
+  } catch (err) {
+    console.warn('getCategoryViews failed:', err);
+    return [];
+  }
+};
+

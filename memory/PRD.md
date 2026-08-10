@@ -32,3 +32,8 @@ Goal: When a customer has a product problem, they hand the product to a store br
 - Root cause: product images are on Cloudflare R2 / external CDNs (e.g. cdn.saatvesaat.com.tr). The Story canvas loads them via same-origin proxy /api/img-proxy. Production (Vercel) had NO img-proxy function (404); preview FastAPI proxy had a host whitelist that excluded external CDNs → canvas drew a placeholder.
 - Fixes: (1) added /api/img-proxy handler inside existing api/og.js (reused to stay under Vercel function limit) + vercel.json rewrite /api/img-proxy → /api/og?type=img-proxy; (2) relaxed backend/server.py img-proxy to allow any public host with an SSRF guard; (3) redesigned minimal/pure/silhouette templates to smooth white→soft-tint gradients (no hard split) keeping brand/price/6-month credit.
 - Verified: iteration_18 — backend proxy 200 + ACAO:* for arbitrary + real product hosts; end-to-end modal renders the product on all templates, no CORS/error warning; pixel-stat confirms real content. Works via same-origin proxy on iOS too.
+
+## Feature: Category view analytics (2026-06)
+- Tracks how many times each category listing is opened. analyticsService.trackCategoryView() → Firestore 'category_view_counts/{slug}' {category,count,lastViewed}, 60s per-category throttle. Hooked in ProductsPage when ?category= is active.
+- Admin → Analitika → Ümumi statistika: new 'Kateqoriya baxışları' card shows MOST viewed + LEAST viewed category with counts, plus a ranked list with bars and delete.
+- Verified: iteration_19 (100%).

@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Radio,
   Globe,
+  Layers,
 } from 'lucide-react';
 import {
   collection,
@@ -28,10 +29,12 @@ import {
   getTopSearches,
   getDailyVisits,
   getAnonProductInterest,
+  getCategoryViews,
   type ProductViewStat,
   type SearchStat,
   type DailyVisitStat,
   type AnonInterestStat,
+  type CategoryViewStat,
 } from '../../services/analyticsService';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
@@ -89,6 +92,7 @@ const AnalyticsTab: React.FC = () => {
   const [topSearches, setTopSearches] = useState<SearchStat[]>([]);
   const [dailyVisits, setDailyVisits] = useState<DailyVisitStat[]>([]);
   const [anonInterests, setAnonInterests] = useState<AnonInterestStat[]>([]);
+  const [categoryViews, setCategoryViews] = useState<CategoryViewStat[]>([]);
   const [carts, setCarts] = useState<CustomerCart[]>([]);
   const [wishlists, setWishlists] = useState<CustomerWishlist[]>([]);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
@@ -114,7 +118,7 @@ const AnalyticsTab: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [v, s, visits, anons, cartsSnap, wlSnap, products] = await Promise.all([
+      const [v, s, visits, anons, cartsSnap, wlSnap, products, cats] = await Promise.all([
         getTopViewedProducts(20),
         getTopSearches(30),
         getDailyVisits(30),
@@ -122,11 +126,13 @@ const AnalyticsTab: React.FC = () => {
         getDocs(collection(db, 'customer_carts')),
         getDocs(collection(db, 'customer_wishlists')),
         productService.getAll(true).catch(() => [] as Product[]),
+        getCategoryViews(),
       ]);
       setTopViews(v);
       setTopSearches(s);
       setDailyVisits(visits);
       setAnonInterests(anons);
+      setCategoryViews(cats);
       const pm: Record<string, Product> = {};
       products.forEach((p) => {
         pm[p.id] = p;
@@ -185,11 +191,26 @@ const AnalyticsTab: React.FC = () => {
     }
   };
 
-  const handleDeleteView = async (productId: string, productName: string) => {
-    if (!confirm(`"${productName || productId}" baxış statistikasını silmək istəyirsiniz?`)) return;
+  const handleDeleteView = async (productId: string, productName: string) => {    if (!confirm(`"${productName || productId}" baxış statistikasını silmək istəyirsiniz?`)) return;
     try {
       await deleteDoc(doc(db, 'product_view_counts', productId));
       setTopViews((prev) => prev.filter((v) => v.productId !== productId));
+    } catch (e) {
+      alert('Silinmədi: ' + (e as Error).message);
+    }
+  };
+
+  const handleDeleteCategoryView = async (category: string) => {
+    if (!confirm(`"${category}" kateqoriya baxış statistikasını silmək istəyirsiniz?`)) return;
+    const id = category
+      .toLowerCase()
+      .trim()
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'unknown';
+    try {
+      await deleteDoc(doc(db, 'category_view_counts', id));
+      setCategoryViews((prev) => prev.filter((c) => c.category !== category));
     } catch (e) {
       alert('Silinmədi: ' + (e as Error).message);
     }
@@ -444,6 +465,92 @@ const AnalyticsTab: React.FC = () => {
                     )}
                   </button>
                 )}
+              </>
+            )}
+          </div>
+
+          {/* Category views — most / least viewed categories */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 lg:col-span-2" data-testid="category-views-card">
+            <div className="flex items-center gap-2 mb-3">
+              <Layers className="h-4 w-4 text-gray-700" />
+              <h3 className="font-semibold text-gray-900">Kateqoriya baxışları</h3>
+              <span className="ml-auto text-xs text-gray-400">
+                Cəmi {categoryViews.reduce((s, c) => s + (c.count || 0), 0)} baxış · {categoryViews.length} kateqoriya
+              </span>
+            </div>
+            {categoryViews.length === 0 ? (
+              <p className="text-sm text-gray-500 py-6 text-center">Hələ kateqoriya baxış statistikası yoxdur</p>
+            ) : (
+              <>
+                {(() => {
+                  const max = Math.max(1, ...categoryViews.map((c) => c.count || 0));
+                  const most = categoryViews[0];
+                  const least = categoryViews[categoryViews.length - 1];
+                  const list = expanded['categoryViews'] ? categoryViews : categoryViews.slice(0, VISIBLE_LIMIT);
+                  return (
+                    <>
+                      {/* Highlight: most vs least */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3" data-testid="category-most-viewed">
+                          <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold mb-0.5">Ən çox baxılan</p>
+                          <p className="text-sm font-bold text-emerald-900 truncate">{most.category}</p>
+                          <p className="text-xs text-emerald-700 mt-0.5">{most.count} dəfə baxılıb</p>
+                        </div>
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3" data-testid="category-least-viewed">
+                          <p className="text-[10px] uppercase tracking-wider text-amber-600 font-semibold mb-0.5">Ən az baxılan</p>
+                          <p className="text-sm font-bold text-amber-900 truncate">{least.category}</p>
+                          <p className="text-xs text-amber-700 mt-0.5">{least.count} dəfə baxılıb</p>
+                        </div>
+                      </div>
+
+                      <ol className="space-y-2.5">
+                        {list.map((c, i) => {
+                          const pct = Math.round(((c.count || 0) / max) * 100);
+                          return (
+                            <li key={c.category} className="group" data-testid={`category-view-${i}`}>
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="text-xs font-mono text-gray-400 w-5 text-center">{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-gray-900">{c.category}</p>
+                                    <span className="text-sm font-bold text-gray-900 tabular-nums">
+                                      {c.count} <span className="text-[10px] font-normal text-gray-400">dəfə</span>
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                                    <div className="h-full bg-gray-900 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteCategoryView(c.category)}
+                                  className="text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Sil"
+                                  data-testid={`delete-category-view-${i}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ol>
+
+                      {categoryViews.length > VISIBLE_LIMIT && (
+                        <button
+                          onClick={() => toggle('categoryViews')}
+                          className="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg py-2 border border-dashed border-gray-200 transition-colors"
+                          data-testid="toggle-category-views"
+                        >
+                          {expanded['categoryViews'] ? (
+                            <><ChevronUp className="h-3.5 w-3.5" /> Daha az göstər</>
+                          ) : (
+                            <><ChevronDown className="h-3.5 w-3.5" /> Daha çox göstər ({categoryViews.length - VISIBLE_LIMIT})</>
+                          )}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>
