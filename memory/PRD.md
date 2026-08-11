@@ -47,3 +47,7 @@ Goal: When a customer has a product problem, they hand the product to a store br
 - SlowReplyBar: one X dismisses ALL waiting chats, auto-hides after 10s, shows once per new waiting chat. (tested iteration_21)
 - Unviewed chats: AiConsultantTab chat list highlights admin-unviewed sessions blue + dot (session-unviewed-<id>); clears on view; persists via localStorage 'dv_admin_chat_seen_v1'. (tested iteration_21)
 - Telegram: server-side notify (token/chat_id in env). FastAPI POST /api/telegram/notify + GET /api/telegram/chat-info (find group id). Vercel: og.js ?type=telegram-notify + rewrite /api/telegram/notify. Frontend AiChatWidget fires notifyNewChat (first user msg) + notifyContact (phone shared). backend/.env has TELEGRAM_BOT_TOKEN (token valid: @De_valeur_assistant_bot), TELEGRAM_CHAT_ID=-5447107741 (group 'De Valeur'). ACTIVE in preview (test sends ok:true). for prod set Vercel env TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.
+
+## Fix: AI chatbot not working (2026-06)
+- Root cause: preview backend had no GEMINI_API_KEY (backend/.env didn't exist) → /api/chat returned 500.
+- Fix: added GEMINI_API_KEY (existing key from api/chat.js fallback) to backend/.env. Model gemini-flash-lite-latest. Verified iteration_22 (100%). Production (Vercel api/chat.js) already has same key as fallback.
