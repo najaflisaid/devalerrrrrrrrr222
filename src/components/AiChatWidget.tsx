@@ -14,7 +14,9 @@ import {
   detectContactInfo,
   captureSessionContact,
   setCustomerTyping,
+  sessionShortCode,
 } from '../services/chatSessionService';
+import { notifyNewChat, notifyContact } from '../services/telegramNotify';
 import { uploadImageToR2 } from '../services/imageUploadService';
 import { playCustomerReceiveSound, unlockChatAudio } from '../utils/chatSounds';
 import { useCart } from '../context/CartContext';
@@ -285,6 +287,8 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
   const sessionIdRef = useRef<string>('');
   const sessionInitedRef = useRef<boolean>(false);
   const firstMessagesLoadRef = useRef<boolean>(true);
+  const tgNewChatSentRef = useRef<boolean>(false);
+  const tgContactSentRef = useRef<boolean>(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -545,11 +549,21 @@ const AiChatWidget: React.FC<AiChatWidgetProps> = ({ embedded = false }) => {
         content: trimmed,
         imageUrl: options.imageUrl,
       });
+      // Telegram — müştəri ilk mesajını yazanda "yeni söhbət başladı" bildirişi
+      if (!tgNewChatSentRef.current) {
+        tgNewChatSentRef.current = true;
+        notifyNewChat(sessionShortCode(sessionIdRef.current), trimmed || (options.imageUrl ? '[şəkil]' : ''));
+      }
       // Detect contact info (phone + optional name) — notifies admin panel
       // via session field so the AdminChatNotifier can raise a special toast.
       const contact = detectContactInfo(trimmed);
       if (contact.phone) {
         void captureSessionContact(sessionIdRef.current, contact);
+        // Telegram — əlaqə nömrəsi paylaşıldı bildirişi (sessiyada bir dəfə)
+        if (!tgContactSentRef.current) {
+          tgContactSentRef.current = true;
+          notifyContact(sessionShortCode(sessionIdRef.current), contact.phone, contact.name);
+        }
       }
     } else {
       pendingHistory = [...messages];

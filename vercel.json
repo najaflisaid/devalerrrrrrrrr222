@@ -29,6 +29,10 @@
       "destination": "/api/og?type=img-proxy"
     },
     {
+      "source": "/api/telegram/notify",
+      "destination": "/api/og?type=telegram-notify"
+    },
+    {
       "source": "/product/:id",
       "destination": "/api/og?type=product&id=:id",
       "has": [

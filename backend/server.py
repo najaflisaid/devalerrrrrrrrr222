@@ -212,6 +212,90 @@ async def image_proxy(url: str):
 
 
 # ---------------------------------------------------------------------------
+# Telegram bildirişləri — yeni söhbət başlayanda / müştəri əlaqə nömrəsi paylaşanda
+# Token və chat_id yalnız server tərəfdə (env) saxlanılır.
+# ---------------------------------------------------------------------------
+_TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+_TG_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+
+class TelegramNotifyRequest(BaseModel):
+    type: str = "new_session"
+    code: str = ""
+    message: str = ""
+    phone: str = ""
+    name: str = ""
+
+
+async def _tg_send(text: str) -> dict:
+    if not _TG_TOKEN or not _TG_CHAT_ID:
+        return {"ok": False, "error": "telegram not configured"}
+    url = f"https://api.telegram.org/bot{_TG_TOKEN}/sendMessage"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                url,
+                json={
+                    "chat_id": _TG_CHAT_ID,
+                    "text": text,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                },
+            )
+        return r.json()
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/telegram/chat-info")
+async def telegram_chat_info():
+    """getUpdates — qrupun chat_id-sini tapmaq üçün köməkçi endpoint."""
+    if not _TG_TOKEN:
+        raise HTTPException(status_code=400, detail="TELEGRAM_BOT_TOKEN not set")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"https://api.telegram.org/bot{_TG_TOKEN}/getUpdates")
+        data = r.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    chats = []
+    seen = set()
+    for upd in (data.get("result") or []):
+        msg = upd.get("message") or upd.get("channel_post") or upd.get("my_chat_member") or {}
+        chat = msg.get("chat") or {}
+        cid = chat.get("id")
+        if cid and cid not in seen:
+            seen.add(cid)
+            chats.append({
+                "id": cid,
+                "title": chat.get("title") or chat.get("username") or chat.get("first_name"),
+                "type": chat.get("type"),
+            })
+    return {"configured_chat_id": _TG_CHAT_ID, "raw_ok": data.get("ok"), "chats": chats}
+
+
+@app.post("/api/telegram/notify")
+async def telegram_notify(body: TelegramNotifyRequest):
+    code = (body.code or "?").strip()
+    if body.type == "contact":
+        name = (body.name or "").strip()
+        phone = (body.phone or "").strip()
+        lines = ["📞 <b>Müştəri ilə əlaqə yarat</b>", f"Müştəri: <b>#{code}</b>"]
+        if name:
+            lines.append(f"👤 {name}")
+        if phone:
+            lines.append(f"📱 <b>{phone}</b>")
+        text = "\n".join(lines)
+    else:
+        text = f"🆕 <b>Yeni söhbət başladı</b>\nMüştəri: <b>#{code}</b>"
+        msg = (body.message or "").strip()
+        if msg:
+            text += f"\n💬 {msg[:200]}"
+    result = await _tg_send(text)
+    return {"ok": bool(result.get("ok")), "detail": result.get("error")}
+
+
+# ---------------------------------------------------------------------------
 # De Valeur AI – sales assistant chat
 # ---------------------------------------------------------------------------
 

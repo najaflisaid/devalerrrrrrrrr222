@@ -21,6 +21,8 @@ import {
   formatRelativeTime,
   sessionShortCode,
   formatSessionStart,
+  isSessionUnviewedByAdmin,
+  markSessionViewedByAdmin,
   type ChatSessionMeta,
   type ChatSessionMessage,
   type ChatStats,
@@ -880,6 +882,7 @@ const ConversationsSection: React.FC<{
   const [muted, setMuted] = useState(isAdminChatMuted());
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [typingTick, setTypingTick] = useState(0);
+  const [seenTick, setSeenTick] = useState(0);
   const [playbackOpen, setPlaybackOpen] = useState(false);
   void typingTick; // used only to trigger re-render for stale typing indicator
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -896,6 +899,13 @@ const ConversationsSection: React.FC<{
     const unsub = subscribeAllSessions(setSessions);
     return () => unsub();
   }, []);
+
+  // Açıq olan söhbəti "baxıldı" kimi işarələ (yeni mesaj gəldikdə də təzələ).
+  useEffect(() => {
+    if (!selectedId) return;
+    markSessionViewedByAdmin(selectedId);
+    setSeenTick((x) => x + 1);
+  }, [selectedId, sessions]);
 
   useEffect(() => {
     const unsub = subscribeAdminChatProfile(setProfile);
@@ -1063,17 +1073,22 @@ const ConversationsSection: React.FC<{
                 Söhbət yoxdur.
               </div>
             )}
-            {filtered.map((s) => (
+            {filtered.map((s) => {
+              const unviewed = isSessionUnviewedByAdmin(s) && selectedId !== s.id;
+              void seenTick; // recompute rəngi seenTick dəyişəndə
+              return (
               <div
                 key={s.id}
                 className={`w-full text-left px-3 py-2.5 border-b border-gray-50 flex gap-2.5 hover:bg-gray-50 transition-colors cursor-pointer ${
                   selectedId === s.id
                     ? 'bg-amber-50/70 border-l-2 border-l-amber-500'
+                    : unviewed
+                    ? 'bg-blue-50 border-l-2 border-l-blue-500'
                     : s.contactCaptured
                     ? 'border-l-2 border-l-orange-400 bg-orange-50/30'
                     : 'border-l-2 border-l-transparent'
                 }`}
-                onClick={() => setSelectedId(s.id)}
+                onClick={() => { markSessionViewedByAdmin(s.id); setSeenTick((x) => x + 1); setSelectedId(s.id); }}
                 data-testid={`session-item-${s.id}`}
               >
                 <div className={`relative w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${
@@ -1099,7 +1114,14 @@ const ConversationsSection: React.FC<{
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-medium text-gray-900 truncate flex items-center gap-1">
+                    <span className={`text-[13px] ${unviewed ? 'font-bold' : 'font-medium'} text-gray-900 truncate flex items-center gap-1`}>
+                      {unviewed && (
+                        <span
+                          data-testid={`session-unviewed-${s.id}`}
+                          className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"
+                          title="Baxılmayıb"
+                        />
+                      )}
                       {s.contactCaptured && s.contactName
                         ? s.contactName
                         : <span className="font-mono">#{sessionShortCode(s.id)}</span>}
@@ -1149,7 +1171,8 @@ const ConversationsSection: React.FC<{
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

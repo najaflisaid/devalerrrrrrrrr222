@@ -242,6 +242,46 @@ export const markSessionRead = async (sessionId: string): Promise<void> => {
   }
 };
 
+// ────────── Admin-side "viewed" tracking (per browser, localStorage) ──────────
+// Admin hansı söhbətlərə baxıb — həmin söhbətin son müştəri mesajı vaxtından
+// sonra baxılıbsa "baxılıb" sayılır. Yeni müştəri mesajı gələndə yenidən
+// "baxılmayıb" olur. Bu, söhbətlər siyahısında fərqli rəng üçün istifadə olunur.
+const ADMIN_SEEN_KEY = 'dv_admin_chat_seen_v1';
+
+const getAdminSeenMap = (): Record<string, number> => {
+  try {
+    return JSON.parse(localStorage.getItem(ADMIN_SEEN_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+};
+
+const getSessionMs = (s: ChatSessionMeta): number => {
+  const v: any = (s as any).lastUserMessageAt || (s as any).lastActive;
+  if (!v) return 0;
+  if (typeof v.seconds === 'number') return v.seconds * 1000;
+  if (typeof v.toMillis === 'function') return v.toMillis();
+  return 0;
+};
+
+export const markSessionViewedByAdmin = (sessionId: string): void => {
+  try {
+    const map = getAdminSeenMap();
+    map[sessionId] = Date.now();
+    localStorage.setItem(ADMIN_SEEN_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+};
+
+export const isSessionUnviewedByAdmin = (s: ChatSessionMeta): boolean => {
+  if (!s) return false;
+  const lastMs = getSessionMs(s);
+  if (!lastMs) return false;
+  const seen = getAdminSeenMap()[s.id] || 0;
+  return lastMs > seen;
+};
+
 // ────────── Typing indicator (WhatsApp-style "yazır…") ──────────
 
 /**

@@ -1,0 +1,25 @@
+{
+  "summary": "Frontend-only test of Admin AI Konsultant → Söhbətlər unviewed chat coloring and SlowReplyBar dismiss. All 4 acceptance criteria PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AiConsultantTab.tsx is a very large component; consider splitting the sessions list, transcript viewer, knowledge/settings tabs into subcomponents to improve maintainability.",
+    "There are recurring Firestore 'WebChannelConnection RPC Listen transport errored / could not reach Firestore' warnings during initial navigation. Preview infra likely transient, but consider adding retry/backoff or graceful UI state.",
+    "Debug console.log statements (ProductService.getAll - userRole..., 'Admin Panel - Loading data...') are still printing in production build; recommend stripping for release.",
+    "ERR_BLOCKED_BY_RESPONSE.NotSameOrigin console error on some resource — please audit external asset loading (likely CORS/image)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "test_credentials": "localStorage userRole=admin, userId=test-admin; AI Konsultant section did not prompt password in this run.",
+  "seed_data_creation": "None. Cleared only localStorage 'dv_admin_chat_seen_v1' before test to start from a clean unviewed state as instructed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified: (a) On empty localStorage all 193 session rows had bg-blue-50 border-l-blue-500 and a data-testid='session-unviewed-<id>' dot. (b) After clicking session A (12a10fac-360a-4b02-bda5-0d28ce29c28b) then session B (08d1db94-8feb-47e9-9704-139375066f89): A's unviewed dot removed and class no longer contained bg-blue-50 (border-l-transparent); B was selected with bg-amber-50/70 border-l-amber-500. (c) localStorage 'dv_admin_chat_seen_v1' persisted timestamps for both IDs. (d) After full page reload and re-navigating to Söhbətlər, both A and B still had no unviewed dot (persistence confirmed) while never-clicked rows still displayed dots. (e) SlowReplyBar (data-testid='slow-reply-bar') was present; clicking data-testid='slow-reply-dismiss' hid the ENTIRE bar (query returned null afterwards) and it did not immediately reappear. Auto-hide 10s not explicitly awaited but dismiss behaviour verified as fixed.",
+  "rca of the issue": "N/A — user-reported bugs (per-chat dismiss annoyance + no visual distinction for unviewed chats) are fixed. Unviewed detection via isSessionUnviewedByAdmin + markSessionViewedByAdmin (localStorage key dv_admin_chat_seen_v1) works; SlowReplyBar single-X dismiss and auto-hide behaviour implemented."
+}

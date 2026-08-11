@@ -337,6 +337,39 @@ async function handleProduct(req, res) {
   }
 }
 
+// ?type=telegram-notify (POST) — müştəri söhbət hadisələrini Telegram qrupuna
+// göndərir. Token/chat_id yalnız Vercel env-də saxlanılır.
+async function handleTelegramNotify(req, res) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    let body = req.body;
+    if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+    body = body || {};
+    if (!token || !chatId) { res.status(200).json({ ok: false, error: 'telegram not configured' }); return; }
+    const code = (body.code || '?').toString().trim();
+    let text;
+    if (body.type === 'contact') {
+      const lines = ['📞 <b>Müştəri ilə əlaqə yarat</b>', `Müştəri: <b>#${code}</b>`];
+      if (body.name) lines.push(`👤 ${body.name}`);
+      if (body.phone) lines.push(`📱 <b>${body.phone}</b>`);
+      text = lines.join('\n');
+    } else {
+      text = `🆕 <b>Yeni söhbət başladı</b>\nMüştəri: <b>#${code}</b>`;
+      if (body.message) text += `\n💬 ${String(body.message).slice(0, 200)}`;
+    }
+    const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+    });
+    const data = await tg.json().catch(() => ({}));
+    res.status(200).json({ ok: !!data.ok });
+  } catch (e) {
+    res.status(200).json({ ok: false, error: String(e) });
+  }
+}
+
 // ?type=img-proxy&url=... — CORS-safe image proxy so <canvas> (Instagram Story
 // generator) can draw remote R2/Firebase product images without tainting.
 async function handleImgProxy(req, res) {
@@ -385,10 +418,12 @@ export default async function handler(req, res) {
   if (type === 'category') return handleCategory(req, res);
   if (type === 'product') return handleProduct(req, res);
   if (type === 'img-proxy') return handleImgProxy(req, res);
+  if (type === 'telegram-notify') return handleTelegramNotify(req, res);
 
   // Fallback: infer from URL path so /api/og-default etc. still work if any
   // callers hit the raw file name without rewrite.
   if (req.url?.includes('img-proxy')) return handleImgProxy(req, res);
+  if (req.url?.includes('telegram')) return handleTelegramNotify(req, res);
   if (req.url?.includes('og-default')) return handleDefault(req, res);
   if (req.url?.includes('og-category-image')) return handleCategoryImage(req, res);
   if (req.url?.includes('og-category')) return handleCategory(req, res);

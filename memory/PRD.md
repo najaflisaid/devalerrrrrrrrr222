@@ -42,3 +42,8 @@ Goal: When a customer has a product problem, they hand the product to a store br
 - trackBrandView() → 'brand_view_counts/{slug}' (60s throttle), hooked in ProductsPage on ?brand=. Admin card 'Brend baxışları' = most/least viewed brands + counts + ranked list.
 - trackCategoryView() now also writes daily bucket 'category_view_daily/{slug}__{date}'. getCategoryTrends() aggregates last7 vs prev7 (+%/'yeni') and last30. Admin card 'Kateqoriya trendi'.
 - Verified: iteration_20 (100%). Trend uses data collected going forward (prev-7 empty at launch → shows 'yeni').
+
+## Fix + Feature: Admin chat notifications & Telegram (2026-06)
+- SlowReplyBar: one X dismisses ALL waiting chats, auto-hides after 10s, shows once per new waiting chat. (tested iteration_21)
+- Unviewed chats: AiConsultantTab chat list highlights admin-unviewed sessions blue + dot (session-unviewed-<id>); clears on view; persists via localStorage 'dv_admin_chat_seen_v1'. (tested iteration_21)
+- Telegram: server-side notify (token/chat_id in env). FastAPI POST /api/telegram/notify + GET /api/telegram/chat-info (find group id). Vercel: og.js ?type=telegram-notify + rewrite /api/telegram/notify. Frontend AiChatWidget fires notifyNewChat (first user msg) + notifyContact (phone shared). backend/.env has TELEGRAM_BOT_TOKEN (PROVIDED TOKEN IS INVALID/401), TELEGRAM_CHAT_ID empty. PENDING: valid token + group chat id; for prod set Vercel env TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.

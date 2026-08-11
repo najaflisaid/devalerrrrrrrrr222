@@ -10,11 +10,12 @@
  * satış itkisi çox real bir risk olduğu üçün, xəbərdarlıq problem aradan
  * qaldırılana qədər ekranda qalmalıdır.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Clock, X } from 'lucide-react';
 import { subscribeAllSessions, sessionShortCode, type ChatSessionMeta } from '../../services/chatSessionService';
 
 const SLOW_THRESHOLD_MS = 60_000; // 60 saniyə
+const AUTO_HIDE_MS = 10_000; // 10 saniyə sonra avtomatik itir
 
 interface Props {
   onJumpToSession: (sessionId: string) => void;
@@ -37,47 +38,65 @@ const formatWait = (ms: number): string => {
 
 const SlowReplyBar: React.FC<Props> = ({ onJumpToSession }) => {
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [, setTick] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const [batch, setBatch] = useState<{ session: ChatSessionMeta; waitedMs: number; key: string }[]>([]);
+  const notifiedRef = useRef<Set<string>>(new Set());
+  const hideTimerRef = useRef<any>(null);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const unsub = subscribeAllSessions(setSessions);
     return () => unsub();
   }, []);
 
-  // Re-render every 5 s so the countdown / auto-dismiss reasoning stays fresh.
+  // 5 saniyədə bir yenilə ki, 60s həddini keçən söhbətlər aşkarlansın.
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 5000);
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }, []);
+
   const pending = useMemo(() => {
     const now = Date.now();
-    // Səssiya "gözləyir" sayılır əgər:
-    //  - lastRole = 'user' (sonuncu mesajı müştəri yazıb)
-    //  - lastUserMessageAt yaşı > 60s
-    //  - closed deyil
-    //  - session dismiss edilməyib
     return sessions
       .filter((s) => {
         if (s.closed) return false;
         if (s.lastRole !== 'user') return false;
-        if (dismissed.has(s.id)) return false;
         const lastMs = getMs((s as any).lastUserMessageAt) || getMs((s as any).lastActive);
         if (!lastMs) return false;
         return now - lastMs >= SLOW_THRESHOLD_MS;
       })
-      .map((s) => ({
-        session: s,
-        waitedMs: now - (getMs((s as any).lastUserMessageAt) || getMs((s as any).lastActive)),
-      }))
+      .map((s) => {
+        const lastMs = getMs((s as any).lastUserMessageAt) || getMs((s as any).lastActive);
+        return { session: s, waitedMs: now - lastMs, key: `${s.id}:${lastMs}` };
+      })
       .sort((a, b) => b.waitedMs - a.waitedMs);
-  }, [sessions, dismissed]);
+  }, [sessions, tick]);
 
-  if (pending.length === 0) return null;
+  // Yeni gözləyən söhbət yarananda bar-ı BİR DƏFƏ göstər, 10 saniyə sonra gizlət.
+  // Eyni gözləyən söhbət təkrar-təkrar göstərilmir (yalnız yeni müştəri mesajı gələndə).
+  useEffect(() => {
+    if (visible) return;
+    const hasNew = pending.some((p) => !notifiedRef.current.has(p.key));
+    if (!hasNew) return;
+    setBatch(pending);
+    setVisible(true);
+    pending.forEach((p) => notifiedRef.current.add(p.key));
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
+  }, [pending, visible]);
 
-  const oldest = pending[0];
-  const total = pending.length;
+  // X — bütün gözləyən söhbətləri birdən bağlayır (bar tamamilə itir).
+  const hideNow = () => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setVisible(false);
+  };
+
+  if (!visible || batch.length === 0) return null;
+
+  const oldest = batch[0];
+  const total = batch.length;
   const label = oldest.session.contactName || `#${sessionShortCode(oldest.session.id)}`;
 
   return (
@@ -87,7 +106,7 @@ const SlowReplyBar: React.FC<Props> = ({ onJumpToSession }) => {
     >
       <button
         type="button"
-        onClick={() => onJumpToSession(oldest.session.id)}
+        onClick={() => { onJumpToSession(oldest.session.id); hideNow(); }}
         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white shadow-2xl shadow-red-500/40 border border-rose-400/40 hover:from-rose-700 hover:via-red-700 hover:to-rose-800 transition-colors text-left group"
       >
         <div className="relative w-9 h-9 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
@@ -109,10 +128,11 @@ const SlowReplyBar: React.FC<Props> = ({ onJumpToSession }) => {
           <Clock className="h-3 w-3" /> Söhbətə keç
         </div>
         <span
-          onClick={(e) => { e.stopPropagation(); setDismissed((prev) => new Set(prev).add(oldest.session.id)); }}
+          onClick={(e) => { e.stopPropagation(); hideNow(); }}
           className="p-1.5 rounded-full hover:bg-white/25 cursor-pointer flex-shrink-0"
-          aria-label="Bu söhbəti gizlə"
-          title="Bu söhbəti gizlə (növbəti müştəri mesajından sonra yenidən görünəcək)"
+          aria-label="Bildirişi bağla"
+          title="Bağla"
+          data-testid="slow-reply-dismiss"
         >
           <X className="h-4 w-4" />
         </span>
