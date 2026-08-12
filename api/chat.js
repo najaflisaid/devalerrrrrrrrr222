@@ -181,6 +181,177 @@ const callGemini = async (payload) => {
   return { data: null, error: lastError };
 };
 
+// ---------------------------------------------------------------------------
+// HR / heyət analitikası (İşçilər səhifəsi) — /api/workers-chat bu funksiyaya
+// yönləndirilir (vercel.json rewrite). Eyni Gemini açarı istifadə olunur.
+// ---------------------------------------------------------------------------
+const HR_PERSONA = `Sən De Valeur şirkətinin admini üçün işləyən HR/heyət analitikasısan.
+
+🎯 ƏSAS MƏQSƏD:
+Admin sizdən komanda haqqında suallar verəcək (kim yaxşı satır, kimin performansı zəifdir, cərimələr, mükafatlar, tələblər, filial müqayisələri və s.). Cavabları QISA, konkret və data-ya əsaslanmış şəkildə ver.
+
+🧭 DAVRANIŞ:
+- Adminlə peşəkar, məlumatlı, bir HR analitiki tonunda danış
+- Cavab dilində konkret rəqəm və adlar ver (məs. "Rəşad Əliyev — 4,200 AZN satış, 88% reytinq")
+- Ümumiləşdirməkdən çəkin — hansı işçini nəzərdə tutduğunu aydın göstər
+- Rəqəmləri AZN valyutasında və 0/2 onluqda ver
+- Zəruri hallarda TOP-3 və ya siyahı formatı istifadə et (- ilə)
+- Cavab uzunluğu: 3-8 cümlə (əgər sual siyahı istəyirsə, siyahını qısa saxla)
+- Heç vaxt uydurma — göstərilən data-dan kənara çıxmasan
+- Əgər sual data ilə əlaqəli deyilsə, mehriban şəkildə admini komanda mövzusuna qaytar
+
+📊 STATİSTİKA QAYDALARI:
+- "Bu ay" dedikdə cari ay salesHistory-də tapdığın son ay
+- Reytinq (%): işçinin ümumi performans göstəricisi
+- monthlyTotalSales / monthlyTarget → hədəf tamamlanma faizi
+- monthlyTotalReturns → qaytarılmalar (əskiltmə)
+- Cərimələr və mükafatlar tarixçəsini nəzərə al
+
+Əgər səndən hansı model olduğun soruşulsa: "Mən De Valeur-un daxili HR AI-yıyam."`;
+
+const nfmt = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+const summariseWorkers = (workers) => {
+  if (!workers || workers.length === 0) return 'Komandada işçi yoxdur.';
+  const active = workers.filter((w) => w.isActive);
+  const totalSales = active.reduce((s, w) => s + (w.monthlyTotalSales || 0), 0);
+  const totalTarget = active.reduce((s, w) => s + (w.monthlyTarget || 0), 0);
+  const avgRating = active.length
+    ? active.reduce((s, w) => s + (w.rating || 0), 0) / active.length
+    : 0;
+  const branches = {};
+  const positions = {};
+  for (const w of active) {
+    if (w.branch) branches[w.branch] = (branches[w.branch] || 0) + 1;
+    if (w.position) positions[w.position] = (positions[w.position] || 0) + 1;
+  }
+  const bstr = Object.entries(branches).map(([k, v]) => `${k} (${v})`).join(', ') || '—';
+  const pstr = Object.entries(positions).map(([k, v]) => `${k} (${v})`).join(', ') || '—';
+  return (
+    `📊 KOMANDA ÜMUMİ:\n` +
+    `- Ümumi işçi: ${workers.length}, aktiv: ${active.length}\n` +
+    `- Cari ay ümumi satış: ${nfmt(totalSales)} AZN (hədəf: ${nfmt(totalTarget)} AZN)\n` +
+    `- Orta performans reytinqi: ${avgRating.toFixed(1)}%\n` +
+    `- Filiallar: ${bstr}\n` +
+    `- Vəzifələr: ${pstr}`
+  );
+};
+
+const formatWorkers = (workers, limit = 60) => {
+  if (!workers || workers.length === 0) return '';
+  const rows = workers.slice(0, limit).map((w) => {
+    const sales = w.monthlyTotalSales || 0;
+    const target = w.monthlyTarget || 0;
+    const returns = w.monthlyTotalReturns || 0;
+    const net = Math.max(0, sales - returns);
+    const pct = target > 0 ? (net / target) * 100 : 0;
+    const rating = w.rating != null ? `${Math.round(w.rating)}%` : '—';
+    const branch = w.branch ? ` · ${w.branch}` : '';
+    return (
+      `- ${w.name} ${w.surname} [${w.position}${branch}] ` +
+      `| reytinq: ${rating} | satış: ${nfmt(sales)} AZN ` +
+      `| qaytarma: ${nfmt(returns)} | net: ${nfmt(net)} ` +
+      `| hədəf: ${nfmt(target)} (${Math.round(pct)}%) ` +
+      `| ${w.isActive ? 'aktiv' : 'passiv'} | id:${w.id}`
+    );
+  });
+  return '👥 İŞÇİLƏR (detallı siyahı):\n' + rows.join('\n');
+};
+
+const nameMap = (workers) => {
+  const m = {};
+  for (const w of workers) m[w.id] = `${w.name} ${w.surname}`;
+  return m;
+};
+
+const formatFines = (fines, workers) => {
+  if (!fines || fines.length === 0) return '';
+  const nm = nameMap(workers);
+  const rows = fines.slice(0, 40).map(
+    (f) => `- ${nm[f.workerId] || f.workerId}: -${nfmt(f.amount)} AZN (${f.reason || '—'}) · ${f.date}`
+  );
+  return '⚠️ SON CƏRİMƏLƏR:\n' + rows.join('\n');
+};
+
+const formatRewards = (rewards, workers) => {
+  if (!rewards || rewards.length === 0) return '';
+  const nm = nameMap(workers);
+  const rows = rewards.slice(0, 40).map((r) => {
+    const amt = r.amount ? ` +${nfmt(r.amount)}` : '';
+    return `- ${nm[r.workerId] || r.workerId}: ${r.type}${amt} (${r.reason || '—'}) · ${r.date}`;
+  });
+  return '🏆 SON MÜKAFATLAR:\n' + rows.join('\n');
+};
+
+const formatRequests = (requests, workers) => {
+  if (!requests || requests.length === 0) return '';
+  const nm = nameMap(workers);
+  const rows = requests.slice(0, 30).map(
+    (r) => `- ${nm[r.workerId] || r.workerId}: ${r.type} [${r.status}] — ${r.subject || '—'} (${r.createdAt ? r.createdAt.slice(0, 10) : '—'})`
+  );
+  return '📨 İŞÇİ TƏLƏBLƏRİ:\n' + rows.join('\n');
+};
+
+const handleWorkersChat = async (res, body, message) => {
+  const language = body.language || 'az';
+  const langDirective =
+    language === 'ru'
+      ? 'Cavab DİLİ: Rus dilində.'
+      : language === 'en'
+      ? 'Cavab DİLİ: İngilis dilində.'
+      : 'Cavab DİLİ: Azərbaycan dilində.';
+  const workers = Array.isArray(body.workers) ? body.workers : [];
+  const fines = Array.isArray(body.fines) ? body.fines : [];
+  const rewards = Array.isArray(body.rewards) ? body.rewards : [];
+  const requests = Array.isArray(body.requests) ? body.requests : [];
+
+  const parts = [
+    HR_PERSONA,
+    langDirective,
+    summariseWorkers(workers),
+    formatWorkers(workers),
+    formatFines(fines, workers),
+    formatRewards(rewards, workers),
+    formatRequests(requests, workers),
+  ];
+  if ((body.context || '').trim()) parts.push('📝 ADMIN ƏLAVƏSİ:\n' + body.context.trim());
+  const systemMessage = parts.filter(Boolean).join('\n\n');
+
+  const history = Array.isArray(body.history) ? body.history : [];
+  const contents = [];
+  for (const h of history.slice(-10)) {
+    if (!(h.content || '').trim()) continue;
+    contents.push({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] });
+  }
+  contents.push({ role: 'user', parts: [{ text: message }] });
+
+  const payload = {
+    systemInstruction: { parts: [{ text: systemMessage }] },
+    contents,
+    generationConfig: { temperature: 0.4, topP: 0.9, maxOutputTokens: 1200 },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  };
+
+  const { data, error } = await callGemini(payload);
+  if (error || !data) {
+    res.status(502).json({ error: `AI provayder xətası: ${error || 'boş cavab'}` });
+    return;
+  }
+  const candidates = data.candidates || [];
+  let reply = '';
+  if (candidates.length > 0) {
+    const p = ((candidates[0].content || {}).parts) || [];
+    reply = p.map((x) => x.text || '').join('').trim();
+  }
+  if (!reply) reply = 'Bağışlayın, cavab yarana bilmədi. Yenidən cəhd edin.';
+  res.status(200).json({ reply });
+};
+
 export default async function handler(req, res) {
   setCorsHeaders(res);
 
@@ -195,11 +366,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body || {};
+    let body = req.body || {};
+    if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     const message = (body.message || '').toString().trim();
     if (!message) {
       res.status(400).json({ error: 'message required' });
       return;
+    }
+
+    // İşçilər səhifəsi (HR analitikası) — /api/workers-chat bura yönlənir.
+    if (body.mode === 'workers' || Array.isArray(body.workers)) {
+      return await handleWorkersChat(res, body, message);
     }
 
     const history = Array.isArray(body.history) ? body.history : [];

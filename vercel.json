@@ -5,6 +5,10 @@
   "installCommand": "yarn install",
   "rewrites": [
     {
+      "source": "/api/workers-chat",
+      "destination": "/api/chat"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     },

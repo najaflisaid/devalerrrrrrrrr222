@@ -141,6 +141,7 @@ const WorkersAiChat: React.FC = () => {
 
   // ─── Compact worker payload (strip heavy fields, keep only what AI needs) ───
   const buildPayload = (userMsg: string) => ({
+    mode: 'workers',
     message: userMsg,
     history: messages.map((m) => ({
       role: m.role,
