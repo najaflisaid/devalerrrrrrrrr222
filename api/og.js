@@ -341,8 +341,10 @@ async function handleProduct(req, res) {
 // göndərir. Token/chat_id yalnız Vercel env-də saxlanılır.
 async function handleTelegramNotify(req, res) {
   try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const token =
+      process.env.TELEGRAM_BOT_TOKEN ||
+      '8879699672:AAHn_7Omeg8LA9eEMEF2MhlwNnBtlfC9_u4';
+    const chatId = process.env.TELEGRAM_CHAT_ID || '-5447107741';
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     body = body || {};
