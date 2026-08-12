@@ -42,6 +42,13 @@ export interface ChatRequest {
   contactCaptured?: boolean;
 }
 
+// Backend/serverless mövcud olmadıqda brauzerdən birbaşa Gemini fallback.
+import { salesChatDirect } from './geminiDirect';
+const salesChatViaGemini = async (req: ChatRequest): Promise<string> => {
+  const reply = await salesChatDirect(req);
+  return (reply || '').trim() || 'Bağışlayın, cavab yarana bilmədi.';
+};
+
 export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30000);
@@ -62,6 +69,10 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
     });
 
     if (!res.ok) {
+      // Serverless/backend yoxdursa (404/502) və ya xəta → birbaşa Gemini-yə keç
+      if (res.status === 404 || res.status === 405 || res.status >= 500) {
+        return await salesChatViaGemini(req);
+      }
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData?.error || `Server xətası: ${res.status}`);
     }
@@ -73,7 +84,12 @@ export const sendChatMessage = async (req: ChatRequest): Promise<string> => {
     if (err.name === 'AbortError') {
       throw new Error('AI cavabı gecikdi. Yenidən cəhd edin.');
     }
-    throw new Error(err?.message || 'AI ilə əlaqə qurula bilmədi.');
+    // Şəbəkə xətası / API mövcud deyil → frontend-dən birbaşa Gemini cəhdi
+    try {
+      return await salesChatViaGemini(req);
+    } catch (e: any) {
+      throw new Error(e?.message || err?.message || 'AI ilə əlaqə qurula bilmədi.');
+    }
   } finally {
     clearTimeout(timer);
   }

@@ -65,3 +65,11 @@ Goal: When a customer has a product problem, they hand the product to a store br
 - Frontend buildPayload now also sends mode:'workers' (harmless to FastAPI). Verified standalone via node harness (no env, no backend) → 200 + grounded HR reply.
 - Also (session 2 earlier): api/og.js telegram-notify now has hardcoded TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID fallback so Vercel works without env config. api/chat.js already had Gemini key fallback + conversationExamples support. => Whole site works on Vercel WITHOUT the FastAPI backend (products via Firestore client-side; /api/chat, /api/workers-chat, /api/telegram/notify via serverless functions).
 - SECURITY NOTE: Gemini + Telegram secrets are now hardcoded as fallbacks in api/chat.js and api/og.js (visible if code shared). Prefer moving to Vercel env vars for production; code reads env first, falls back to hardcoded.
+
+## Feature: Frontend-only AI fallback (backend/serverless olmadan) (2026-06 session 2)
+- New module src/services/geminiDirect.ts: brauzerdən BIRBAŞA Gemini generativelanguage API-yə çağırış (CORS dəstəklənir — API Origin-i əks etdirir). Exports salesChatDirect() + workersChatDirect(); persona/kataloq/knowledge/HR prompt-ları serverless funksiyalarla eyni portlanıb. Açar VITE_GEMINI_API_KEY env və ya hardcoded fallback.
+- aiChatService.sendChatMessage: /api/chat 404/405/5xx və ya şəbəkə xətası → salesChatViaGemini (geminiDirect) fallback.
+- WorkersAiChat.tsx: /api/workers-chat uğursuz → workersChatDirect fallback (import added).
+- Verified in real browser (preview): (1) /api/chat route BLOCKED via Playwright → widget still returned full reply + product cards (DUCATI/FESTINA) using direct Gemini. (2) dynamic import of geminiDirect + workersChatDirect() → grounded HR reply (Rəşad Əliyev 6,200 AZN, 120%, 88%). Both via real CORS, no backend.
+- Result: 3-tier resiliency — preview FastAPI, Vercel serverless (api/chat.js), və pure frontend-direct. Sayt heç bir /api olmadan (static hosting) da AI işlədir.
+- SECURITY: Gemini key indi frontend bundle-də də görünür (client-side fetch). Bu qəbul edilən trade-off-dur (istifadəçi backend-siz işləməsini istədi). İstənilsə VITE_GEMINI_API_KEY ilə əvəz edilə bilər.

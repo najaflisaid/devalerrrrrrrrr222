@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { workersChatDirect } from '../../services/geminiDirect';
 import {
   Sparkles,
   Send,
@@ -195,19 +196,32 @@ const WorkersAiChat: React.FC = () => {
     setMessages((m) => [...m, { role: 'user', content: raw, ts: Date.now() }]);
     setBusy(true);
     try {
-      const res = await fetch('/api/workers-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload(raw)),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
+      const payload = buildPayload(raw);
+      let replyText = '';
+      try {
+        const res = await fetch('/api/workers-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          if (res.status === 404 || res.status === 405 || res.status >= 500) {
+            replyText = await workersChatDirect(payload);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+          }
+        } else {
+          const data = await res.json();
+          replyText = data.reply || 'Cavab yoxdur.';
+        }
+      } catch (netErr) {
+        // Backend/serverless yoxdursa → brauzerdən birbaşa Gemini
+        replyText = await workersChatDirect(payload);
       }
-      const data = await res.json();
       setMessages((m) => [
         ...m,
-        { role: 'assistant', content: data.reply || 'Cavab yoxdur.', ts: Date.now() },
+        { role: 'assistant', content: replyText || 'Cavab yoxdur.', ts: Date.now() },
       ]);
     } catch (e: any) {
       setMessages((m) => [
