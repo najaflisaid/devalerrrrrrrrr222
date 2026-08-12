@@ -3,7 +3,7 @@ import {
   Loader2, Save, Sparkles, Building2, Tag, Shield, Package, FileText, CheckCircle2,
   MessageCircle, Power, MessageSquare, Plus, Trash2, Send, Users, TrendingUp,
   Clock, Search, Bot, PowerOff, MessageSquareText, BarChart3,
-  Paperclip, Volume2, VolumeX, X, Copy, User, Phone, CheckCheck, Play, Film,} from 'lucide-react';
+  Paperclip, Volume2, VolumeX, X, Copy, User, Phone, CheckCheck, Play, Film, ChevronLeft,} from 'lucide-react';
 import {
   getAiKnowledge,
   saveAiKnowledge,
@@ -1051,8 +1051,8 @@ const ConversationsSection: React.FC<{
 
       {/* WhatsApp-like split */}
       <div className="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-3 h-[calc(100vh-260px)] min-h-[520px] max-h-[820px]">
-        {/* Left: sessions list (narrower) */}
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden h-full min-h-0">
+        {/* Left: sessions list (narrower) — mobildə söhbət seçiləndə gizlənir */}
+        <div className={`bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden h-full min-h-0 ${selectedId ? 'hidden lg:flex' : 'flex'}`}>
           <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1176,8 +1176,8 @@ const ConversationsSection: React.FC<{
           </div>
         </div>
 
-        {/* Right: WhatsApp-like chat area (wider) */}
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col overflow-hidden h-full min-h-0" style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(212,175,55,0.03) 0%, transparent 40%)' }}>
+        {/* Right: WhatsApp-like chat area (wider) — mobildə yalnız söhbət seçiləndə görünür */}
+        <div className={`bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden h-full min-h-0 ${selectedId ? 'flex' : 'hidden lg:flex'}`} style={{ backgroundImage: 'radial-gradient(circle at top right, rgba(212,175,55,0.03) 0%, transparent 40%)' }}>
           {!current ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm p-6">
               <div className="text-center">
@@ -1197,6 +1197,14 @@ const ConversationsSection: React.FC<{
                   : 'bg-gradient-to-r from-white to-amber-50/40'
               }`}>
                 <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="lg:hidden -ml-1 p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 flex-shrink-0"
+                    aria-label="Geri"
+                    data-testid="ai-chat-back-btn"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
                   <div className={`relative w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
                     current.contactCaptured
                       ? 'bg-gradient-to-br from-orange-300 to-rose-300 text-rose-900'

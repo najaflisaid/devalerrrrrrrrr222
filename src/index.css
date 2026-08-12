@@ -443,6 +443,7 @@ html {
   to {
     transform: translateX(0);
   }
+}
 
 /* ========================================
    DARK MODE GLOBAL OVERRIDES
@@ -503,8 +504,6 @@ html.dark [data-testid^="dv-bestseller-card"] img { filter: brightness(0.95); }
 
 /* Orbs — slightly brighter in dark */
 html.dark .dv-orb { opacity: 0.28; }
-
-}
 
 /* Hide scrollbar */
 .scrollbar-hide {

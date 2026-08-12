@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Inbox, Send, Bot, PowerOff as BotOff, RefreshCw, Save, Eye, EyeOff, Sparkles,
   MessageSquare, Instagram, AlertCircle, CheckCircle2, Copy,
-  Settings as SettingsIcon, Search, ShieldCheck, Loader2, Wand2,
+  Settings as SettingsIcon, Search, ShieldCheck, Loader2, Wand2, ChevronLeft,
 } from 'lucide-react';
 import {
   doc,
@@ -411,8 +411,8 @@ const AiInboxTab: React.FC = () => {
       {/* === INBOX === */}
       {activeSection === 'inbox' && (
         <div className="grid grid-cols-1 lg:grid-cols-[340px,1fr] gap-4 min-h-[600px]">
-          {/* Conversation list */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+          {/* Conversation list — mobildə söhbət seçiləndə gizlənir */}
+          <div className={`bg-white rounded-xl border border-gray-200 shadow-sm flex-col overflow-hidden ${selectedId ? 'hidden lg:flex' : 'flex'}`}>
             <div className="p-3 border-b border-gray-100 space-y-2">
               <div className="flex gap-1">
                 {(['all', 'whatsapp', 'instagram'] as const).map((p) => (
@@ -492,8 +492,8 @@ const AiInboxTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Thread view */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden min-h-[600px]">
+          {/* Thread view — mobildə yalnız söhbət seçiləndə görünür */}
+          <div className={`bg-white rounded-xl border border-gray-200 shadow-sm flex-col overflow-hidden min-h-[600px] ${selectedId ? 'flex' : 'hidden lg:flex'}`}>
             {!selectedConv ? (
               <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
                 <div className="text-center">
@@ -505,6 +505,14 @@ const AiInboxTab: React.FC = () => {
               <>
                 <div className="p-3 border-b border-gray-100 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
+                    <button
+                      onClick={() => setSelectedId(null)}
+                      className="lg:hidden -ml-1 p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 flex-shrink-0"
+                      aria-label="Geri"
+                      data-testid="inbox-back-btn"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                       {renderPlatformIcon(selectedConv.platform, 16)}
                     </div>

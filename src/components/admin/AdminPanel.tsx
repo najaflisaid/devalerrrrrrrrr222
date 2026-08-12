@@ -11,6 +11,7 @@ import CustomerOrdersTab from './CustomerOrdersTab';
 import EpointSettingsTab from './EpointSettingsTab';
 import DeliveryMethodsTab from './DeliveryMethodsTab';
 import AnalyticsTab from './AnalyticsTab';
+import DashboardOverview from './DashboardOverview';
 import ReviewsTab from './ReviewsTab';
 import AiConsultantTab from './AiConsultantTab';
 import AdminChatNotifier from './AdminChatNotifier';
@@ -1968,8 +1969,10 @@ const AdminPanel: React.FC = () => {
           <div data-testid="admin-dashboard">
             <div className="mb-5">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Xoş gəldiniz 👋</h2>
-              <p className="text-sm text-gray-500 mt-1">İdarəetmə panelinə sürətli keçidlər</p>
+              <p className="text-sm text-gray-500 mt-1">Mağazanın anlıq göstəriciləri və sürətli keçidlər</p>
             </div>
+            <DashboardOverview onNavigate={selectTab} />
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Sürətli keçidlər</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {dashboardShortcuts.map((s) => {
                 const Icon = s.icon;
