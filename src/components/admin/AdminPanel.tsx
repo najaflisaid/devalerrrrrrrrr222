@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot, AlertTriangle, Upload } from 'lucide-react';
+import { X, Plus, Trash2, Package, Users, Tag, FileText, Building2, LogOut, Loader2, Info, Mail, Edit, ShoppingBag, Image as ImageIcon, Search, Settings, Bell, Briefcase, ShieldCheck, Lock, BarChart3, MessageSquare, Sparkles, Ticket, Eye, Truck, Percent, Calendar, Bot, AlertTriangle, Upload, Menu, LayoutDashboard, ChevronRight } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { productService } from '../../services/productService';
@@ -85,7 +85,8 @@ interface ContactData {
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Cari admin istifadəçi və onun icazələri (undefined → super-admin / hamısı açıq)
   const [currentAdminPermissions, setCurrentAdminPermissions] = useState<string[] | undefined>(undefined);
   // Permission düzəltmə modalı üçün state
@@ -1694,6 +1695,7 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     if (currentAdminPermissions === undefined) return;
     if (currentAdminPermissions.length === 0) return;
+    if (activeTab === 'dashboard') return; // Dashboard hər zaman açıqdır
     if (!currentAdminPermissions.includes(activeTab)) {
       setActiveTab(currentAdminPermissions[0]);
     }
@@ -1800,6 +1802,86 @@ const AdminPanel: React.FC = () => {
     }))
     .filter((group) => group.items.length > 0);
 
+  // Tab seçimi — sidebar, dashboard və mobil menyu üçün ortaq (ack + drawer bağla)
+  const selectTab = (id: string) => {
+    setActiveTab(id);
+    setMobileNavOpen(false);
+    if (id === 'contactMessages') acknowledgeContactMessages();
+    if (id === 'b2bOrders') acknowledgeB2bOrders();
+    if (id === 'b2b') acknowledgeB2BRequests();
+    if (id === 'customerOrders') acknowledgeCustomerOrders();
+  };
+
+  const isTabAllowed = (id: string) =>
+    currentAdminPermissions === undefined || currentAdminPermissions.includes(id);
+
+  // Dashboard sürətli keçidləri (ən vacib bölmələr) — icazəyə görə filtr olunur
+  const dashboardShortcuts = [
+    { id: 'customerOrders', label: 'Müştəri Sifarişləri', icon: ShoppingBag, badge: customerBadgeCount, color: 'bg-blue-50 text-blue-600' },
+    { id: 'b2bOrders', label: 'B2B Sifarişləri', icon: ShoppingBag, badge: b2bBadgeCount, color: 'bg-indigo-50 text-indigo-600' },
+    { id: 'contactMessages', label: 'Müraciətlər', icon: Mail, badge: newContactMessagesCount, color: 'bg-rose-50 text-rose-600' },
+    { id: 'b2b', label: 'B2B Sorğular', icon: Users, badge: pendingB2BRequestsCount, color: 'bg-amber-50 text-amber-600' },
+    { id: 'products', label: 'Məhsullar', icon: Package, color: 'bg-emerald-50 text-emerald-600' },
+    { id: 'aiConsultant', label: 'AI Konsultant', icon: Sparkles, color: 'bg-fuchsia-50 text-fuchsia-600' },
+    { id: 'analytics', label: 'Analitika', icon: BarChart3, color: 'bg-cyan-50 text-cyan-600' },
+    { id: 'workers', label: 'İşçilər', icon: Briefcase, color: 'bg-violet-50 text-violet-600' },
+    { id: 'campaigns', label: 'Kampaniyalar', icon: Sparkles, color: 'bg-orange-50 text-orange-600' },
+    { id: 'siteSettings', label: 'Sayt Parametrləri', icon: Settings, color: 'bg-slate-100 text-slate-600' },
+  ].filter((s) => isTabAllowed(s.id));
+
+  // Sidebar & mobil menyu üçün ortaq naviqasiya markup-u (prefix testid təkrarının qarşısını alır)
+  const buildNav = (prefix = '') => (
+    <nav className="space-y-4">
+      <button
+        onClick={() => selectTab('dashboard')}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-left ${
+          activeTab === 'dashboard' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100'
+        }`}
+        data-testid={`${prefix}admin-tab-dashboard`}
+      >
+        <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+        <span className="flex-1">Dashboard</span>
+      </button>
+      {filteredTabGroups.map((group) => (
+        <div key={group.label}>
+          <div className="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            {group.label}
+          </div>
+          <div className="space-y-1">
+            {group.items.map((tab) => {
+              const Icon = tab.icon;
+              const badgeCount = tab.badge || 0;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => selectTab(tab.id)}
+                  className={`relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    isActive ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  data-testid={`${prefix}admin-tab-${tab.id}`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="flex-1 truncate">{tab.label}</span>
+                  {badgeCount > 0 && (
+                    <span
+                      className={`min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center shadow ${
+                        isActive ? 'bg-white text-gray-900' : 'bg-red-500 text-white animate-pulse'
+                      }`}
+                      data-testid={`${prefix}tab-badge-${tab.id}`}
+                    >
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Global chat notifier — bütün tab-larda görünür, kliklədikdə AI Konsultanta keçir */}
@@ -1819,81 +1901,109 @@ const AdminPanel: React.FC = () => {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">{t('admin.title')}</h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+                aria-label="Menyu"
+                data-testid="admin-hamburger-btn"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('admin.title')}</h1>
+            </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+              data-testid="admin-logout-btn"
             >
               <LogOut className="h-4 w-4" />
-              Çıxış
+              <span className="hidden sm:inline">Çıxış</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Mobil naviqasiya — hamburger drawer */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-[10000] lg:hidden" data-testid="admin-mobile-nav">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileNavOpen(false)}
+            data-testid="admin-mobile-nav-overlay"
+          />
+          <div className="absolute left-0 top-0 h-full w-72 max-w-[85%] bg-white shadow-2xl overflow-y-auto animate-[slideIn_0.2s_ease-out] p-4">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+              <span className="text-base font-bold text-gray-900">{t('admin.title')}</span>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
+                aria-label="Bağla"
+                data-testid="admin-mobile-nav-close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {buildNav('m-')}
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sol panel — qruplaşdırılmış bölmələr */}
+          {/* Sol panel — yalnız desktopda görünür (mobildə hamburger) */}
           <aside
-            className="lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+            className="hidden lg:block lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
             data-testid="admin-sidebar"
           >
-            <nav className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-4">
-              {filteredTabGroups.map((group) => (
-                <div key={group.label}>
-                  <div className="px-3 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                    {group.label}
-                  </div>
-                  <div className="space-y-1">
-                    {group.items.map((tab) => {
-                      const Icon = tab.icon;
-                      const badgeCount = tab.badge || 0;
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          onClick={() => {
-                            setActiveTab(tab.id);
-                            if (tab.id === 'contactMessages') acknowledgeContactMessages();
-                            if (tab.id === 'b2bOrders') acknowledgeB2bOrders();
-                            if (tab.id === 'b2b') acknowledgeB2BRequests();
-                            if (tab.id === 'customerOrders') acknowledgeCustomerOrders();
-                          }}
-                          className={`relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
-                            isActive
-                              ? 'bg-gray-900 text-white shadow-sm'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                          data-testid={`admin-tab-${tab.id}`}
-                        >
-                          <Icon className="h-4 w-4 flex-shrink-0" />
-                          <span className="flex-1 truncate">{tab.label}</span>
-                          {badgeCount > 0 && (
-                            <span
-                              className={`min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center shadow ${
-                                isActive ? 'bg-white text-gray-900' : 'bg-red-500 text-white animate-pulse'
-                              }`}
-                              data-testid={`tab-badge-${tab.id}`}
-                            >
-                              {badgeCount > 99 ? '99+' : badgeCount}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </nav>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3">
+              {buildNav()}
+            </div>
           </aside>
 
           {/* Sağ panel — aktiv bölmənin məzmunu */}
           <main className="flex-1 min-w-0">
 
+        {activeTab === 'dashboard' && (
+          <div data-testid="admin-dashboard">
+            <div className="mb-5">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Xoş gəldiniz 👋</h2>
+              <p className="text-sm text-gray-500 mt-1">İdarəetmə panelinə sürətli keçidlər</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              {dashboardShortcuts.map((s) => {
+                const Icon = s.icon;
+                const badge = s.badge || 0;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => selectTab(s.id)}
+                    className="group relative flex flex-col items-start gap-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 text-left hover:shadow-md hover:border-gray-900 transition-all"
+                    data-testid={`dashboard-shortcut-${s.id}`}
+                  >
+                    {badge > 0 && (
+                      <span className="absolute top-3 right-3 min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center bg-red-500 text-white shadow animate-pulse">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center justify-center h-10 w-10 rounded-xl ${s.color}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 leading-tight">{s.label}</span>
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-400 group-hover:text-gray-900 transition-colors">
+                      Aç <ChevronRight className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'products' && (
           <PasswordProtectedSection sectionName="products">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">
                 Məhsullar ({(() => {
                   return products.filter(p => {
@@ -2718,8 +2828,8 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'brands' && (
           <PasswordProtectedSection sectionName="brands">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">Markalar ({brands.length})</h2>
               <button
                 onClick={() => setShowAddBrand(!showAddBrand)}
@@ -3016,7 +3126,7 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'categories' && (
           <PasswordProtectedSection sectionName="categories">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">Kateqoriyalar ({categories.length})</h2>
               <div className="flex items-center gap-2 flex-wrap">
@@ -3380,8 +3490,8 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'blogs' && (
           <PasswordProtectedSection sectionName="blogs">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">Bloq Yazıları ({blogs.length})</h2>
               <button
                 onClick={() => setShowAddBlog(!showAddBlog)}
@@ -3568,8 +3678,8 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'partners' && (
           <PasswordProtectedSection sectionName="partners">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
               <h2 className="text-xl font-bold text-gray-900">Tərəfdaşlar ({partners.length})</h2>
               <button
                 onClick={() => {
@@ -3713,7 +3823,7 @@ const AdminPanel: React.FC = () => {
         )}
 
         {false && activeTab === 'about' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Haqqımızda Bölməsi</h2>
 
             <div className="space-y-4">
@@ -3819,7 +3929,7 @@ const AdminPanel: React.FC = () => {
         )}
 
         {false && activeTab === 'contact' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Əlaqə Məlumatları</h2>
 
             <div className="space-y-4">
@@ -3905,8 +4015,8 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'b2b' && (
           <PasswordProtectedSection sectionName="b2b">
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Yeni B2B İstifadəçi Yarat</h2>
               </div>
 
@@ -3994,7 +4104,7 @@ const AdminPanel: React.FC = () => {
               )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">B2B Müraciətləri ({b2bRequests.filter(r => r.status === 'pending').length})</h2>
 
               <div className="space-y-4">
@@ -4043,7 +4153,7 @@ const AdminPanel: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Aktiv B2B Şirkətləri ({users.filter(u => u.role === 'b2b').length})</h2>
 
               <div className="space-y-3">
@@ -4264,7 +4374,7 @@ const AdminPanel: React.FC = () => {
 
         {activeTab === 'b2bUsers' && (
           <PasswordProtectedSection sectionName="b2bUsers">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">B2B İstifadəçilər ({users.filter(u => u.role === 'b2b').length})</h2>
 
             <div className="space-y-4">
@@ -4396,7 +4506,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'users' && (
           <PasswordProtectedSection sectionName="users">
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">İstifadəçilər ({users.filter(u => u.role !== 'b2b').length})</h2>
 
             <div className="space-y-3">

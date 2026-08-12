@@ -101,7 +101,7 @@ const SlowReplyBar: React.FC<Props> = ({ onJumpToSession }) => {
 
   return (
     <div
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-[9998] max-w-2xl w-[calc(100vw-24px)] dv-slow-reply-slide"
+      className="fixed top-[76px] sm:top-3 left-1/2 -translate-x-1/2 z-[9998] max-w-2xl w-[calc(100vw-24px)] dv-slow-reply-slide"
       data-testid="slow-reply-bar"
     >
       <button
