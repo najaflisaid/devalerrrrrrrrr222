@@ -1,6 +1,6 @@
 # De Valeur — PRD
 
-Existing luxury watches/accessories e-commerce. Stack: React + Vite + TypeScript, Firebase/Firestore/Auth/Storage, FastAPI backend (AI chat, Epoint payments, WhatsApp). Preview: https://device-return-2.preview.emergentagent.com
+Existing luxury watches/accessories e-commerce. Stack: React + Vite + TypeScript, Firebase/Firestore/Auth/Storage, FastAPI backend (AI chat, Epoint payments, WhatsApp). Preview: https://ai-chat-share-3.preview.emergentagent.com
 
 ## Feature: Zəmanət Servisi (Warranty / Service Handover) — added 2026-06
 Goal: When a customer has a product problem, they hand the product to a store branch, sign a handover act; the store worker accepts it to service; admin advances status; when the repaired item returns to the branch the customer is notified and signs to pick it up.
@@ -51,3 +51,10 @@ Goal: When a customer has a product problem, they hand the product to a store br
 ## Fix: AI chatbot not working (2026-06)
 - Root cause: preview backend had no GEMINI_API_KEY (backend/.env didn't exist) → /api/chat returned 500.
 - Fix: added GEMINI_API_KEY (existing key from api/chat.js fallback) to backend/.env. Model gemini-flash-lite-latest. Verified iteration_22 (100%). Production (Vercel api/chat.js) already has same key as fallback.
+
+## Session 2026-06 (re-uploaded zip): AI chat + admin behavior rules + Telegram fixes
+- Root cause across all issues: uploaded ZIP did not include backend/.env, so GEMINI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID were all empty. Also Vite deps not installed at /app root (frontend FATAL: 'vite: not found').
+- Fix 1 (AI chat): recreated /app/backend/.env with GEMINI_API_KEY (gemini-flash-lite-latest). Ran `yarn install --ignore-engines` at /app root (node 20 vs supabase engine req). Chat verified iteration_23 (100%).
+- Fix 2 (admin behavior rules): backend ChatKnowledge model was missing conversationExamples → dialogue examples set in admin panel (AiKnowledgeTab) were dropped. Added ChatConversationExample model + conversationExamples formatting in _format_knowledge (server.py) mirroring api/chat.js. aiInstructions ('🎯 AI Davranış Komandaları') already worked as top-priority prompt section; verified AI obeys custom rules + examples via curl.
+- Fix 3 (Telegram): added TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID=-5447107741 (group 'De Valeur') to backend/.env. GET /api/telegram/chat-info raw_ok:true; POST /api/telegram/notify returns ok:true for new_session + contact. Frontend AiChatWidget fires notifyNewChat on first customer msg + notifyContact on phone. Verified iteration_24 (100%).
+- NOTE: backend/.env holds secrets and is git-ignored — will be lost if the app is re-zipped/exported. For Vercel prod, set the same env vars in the Vercel dashboard.

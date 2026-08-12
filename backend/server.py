@@ -417,6 +417,13 @@ class ChatHistoryItem(BaseModel):
     content: str
 
 
+class ChatConversationExample(BaseModel):
+    id: Optional[str] = ""
+    userMessage: Optional[str] = ""
+    assistantMessage: Optional[str] = ""
+    note: Optional[str] = ""
+
+
 class ChatKnowledge(BaseModel):
     aiInstructions: Optional[str] = ""
     companyInfo: Optional[str] = ""
@@ -424,6 +431,7 @@ class ChatKnowledge(BaseModel):
     policiesInfo: Optional[str] = ""
     productsInfo: Optional[str] = ""
     additionalNotes: Optional[str] = ""
+    conversationExamples: List[ChatConversationExample] = Field(default_factory=list)
 
 
 class ChatRequest(BaseModel):
@@ -537,6 +545,20 @@ def _format_knowledge(k: Optional[ChatKnowledge]) -> str:
         sections.append("📦 MƏHSULLAR HAQQINDA ƏLAVƏ QEYDLƏR:\n" + k.productsInfo.strip())
     if k.additionalNotes and k.additionalNotes.strip():
         sections.append("📝 ƏLAVƏ KONTEKST/FAQ:\n" + k.additionalNotes.strip())
+    if k.conversationExamples:
+        ex_rows: List[str] = []
+        for i, e in enumerate(k.conversationExamples):
+            um = (e.userMessage or "").strip()
+            am = (e.assistantMessage or "").strip()
+            if not um or not am:
+                continue
+            note = f"\n(Kontekst: {e.note.strip()})" if (e.note or "").strip() else ""
+            ex_rows.append(f"Nümunə {i + 1}:\nMüştəri: {um}\nDe Valeur AI: {am}{note}")
+        if ex_rows:
+            sections.append(
+                "💡 DİALOQ NÜMUNƏLƏRİ (məhz bu tərzdə/tonda cavab ver):\n"
+                + "\n\n".join(ex_rows)
+            )
     if not sections:
         return ""
     return (
